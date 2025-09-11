@@ -1,0 +1,29 @@
+name: Code analysis
+
+on:
+  pull_request:
+    branches:
+      - master
+      - main
+
+jobs:
+  pmd-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - uses: pmd/pmd-github-action@v2
+        with:
+          rulesets: '.github/pmd-ruleset.xml'
+          sourcePath: 'src/main/java'
+
+      - name: Fail build if there are violations
+        if: steps.pmd.outputs.violations != 0
+        run: exit 1

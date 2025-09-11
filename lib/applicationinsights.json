@@ -1,0 +1,21 @@
+{
+  "connectionString": "${file:/mnt/secrets/PathFinder/app-insights-connection-string}",
+  "role": {
+    "name": "PathFinder-api-service"
+  },
+  "sampling": {
+    "overrides": [
+      {
+        "telemetryType": "request",
+        "attributes": [
+          {
+            "key": "http.url",
+            "value": "https?://[^/]+/health.*",
+            "matchType": "regexp"
+          }
+        ],
+        "percentage": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,240 @@
+name: CI Build and Publish
+
+on:
+  workflow_call:
+    secrets:
+      AZURE_DEVOPS_ARTIFACT_USERNAME:
+        required: true
+      AZURE_DEVOPS_ARTIFACT_TOKEN:
+        required: true
+      HMCTS_ADO_PAT:
+        required: true
+      PACT_BROKER_TOKEN:
+        required: true
+    inputs:
+      is_release:
+        required: false
+        type: boolean
+        default: false
+      is_publish:
+        required: true
+        type: boolean
+      trigger_docker:
+        required: true
+        type: boolean
+      trigger_deploy:
+        required: true
+        type: boolean
+      pacticipant:
+        required: true
+        type: string
+      pact_ignore:
+        required: true
+        type: boolean
+        default: false
+      pact_env:
+        required: true
+        type: string
+
+jobs:
+  Artefact-Version:
+    runs-on: ubuntu-latest
+    outputs:
+      artefact_version: ${{ inputs.is_release && steps.artefact.outputs.release_version || steps.artefact.outputs.draft_version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Generate Artefact Version
+        id: artefact
+        uses: hmcts/artefact-version-action@v1
+        with:
+          release: ${{ inputs.is_release }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  Build:
+    needs: [Artefact-Version]
+    runs-on: ubuntu-latest
+    outputs:
+      repo_name: ${{ steps.repo_vars.outputs.repo_name }}
+      artefact_name: ${{ steps.repo_vars.outputs.artefact_name }}
+    env:
+      PACT_BROKER_BASE_URL: "https://hmcts-dts.pactflow.io"
+      PACT_ENV: "dev/pactTest"
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v5
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+
+      - name: Gradle Build
+        env:
+          ARTEFACT_VERSION: ${{ needs.Artefact-Version.outputs.artefact_version }}
+        run: |
+          echo "Building with ARTEFACT_VERSION=$ARTEFACT_VERSION"
+          gradle build -DARTEFACT_VERSION=$ARTEFACT_VERSION
+
+      - name: Extract repo name
+        id: repo_vars
+        run: |
+          repo_name=${GITHUB_REPOSITORY##*/}
+          echo "repo_name=${repo_name}" >> $GITHUB_OUTPUT
+          echo "artefact_name=${repo_name}-${{ needs.Artefact-Version.outputs.artefact_version }}" >> $GITHUB_OUTPUT
+
+      - name: Upload JAR Artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: build/libs/${{ steps.repo_vars.outputs.artefact_name }}.jar
+
+  Provider-Deploy:
+    needs: [ Artefact-Version, Build ]
+    runs-on: ubuntu-latest
+    env:
+      PACT_PROVIDER_VERSION: ${{ needs.Artefact-Version.outputs.artefact_version }}
+      PACT_BROKER_URL: "https://hmcts-dts.pactflow.io"
+      PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
+      PACT_ENV: ${{ inputs.pact_env }}
+      PACTICIPANT: ${{ inputs.pacticipant }}
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v5
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+
+      # If the results are not published, the Pact Broker will not be able to find the version
+      # NOTE: if the version is not found and verification step is successful, check that 'pact.verifier.publishResults' is set to true in the gradle task
+      - name: Pact Provider Verification and Publish Results
+        if: ${{ !inputs.pact_ignore }}
+        env:
+          PACT_PROVIDER_BRANCH: ${{ github.ref_name }}
+          PACT_VERIFIER_PUBLISH_RESULTS: true
+        run: |
+          echo "PACT_PROVIDER_VERSION=$PACT_PROVIDER_VERSION"
+          echo "PACT_VERIFIER_PUBLISH_RESULTS=$PACT_VERIFIER_PUBLISH_RESULTS"
+          echo "PACT_PROVIDER_BRANCH=$PACT_PROVIDER_BRANCH"
+          echo "PACT_BROKER_TOKEN=$PACT_BROKER_TOKEN"
+          echo "PACT_BROKER_URL=$PACT_BROKER_URL"
+          echo "PACT_ENV=$PACT_ENV"
+          
+          gradle pactVerificationTest \
+            -Dpact.provider.version="$PACT_PROVIDER_VERSION" \
+            -Dpact.verifier.publishResults="$PACT_VERIFIER_PUBLISH_RESULTS" \
+            -Dpact.provider.branch="$PACT_PROVIDER_BRANCH" \
+            -Dpact.broker.token="$PACT_BROKER_TOKEN" \
+            -Dpact.broker.url="$PACT_BROKER_URL" \
+            -Dpact.env="$PACT_ENV"
+
+      - uses: hmcts/pact-can-i-deploy@main
+        if: ${{ !inputs.pact_ignore }}
+        with:
+          pact_broker_token: ${{ secrets.PACT_BROKER_TOKEN }}
+          pacticipant: ${{ inputs.pacticipant }}
+          pacticipant_version: ${{ env.PACT_PROVIDER_VERSION }}
+          pact_env: ${{ env.PACT_ENV }}
+
+      - name: Gradle Publish
+        if: ${{ inputs.is_publish }}
+        env:
+          ARTEFACT_VERSION: ${{ needs.Artefact-Version.outputs.artefact_version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZURE_DEVOPS_ARTIFACT_USERNAME: ${{ secrets.AZURE_DEVOPS_ARTIFACT_USERNAME }}
+          AZURE_DEVOPS_ARTIFACT_TOKEN: ${{ secrets.AZURE_DEVOPS_ARTIFACT_TOKEN }}
+        run: |
+          if [ -z "AZURE_DEVOPS_ARTIFACT_USERNAME" ]; then
+            echo "::warning::AZURE_DEVOPS_ARTIFACT_USERNAME is null or not set"
+          fi
+
+          if [ -z "$AZURE_DEVOPS_ARTIFACT_TOKEN" ]; then
+            echo "::warning::AZURE_DEVOPS_ARTIFACT_TOKEN is null or not set"
+          fi
+
+          echo "Publishing artefact for version: $ARTEFACT_VERSION"
+          
+          gradle publish \
+            -DARTEFACT_VERSION=$ARTEFACT_VERSION \
+            -DGITHUB_REPOSITORY=${{ github.repository }} \
+            -DGITHUB_ACTOR=${{ github.actor }} \
+            -DGITHUB_TOKEN=$GITHUB_TOKEN \
+            -DAZURE_DEVOPS_ARTIFACT_USERNAME=$AZURE_DEVOPS_ARTIFACT_USERNAME \
+            -DAZURE_DEVOPS_ARTIFACT_TOKEN=$AZURE_DEVOPS_ARTIFACT_TOKEN
+
+  Build-Docker:
+    needs: [ Provider-Deploy, Build, Artefact-Version ]
+    if: ${{ inputs.trigger_docker }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+
+      - name: Download JAR Artefact
+        uses: actions/download-artifact@v5
+        with:
+          name: app-jar
+          path: build/libs
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Packages
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Image to GitHub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ needs.Artefact-Version.outputs.artefact_version }}
+          build-args: |
+            BASE_IMAGE=openjdk:21-jdk-slim
+            JAR_FILENAME=${{ needs.Build.outputs.artefact_name }}.jar
+
+  Deploy:
+    needs: [ Provider-Deploy, Build, Artefact-Version ]
+    if: ${{ inputs.trigger_deploy }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract repo name
+        run: echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+
+      - name: Trigger ADO pipeline
+        uses: hmcts/trigger-ado-pipeline@v1
+        with:
+          pipeline_id: 460
+          ado_pat: ${{ secrets.HMCTS_ADO_PAT }}
+          template_parameters: >
+            {
+              "GROUP_ID": "uk.gov.hmcts.cp",
+              "ARTIFACT_ID": "${{ env.REPO_NAME }}",
+              "ARTIFACT_VERSION": "${{ needs.Artefact-Version.outputs.artefact_version }}",
+              "TARGET_REPOSITORY": "${{ github.repository }}"
+            }
+

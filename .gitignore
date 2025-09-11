@@ -1,0 +1,33 @@
+gradle
+bin/*
+!bin/run-in-docker.sh
+.gradle
+/build/
+/gradlew
+/gradlew.bat
+!gradle/wrapper/gradle-wrapper.properties
+*.class
+bin/main/application.yaml
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+
+### IntelliJ IDEA ###
+.idea
+/out
+*.iws
+*.iml
+*.ipr
+
+.DS_Store
+
+applicationinsights-agent-*.jar
+*.log
+
+.DS_Store
+*/.DS_Store

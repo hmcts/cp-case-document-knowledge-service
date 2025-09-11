@@ -1,0 +1,22 @@
+{
+  "courtSchedule": [
+    {
+      "hearings": [
+        {
+          "hearingId": "HRG-123456",
+          "hearingType": "Preliminary",
+          "hearingDescription": "Initial appearance for case 456789",
+          "listNote": "Judge prefers afternoon start",
+          "courtSittings": [
+            {
+              "sittingStart": "2025-03-25T09:00:00Z",
+              "sittingEnd": "2025-03-25T12:00:00Z",
+              "judiciaryId": "123e4567-e89b-12d3-a456-426614174000",
+              "courtHouse": "223e4567-e89b-12d3-a456-426614174111"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
