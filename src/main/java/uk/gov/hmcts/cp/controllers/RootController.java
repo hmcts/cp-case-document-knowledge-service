@@ -19,7 +19,7 @@ import uk.gov.hmcts.cp.filters.jwt.AuthDetails;
 public class RootController {
 
     // request scope bean
-    AuthDetails jwtToken;
+    protected AuthDetails jwtToken;
 
     /**
      * Root GET endpoint.

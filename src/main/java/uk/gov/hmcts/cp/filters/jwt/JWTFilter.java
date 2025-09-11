@@ -42,31 +42,32 @@ public class JWTFilter extends OncePerRequestFilter {
         final String jwt = request.getHeader(JWT_TOKEN_HEADER);
 
         if (jwt == null) {
-            log.error("JWTFilter expected header {} not passed", JWT_TOKEN_HEADER);
+            log.atError().log("JWTFilter expected header {} not passed", JWT_TOKEN_HEADER);
             throw new HttpClientErrorException(HttpStatus.UNAUTHORIZED, "No jwt token passed");
         }
 
         try {
             final AuthDetails extractedToken = jwtService.extract(jwt);
 
-            AuthDetails requestScopedToken = jwtProvider.getObject(); // current request instance
+            final AuthDetails requestScopedToken = jwtProvider.getObject(); // current request instance
             requestScopedToken.setUserName(extractedToken.getUserName());
             requestScopedToken.setScope(extractedToken.getScope());
         } catch (InvalidJWTException e) {
+            log.atError().log(e.getMessage());
             throw new HttpClientErrorException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
-
         filterChain.doFilter(request, response);
     }
 
     @Override
     protected boolean shouldNotFilter(final HttpServletRequest request) {
         // Skip filtering entirely when disabled, and for specific paths
-        if (!jwFilterEnabled) {
-            return true;
+        boolean shouldNotFilter = true;
+        if (jwFilterEnabled) {
+            log.atInfo().log("JWT Filter is enabled");
+            shouldNotFilter = Stream.of("/health")
+                    .anyMatch(p -> pathMatcher.match(p, request.getRequestURI()));
         }
-
-        return Stream.of("/health")
-                .anyMatch(p -> pathMatcher.match(p, request.getRequestURI()));
+        return shouldNotFilter;
     }
 }

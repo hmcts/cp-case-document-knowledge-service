@@ -19,10 +19,12 @@ public class InMemoryCourtScheduleRepositoryImpl implements CourtScheduleReposit
 
     private final Map<String, CourtScheduleResponse> courtScheduleResponseMap = new ConcurrentHashMap<>();
 
+    @Override
     public void saveCourtSchedule(final String caseUrn, final CourtScheduleResponse courtScheduleResponse) {
         courtScheduleResponseMap.put(caseUrn, courtScheduleResponse);
     }
 
+    @Override
     public CourtScheduleResponse getCourtScheduleByCaseUrn(final String caseUrn) {
         if (!courtScheduleResponseMap.containsKey(caseUrn)) {
             saveCourtSchedule(caseUrn, createCourtScheduleResponse());
@@ -30,6 +32,7 @@ public class InMemoryCourtScheduleRepositoryImpl implements CourtScheduleReposit
         return courtScheduleResponseMap.get(caseUrn);
     }
 
+    @Override
     public void clearAll() {
         courtScheduleResponseMap.clear();
     }

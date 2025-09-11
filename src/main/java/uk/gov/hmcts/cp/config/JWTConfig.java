@@ -12,7 +12,7 @@ public class JWTConfig {
     @Bean
     @RequestScope
     // attributes are set in the filter
-    AuthDetails jwt(){
+    protected AuthDetails jwt(){
         return AuthDetails.builder().build();
     }
 }
