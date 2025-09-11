@@ -244,7 +244,7 @@ tasks.named('processPactVerificationTestResources') {
 
 dependencies {
   implementation "uk.gov.hmcts.cp:api-cp-crime-schedulingandlisting-courtschedule:$apiCourtScheduleVersion"
-  implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.12'
+  implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13'
   implementation 'io.swagger.core.v3:swagger-core:2.2.36'
   implementation 'javax.xml.bind:jaxb-api:2.3.1'
 
