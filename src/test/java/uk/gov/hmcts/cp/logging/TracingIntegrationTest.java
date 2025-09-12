@@ -2,10 +2,11 @@ package uk.gov.hmcts.cp.logging;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,7 +25,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Slf4j
 public class TracingIntegrationTest {
 
-    @Resource
+    @Value("${spring.application.name}")
+    private String springApplicationName;
+
+    @Autowired
     private MockMvc mockMvc;
 
     private PrintStream originalStdOut = System.out;
@@ -64,6 +68,7 @@ public class TracingIntegrationTest {
         });
         assertThat(capturedFields.get("traceId")).isEqualTo("1234-1234");
         assertThat(capturedFields.get("spanId")).isEqualTo("567-567");
+        assertThat(capturedFields.get("applicationName")).isEqualTo(springApplicationName);
 
         assertThat(result.getResponse().getHeader("traceId")).isEqualTo(capturedFields.get("traceId"));
         assertThat(result.getResponse().getHeader("spanId")).isEqualTo(capturedFields.get("spanId"));
