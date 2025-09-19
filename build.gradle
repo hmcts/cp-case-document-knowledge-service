@@ -2,11 +2,11 @@ plugins {
     id 'application'
     id 'java'
     id 'io.spring.dependency-management' version '1.1.7'
-    id 'org.springframework.boot' version '3.5.5'
+    id 'org.springframework.boot' version '3.5.6'
     id 'jacoco'
     id 'maven-publish'
     id "com.github.ben-manes.versions" version "0.52.0"
-    id "org.cyclonedx.bom" version "2.3.1"
+    id "org.cyclonedx.bom" version "2.4.0"
     id "au.com.dius.pact" version "4.6.17"
     id 'pmd'
 }
@@ -265,7 +265,7 @@ tasks.named('processPactVerificationTestResources') {
 dependencies {
     implementation "uk.gov.hmcts.cp:api-cp-crime-schedulingandlisting-courtschedule:$apiCourtScheduleVersion"
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13'
-    implementation 'io.swagger.core.v3:swagger-core:2.2.36'
+    implementation 'io.swagger.core.v3:swagger-core:2.2.37'
     implementation 'javax.xml.bind:jaxb-api:2.3.1'
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -299,7 +299,7 @@ dependencies {
 
     testImplementation(platform('org.junit:junit-bom:5.13.4'))
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
-    testImplementation group: 'org.springframework.boot', name: 'spring-boot-starter-test', version: '3.5.5', {
+    testImplementation group: 'org.springframework.boot', name: 'spring-boot-starter-test', version: '3.5.6', {
         exclude group: 'junit', module: 'junit'
         exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
     }
@@ -312,7 +312,7 @@ dependencies {
     // especially with platform BOMs, test runtime dependencies, or custom tasks. Explicit dependencies eliminate that risk.
     integrationTestImplementation platform('org.junit:junit-bom:5.13.4')
     integrationTestRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
-    integrationTestImplementation  group: 'org.springframework.boot', name: 'spring-boot-starter-test', version: '3.5.5', {
+    integrationTestImplementation  group: 'org.springframework.boot', name: 'spring-boot-starter-test', version: '3.5.6', {
         exclude group: 'junit', module: 'junit'
         exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
     }
