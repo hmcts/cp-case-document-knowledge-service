@@ -153,17 +153,17 @@ What happens under the hood:
 
 The application is configured via environment variables with sensible defaults. Key settings:
 
-| Property                          | Default                                      | Notes                               |
-|----------------------------------|----------------------------------------------|-------------------------------------|
-| `server.port`                    | `8082`                                       | API & Actuator port                 |
-| `SPRING_DATASOURCE_URL`          | `jdbc:postgresql://localhost:55432/appdb`    | Postgres JDBC URL                   |
-| `SPRING_DATASOURCE_USERNAME`     | `app`                                        | DB user                             |
-| `SPRING_DATASOURCE_PASSWORD`     | `app`                                        | DB password                         |
-| `DB_POOL_SIZE`                   | `10`                                         | Hikari pool size                    |
-| `TRACING_SAMPLER_PROBABILITY`    | `1.0`                                        | OTel tracing sample rate            |
-| `OTEL_TRACES_URL`                | `http://localhost:4318/v1/traces`            | OTLP traces endpoint                |
-| `OTEL_METRICS_ENABLED`           | `false`                                      | Export metrics via OTLP if `true`   |
-| `OTEL_METRICS_URL`               | `http://localhost:4318/v1/metrics`           | OTLP metrics endpoint               |
+| Property                          | Default                                       | Notes                               |
+|----------------------------------|-----------------------------------------------|-------------------------------------|
+| `server.port`                    | `8082`                                        | API & Actuator port                 |
+| `SPRING_DATASOURCE_URL`          | `jdbc:postgresql://localhost:{DB_PORT}/appdb` | Postgres JDBC URL                   |
+| `SPRING_DATASOURCE_USERNAME`     | `app`                                         | DB user                             |
+| `SPRING_DATASOURCE_PASSWORD`     | `app`                                         | DB password                         |
+| `DB_POOL_SIZE`                   | `10`                                          | Hikari pool size                    |
+| `TRACING_SAMPLER_PROBABILITY`    | `1.0`                                         | OTel tracing sample rate            |
+| `OTEL_TRACES_URL`                | `http://localhost:4318/v1/traces`             | OTLP traces endpoint                |
+| `OTEL_METRICS_ENABLED`           | `false`                                       | Export metrics via OTLP if `true`   |
+| `OTEL_METRICS_URL`               | `http://localhost:4318/v1/metrics`            | OTLP metrics endpoint               |
 
 Flyway is enabled and points at `classpath:db/migration`.
 
