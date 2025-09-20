@@ -4,7 +4,7 @@ spring:
 
   datasource:
     # Override these via env in each environment
-    url: ${CP_CDK_DATASOURCE_URL:jdbc:postgresql://localhost:55432/appdb}
+    url: ${CP_CDK_DATASOURCE_URL}
     username: ${CP_CDK_DATASOURCE_USERNAME:app}
     password: ${CP_CDK_DATASOURCE_PASSWORD:app}
     hikari:
