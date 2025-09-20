@@ -24,9 +24,9 @@ GRADLE_INSTALL=false
 
 # TODO custom environment variables application requires.
 # TODO also consider enlisting them in help string above ^
-# TODO sample: DB_PASSWORD   Defaults to 'dev'
+# TODO sample: CP_CDK_DB_PASSWORD   Defaults to 'dev'
 # environment variables
-#DB_PASSWORD=dev
+#CP_CDK_DB_PASSWORD=dev
 #S2S_URL=localhost
 #S2S_SECRET=secret
 
@@ -47,7 +47,7 @@ execute_script() {
 
 #  echo "Assigning environment variables.."
 #
-#  export DB_PASSWORD=${DB_PASSWORD}
+#  export CP_CDK_DB_PASSWORD=${CP_CDK_DB_PASSWORD}
 #  export S2S_URL=${S2S_URL}
 #  export S2S_SECRET=${S2S_SECRET}
 
@@ -63,7 +63,7 @@ while true ; do
     -i|--install) GRADLE_INSTALL=true ; shift ;;
     -p|--param)
       case "$2" in
-#        DB_PASSWORD=*) DB_PASSWORD="${2#*=}" ; shift 2 ;;
+#        CP_CDK_DB_PASSWORD=*) CP_CDK_DB_PASSWORD="${2#*=}" ; shift 2 ;;
 #        S2S_URL=*) S2S_URL="${2#*=}" ; shift 2 ;;
 #        S2S_SECRET=*) S2S_SECRET="${2#*=}" ; shift 2 ;;
         *) shift 2 ;;

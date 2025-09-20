@@ -15,9 +15,7 @@ import java.io.IOException;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.hmcts.cp.filters.tracing.TracingFilter.APPLICATION_NAME;
-import static uk.gov.hmcts.cp.filters.tracing.TracingFilter.SPAN_ID;
-import static uk.gov.hmcts.cp.filters.tracing.TracingFilter.TRACE_ID;
+import static uk.gov.hmcts.cp.filters.tracing.TracingFilter.*;
 
 @ExtendWith(MockitoExtension.class)
 class TracingFilterTest {
