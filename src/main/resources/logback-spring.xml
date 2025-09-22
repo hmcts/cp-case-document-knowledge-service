@@ -1,0 +1,19 @@
+<configuration>
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <shortenedLoggerNameLength>0</shortenedLoggerNameLength>
+            <customFields>{"app":"cp-case-document-knowledge-service","service":"cp-case-document-knowledge-service"}</customFields>
+        </encoder>
+    </appender>
+
+    <appender name="ASYNC_JSON" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>8192</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <includeCallerData>false</includeCallerData>
+        <appender-ref ref="JSON"/>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="ASYNC_JSON"/>
+    </root>
+</configuration>
