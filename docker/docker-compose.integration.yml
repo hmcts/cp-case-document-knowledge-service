@@ -22,7 +22,7 @@ services:
     ports:
       - "8082:8082"
     environment:
-      CP_CDK_DATASOURCE_URL: jdbc:postgresql://db:${INT_DB_PORT}/appdb
+      CP_CDK_DATASOURCE_URL: jdbc:postgresql://db:5432/appdb
       CP_CDK_DATASOURCE_USERNAME: app
       CP_CDK_DATASOURCE_PASSWORD: app
       SERVER_PORT: 8082
