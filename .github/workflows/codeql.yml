@@ -93,6 +93,12 @@ jobs:
   DAST:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: DAST - Build and run containerised app
         run: |
           docker-compose -f docker/docker-compose.integration.yml up -d
