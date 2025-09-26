@@ -10,6 +10,24 @@ on:
     - cron: '36 5 * * 4'
 
 jobs:
+#  Artefact-Version:
+#    runs-on: ubuntu-latest
+#    outputs:
+#      artefact_version: ${{ github.event_name == 'push' && steps.artefact.outputs.release_version || steps.artefact.outputs.draft_version }}
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v5
+#        with:
+#          fetch-depth: 0
+#
+#      - name: Generate Artefact Version
+#        id: artefact
+#        uses: hmcts/artefact-version-action@v1
+#        with:
+#          release: ${{ inputs.is_release }}
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
@@ -39,7 +57,7 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: 21
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -71,3 +89,54 @@ jobs:
         with:
           name: sbom
           path: build/resources/main/META-INF/sbom/application.cdx.json
+
+  DAST:
+    runs-on: ubuntu-latest
+    steps:
+      - name: DAST - Build and run containerised app
+        run: |
+          docker-compose -f ${{ github.workspace }}/docker/docker-compose.integration.yml up -d
+          
+          echo "Waiting for health endpoint..."
+          for i in {1..30}; do
+            if curl -s http://localhost:8082/health > /dev/null; then
+              echo "App is healthy"
+              break
+            fi
+            echo "Waiting for app to be healthy ($i)..."
+            sleep 2
+          done
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+
+      - name: Run OWASP ZAP DAST Scan
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: "http://localhost:8082"
+          cmd_options: "-a -J zap_report.json -r zap_report.html"
+
+      - name: Install zap2sarif
+        run: pip install zap2sarif
+
+      - name: Convert ZAP JSON to SARIF
+        run: |
+          zap2sarif -i zap_report.json -o zap_report.sarif
+
+      - name: Upload ZAP HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-html-report
+          path: zap_report.html
+
+      - name: Upload ZAP SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: zap_report.sarif
