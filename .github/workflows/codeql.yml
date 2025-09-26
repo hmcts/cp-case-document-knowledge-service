@@ -96,6 +96,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+
+      - name: Gradle Build
+        run: gradle build -x test -x integration
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -112,19 +125,6 @@ jobs:
             echo "Waiting for app to be healthy ($i)..."
             sleep 2
           done
-
-      - uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: 21
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: current
-
-      - name: Gradle Build
-        run: gradle build -x test -x integration
 
       - name: Run OWASP ZAP DAST Scan
         uses: zaproxy/action-baseline@v0.14.0
