@@ -77,12 +77,6 @@ management:
         enabled: ${OTEL_METRICS_ENABLED:false}
         url: ${OTEL_METRICS_URL:http://localhost:4318/v1/metrics}
 
-springdoc:
-  api-docs:
-    enabled: ${OPENAPI_ENABLED:false}
-  swagger-ui:
-    enabled: ${SWAGGER_UI_ENABLED:false}
-
 logging:
   level:
     root: INFO
