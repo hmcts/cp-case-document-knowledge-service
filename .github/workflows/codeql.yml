@@ -10,24 +10,6 @@ on:
     - cron: '36 5 * * 4'
 
 jobs:
-#  Artefact-Version:
-#    runs-on: ubuntu-latest
-#    outputs:
-#      artefact_version: ${{ github.event_name == 'push' && steps.artefact.outputs.release_version || steps.artefact.outputs.draft_version }}
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v5
-#        with:
-#          fetch-depth: 0
-#
-#      - name: Generate Artefact Version
-#        id: artefact
-#        uses: hmcts/artefact-version-action@v1
-#        with:
-#          release: ${{ inputs.is_release }}
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
