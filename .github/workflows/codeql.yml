@@ -130,22 +130,10 @@ jobs:
         uses: zaproxy/action-baseline@v0.14.0
         with:
           target: "http://localhost:8082"
-          cmd_options: "-a -J zap_report.json -r zap_report.html -w zap_report.sarif"
-
-#      - name: Install zap2sarif
-#        run: pip install zap2sarif
-#
-#      - name: Convert ZAP JSON to SARIF
-#        run: |
-#          zap2sarif -i zap_report.json -o zap_report.sarif
+          cmd_options: "-a -J zap_report.json -r zap_report.html"
 
       - name: Upload ZAP HTML Report
         uses: actions/upload-artifact@v4
         with:
           name: zap-html-report
           path: zap_report.html
-
-      - name: Upload ZAP SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: zap_report.sarif
