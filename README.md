@@ -225,6 +225,26 @@ Print dependency trees:
 
 ---
 
+## Build Flow
+
+Build tasks and their dependencies:
+
+```mermaid
+flowchart TD
+
+    build[build] --> check[check]
+
+    check --> test[test]
+    check --> integration[integration - docker-compose integration tests]
+
+    integration --> composeUp[composeUp]
+    composeUp --> composeBuild[composeBuild]
+    composeBuild --> bootJar[bootJar]
+    bootJar --> jar[jar]
+
+    integration --> composeDown[composeDown - finalizedBy]
+```
+
 ## Troubleshooting
 
 - **Port in use** — Change ports in `application.yml` or Compose file. DB uses **55432** to avoid conflicts with a local 5432.
