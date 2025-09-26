@@ -99,9 +99,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Gradle Build
-        run: gradle build -x test
-
       - name: DAST - Build and run containerised app
         run: |
           docker compose -f docker/docker-compose.integration.yml up -d
@@ -125,6 +122,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: current
+
+      - name: Gradle Build
+        run: gradle build -x test -x integration
 
       - name: Run OWASP ZAP DAST Scan
         uses: zaproxy/action-baseline@v0.14.0

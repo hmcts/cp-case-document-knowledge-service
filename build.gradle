@@ -128,14 +128,21 @@ tasks.named('processIntegrationTestResources') {
 
 tasks.named('test') {
     useJUnitPlatform()
-    // Gradle 9: do NOT use failIfNoTests (removed)
-    jvmArgs = ['-Xshare:off']
+
+    // Mockito must be added as an agent, see:
+    // https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+    jvmArgs += [
+            "-javaagent:${configurations.testRuntimeClasspath.find { it.name.contains('mockito-core') }}", '-Xshare:off'
+    ]
     testLogging {
         events "passed", "skipped", "failed"
         exceptionFormat = 'full'
         showStandardStreams = true
     }
-    reports { junitXml.required.set(true); html.required.set(true) }
+    reports {
+        junitXml.required.set(true)
+        html.required.set(true)
+    }
 }
 
 tasks.withType(Test).configureEach {
@@ -236,6 +243,8 @@ tasks.register('integration', Test) {
     description = "Runs integration tests against docker-compose stack"
     group = "Verification"
 
+    mustRunAfter tasks.named('test')
+
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath       = sourceSets.integrationTest.runtimeClasspath
     useJUnitPlatform()
@@ -253,9 +262,10 @@ tasks.register('integration', Test) {
     }
 }
 
-// Ensure CI “build/check” includes integration tests
-tasks.named('check') { dependsOn tasks.named('integration') }
-tasks.named('build') { dependsOn tasks.named('integration') }
+// Run integration tests as part of check, after unit tests
+tasks.named('check') {
+    dependsOn tasks.named('integration')
+}
 
 /* ---------------- Publishing ---------------- */
 
