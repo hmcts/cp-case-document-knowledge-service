@@ -14,7 +14,7 @@ public class ApiController {
 
     @GetMapping("/public")
     public ResponseEntity<String> publicEndpoint() {
-        return ok("Welcome to service-hmcts-marketplace-springboot-template");
+        return ok("Welcome to cp-case-document-knowledge-service");
     }
 
 }

@@ -10,15 +10,15 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.hmcts.cp.openapi.api.CourtScheduleApi;
 import uk.gov.hmcts.cp.openapi.model.CourtScheduleResponse;
-import uk.gov.hmcts.cp.services.CourtScheduleService;
+import uk.gov.hmcts.cp.services.ExampleService;
 
 @RestController
-public class CourtScheduleController implements CourtScheduleApi {
-    private static final Logger LOG = LoggerFactory.getLogger(CourtScheduleController.class);
-    private final CourtScheduleService courtScheduleService;
+public class ExampleController implements CourtScheduleApi {
+    private static final Logger LOG = LoggerFactory.getLogger(ExampleController.class);
+    private final ExampleService exampleService;
 
-    public CourtScheduleController(final CourtScheduleService courtScheduleService) {
-        this.courtScheduleService = courtScheduleService;
+    public ExampleController(final ExampleService exampleService) {
+        this.exampleService = exampleService;
     }
 
     @Override
@@ -27,7 +27,7 @@ public class CourtScheduleController implements CourtScheduleApi {
         final CourtScheduleResponse courtScheduleResponse;
         try {
             sanitizedCaseUrn = sanitizeCaseUrn(caseUrn);
-            courtScheduleResponse = courtScheduleService.getCourtScheduleByCaseUrn(sanitizedCaseUrn);
+            courtScheduleResponse = exampleService.getCourtScheduleByCaseUrn(sanitizedCaseUrn);
         } catch (ResponseStatusException e) {
             LOG.atError().log(e.getMessage());
             throw e;

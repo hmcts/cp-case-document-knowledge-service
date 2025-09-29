@@ -8,15 +8,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.hmcts.cp.openapi.model.CourtScheduleResponse;
-import uk.gov.hmcts.cp.repositories.CourtScheduleRepository;
+import uk.gov.hmcts.cp.repositories.ExampleCourtScheduleRepository;
 
 @Service
 @RequiredArgsConstructor
-public class CourtScheduleService {
+public class ExampleService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(CourtScheduleService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ExampleService.class);
 
-    private final CourtScheduleRepository courtScheduleRepository;
+    private final ExampleCourtScheduleRepository courtScheduleRepository;
 
     public CourtScheduleResponse getCourtScheduleByCaseUrn(final String caseUrn) throws ResponseStatusException {
         if (StringUtils.isEmpty(caseUrn)) {

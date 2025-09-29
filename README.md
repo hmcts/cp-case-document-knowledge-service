@@ -1,7 +1,7 @@
 # case-document-knowledge-service
 
 **AI-powered answers for case documents — every response cited and auditable.**  
-Spring Boot 4 (Java 21) REST API with OpenAPI docs, PostgreSQL + Flyway, production-ready observability, and CI-friendly **Gradle** build.
+Spring Boot 4 (Java 21), PostgreSQL + Flyway, production-ready observability, and CI-friendly **Gradle** build.
 
 ---
 
@@ -26,8 +26,6 @@ Spring Boot 4 (Java 21) REST API with OpenAPI docs, PostgreSQL + Flyway, product
 
 ## Features
 
-- Versioned **REST API** under `/api/v1/**`
-- **OpenAPI / Swagger UI**
 - **PostgreSQL** persistence with **Flyway** migrations
 - **Observability**: Actuator health, Prometheus metrics, OTLP tracing, structured JSON logs
 - **Quality gates**: PMD, JaCoCo coverage
@@ -41,7 +39,6 @@ Spring Boot 4 (Java 21) REST API with OpenAPI docs, PostgreSQL + Flyway, product
 
 - **Java 21**, **Spring Boot 4.0.0-M2**
 - Spring MVC, Spring Data JPA, **PostgreSQL 16**, Flyway
-- springdoc-openapi 3.x (Swagger UI)
 - Micrometer + **Prometheus**, OpenTelemetry OTLP exporter
 - Gradle 9, PMD, JaCoCo
 - Docker / Docker Compose v2
@@ -70,7 +67,7 @@ Spring Boot 4 (Java 21) REST API with OpenAPI docs, PostgreSQL + Flyway, product
 
 - Java **21**
 - Docker Engine **v27+** and **Docker Compose v2** (`docker compose` CLI)
-- Nothing else required — use the Gradle wrapper (`./gradlew`)
+- Nothing else required — use the Gradle (`gradle`)
 
 ---
 
@@ -78,25 +75,25 @@ Spring Boot 4 (Java 21) REST API with OpenAPI docs, PostgreSQL + Flyway, product
 
 ```bash
 # Clean & full build (unit tests)
-./gradlew clean build
+gradle clean build
 
 # Faster local build (skip tests)
-./gradlew -x test clean build
+gradle -x test clean build
 
 # Run only unit tests
-./gradlew test
+gradle test
 
 # Run only integration tests
-./gradlew integration
+gradle integration
 # Code quality reports
-./gradlew pmdMain pmdTest jacocoTestReport
+gradle pmdMain pmdTest jacocoTestReport
 # Open reports
 open build/reports/pmd/main.html
 open build/reports/tests/test/index.html
 open build/reports/jacoco/test/html/index.html
 
 # Dependency insight (useful for conflicts)
-./gradlew dependencyInsight --dependency <group-or-module>
+gradle dependencyInsight --dependency <group-or-module>
 ```
 
 ---
@@ -107,7 +104,7 @@ By default the app starts on **:8082** and looks for Postgres at **localhost:554
 
 ```bash
 # Start with your local Java 21
-./gradlew bootRun
+gradle bootRun
 ```
 
 ---
@@ -138,7 +135,7 @@ docker compose -f docker/docker-compose.integration.yml down -v
 Integration tests automatically **bring up** Postgres + app, **wait** until they’re healthy, run tests, then **tear down** the stack.
 
 ```bash
-./gradlew clean integration
+gradle clean integration
 ```
 
 What happens under the hood:
@@ -154,17 +151,17 @@ What happens under the hood:
 
 The application is configured via environment variables with sensible defaults. Key settings:
 
-| Property                          | Default                                      | Notes                               |
-|----------------------------------|----------------------------------------------|-------------------------------------|
-| `server.port`                    | `8082`                                       | API & Actuator port                 |
-| `SPRING_DATASOURCE_URL`          | `jdbc:postgresql://localhost:55432/appdb`    | Postgres JDBC URL                   |
-| `SPRING_DATASOURCE_USERNAME`     | `app`                                        | DB user                             |
-| `SPRING_DATASOURCE_PASSWORD`     | `app`                                        | DB password                         |
-| `DB_POOL_SIZE`                   | `10`                                         | Hikari pool size                    |
-| `TRACING_SAMPLER_PROBABILITY`    | `1.0`                                        | OTel tracing sample rate            |
-| `OTEL_TRACES_URL`                | `http://localhost:4318/v1/traces`            | OTLP traces endpoint                |
-| `OTEL_METRICS_ENABLED`           | `false`                                      | Export metrics via OTLP if `true`   |
-| `OTEL_METRICS_URL`               | `http://localhost:4318/v1/metrics`           | OTLP metrics endpoint               |
+| Property                          | Default                                | Notes                               |
+|----------------------------------|----------------------------------------|-------------------------------------|
+| `server.port`                    | `8082`                                 | API & Actuator port                 |
+| `SPRING_DATASOURCE_URL`          | `jdbc:postgresql://localhost:55432/appdb` | Postgres JDBC URL                   |
+| `SPRING_DATASOURCE_USERNAME`     | `app`                                  | DB user                             |
+| `SPRING_DATASOURCE_PASSWORD`     | `app`                                  | DB password                         |
+| `DB_POOL_SIZE`                   | `10`                                   | Hikari pool size                    |
+| `TRACING_SAMPLER_PROBABILITY`    | `1.0`                                  | OTel tracing sample rate            |
+| `OTEL_TRACES_URL`                | `http://localhost:4318/traces`         | OTLP traces endpoint                |
+| `OTEL_METRICS_ENABLED`           | `false`                                | Export metrics via OTLP if `true`   |
+| `OTEL_METRICS_URL`               | `http://localhost:4318/metrics`        | OTLP metrics endpoint               |
 
 Flyway is enabled and points at `classpath:db/migration`.
 
@@ -173,14 +170,14 @@ Flyway is enabled and points at `classpath:db/migration`.
 ## API & docs
 
 - Base URL: `http://localhost:8082`
-- Swagger UI: `http://localhost:8082/swagger-ui.html`  
-  (OpenAPI JSON at `/v3/api-docs`)
 
 Example smoke:
 
 ```bash
 curl -fsS "http://localhost:8082/actuator/health" | jq
 ```
+
+Please see the API Marketplace documentation for details on api versioning, etc : [Supporting Documents](https://github.com/hmcts/api-hmcts-marketplace-template?tab=readme-ov-file#supporting-documents)
 
 ---
 
@@ -213,14 +210,14 @@ curl -fsS http://localhost:8082/actuator/prometheus | head
 Generate a CycloneDX SBOM:
 
 ```bash
-./gradlew cyclonedxBom
+gradle cyclonedxBom
 # Output at: build/reports/bom.json (or .xml depending on configuration)
 ```
 
 Print dependency trees:
 
 ```bash
-./gradlew -q dependencies --configuration runtimeClasspath
+gradle -q dependencies --configuration runtimeClasspath
 ```
 
 ---

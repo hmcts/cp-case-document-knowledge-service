@@ -15,7 +15,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
-public class InMemoryCourtScheduleRepositoryImpl implements CourtScheduleRepository {
+public class ExampleInMemoryStubRepositoryImpl implements ExampleCourtScheduleRepository {
 
     private final Map<String, CourtScheduleResponse> courtScheduleResponseMap = new ConcurrentHashMap<>();
 

@@ -4,7 +4,7 @@ import org.springframework.stereotype.Repository;
 import uk.gov.hmcts.cp.openapi.model.CourtScheduleResponse;
 
 @Repository
-public interface CourtScheduleRepository  {
+public interface ExampleCourtScheduleRepository {
 
     CourtScheduleResponse getCourtScheduleByCaseUrn(String caseUrn);
     void saveCourtSchedule(String caseUrn, CourtScheduleResponse courtScheduleResponse);

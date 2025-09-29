@@ -71,22 +71,15 @@ management:
       probability: ${TRACING_SAMPLER_PROBABILITY:1.0}
   otlp:
     tracing:
-      endpoint: ${OTEL_TRACES_URL:http://localhost:4318/v1/traces}
+      endpoint: ${OTEL_TRACES_URL:http://localhost:4318/traces}
     metrics:
       export:
         enabled: ${OTEL_METRICS_ENABLED:false}
-        url: ${OTEL_METRICS_URL:http://localhost:4318/v1/metrics}
-
-springdoc:
-  api-docs:
-    enabled: ${OPENAPI_ENABLED:false}
-  swagger-ui:
-    enabled: ${SWAGGER_UI_ENABLED:false}
+        url: ${OTEL_METRICS_URL:http://localhost:4318/metrics}
 
 logging:
   level:
     root: INFO
-  # Use your JSON config (async) — make sure this file exists
   config: classpath:logback-spring.xml
 
 # Optional: Java 21 virtual threads (Boot 3.2+ / 4.x)
