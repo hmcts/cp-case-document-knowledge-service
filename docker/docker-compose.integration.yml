@@ -17,7 +17,7 @@ services:
   app:
     container_name: cdks_app_it
     build:
-      context: ..                # project root (so Docker has access to source)
+      context: ..                 # project root
       dockerfile: docker/Dockerfile
     ports:
       - "8082:8082"
@@ -26,11 +26,16 @@ services:
       CP_CDK_DATASOURCE_USERNAME: app
       CP_CDK_DATASOURCE_PASSWORD: app
       SERVER_PORT: 8082
+      SERVER_SERVLET_CONTEXT_PATH: /casedocumentknowledge-service
+      SPRING_APPLICATION_NAME: cp-case-document-knowledge-service
+
+      # Optional: debug
+      LOGGING_LEVEL_org.flywaydb: "DEBUG"
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8082/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/casedocumentknowledge-service/actuator/health || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 12
