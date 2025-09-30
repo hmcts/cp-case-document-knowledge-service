@@ -31,13 +31,13 @@ public class QueryVersionEntity {
     @Column(name = "status", nullable = false)
     private IngestionStatus status = IngestionStatus.UPLOADED;
 
-    protected QueryVersionEntity() { }
-
-    public QueryVersionEntity(QueryVersionKey id, String userQuery) {
-        this(id, userQuery, null, null);
+    protected QueryVersionEntity() {
     }
 
-    public QueryVersionEntity(QueryVersionKey id, String userQuery, String queryPrompt, IngestionStatus status) {
+    public QueryVersionEntity(final QueryVersionKey id,
+                              final String userQuery,
+                              final String queryPrompt,
+                              final IngestionStatus status) {
         this.id = Objects.requireNonNull(id, "id must not be null");
         this.userQuery = Objects.requireNonNull(userQuery, "userQuery must not be null");
         this.queryPrompt = queryPrompt;

@@ -79,18 +79,18 @@ class QueriesApiControllerTest {
 
         // JSON body for POST /queries
         String body = """
-            {
-              "effectiveAt": "2025-05-01T12:00:00Z",
-              "queries": [
                 {
-                  "queryId": "%s",
-                  "userQuery": "Q1",
-                  "queryPrompt": "Prompt for Q1",
-                  "status": "INGESTED"
+                  "effectiveAt": "2025-05-01T12:00:00Z",
+                  "queries": [
+                    {
+                      "queryId": "%s",
+                      "userQuery": "Q1",
+                      "queryPrompt": "Prompt for Q1",
+                      "status": "INGESTED"
+                    }
+                  ]
                 }
-              ]
-            }
-            """.formatted(qid);
+                """.formatted(qid);
 
         mvc.perform(post("/queries")
                         .contentType(MediaType.APPLICATION_JSON)

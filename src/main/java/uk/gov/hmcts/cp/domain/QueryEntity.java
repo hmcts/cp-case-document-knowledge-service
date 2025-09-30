@@ -20,9 +20,10 @@ public class QueryEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    protected QueryEntity() {}
+    protected QueryEntity() {
+    }
 
-    public QueryEntity(UUID queryId, Instant createdAt) {
+    public QueryEntity(final UUID queryId, final Instant createdAt) {
         this.queryId = Objects.requireNonNull(queryId);
         this.createdAt = Objects.requireNonNull(createdAt);
     }

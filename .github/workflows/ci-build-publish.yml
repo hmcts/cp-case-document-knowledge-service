@@ -56,7 +56,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   Build:
-    needs: [Artefact-Version]
+    needs: [ Artefact-Version ]
     runs-on: ubuntu-latest
     outputs:
       repo_name: ${{ steps.repo_vars.outputs.repo_name }}

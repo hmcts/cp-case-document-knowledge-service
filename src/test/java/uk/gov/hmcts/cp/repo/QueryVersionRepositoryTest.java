@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest(
         properties = {
                 "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.flyway.enabled=false" ,
+                "spring.flyway.enabled=false",
                 "spring.jpa.properties.hibernate.connection.provider_disables_autocommit=false"
         }
 )
@@ -36,6 +36,8 @@ class QueryVersionRepositoryTest {
                     .withDatabaseName("cdk")
                     .withUsername("postgres")
                     .withPassword("postgres");
+    @org.springframework.beans.factory.annotation.Autowired
+    QueryVersionRepository repo;
 
     @DynamicPropertySource
     static void dbProps(DynamicPropertyRegistry r) {
@@ -45,9 +47,6 @@ class QueryVersionRepositoryTest {
         // Let Hibernate create/drop schema for the slice test:
         r.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
     }
-
-    @org.springframework.beans.factory.annotation.Autowired
-    QueryVersionRepository repo;
 
     @Test
     void latest_and_asOf() {

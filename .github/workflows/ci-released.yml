@@ -2,7 +2,7 @@ name: CI Build and Publish – Release
 
 on:
   release:
-    types: [published]
+    types: [ published ]
   workflow_dispatch:
 
 jobs:

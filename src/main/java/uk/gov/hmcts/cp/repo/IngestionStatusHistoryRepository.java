@@ -11,10 +11,14 @@ import java.util.Optional;
 public interface IngestionStatusHistoryRepository
         extends JpaRepository<IngestionStatusHistoryEntity, Instant> {
 
-    /** Latest row by changedAt (global latest). */
+    /**
+     * Latest row by changedAt (global latest).
+     */
     Optional<IngestionStatusHistoryEntity> findTopByOrderByChangedAtDesc();
 
-    /** Latest row with changedAt <= the given instant (as-of). */
+    /**
+     * Latest row with changedAt <= the given instant (as-of).
+     */
     Optional<IngestionStatusHistoryEntity>
     findTopByChangedAtLessThanEqualOrderByChangedAtDesc(Instant at);
 }

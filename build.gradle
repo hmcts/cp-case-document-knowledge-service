@@ -44,7 +44,7 @@ sourceSets {
         java.srcDir 'src/integrationTest/java'
         resources.srcDir 'src/integrationTest/resources'
         compileClasspath += sourceSets.main.output + configurations.integrationTestCompileClasspath
-        runtimeClasspath  += sourceSets.main.output + configurations.integrationTestRuntimeClasspath
+        runtimeClasspath += sourceSets.main.output + configurations.integrationTestRuntimeClasspath
     }
     pactVerificationTest {
         java {
@@ -64,8 +64,8 @@ configurations {
 
 // ---- Versions you control ----
 ext {
-    lombokVersion     = "1.18.42"
-    apiSpecVersion    = "0.4.2"
+    lombokVersion = "1.18.42"
+    apiSpecVersion = "0.4.2"
     testcontainersBom = "1.20.1"
 }
 
@@ -151,7 +151,7 @@ tasks.named("pmdIntegrationTest").configure { enabled = false }
 // ---- Versions check policy ----
 tasks.named("dependencyUpdates").configure {
     def isNonStable = { String v ->
-        def stableKeyword = ['RELEASE','FINAL','GA'].any { q -> v.toUpperCase().contains(q) }
+        def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { q -> v.toUpperCase().contains(q) }
         def regex = /^[0-9,.v-]+$/
         !stableKeyword && !(v ==~ regex)
     }
@@ -254,7 +254,7 @@ tasks.register('integration', Test) {
     mustRunAfter tasks.named('test')
 
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath       = sourceSets.integrationTest.runtimeClasspath
+    classpath = sourceSets.integrationTest.runtimeClasspath
     useJUnitPlatform()
 
     dependsOn tasks.composeUp
@@ -284,7 +284,7 @@ tasks.named('check') {
 // ---- Publishing ----
 def githubActor = project.findProperty("github.actor") ?: System.getenv("GITHUB_ACTOR")
 def githubToken = project.findProperty("github.token") ?: System.getenv("GITHUB_TOKEN")
-def githubRepo  = System.getenv("GITHUB_REPOSITORY")
+def githubRepo = System.getenv("GITHUB_REPOSITORY")
 def azureADOArtifactRepository = 'https://pkgs.dev.azure.com/hmcts/Artifacts/_packaging/hmcts-lib/maven/v1'
 def azureADOArtifactActor = System.getenv("AZURE_DEVOPS_ARTIFACT_USERNAME")
 def azureADOArtifactToken = System.getenv("AZURE_DEVOPS_ARTIFACT_TOKEN")

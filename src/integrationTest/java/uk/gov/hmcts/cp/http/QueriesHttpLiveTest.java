@@ -19,13 +19,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class QueriesHttpLiveTest {
 
     // Same baseUrl convention as your ActuatorHttpLiveTest
-    private final String baseUrl  = System.getProperty(
+    private final String baseUrl = System.getProperty(
             "app.baseUrl",
             "http://localhost:8082/casedocumentknowledge-service"
     );
 
     // Connect to the DB published by docker-compose (for cleanup)
-    private final String jdbcUrl  = System.getProperty("it.db.url", "jdbc:postgresql://localhost:55432/appdb");
+    private final String jdbcUrl = System.getProperty("it.db.url", "jdbc:postgresql://localhost:55432/appdb");
     private final String jdbcUser = System.getProperty("it.db.user", "app");
     private final String jdbcPass = System.getProperty("it.db.pass", "app");
 
@@ -40,32 +40,32 @@ public class QueriesHttpLiveTest {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         // t1 payload
-        Map<String,Object> body1 = new HashMap<>();
+        Map<String, Object> body1 = new HashMap<>();
         body1.put("effectiveAt", "2025-05-01T12:00:00Z");
-        Map<String,Object> q1 = new HashMap<>();
+        Map<String, Object> q1 = new HashMap<>();
         q1.put("queryId", queryId.toString());
         q1.put("userQuery", "Q1 @ t1");
         q1.put("queryPrompt", "Prompt for Q1 @ t1");
         q1.put("status", "INGESTED");
         body1.put("queries", List.of(q1));
 
-        HttpEntity<Map<String,Object>> req1 = new HttpEntity<>(body1, headers);
+        HttpEntity<Map<String, Object>> req1 = new HttpEntity<>(body1, headers);
         ResponseEntity<String> r1 = http.postForEntity(baseUrl + "/queries", req1, String.class);
         if (!r1.getStatusCode().is2xxSuccessful()) {
             throw new IllegalStateException("Failed to post t1: " + r1);
         }
 
         // t2 payload
-        Map<String,Object> body2 = new HashMap<>();
+        Map<String, Object> body2 = new HashMap<>();
         body2.put("effectiveAt", "2025-06-01T12:00:00Z");
-        Map<String,Object> q2 = new HashMap<>();
+        Map<String, Object> q2 = new HashMap<>();
         q2.put("queryId", queryId.toString());
         q2.put("userQuery", "Q1 @ t2");
         q2.put("queryPrompt", "Prompt for Q1 @ t2");
         q2.put("status", "INGESTED");
         body2.put("queries", List.of(q2));
 
-        HttpEntity<Map<String,Object>> req2 = new HttpEntity<>(body2, headers);
+        HttpEntity<Map<String, Object>> req2 = new HttpEntity<>(body2, headers);
         ResponseEntity<String> r2 = http.postForEntity(baseUrl + "/queries", req2, String.class);
         if (!r2.getStatusCode().is2xxSuccessful()) {
             throw new IllegalStateException("Failed to post t2: " + r2);

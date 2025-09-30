@@ -19,14 +19,13 @@ import static uk.gov.hmcts.cp.filters.tracing.TracingFilter.*;
 
 @ExtendWith(MockitoExtension.class)
 class TracingFilterTest {
+    TracingFilter tracingFilter = new TracingFilter("myAppName");
     @Mock
     private HttpServletRequest request;
     @Mock
     private HttpServletResponse response;
     @Mock
     private FilterChain filterChain;
-
-    TracingFilter tracingFilter = new TracingFilter("myAppName");
 
     @Test
     void filter_should_use_incoming_traceId() throws ServletException, IOException {

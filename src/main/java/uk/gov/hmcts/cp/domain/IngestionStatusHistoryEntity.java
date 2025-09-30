@@ -1,6 +1,13 @@
 package uk.gov.hmcts.cp.domain;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import java.time.Instant;
 
 import java.time.Instant;
 
@@ -16,15 +23,20 @@ public class IngestionStatusHistoryEntity {
     @Column(name = "status", nullable = false, length = 32)
     private IngestionStatus status;
 
-    /** JPA needs a no-arg ctor; keep it protected. */
-    protected IngestionStatusHistoryEntity() { }
+    /**
+     * JPA needs a no-arg ctor; keep it protected.
+     */
+    protected IngestionStatusHistoryEntity() {
+    }
 
-    public IngestionStatusHistoryEntity(Instant changedAt, IngestionStatus status) {
+    public IngestionStatusHistoryEntity(final Instant changedAt, final IngestionStatus status) {
         this.changedAt = changedAt;
         this.status = status;
     }
 
-    /** Ensure PK is set if not provided explicitly. */
+    /**
+     * Ensure PK is set if not provided explicitly.
+     */
     @PrePersist
     void prePersist() {
         if (changedAt == null) {
@@ -32,6 +44,11 @@ public class IngestionStatusHistoryEntity {
         }
     }
 
-    public Instant getChangedAt() { return changedAt; }
-    public IngestionStatus getStatus() { return status; }
+    public Instant getChangedAt() {
+        return changedAt;
+    }
+
+    public IngestionStatus getStatus() {
+        return status;
+    }
 }

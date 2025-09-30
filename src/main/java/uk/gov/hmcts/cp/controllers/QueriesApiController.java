@@ -18,12 +18,13 @@ public class QueriesApiController implements QueriesApi {
     private final QueryReadService readService;
     private final QueryWriteService writeService;
 
-    public QueriesApiController(QueryReadService readService, QueryWriteService writeService) {
+    public QueriesApiController(final QueryReadService readService, final QueryWriteService writeService) {
         this.readService = readService;
         this.writeService = writeService;
     }
 
     @Override
+    @SuppressWarnings("PMD.ShortVariable")
     public ResponseEntity<QueryStatusResponse> listQueries(OffsetDateTime at) {
         return ResponseEntity.ok(readService.listQueries(at != null ? at.toInstant() : null));
     }

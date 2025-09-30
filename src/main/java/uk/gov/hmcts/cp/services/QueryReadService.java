@@ -28,7 +28,9 @@ public class QueryReadService {
         this.clock = clock;
     }
 
-    /** Returns queries as of the provided time; if null, returns the latest snapshot. */
+    /**
+     * Returns queries as of the provided time; if null, returns the latest snapshot.
+     */
     @Transactional(readOnly = true)
     public QueryStatusResponse listQueries(Instant asOf) {
         final Instant effective = (asOf != null) ? asOf : Instant.now(clock);
