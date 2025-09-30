@@ -9,8 +9,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
 
-import java.time.Instant;
-
 @Entity
 @Table(name = "ingestion_status_history")
 public class IngestionStatusHistoryEntity {
@@ -38,7 +36,7 @@ public class IngestionStatusHistoryEntity {
      * Ensure PK is set if not provided explicitly.
      */
     @PrePersist
-    void prePersist() {
+    public void prePersist() {
         if (changedAt == null) {
             changedAt = Instant.now();
         }

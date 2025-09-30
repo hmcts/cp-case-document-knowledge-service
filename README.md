@@ -157,7 +157,7 @@ The application is configured via environment variables with sensible defaults. 
 | Property                      | Default                                   | Notes                             |
 |-------------------------------|-------------------------------------------|-----------------------------------|
 | `server.port`                 | `8082`                                    | API & Actuator port               |
-| `SPRING_DATASOURCE_URL`       | `jdbc:postgresql://localhost:55432/appdb` | Postgres JDBC URL                 |
+| `SPRING_DATASOURCE_URL`       | `jdbc:postgresql://localhost:55432/casedocumentknowledgeDatabase` | Postgres JDBC URL                 |
 | `SPRING_DATASOURCE_USERNAME`  | `app`                                     | DB user                           |
 | `SPRING_DATASOURCE_PASSWORD`  | `app`                                     | DB password                       |
 | `DB_POOL_SIZE`                | `10`                                      | Hikari pool size                  |

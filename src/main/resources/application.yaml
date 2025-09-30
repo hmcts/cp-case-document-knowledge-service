@@ -3,9 +3,9 @@ spring:
     name: cp-case-document-knowledge-service
 
   datasource:
-    url: ${CP_CDK_DATASOURCE_URL:jdbc:postgresql://localhost:55432/appdb}
-    username: ${CP_CDK_DATASOURCE_USERNAME:app}
-    password: ${CP_CDK_DATASOURCE_PASSWORD:app}
+    url: ${CP_CDK_DATASOURCE_URL}
+    username: ${CP_CDK_DATASOURCE_USERNAME}
+    password: ${CP_CDK_DATASOURCE_PASSWORD}
     hikari:
       pool-name: cp-hikari
       maximum-pool-size: ${CP_CDK_DB_POOL_SIZE:20}

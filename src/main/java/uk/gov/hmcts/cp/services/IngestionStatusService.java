@@ -7,7 +7,12 @@ import uk.gov.hmcts.cp.openapi.model.IngestionStatus;
 import uk.gov.hmcts.cp.repo.IngestionStatusHistoryRepository;
 
 import java.time.Instant;
+import java.util.Optional;
 
+/**
+ * Service to read latest ingestion status (optionally as-of an instant) and map it
+ * safely to the OpenAPI model enum. Defaults to UPLOADED on missing/unknown values.
+ */
 @Service
 @RequiredArgsConstructor
 public class IngestionStatusService {
@@ -18,10 +23,13 @@ public class IngestionStatusService {
      * Latest ingestion status (or latest at/before {@code asOf}) mapped to the OpenAPI enum.
      * Defaults to UPLOADED if there’s no history or mapping fails.
      */
-    public IngestionStatus latestStatus(Instant asOf) {
-        var row = (asOf == null)
-                ? repo.findTopByOrderByChangedAtDesc()
-                : repo.findTopByChangedAtLessThanEqualOrderByChangedAtDesc(asOf);
+    public IngestionStatus latestStatus(final Instant asOf) {
+        final Optional<IngestionStatusHistoryEntity> row;
+        if (asOf == null) {
+            row = repo.findTopByOrderByChangedAtDesc();
+        } else {
+            row = repo.findTopByChangedAtLessThanEqualOrderByChangedAtDesc(asOf);
+        }
 
         return row
                 .map(IngestionStatusHistoryEntity::getStatus) // could be enum or String
@@ -29,14 +37,20 @@ public class IngestionStatusService {
                 .orElse(IngestionStatus.UPLOADED);
     }
 
-    private IngestionStatus toApiStatusSafely(Object statusValue) {
-        if (statusValue == null) return IngestionStatus.UPLOADED;
-        String name = statusValue.toString(); // handles enum.name() or raw String
-        try {
-            return IngestionStatus.valueOf(name);
-        } catch (IllegalArgumentException ex) {
-            // Unknown value in DB; be safe and degrade gracefully
-            return IngestionStatus.UPLOADED;
+    private IngestionStatus toApiStatusSafely(final Object statusValue) {
+        final IngestionStatus mapped;
+        if (statusValue == null) {
+            mapped = IngestionStatus.UPLOADED;
+        } else {
+            final String name = statusValue.toString();
+            IngestionStatus tmp;
+            try {
+                tmp = IngestionStatus.valueOf(name);
+            } catch (final IllegalArgumentException ex) {
+                tmp = IngestionStatus.UPLOADED;
+            }
+            mapped = tmp;
         }
+        return mapped;
     }
 }

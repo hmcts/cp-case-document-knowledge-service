@@ -25,14 +25,14 @@ public class QueriesApiController implements QueriesApi {
 
     @Override
     @SuppressWarnings("PMD.ShortVariable")
-    public ResponseEntity<QueryStatusResponse> listQueries(OffsetDateTime at) {
+    public ResponseEntity<QueryStatusResponse> listQueries(final OffsetDateTime at) {
         return ResponseEntity.ok(readService.listQueries(at != null ? at.toInstant() : null));
     }
 
     @Override
-    public ResponseEntity<QueryStatusResponse> upsertQueries(QueryUpsertRequest body) {
+    public ResponseEntity<QueryStatusResponse> upsertQueries(final QueryUpsertRequest body) {
         // persist and return 202 with the as-of snapshot echo
-        QueryStatusResponse resp = writeService.upsertQueries(body);
+        final QueryStatusResponse resp = writeService.upsertQueries(body);
         return ResponseEntity.accepted().body(resp);
     }
 }

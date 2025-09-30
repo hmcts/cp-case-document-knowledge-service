@@ -20,5 +20,5 @@ public interface IngestionStatusHistoryRepository
      * Latest row with changedAt <= the given instant (as-of).
      */
     Optional<IngestionStatusHistoryEntity>
-    findTopByChangedAtLessThanEqualOrderByChangedAtDesc(Instant at);
+    findTopByChangedAtLessThanEqualOrderByChangedAtDesc(Instant instantAt);
 }

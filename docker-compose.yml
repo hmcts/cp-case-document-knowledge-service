@@ -22,9 +22,9 @@ services:
     ports:
       - "8082:8082"
     environment:
-      CP_CDK_DATASOURCE_URL: jdbc:postgresql://db:5432/appdb
-      CP_CDK_DATASOURCE_USERNAME: app
-      CP_CDK_DATASOURCE_PASSWORD: app
+      CP_CDK_DATASOURCE_URL: jdbc:postgresql://db:5432/casedocumentknowledgeDatabase
+      CP_CDK_DATASOURCE_USERNAME: casedocumentknowledge
+      CP_CDK_DATASOURCE_PASSWORD: casedocumentknowledge
       SERVER_PORT: 8082
     depends_on:
       db:

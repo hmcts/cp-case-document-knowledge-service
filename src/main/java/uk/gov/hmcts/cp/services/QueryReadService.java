@@ -12,27 +12,28 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class QueryReadService {
 
     private final QueryVersionRepository queryRepo;
+    private final IngestionStatusHistoryRepository stateRepo; // kept for DI compatibility and future use
     private final Clock clock;
 
-    public QueryReadService(
-            QueryVersionRepository queryRepo,
-            IngestionStatusHistoryRepository stateRepo,
-            Clock clock
-    ) {
-        this.queryRepo = queryRepo;
-        this.clock = clock;
+    public QueryReadService(final QueryVersionRepository queryRepo,
+                            final IngestionStatusHistoryRepository stateRepo,
+                            final Clock clock) {
+        this.queryRepo = Objects.requireNonNull(queryRepo, "queryRepo must not be null");
+        this.stateRepo = Objects.requireNonNull(stateRepo, "stateRepo must not be null");
+        this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
     /**
      * Returns queries as of the provided time; if null, returns the latest snapshot.
      */
     @Transactional(readOnly = true)
-    public QueryStatusResponse listQueries(Instant asOf) {
+    public QueryStatusResponse listQueries(final Instant asOf) {
         final Instant effective = (asOf != null) ? asOf : Instant.now(clock);
 
         final List<QueryVersionEntity> items = (asOf == null)

@@ -25,9 +25,9 @@ public class QueriesHttpLiveTest {
     );
 
     // Connect to the DB published by docker-compose (for cleanup)
-    private final String jdbcUrl = System.getProperty("it.db.url", "jdbc:postgresql://localhost:55432/appdb");
-    private final String jdbcUser = System.getProperty("it.db.user", "app");
-    private final String jdbcPass = System.getProperty("it.db.pass", "app");
+    private final String jdbcUrl = System.getProperty("it.db.url", "jdbc:postgresql://localhost:55432/casedocumentknowledgeDatabase");
+    private final String jdbcUser = System.getProperty("it.db.user", "casedocumentknowledge");
+    private final String jdbcPass = System.getProperty("it.db.pass", "casedocumentknowledge");
 
     private final RestTemplate http = new RestTemplate();
     private UUID queryId;

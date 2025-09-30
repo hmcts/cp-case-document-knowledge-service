@@ -23,15 +23,15 @@ public class RequestContextFilter implements Filter {
     public void doFilter(final ServletRequest req, final ServletResponse res, final FilterChain chain)
             throws IOException, ServletException {
         try {
-            HttpServletRequest r = (HttpServletRequest) req;
-            String cid = r.getHeader("X-Correlation-Id");
+            final HttpServletRequest httpServletRequest = (HttpServletRequest) req;
+            String cid = httpServletRequest.getHeader("X-Correlation-Id");
             if (cid == null || cid.isBlank()) {
                 cid = UUID.randomUUID().toString();
             }
             MDC.put("correlationId", cid);
             MDC.put("cluster", CLUSTER);
             MDC.put("region", REGION);
-            MDC.put("path", r.getRequestURI());
+            MDC.put("path", httpServletRequest.getRequestURI());
             chain.doFilter(req, res);
         } finally {
             MDC.clear();

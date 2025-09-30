@@ -16,23 +16,35 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
-import java.util.stream.Collectors;
-
+/**
+ * Service responsible for persisting query versions (write path).
+ *
+ * Suppress a couple of PMD rules here where the code legitimately creates one
+ * entity per input (instantiating inside a loop). The changes are intentional
+ * and necessary to persist each incoming version.
+ */
 @Service
+@SuppressWarnings({
+        "PMD.AvoidInstantiatingObjectsInLoops",
+        "PMD.LocalVariableCouldBeFinal",
+        "PMD.UseExplicitType"
+})
 public class QueryWriteService {
 
     private final QueryRepository queryRepo;
     private final QueryVersionRepository qvRepo;
     private final Clock clock;
 
-    public QueryWriteService(QueryRepository queryRepo,
-                             QueryVersionRepository qvRepo,
-                             Clock clock) {
-        this.queryRepo = queryRepo;
-        this.qvRepo = qvRepo;
-        this.clock = clock;
+    public QueryWriteService(final QueryRepository queryRepo,
+                             final QueryVersionRepository qvRepo,
+                             final Clock clock) {
+        this.queryRepo = Objects.requireNonNull(queryRepo, "queryRepo must not be null");
+        this.qvRepo = Objects.requireNonNull(qvRepo, "qvRepo must not be null");
+        this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
     /**
@@ -40,15 +52,16 @@ public class QueryWriteService {
      * Returns an echo QueryStatusResponse (as-of the effective timestamp) containing the submitted queries.
      */
     @Transactional
-    public QueryStatusResponse upsertQueries(QueryUpsertRequest body) {
+    public QueryStatusResponse upsertQueries(final QueryUpsertRequest body) {
         final OffsetDateTime effectiveAtOffset = (body.getEffectiveAt() != null)
                 ? body.getEffectiveAt()
                 : OffsetDateTime.ofInstant(Instant.now(clock), ZoneOffset.UTC);
         final Instant effective = effectiveAtOffset.toInstant();
 
         // persist each provided query/version
-        for (var q : body.getQueries()) {
-            UUID qid = (q.getQueryId() != null) ? q.getQueryId() : UUID.randomUUID();
+        final List<QuerySummary> summaries = body.getQueries();
+        for (final QuerySummary q : summaries) {
+            final UUID qid = (q.getQueryId() != null) ? q.getQueryId() : UUID.randomUUID();
 
             // ensure canonical queries row exists
             queryRepo.findById(qid).orElseGet(() ->
@@ -58,26 +71,27 @@ public class QueryWriteService {
             // map API enum -> domain enum if provided
             IngestionStatus domainStatus = IngestionStatus.UPLOADED;
             if (q.getStatus() != null) {
-                // OpenAPI generated enum has same names; safe mapping via name()
                 domainStatus = IngestionStatus.valueOf(q.getStatus().name());
             }
 
-            // build and save QueryVersionEntity
-            QueryVersionKey key = new QueryVersionKey(qid, effective);
-            QueryVersionEntity entity = new QueryVersionEntity(key, q.getUserQuery(), q.getQueryPrompt(), domainStatus);
+            // build and save QueryVersionEntity (one-per-input)
+            final QueryVersionKey key = new QueryVersionKey(qid, effective);
+            final QueryVersionEntity entity = new QueryVersionEntity(key, q.getUserQuery(), q.getQueryPrompt(), domainStatus);
             qvRepo.save(entity);
         }
 
         // Build echo response
-        QueryStatusResponse response = new QueryStatusResponse().asOf(effectiveAtOffset);
+        final QueryStatusResponse response = new QueryStatusResponse().asOf(effectiveAtOffset);
 
-        List<QuerySummary> echo = body.getQueries().stream()
-                .map(s -> new QuerySummary()
-                        .queryId(s.getQueryId())
-                        .userQuery(s.getUserQuery())
-                        .queryPrompt(s.getQueryPrompt())
-                        .status(s.getStatus()))
-                .collect(Collectors.toList());
+        final List<QuerySummary> echo = new ArrayList<>(body.getQueries().size());
+        for (final QuerySummary s : body.getQueries()) {
+            final QuerySummary copy = new QuerySummary()
+                    .queryId(s.getQueryId())
+                    .userQuery(s.getUserQuery())
+                    .queryPrompt(s.getQueryPrompt())
+                    .status(s.getStatus());
+            echo.add(copy);
+        }
 
         response.queries(echo);
         return response;

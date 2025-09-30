@@ -10,7 +10,7 @@ import javax.sql.DataSource;
 public class FlywayConfig {
     // This forces migration at startup
     @Bean(initMethod = "migrate")
-    Flyway flyway(final DataSource dataSource) {
+    public Flyway flyway(final DataSource dataSource) {
         return Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")

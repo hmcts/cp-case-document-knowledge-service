@@ -9,10 +9,13 @@ import java.util.UUID;
 
 @Embeddable
 public class QueryVersionKey implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private UUID queryId;
     private Instant effectiveAt;
 
     public QueryVersionKey() {
+        // JPA
     }
 
     public QueryVersionKey(final UUID queryId, final Instant effectiveAt) {
@@ -29,14 +32,27 @@ public class QueryVersionKey implements Serializable {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof QueryVersionKey q)) return false;
-        return Objects.equals(queryId, q.queryId) && Objects.equals(effectiveAt, q.effectiveAt);
+    public boolean equals(final Object obj) {
+        boolean result = false;
+
+        if (this == obj) {
+            result = true;
+        } else if (obj != null && getClass() == obj.getClass()) {
+            final QueryVersionKey other = (QueryVersionKey) obj;
+            result = Objects.equals(queryId, other.queryId)
+                    && Objects.equals(effectiveAt, other.effectiveAt);
+        }
+
+        return result;
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(queryId, effectiveAt);
+    }
+
+    @Override
+    public String toString() {
+        return "QueryVersionKey[queryId=" + queryId + ", effectiveAt=" + effectiveAt + "]";
     }
 }
