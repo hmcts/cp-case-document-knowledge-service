@@ -7,7 +7,9 @@ import uk.gov.hmcts.cp.openapi.model.CourtScheduleResponse;
 public interface ExampleCourtScheduleRepository {
 
     CourtScheduleResponse getCourtScheduleByCaseUrn(String caseUrn);
+
     void saveCourtSchedule(String caseUrn, CourtScheduleResponse courtScheduleResponse);
+
     void clearAll();
 
 }

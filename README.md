@@ -31,7 +31,8 @@ Spring Boot 4 (Java 21), PostgreSQL + Flyway, production-ready observability, an
 - **Quality gates**: PMD, JaCoCo coverage
 - **Gradle 9** build with Docker-Compose-backed **integration tests**
 
-> Note: HTTP security/authorization is intentionally minimal by default. Integrate with your gateway or add your own authorization as needed.
+> Note: HTTP security/authorization is intentionally minimal by default. Integrate with your gateway or add your own
+> authorization as needed.
 
 ---
 
@@ -100,7 +101,8 @@ gradle dependencyInsight --dependency <group-or-module>
 
 ## Run locally (Gradle)
 
-By default the app starts on **:8082** and looks for Postgres at **localhost:55432** (see [Configuration](#configuration)).
+By default the app starts on **:8082** and looks for Postgres at **localhost:55432** (
+see [Configuration](#configuration)).
 
 ```bash
 # Start with your local Java 21
@@ -132,7 +134,8 @@ docker compose -f docker/docker-compose.integration.yml down -v
 
 ## Integration tests with Docker Compose
 
-Integration tests automatically **bring up** Postgres + app, **wait** until they’re healthy, run tests, then **tear down** the stack.
+Integration tests automatically **bring up** Postgres + app, **wait** until they’re healthy, run tests, then **tear down
+** the stack.
 
 ```bash
 gradle clean integration
@@ -151,17 +154,17 @@ What happens under the hood:
 
 The application is configured via environment variables with sensible defaults. Key settings:
 
-| Property                          | Default                                | Notes                               |
-|----------------------------------|----------------------------------------|-------------------------------------|
-| `server.port`                    | `8082`                                 | API & Actuator port                 |
-| `SPRING_DATASOURCE_URL`          | `jdbc:postgresql://localhost:55432/appdb` | Postgres JDBC URL                   |
-| `SPRING_DATASOURCE_USERNAME`     | `app`                                  | DB user                             |
-| `SPRING_DATASOURCE_PASSWORD`     | `app`                                  | DB password                         |
-| `DB_POOL_SIZE`                   | `10`                                   | Hikari pool size                    |
-| `TRACING_SAMPLER_PROBABILITY`    | `1.0`                                  | OTel tracing sample rate            |
-| `OTEL_TRACES_URL`                | `http://localhost:4318/traces`         | OTLP traces endpoint                |
-| `OTEL_METRICS_ENABLED`           | `false`                                | Export metrics via OTLP if `true`   |
-| `OTEL_METRICS_URL`               | `http://localhost:4318/metrics`        | OTLP metrics endpoint               |
+| Property                      | Default                                   | Notes                             |
+|-------------------------------|-------------------------------------------|-----------------------------------|
+| `server.port`                 | `8082`                                    | API & Actuator port               |
+| `SPRING_DATASOURCE_URL`       | `jdbc:postgresql://localhost:55432/casedocumentknowledgeDatabase` | Postgres JDBC URL                 |
+| `SPRING_DATASOURCE_USERNAME`  | `app`                                     | DB user                           |
+| `SPRING_DATASOURCE_PASSWORD`  | `app`                                     | DB password                       |
+| `DB_POOL_SIZE`                | `10`                                      | Hikari pool size                  |
+| `TRACING_SAMPLER_PROBABILITY` | `1.0`                                     | OTel tracing sample rate          |
+| `OTEL_TRACES_URL`             | `http://localhost:4318/traces`            | OTLP traces endpoint              |
+| `OTEL_METRICS_ENABLED`        | `false`                                   | Export metrics via OTLP if `true` |
+| `OTEL_METRICS_URL`            | `http://localhost:4318/metrics`           | OTLP metrics endpoint             |
 
 Flyway is enabled and points at `classpath:db/migration`.
 
@@ -177,7 +180,8 @@ Example smoke:
 curl -fsS "http://localhost:8082/actuator/health" | jq
 ```
 
-Please see the API Marketplace documentation for details on api versioning, etc : [Supporting Documents](https://github.com/hmcts/api-hmcts-marketplace-template?tab=readme-ov-file#supporting-documents)
+Please see the API Marketplace documentation for details on api versioning,
+etc : [Supporting Documents](https://github.com/hmcts/api-hmcts-marketplace-template?tab=readme-ov-file#supporting-documents)
 
 ---
 
@@ -185,13 +189,13 @@ Please see the API Marketplace documentation for details on api versioning, etc 
 
 Actuator endpoints (same port as API):
 
-| Endpoint                     | Purpose                         |
-|-----------------------------|---------------------------------|
-| `/actuator/health`          | Overall health (UP/DOWN)        |
-| `/actuator/health/liveness` | Liveness probe                  |
-| `/actuator/health/readiness`| Readiness probe                 |
-| `/actuator/info`            | App/build info (if configured)  |
-| `/actuator/prometheus`      | Prometheus/OpenMetrics scrape   |
+| Endpoint                     | Purpose                        |
+|------------------------------|--------------------------------|
+| `/actuator/health`           | Overall health (UP/DOWN)       |
+| `/actuator/health/liveness`  | Liveness probe                 |
+| `/actuator/health/readiness` | Readiness probe                |
+| `/actuator/info`             | App/build info (if configured) |
+| `/actuator/prometheus`       | Prometheus/OpenMetrics scrape  |
 
 The service logs JSON to STDOUT (Logback + logstash-encoder).  
 OTel tracing is pre-wired; set the `OTEL_*` env vars above to export.
@@ -244,8 +248,10 @@ flowchart TD
 
 ## Troubleshooting
 
-- **Port in use** — Change ports in `application.yml` or Compose file. DB uses **55432** to avoid conflicts with a local 5432.
-- **Compose not found** — You need **Docker Compose v2** (`docker compose`). The Gradle plugin calls the Docker CLI directly.
+- **Port in use** — Change ports in `application.yml` or Compose file. DB uses **55432** to avoid conflicts with a local
+  5432.
+- **Compose not found** — You need **Docker Compose v2** (`docker compose`). The Gradle plugin calls the Docker CLI
+  directly.
 - **DB auth failures** — Ensure env vars match Postgres service in Compose: `app/app@appdb`.
 - **Slow startup in CI** — Increase Compose wait timeouts (plugin `upAdditionalArgs`) if needed.
 - **Gradle “buildDir deprecated”** — The build uses `layout.buildDirectory`; avoid legacy `buildDir` in custom tasks.

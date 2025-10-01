@@ -50,12 +50,37 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Slf4j
 class TracingIntegrationTest {
 
-    @Autowired private MockMvc mockMvc;
-
+    private final PrintStream originalStdOut = System.out;
+    @Autowired
+    private MockMvc mockMvc;
     @Value("${spring.application.name}")
     private String springApplicationName;
 
-    private final PrintStream originalStdOut = System.out;
+    private static Map<String, Object> parseLastJsonLine(ByteArrayOutputStream buf) throws Exception {
+        String[] lines = buf.toString().split("\\R");
+        for (int i = lines.length - 1; i >= 0; i--) {
+            String line = lines[i].trim();
+            if (!line.isEmpty() && line.startsWith("{") && line.endsWith("}")) {
+                return new ObjectMapper().readValue(line, new TypeReference<>() {
+                });
+            }
+        }
+        throw new IllegalStateException("No JSON log line found on STDOUT");
+    }
+
+    // renamed from `get(...)` to avoid shadowing MockMvcRequestBuilders.get(...)
+    private static Object fieldOf(Map<String, Object> map, String... keys) {
+        for (String k : keys) if (map.containsKey(k)) return map.get(k);
+        return null;
+    }
+
+    private static ByteArrayOutputStream captureStdOut() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(out));
+        return out;
+    }
+
+    // ---------- helpers ----------
 
     @AfterEach
     void tearDown() {
@@ -85,7 +110,6 @@ class TracingIntegrationTest {
         assertThat(fieldOf(fields, "message")).isEqualTo("START");
     }
 
-
     @Test
     void incoming_request_with_traceId_should_pass_through() throws Exception {
         ByteArrayOutputStream captured = captureStdOut();
@@ -106,32 +130,9 @@ class TracingIntegrationTest {
         assertThat(result.getResponse().getHeader("spanId")).isEqualTo(fields.get("spanId"));
     }
 
-    // ---------- helpers ----------
-
-    private static Map<String, Object> parseLastJsonLine(ByteArrayOutputStream buf) throws Exception {
-        String[] lines = buf.toString().split("\\R");
-        for (int i = lines.length - 1; i >= 0; i--) {
-            String line = lines[i].trim();
-            if (!line.isEmpty() && line.startsWith("{") && line.endsWith("}")) {
-                return new ObjectMapper().readValue(line, new TypeReference<>() {});
-            }
-        }
-        throw new IllegalStateException("No JSON log line found on STDOUT");
-    }
-
-    // renamed from `get(...)` to avoid shadowing MockMvcRequestBuilders.get(...)
-    private static Object fieldOf(Map<String, Object> map, String... keys) {
-        for (String k : keys) if (map.containsKey(k)) return map.get(k);
-        return null;
-    }
-
-    private static ByteArrayOutputStream captureStdOut() {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(out));
-        return out;
-    }
-
-    /** Test-only tracing: sets traceId/spanId in MDC + response headers; adds applicationName. */
+    /**
+     * Test-only tracing: sets traceId/spanId in MDC + response headers; adds applicationName.
+     */
     @Configuration
     static class TestTracingConfig implements WebMvcConfigurer {
         @Value("${spring.application.name:app}")

@@ -3,39 +3,34 @@ spring:
     name: cp-case-document-knowledge-service
 
   datasource:
-    # Override these via env in each environment
-    url: ${CP_CDK_DATASOURCE_URL:jdbc:postgresql://localhost:55432/appdb}
-    username: ${CP_CDK_DATASOURCE_USERNAME:app}
-    password: ${CP_CDK_DATASOURCE_PASSWORD:app}
+    url: ${CP_CDK_DATASOURCE_URL}
+    username: ${CP_CDK_DATASOURCE_USERNAME}
+    password: ${CP_CDK_DATASOURCE_PASSWORD}
     hikari:
       pool-name: cp-hikari
       maximum-pool-size: ${CP_CDK_DB_POOL_SIZE:20}
       minimum-idle: ${CP_CDK_DB_MIN_IDLE:5}
-      connection-timeout: 30000        # ms
-      idle-timeout: 600000             # ms
-      max-lifetime: 1800000            # ms
-      keepalive-time: 300000           # ms
-      validation-timeout: 5000         # ms
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      keepalive-time: 300000
+      validation-timeout: 5000
 
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: validate               # schema managed by Flyway
-    properties:
-      hibernate.jdbc.time_zone: UTC
-      hibernate.connection.provider_disables_autocommit: true
-      hibernate.jdbc.batch_size: 50
-      hibernate.order_inserts: true
-      hibernate.order_updates: true
+    jpa:
+      open-in-view: false
+      hibernate:
+        ddl-auto: validate           # validate AFTER Flyway runs
+      properties:
+        hibernate.jdbc.time_zone: UTC
+        hibernate.connection.provider_disables_autocommit: true
+        hibernate.jdbc.batch_size: 50
+        hibernate.order_inserts: true
+        hibernate.order_updates: true
 
-  sql:
-    init:
-      mode: never
-
-flyway:
-  enabled: true
-  locations: classpath:db/migration
-  baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
+    flyway:
+      enabled: true
+      locations: classpath:db/migration
+      baseline-on-migrate: false
 
 server:
   port: ${SERVER_PORT:8082}
@@ -67,6 +62,8 @@ management:
       cluster: ${CLUSTER_NAME:local}
       region: ${REGION:local}
   tracing:
+    tracing:
+      enabled: false
     sampling:
       probability: ${TRACING_SAMPLER_PROBABILITY:1.0}
   otlp:

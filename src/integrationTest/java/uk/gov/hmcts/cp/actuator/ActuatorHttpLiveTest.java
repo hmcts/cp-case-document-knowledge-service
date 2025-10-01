@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class ActuatorHttpLiveTest {
 
-    private final String baseUrl = System.getProperty("app.baseUrl", "http://localhost:8082");
+    private final String baseUrl = System.getProperty("app.baseUrl", "http://localhost:8082/casedocumentknowledge-service");
     private final RestTemplate http = new RestTemplate();
 
     @Test
