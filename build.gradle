@@ -16,7 +16,7 @@ plugins {
     id 'com.gorylenko.gradle-git-properties' version '2.5.3'
 
     // Docker Compose lifecycle for integration tests
-    id 'com.avast.gradle.docker-compose' version '0.17.12'
+    id 'com.avast.gradle.docker-compose' version '0.17.13'
 }
 
 group = 'uk.gov.hmcts.cp'
