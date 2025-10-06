@@ -2,7 +2,11 @@ package uk.gov.hmcts.cp.cdk.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import uk.gov.hmcts.cp.cdk.repo.*;
+import uk.gov.hmcts.cp.cdk.repo.AnswerRepository;
+import uk.gov.hmcts.cp.cdk.repo.IngestionStatusViewRepository;
+import uk.gov.hmcts.cp.cdk.repo.QueriesAsOfRepository;
+import uk.gov.hmcts.cp.cdk.repo.QueryRepository;
+import uk.gov.hmcts.cp.cdk.repo.QueryVersionRepository;
 
 /**
  * Restrict Spring Data to only the real JPA repository interfaces.
