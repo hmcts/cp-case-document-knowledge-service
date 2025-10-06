@@ -12,7 +12,14 @@ WORKDIR /app
 COPY build/libs/*.jar /app/
 
 EXPOSE 8082
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+AlwaysActAsServerClassMachine"
+# JVM/system overrides to *force* tracing/exporter off
+ENV JAVA_OPTS="\
+-XX:MaxRAMPercentage=75 \
+-XX:+AlwaysActAsServerClassMachine \
+-Dmanagement.tracing.enabled=false \
+-Dmanagement.otlp.tracing.export.enabled=false \
+-Dspring.autoconfigure.exclude=org.springframework.boot.actuate.autoconfigure.tracing.TracingAutoConfiguration,org.springframework.boot.actuate.autoconfigure.tracing.OpenTelemetryTracingAutoConfiguration,org.springframework.boot.actuate.autoconfigure.tracing.otlp.OtlpTracingAutoConfiguration,org.springframework.boot.actuate.autoconfigure.tracing.otlp.OtlpAutoConfiguration \
+"
 
 
 USER app

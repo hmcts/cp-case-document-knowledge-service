@@ -67,12 +67,18 @@ ext {
     lombokVersion = "1.18.42"
     apiSpecVersion = "0.4.2"
     testcontainersBom = "1.20.1"
+    cdk = "0.0.4-02dc81b"
+    mapstruct = "1.5.5.Final"
 }
 
 // ---- Dependencies ----
 dependencies {
-    // Domain API
-    implementation "uk.gov.hmcts.cp:api-cp-crime-schedulingandlisting-courtschedule:$apiSpecVersion"
+    // Domain API contract (generated interfaces/models)
+    implementation "uk.gov.hmcts.cp:api-cp-crime-caseadmin-case-document-knowledge:$cdk"
+
+    // MapStruct
+    implementation "org.mapstruct:mapstruct:$mapstruct"
+    annotationProcessor "org.mapstruct:mapstruct-processor:$mapstruct"
 
     // Web / validation
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -101,9 +107,6 @@ dependencies {
 
     // JWT (keep only if used directly)
     implementation 'io.jsonwebtoken:jjwt:0.13.0'
-
-    // API contract (generated interfaces/models)
-    implementation 'uk.gov.hmcts.cp:api-cp-crime-caseadmin-case-document-knowledge:0.0.2-ebbe709'
 
     // Lombok for handwritten code
     compileOnly "org.projectlombok:lombok:$lombokVersion"
@@ -197,7 +200,7 @@ bootJar {
 
 // ---- Application entrypoint ----
 application {
-    mainClass = 'uk.gov.hmcts.cp.Application'
+    mainClass = 'uk.gov.hmcts.cp.cdk.Application'
 }
 
 // ---- Tests ----

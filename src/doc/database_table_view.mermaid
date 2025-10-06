@@ -1,0 +1,81 @@
+erDiagram
+  %% =========================
+  %% Entities (no schema prefix)
+  %% =========================
+  queries {
+    UUID         query_id PK
+    TEXT         label
+    TIMESTAMPTZ  created_at
+  }
+
+  query_versions {
+    UUID         query_id FK   "→ queries.query_id"
+    TIMESTAMPTZ  effective_at PK
+    TEXT         user_query
+    TEXT         query_prompt
+  }
+
+  case_documents {
+    UUID         doc_id PK
+    UUID         case_id
+    TEXT         source
+    TEXT         blob_uri
+    TEXT         content_type
+    BIGINT       size_bytes
+    TEXT         sha256_hex
+    TEXT         etag
+    TIMESTAMPTZ  uploaded_at
+    document_ingestion_phase_enum ingestion_phase  "NOT NULL DEFAULT 'UPLOADING'"
+    TIMESTAMPTZ  ingestion_phase_at                "NOT NULL DEFAULT NOW()"
+  }
+
+  case_query_status {
+    UUID         case_id   PK
+    UUID         query_id  PK, FK  "→ queries.query_id"
+    query_lifecycle_status_enum status  "NOT NULL DEFAULT 'UPLOADED'"
+    TIMESTAMPTZ  status_at
+    UUID         doc_id FK         "→ case_documents.doc_id (nullable)"
+    INTEGER      last_answer_version
+    TIMESTAMPTZ  last_answer_at
+  }
+
+  answers {
+    UUID         case_id   PK
+    UUID         query_id  PK, FK  "→ queries.query_id"
+    INTEGER      version   PK
+    TIMESTAMPTZ  created_at
+    TEXT         answer
+    TEXT         llm_input
+    UUID         doc_id FK         "→ case_documents.doc_id (nullable)"
+  }
+
+  %% =========================
+  %% Enum Types (as pseudo-entities)
+  %% =========================
+  document_ingestion_phase_enum {
+    ENUM NOT_FOUND
+    ENUM UPLOADING
+    ENUM UPLOADED
+    ENUM INGESTING
+    ENUM INGESTED
+    ENUM FAILED
+  }
+
+  query_lifecycle_status_enum {
+    ENUM ANSWER_NOT_AVAILABLE
+    ENUM ANSWER_AVAILABLE
+  }
+
+  %% =========================
+  %% Relationships
+  %% =========================
+  queries        ||--o{ query_versions    : "has versions"
+  queries        ||--o{ case_query_status : "tracked per case"
+  queries        ||--o{ answers           : "answered"
+
+  case_documents ||--o{ case_query_status : "lineage (optional)"
+  case_documents ||--o{ answers           : "source doc"
+
+  %% Enum usage links (visual only; not actual FKs)
+  case_documents }o--|| document_ingestion_phase_enum : "ingestion_phase ∈"
+  case_query_status }o--|| query_lifecycle_status_enum : "status ∈"

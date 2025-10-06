@@ -55,7 +55,7 @@ management:
   endpoint:
     health:
       probes:
-        enabled: true                  # liveness/readiness groups
+        enabled: false                  # liveness/readiness groups
   metrics:
     tags:
       service: cp-case-document-knowledge-service
@@ -68,6 +68,7 @@ management:
       probability: ${TRACING_SAMPLER_PROBABILITY:1.0}
   otlp:
     tracing:
+      enabled: ${OTEL_METRICS_ENABLED:false}
       endpoint: ${OTEL_TRACES_URL:http://localhost:4318/traces}
     metrics:
       export:

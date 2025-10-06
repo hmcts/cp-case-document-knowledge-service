@@ -31,6 +31,8 @@ services:
 
       # Optional: debug
       LOGGING_LEVEL_org.flywaydb: "DEBUG"
+      MANAGEMENT_TRACING_ENABLED: "false"     # <— Spring relaxed binding for management.tracing.enabled
+      TRACING_ENABLED: "false"                # <— matches the placeholder in application.yml
     depends_on:
       db:
         condition: service_healthy
