@@ -9,10 +9,10 @@ plugins {
     id 'pmd'
     id 'maven-publish'
     id 'com.github.ben-manes.versions' version '0.53.0'
-    id 'org.cyclonedx.bom' version '2.4.1'
+    id 'org.cyclonedx.bom' version '3.0.0'
     id 'au.com.dius.pact' version '4.6.17'
     id 'com.gorylenko.gradle-git-properties' version '2.5.3'
-    id 'com.avast.gradle.docker-compose' version '0.17.12'
+    id 'com.avast.gradle.docker-compose' version '0.17.15'
 }
 
 group = 'uk.gov.hmcts.cp'
@@ -65,8 +65,8 @@ configurations {
 // ---- Versions you control ----
 ext {
     lombokVersion = "1.18.42"
-    apiSpecVersion = "0.4.2"
-    testcontainersBom = "1.20.1"
+    apiSpecVersion = "0.4.8-90d8aad"
+    testcontainersBom = "1.21.3"
 }
 
 // ---- Dependencies ----
@@ -103,7 +103,7 @@ dependencies {
     implementation 'io.jsonwebtoken:jjwt:0.13.0'
 
     // API contract (generated interfaces/models)
-    implementation 'uk.gov.hmcts.cp:api-cp-crime-caseadmin-case-document-knowledge:0.0.2-ebbe709'
+    implementation 'uk.gov.hmcts.cp:api-cp-crime-caseadmin-case-document-knowledge:0.0.4'
 
     // Lombok for handwritten code
     compileOnly "org.projectlombok:lombok:$lombokVersion"
