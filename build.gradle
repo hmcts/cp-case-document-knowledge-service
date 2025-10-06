@@ -272,6 +272,21 @@ tasks.register('integration', Test) {
     }
 }
 
+tasks.register('integrationDebugNoTestAgent', Test) {
+    // same wiring as integration, but do NOT set -agentlib on the test JVM
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    useJUnitPlatform()
+
+    dependsOn tasks.composeUp
+    finalizedBy tasks.composeDown
+
+    systemProperty 'app.baseUrl', 'http://localhost:8082/casedocumentknowledge-service'
+
+    jvmArgs += ['-Xshare:off']
+}
+
+
 tasks.named('processIntegrationTestResources') {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

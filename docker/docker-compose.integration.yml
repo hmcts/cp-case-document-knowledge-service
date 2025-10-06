@@ -21,7 +21,9 @@ services:
       dockerfile: docker/Dockerfile
     ports:
       - "8082:8082"
+      - "5005:5005"
     environment:
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
       CP_CDK_DATASOURCE_URL: jdbc:postgresql://db:5432/casedocumentknowledgeDatabase
       CP_CDK_DATASOURCE_USERNAME: casedocumentknowledge
       CP_CDK_DATASOURCE_PASSWORD: casedocumentknowledge
