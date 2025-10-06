@@ -6,7 +6,9 @@ import io.micrometer.tracing.Tracer;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
-import uk.gov.hmcts.cp.openapi.model.ErrorResponse;
+import uk.gov.hmcts.cp.cdk.controllers.GlobalExceptionHandler;
+import uk.gov.hmcts.cp.openapi.model.cdk.ErrorResponse;
+
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
