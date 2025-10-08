@@ -1,38 +1,16 @@
 spring:
   application:
     name: cp-case-document-knowledge-service
-
+  jpa:
+    open-in-view: false
   datasource:
-    url: ${CP_CDK_DATASOURCE_URL:jdbc:postgresql://localhost:5432/appdb}
-    username: ${CP_CDK_DATASOURCE_USERNAME}
-    password: ${CP_CDK_DATASOURCE_PASSWORD}
-    hikari:
-      pool-name: cp-hikari
-      maximum-pool-size: ${CP_CDK_DB_POOL_SIZE:20}
-      minimum-idle: ${CP_CDK_DB_MIN_IDLE:5}
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      keepalive-time: 300000
-      validation-timeout: 5000
-
-      # spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
-    jpa:
-      database-platform: org.hibernate.dialect.PostgreSQLDialect
-      open-in-view: false
-      hibernate:
-        ddl-auto: none           # we want to use flyway !!
-      properties:
-        hibernate.jdbc.time_zone: UTC
-        hibernate.connection.provider_disables_autocommit: true
-        hibernate.jdbc.batch_size: 50
-        hibernate.order_inserts: true
-        hibernate.order_updates: true
-
-    flyway:
-      enabled: true
-      locations: classpath:db/migration
-      baseline-on-migrate: false
+      url: ${CP_CDK_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cdk}
+      username: ${CP_CDK_DATASOURCE_USERNAME:postgres}
+      password: ${CP_CDK_DATASOURCE_PASSWORD:postgres}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
 
 server:
   port: ${SERVER_PORT:8082}
@@ -80,7 +58,9 @@ management:
 logging:
   level:
     root: INFO
-  config: classpath:logback-spring.xml
+    org:
+        flywaydb: DEBUG
+  config: classpath:logback.xml
 
 # Optional: Java 21 virtual threads (Boot 3.2+ / 4.x)
 spring.threads.virtual.enabled: ${VIRTUAL_THREADS:false}

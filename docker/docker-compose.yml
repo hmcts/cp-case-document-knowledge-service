@@ -1,13 +1,12 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: cdks_CP_CDK_DB_it
     environment:
-      POSTGRES_DB: casedocumentknowledgeDatabase
-      POSTGRES_USER: casedocumentknowledge
-      POSTGRES_PASSWORD: casedocumentknowledge
+      POSTGRES_DB: cdk
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
-      - "55432:5432"
+      - "5432:5432"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U casedocumentknowledge -d casedocumentknowledgeDatabase" ]
       interval: 5s
@@ -15,22 +14,22 @@ services:
       retries: 30
 
   app:
-    container_name: cdks_app_it
+    image: cp-case-document-knowledge-service
     build:
       context: ..                 # project root
       dockerfile: docker/Dockerfile
     ports:
-      - "8082:8082"
+      - "8083:8082"
     environment:
-      CP_CDK_DATASOURCE_URL: jdbc:postgresql://db:5432/casedocumentknowledgeDatabase
-      CP_CDK_DATASOURCE_USERNAME: casedocumentknowledge
-      CP_CDK_DATASOURCE_PASSWORD: casedocumentknowledge
+      CP_CDK_DATASOURCE_URL: jdbc:postgresql://db:5432/cdk
+      CP_CDK_DATASOURCE_USERNAME: postgres
+      CP_CDK_DATASOURCE_PASSWORD: postgres
       SERVER_PORT: 8082
       SERVER_SERVLET_CONTEXT_PATH: /casedocumentknowledge-service
       SPRING_APPLICATION_NAME: cp-case-document-knowledge-service
 
       # Optional: debug
-      LOGGING_LEVEL_org.flywaydb: "DEBUG"
+      LOGGING_LEVEL_org.flywaydb: "TRACE"
       MANAGEMENT_TRACING_ENABLED: "false"     # <— Spring relaxed binding for management.tracing.enabled
       TRACING_ENABLED: "false"                # <— matches the placeholder in application.yml
     depends_on:

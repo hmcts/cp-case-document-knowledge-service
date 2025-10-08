@@ -101,15 +101,14 @@ gradle dependencyInsight --dependency <group-or-module>
 
 ## Run locally (Gradle)
 
-By default the app starts on **:8082** and looks for Postgres at **localhost:55432** (
-see [Configuration](#configuration)).
-
+By default the app starts on **:8082** and looks for Postgres at **localhost:5432** (
+Start the postgres database in docker by running the docker-compose file in docker folder for db only
 ```bash
-# Start with your local Java 21
+docker-compose -f docker/docker-compose.yml up db
 gradle bootRun
 ```
+See [Configuration](#configuration)).
 
----
 
 ## Run with Docker Compose
 
@@ -117,17 +116,21 @@ This brings up **PostgreSQL 16** (exposed as `localhost:55432`) and the **app** 
 It uses `docker/docker-compose.integration.yml`.
 
 ```bash
-# Build image & start stack
-docker compose -f docker/docker-compose.integration.yml up -d --build
+# Build jarfile and docker image
+gradle -x test -x integration clean build 
+docker build -f docker/Dockerfile . -t cp-case-document-knowledge-service
+
+# Run docker image stack
+docker compose -f docker/docker-compose.yml up -d --build
 
 # Tail logs
-docker compose -f docker/docker-compose.integration.yml logs -f app
+docker compose -f docker/docker-compose.yml logs -f app
 
 # Stop & remove (keep volumes)
-docker compose -f docker/docker-compose.integration.yml down
+docker compose -f docker/docker-compose.yml down
 
 # Remove everything inc. volumes (⚠️ deletes DB data)
-docker compose -f docker/docker-compose.integration.yml down -v
+docker compose -f docker/docker-compose.yml down -v
 ```
 
 ---
