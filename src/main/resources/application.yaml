@@ -3,7 +3,7 @@ spring:
     name: cp-case-document-knowledge-service
 
   datasource:
-    url: ${CP_CDK_DATASOURCE_URL}
+    url: ${CP_CDK_DATASOURCE_URL:jdbc:postgresql://localhost:5432/appdb}
     username: ${CP_CDK_DATASOURCE_USERNAME}
     password: ${CP_CDK_DATASOURCE_PASSWORD}
     hikari:
@@ -16,10 +16,12 @@ spring:
       keepalive-time: 300000
       validation-timeout: 5000
 
+      # spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
     jpa:
+      database-platform: org.hibernate.dialect.PostgreSQLDialect
       open-in-view: false
       hibernate:
-        ddl-auto: validate           # validate AFTER Flyway runs
+        ddl-auto: none           # we want to use flyway !!
       properties:
         hibernate.jdbc.time_zone: UTC
         hibernate.connection.provider_disables_autocommit: true

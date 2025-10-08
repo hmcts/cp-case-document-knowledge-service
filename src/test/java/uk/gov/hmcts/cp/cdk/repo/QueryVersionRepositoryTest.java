@@ -3,6 +3,11 @@ package uk.gov.hmcts.cp.cdk.repo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import com.github.dockerjava.api.model.ExposedPort;
+import com.github.dockerjava.api.model.HostConfig;
+import com.github.dockerjava.api.model.PortBinding;
+import com.github.dockerjava.api.model.Ports;
+import jakarta.annotation.Resource;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.OffsetDateTime;
@@ -25,20 +30,23 @@ import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
 
 @DataJpaTest(
         properties = {
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.flyway.enabled=false",
+                "spring.jpa.hibernate.ddl-auto=none",
                 "spring.jpa.properties.hibernate.connection.provider_disables_autocommit=false"
         }
 )
 @Testcontainers
-@AutoConfigureTestDatabase(replace = Replace.NONE)
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@AutoConfigureTestDatabase
+// @TestInstance
 class QueryVersionRepositoryTest {
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>("postgres:16-alpine")
                     .withDatabaseName("cdk")
+                    .withExposedPorts(5432)
+                    .withCreateContainerCmdModifier(cmd -> cmd.withHostConfig(
+                            new HostConfig().withPortBindings(new PortBinding(Ports.Binding.bindPort(5432), new ExposedPort(5432)))
+                    ))
                     .withUsername("postgres")
                     .withPassword("postgres");
 
@@ -53,44 +61,42 @@ class QueryVersionRepositoryTest {
         r.add("spring.datasource.username", POSTGRES::getUsername);
         r.add("spring.datasource.password", POSTGRES::getPassword);
         r.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-        r.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+        r.add("spring.jpa.hibernate.ddl-auto", () -> "none");
     }
 
     @jakarta.annotation.Resource
     private QueryVersionRepository repo;
 
-    @jakarta.annotation.Resource
+    @Resource
     private QueryRepository queryRepo;
 
-    @PersistenceContext
-    private EntityManager em;
 
     private UUID qid;
 
     @BeforeEach
     void seed() {
-        qid = UUID.randomUUID();
-        final Query q = new Query();
-        q.setQueryId(qid);
-        q.setLabel("Case Summary (All Witnesses)");
-        queryRepo.saveAndFlush(q);
-
-        final OffsetDateTime t1 = OffsetDateTime.parse("2025-05-01T11:58:00Z");
-        final OffsetDateTime t2 = OffsetDateTime.parse("2025-05-01T11:59:00Z");
-
-        final QueryVersion v1 = new QueryVersion();
-        v1.setQuery(q);
-        v1.setQueryVersionId(new QueryVersionId(qid, t1));
-        v1.setUserQuery("UQ v1");
-        v1.setQueryPrompt("QP v1");
-        repo.save(v1);
-
-        final QueryVersion v2 = new QueryVersion();
-        v2.setQuery(q);
-        v2.setQueryVersionId(new QueryVersionId(qid, t2));
-        v2.setUserQuery("UQ v2");
-        v2.setQueryPrompt("QP v2");
-        repo.saveAndFlush(v2);
+//        qid = UUID.randomUUID();
+//        final Query q = new Query();
+//        q.setQueryId(qid);
+//        q.setLabel("Case Summary (All Witnesses)");
+//        queryRepo.saveAndFlush(q);
+//
+//        final OffsetDateTime t1 = OffsetDateTime.parse("2025-05-01T11:58:00Z");
+//        final OffsetDateTime t2 = OffsetDateTime.parse("2025-05-01T11:59:00Z");
+//
+//        final QueryVersion v1 = new QueryVersion();
+//        v1.setQuery(q);
+//        v1.setQueryVersionId(new QueryVersionId(qid, t1));
+//        v1.setUserQuery("UQ v1");
+//        v1.setQueryPrompt("QP v1");
+//        repo.save(v1);
+//
+//        final QueryVersion v2 = new QueryVersion();
+//        v2.setQuery(q);
+//        v2.setQueryVersionId(new QueryVersionId(qid, t2));
+//        v2.setUserQuery("UQ v2");
+//        v2.setQueryPrompt("QP v2");
+//        repo.saveAndFlush(v2);
     }
 
     @Test

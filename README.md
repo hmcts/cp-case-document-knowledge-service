@@ -79,7 +79,7 @@ Spring Boot 4 (Java 21), PostgreSQL + Flyway, production-ready observability, an
 gradle clean build
 
 # Faster local build (skip tests)
-gradle -x test clean build
+gradle -x test -x integration clean build
 
 # Run only unit tests
 gradle test

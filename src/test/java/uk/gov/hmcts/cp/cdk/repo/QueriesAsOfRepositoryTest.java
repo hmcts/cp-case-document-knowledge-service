@@ -28,7 +28,7 @@ import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
 
 @DataJpaTest(
         properties = {
-                "spring.jpa.hibernate.ddl-auto=create-drop",
+                "spring.jpa.hibernate.ddl-auto=none",
                 "spring.flyway.enabled=false",
                 "spring.jpa.properties.hibernate.connection.provider_disables_autocommit=false"
         }

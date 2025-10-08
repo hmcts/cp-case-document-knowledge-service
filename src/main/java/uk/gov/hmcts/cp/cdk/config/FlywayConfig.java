@@ -6,15 +6,15 @@ import org.springframework.context.annotation.Configuration;
 
 import javax.sql.DataSource;
 
-@Configuration
+// @Configuration
 public class FlywayConfig {
     // This forces migration at startup
-    @Bean(initMethod = "migrate")
-    public Flyway flyway(final DataSource dataSource) {
-        return Flyway.configure()
-                .dataSource(dataSource)
-                .locations("classpath:db/migration")
-                .baselineOnMigrate(true)
-                .load();
-    }
+//    @Bean(initMethod = "migrate")
+//    public Flyway flyway(final DataSource dataSource) {
+//        return Flyway.configure()
+//                .dataSource(dataSource)
+//                .locations("classpath:db/migration")
+//                .baselineOnMigrate(true)
+//                .load();
+//    }
 }
