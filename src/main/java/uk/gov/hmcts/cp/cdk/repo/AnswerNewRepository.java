@@ -4,14 +4,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import uk.gov.hmcts.cp.cdk.domain.AnswerNewEntity;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface AnswerNewRepository extends JpaRepository<AnswerNewEntity, Long> {
 
-    AnswerNewEntity findById(long id);
+    List<AnswerNewEntity> findByCaseId(UUID queryId);
 
-    List<AnswerNewEntity> findByQueryId(UUID queryId);
-
+    Optional<AnswerNewEntity> findFirstByOrderByCreatedAtDesc();
 //    @Query(value = """
 //        SELECT a.*
 //          FROM answers a

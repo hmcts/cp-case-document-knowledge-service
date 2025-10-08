@@ -6,8 +6,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Value;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -74,8 +78,10 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "answer")
-@Value
+@Getter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class AnswerNewEntity {
 
     @Id
@@ -89,10 +95,10 @@ public class AnswerNewEntity {
     @NotNull
     Long version;
 
-    @NotNull
-    OffsetDateTime createdAt;
-
     String answer;
     String llmInput;
     UUID docId;
+
+    @Builder.Default
+    OffsetDateTime createdAt = OffsetDateTime.now();
 }
