@@ -10,8 +10,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Value;
-import org.hibernate.annotations.ColumnDefault;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -79,26 +77,26 @@ import java.util.UUID;
 @Entity
 @Table(name = "answer")
 @Getter
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class AnswerNewEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    long id;
+    private long id;
 
     @NotNull
-    UUID caseId;
+    private UUID caseId;
     @NotNull
-    UUID queryId;
+    private UUID queryId;
     @NotNull
-    Long version;
+    private Long version;
 
-    String answer;
-    String llmInput;
-    UUID docId;
+    private String answer;
+    private String llmInput;
+    private UUID docId;
 
     @Builder.Default
-    OffsetDateTime createdAt = OffsetDateTime.now();
+    private OffsetDateTime createdAt = OffsetDateTime.now();
 }
