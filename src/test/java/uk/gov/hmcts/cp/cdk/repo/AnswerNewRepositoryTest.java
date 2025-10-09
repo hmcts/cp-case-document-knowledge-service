@@ -37,10 +37,10 @@ class AnswerNewRepositoryTest {
     @Test
     void query_should_save_and_return_entity_by_id() {
         AnswerNewEntity saved = answerNewRepository.save(newAnswer("the answer"));
-        AnswerNewEntity read = answerNewRepository.findById(saved.getId()).get();
-        assertThat(read.getId()).isNotNull();
+        AnswerNewEntity read = answerNewRepository.findById(saved.getAnswerId()).get();
+        assertThat(read.getAnswerId()).isNotNull();
         assertThat(read.getCreatedAt()).isNotNull();
-        log.info("Saved and retrieved answer with id:{} and createdAt:{}", read.getId(), read.getCreatedAt());
+        log.info("Saved and retrieved answer with id:{} and createdAt:{}", read.getAnswerId(), read.getCreatedAt());
     }
 
     @Test

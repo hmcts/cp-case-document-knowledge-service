@@ -2,7 +2,6 @@ package uk.gov.hmcts.cp.cdk.repo;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import uk.gov.hmcts.cp.cdk.domain.Answer;
 import uk.gov.hmcts.cp.cdk.domain.AnswerNewEntity;
 
 import java.time.OffsetDateTime;
