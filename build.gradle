@@ -84,6 +84,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
+    implementation 'org.springframework.boot:spring-boot-starter-artemis'
+
     // Observability
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
@@ -107,6 +109,8 @@ dependencies {
 
     // JWT (keep only if used directly)
     implementation 'io.jsonwebtoken:jjwt:0.13.0'
+
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
 
     // Lombok for handwritten code
     compileOnly "org.projectlombok:lombok:$lombokVersion"
