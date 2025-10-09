@@ -58,7 +58,7 @@ Spring Boot 4 (Java 21), PostgreSQL + Flyway, production-ready observability, an
 ├─ src/integrationTest/java/...      # integration tests (Gradle sourceSet)
 ├─ docker/
 │   ├─ Dockerfile
-│   └─ docker-compose.integration.yml
+│   └─ docker-compose.yml
 └─ build.gradle                      # Gradle build
 ```
 
@@ -113,7 +113,7 @@ See [Configuration](#configuration)).
 ## Run with Docker Compose
 
 This brings up **PostgreSQL 16** (exposed as `localhost:55432`) and the **app** (exposed as `localhost:8082`).  
-It uses `docker/docker-compose.integration.yml`.
+It uses `docker/docker-compose.yml`.
 
 ```bash
 # Build jarfile and docker image

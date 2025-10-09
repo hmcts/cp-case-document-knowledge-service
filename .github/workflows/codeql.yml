@@ -96,7 +96,7 @@ jobs:
 
       - name: DAST - Build and run containerised app
         run: |
-          docker compose -f docker/docker-compose.integration.yml up -d
+          docker compose -f docker/docker-compose.yml up -d
           
           echo "Waiting for health endpoint..."
           for i in {1..30}; do
