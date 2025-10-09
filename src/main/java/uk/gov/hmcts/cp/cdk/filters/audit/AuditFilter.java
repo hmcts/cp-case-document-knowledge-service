@@ -15,6 +15,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
@@ -26,6 +27,7 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
+@AllArgsConstructor
 public class AuditFilter extends OncePerRequestFilter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuditFilter.class);
@@ -33,11 +35,6 @@ public class AuditFilter extends OncePerRequestFilter {
 
     private final AuditService auditService;
     private final PayloadGenerationService payloadGenerationService;
-
-    public AuditFilter(AuditService auditService, PayloadGenerationService payloadGenerationService) {
-        this.auditService = auditService;
-        this.payloadGenerationService = payloadGenerationService;
-    }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {

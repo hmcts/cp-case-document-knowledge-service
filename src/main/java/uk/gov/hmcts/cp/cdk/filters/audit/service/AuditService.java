@@ -3,12 +3,14 @@ package uk.gov.hmcts.cp.cdk.filters.audit.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
+@AllArgsConstructor
 public class AuditService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuditService.class);
@@ -16,11 +18,6 @@ public class AuditService {
     private final JmsTemplate jmsTemplate;
 
     private final ObjectMapper objectMapper;
-
-    public AuditService(JmsTemplate jmsTemplate, ObjectMapper objectMapper) {
-        this.jmsTemplate = jmsTemplate;
-        this.objectMapper = objectMapper;
-    }
 
     public void postMessageToArtemis(ObjectNode auditMessage) {
 

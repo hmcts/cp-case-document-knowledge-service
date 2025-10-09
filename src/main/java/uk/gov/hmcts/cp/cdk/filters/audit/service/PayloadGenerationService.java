@@ -14,12 +14,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
+@AllArgsConstructor
 public class PayloadGenerationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PayloadGenerationService.class);
@@ -29,10 +31,6 @@ public class PayloadGenerationService {
     private static final String HEADER_CLIENT_CORRELATION_ID = "clientCorrelationId";
 
     private final ObjectMapper objectMapper;
-
-    public PayloadGenerationService(final ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
 
     public ObjectNode generatePayload(final String payloadBody, final Map<String, String> headers) {
         return generatePayload(payloadBody, headers, Map.of());
