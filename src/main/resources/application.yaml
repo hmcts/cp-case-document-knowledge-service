@@ -97,3 +97,7 @@ logging:
 
 # Optional: Java 21 virtual threads (Boot 3.2+ / 4.x)
 spring.threads.virtual.enabled: ${VIRTUAL_THREADS:false}
+
+cp:
+  audit:
+    rest-spec: ${CP_CDK_REST_SPECIFICATION}

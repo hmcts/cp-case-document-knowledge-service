@@ -1,4 +1,4 @@
-package uk.gov.hmcts.cp.cdk.filters.audit.service;
+package uk.gov.hmcts.cp.cdk.filters.audit.util;
 
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toSet;
@@ -14,7 +14,7 @@ public class PathParameterNameExtractor {
 
     private static final Pattern PATH_PARAM_PATTERN = Pattern.compile("\\{(\\w+)\\}");
 
-    public Set<String> extractPathParametersFromPath(final String path) {
+    public Set<String> extractPathParametersFromApiSpec(final String path) {
 
         return stream(path.split("/"))
                 .filter(pathSegment -> PATH_PARAM_PATTERN.matcher(pathSegment).matches())
