@@ -10,15 +10,16 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import uk.gov.hmcts.cp.cdk.filters.audit.service.AuditService;
+import uk.gov.hmcts.cp.cdk.filters.audit.service.PathParameterService;
 import uk.gov.hmcts.cp.cdk.filters.audit.service.PayloadGenerationService;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -30,14 +31,18 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
 
 class AuditFilterTest {
 
     private AuditFilter auditFilter;
+
     private AuditService mockAuditService;
     private PayloadGenerationService mockPayloadGenerationService;
-    private ObjectMapper mapper = new ObjectMapper();
+    private PathParameterService mockPathParameterService;
+
+    private final ObjectMapper mapper = new ObjectMapper();
 
     private MockHttpServletRequest mockRequest;
     private MockHttpServletResponse mockResponse;
@@ -58,9 +63,10 @@ class AuditFilterTest {
         // Mock dependencies
         mockAuditService = mock(AuditService.class);
         mockPayloadGenerationService = mock(PayloadGenerationService.class);
+        mockPathParameterService = mock(PathParameterService.class);
 
         // Instantiate the filter with mocks
-        auditFilter = new AuditFilter(mockAuditService, mockPayloadGenerationService);
+        auditFilter = new AuditFilter(mockAuditService, mockPayloadGenerationService, mockPathParameterService);
 
         // Setup mock servlet objects
         mockRequest = new MockHttpServletRequest(REQUEST_METHOD, REQUEST_URI);
@@ -83,10 +89,10 @@ class AuditFilterTest {
             return null;
         }).when(mockFilterChain).doFilter(any(), any());
 
-        // Mock payload generation for the two new required signatures
+        when(mockPathParameterService.getPathParameters(any())).thenReturn(Map.of("pathparam1", "pathvalue1"));
 
         // 1. Mock for Request payload: generatePayload(String, Map, Map)
-        when(mockPayloadGenerationService.generatePayload(any(String.class), anyMap(), anyMap())).thenReturn(mockRequestAuditNode);
+        when(mockPayloadGenerationService.generatePayload(any(String.class), anyMap(), anyMap(), anyMap())).thenReturn(mockRequestAuditNode);
 
         // 2. Mock for Response payload: generatePayload(String, Map)
         when(mockPayloadGenerationService.generatePayload(any(String.class), anyMap())).thenReturn(mockResponseAuditNode);
@@ -94,37 +100,36 @@ class AuditFilterTest {
 
     @Test
     void doFilterInternal_ShouldAuditRequestAndResponse_WhenResponseBodyIsPresent() throws ServletException, IOException {
-        // 2. Act: Call the protected method directly
         assertDoesNotThrow(() -> {
             auditFilter.doFilterInternal(mockRequest, mockResponse, mockFilterChain);
         });
 
-        // 3. Assert Filter Chain and Response Copy
-        verify(mockFilterChain, times(1)).doFilter(any(), any());
+        verify(mockFilterChain).doFilter(any(ContentCachingRequestWrapper.class), any(ContentCachingResponseWrapper.class));
         // CRITICAL: Verify that the buffered content was copied back to the real response
         assertEquals(RESPONSE_STATUS, mockResponse.getStatus());
         assertEquals(RESPONSE_BODY, mockResponse.getContentAsString());
 
+        ArgumentCaptor<Map<String, String>> headerPayloadCaptor = argumentCaptorForMapStringString();
+        ArgumentCaptor<Map<String, String>> queryParamsPayloadCaptor = argumentCaptorForMapStringString();
+        ArgumentCaptor<Map<String, String>> pathParamsPayloadCaptor = argumentCaptorForMapStringString();
 
-        // 4. Assert Audit Service Calls (Should be called twice)
-        ArgumentCaptor<ObjectNode> payloadCaptor = ArgumentCaptor.forClass(ObjectNode.class);
-
-        // Verify that the AuditService was called twice (once for request, once for response)
-        verify(mockAuditService, times(2)).postMessageToArtemis(payloadCaptor.capture());
-
-        // Assertions for payloadCaptor check the mocked objects were sent in the correct order
-        assertEquals("request_audit", payloadCaptor.getAllValues().get(0).get("type").asText());
-        assertEquals("response_audit", payloadCaptor.getAllValues().get(1).get("type").asText());
+        verify(mockAuditService).postMessageToArtemis(mockRequestAuditNode);
+        verify(mockAuditService).postMessageToArtemis(mockResponseAuditNode);
 
 
-        // 5. Assert Payload Generation Service Calls
-        // Verify both signatures were called
-        verify(mockPayloadGenerationService, times(1)).generatePayload(
-                any(String.class), anyMap(), anyMap() // Request signature
-        );
-        verify(mockPayloadGenerationService, times(1)).generatePayload(
-                any(String.class), anyMap() // Response signature
-        );
+        verify(mockPayloadGenerationService).generatePayload(any(String.class), headerPayloadCaptor.capture(), queryParamsPayloadCaptor.capture(), pathParamsPayloadCaptor.capture());
+        assertEquals(1, headerPayloadCaptor.getAllValues().getFirst().size());
+        assertEquals("Bearer token", headerPayloadCaptor.getAllValues().getFirst().get("Authorization"));
+
+        assertEquals(1, queryParamsPayloadCaptor.getAllValues().getFirst().size());
+        assertEquals("value1", queryParamsPayloadCaptor.getAllValues().getFirst().get("param1"));
+
+        assertEquals(1, pathParamsPayloadCaptor.getAllValues().getFirst().size());
+        assertEquals("pathvalue1", pathParamsPayloadCaptor.getAllValues().getFirst().get("pathparam1"));
+
+        verify(mockPayloadGenerationService).generatePayload(eq(RESPONSE_BODY), headerPayloadCaptor.capture());
+        assertEquals(1, headerPayloadCaptor.getAllValues().get(1).size());
+        assertEquals("Bearer token", headerPayloadCaptor.getAllValues().get(1).get("Authorization"));
     }
 
     @Test
@@ -134,18 +139,16 @@ class AuditFilterTest {
         doAnswer(invocation -> {
             HttpServletResponse currentResponse = (HttpServletResponse) invocation.getArguments()[1];
             currentResponse.setStatus(200);
-            return null; // Don't write any body
+            // Only status is set with no content returned
+            return null;
         }).when(mockFilterChain).doFilter(any(), any());
 
-        ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(emptyMockResponse);
-
-        // 2. Act: Call the protected method directly
         assertDoesNotThrow(() -> {
             auditFilter.doFilterInternal(mockRequest, mockResponse, mockFilterChain);
         });
 
         // Verify that the AuditService was called only once (for the request)
-        verify(mockAuditService, times(1)).postMessageToArtemis(eq(mockRequestAuditNode));
+        verify(mockAuditService).postMessageToArtemis(eq(mockRequestAuditNode));
 
         // Verify that the response payload generation service was not called with the (String, Map) signature
         verify(mockPayloadGenerationService, never()).generatePayload(
@@ -170,5 +173,14 @@ class AuditFilterTest {
         MockHttpServletRequest apiRequest = new MockHttpServletRequest("POST", "/api/data");
 
         assertFalse(auditFilter.shouldNotFilter(apiRequest));
+    }
+
+    /**
+     * Helper method to safely create a type-specific ArgumentCaptor for Map<String, String>.
+     * This is the recommended way to handle generic capture with Mockito's type erasure issues.
+     */
+    @SuppressWarnings("unchecked")
+    private static ArgumentCaptor<Map<String, String>> argumentCaptorForMapStringString() {
+        return ArgumentCaptor.forClass(Map.class);
     }
 }

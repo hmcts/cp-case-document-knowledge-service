@@ -1,11 +1,10 @@
 package uk.gov.hmcts.cp.cdk.http;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.postgresql.util.PGobject;
-import org.springframework.http.*;
-import org.springframework.web.client.RestTemplate;
+import static java.util.UUID.fromString;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -14,7 +13,16 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 
 /**
  * End-to-end tests for Answers & Queries endpoints.
@@ -30,7 +38,7 @@ public class AnswersHttpLiveTest {
             "http://localhost:8082/casedocumentknowledge-service"
     );
 
-    private final String jdbcUrl  = System.getProperty("it.db.url",  "jdbc:postgresql://localhost:55432/casedocumentknowledgeDatabase");
+    private final String jdbcUrl = System.getProperty("it.db.url", "jdbc:postgresql://localhost:55432/casedocumentknowledgeDatabase");
     private final String jdbcUser = System.getProperty("it.db.user", "casedocumentknowledge");
     private final String jdbcPass = System.getProperty("it.db.pass", "casedocumentknowledge");
 
@@ -47,8 +55,8 @@ public class AnswersHttpLiveTest {
         final OffsetDateTime v1Eff = OffsetDateTime.parse("2025-06-01T12:00:00Z");
         final OffsetDateTime v2Eff = OffsetDateTime.parse("2025-06-02T12:00:00Z");
         // Make the latest answer created_at slightly after v2 definition to ensure "latest"
-        final OffsetDateTime a1At  = v1Eff;                 // 2025-06-01T12:00:00Z
-        final OffsetDateTime a2At  = v2Eff.plusSeconds(1);  // 2025-06-02T12:00:01Z
+        final OffsetDateTime a1At = v1Eff;                 // 2025-06-01T12:00:00Z
+        final OffsetDateTime a2At = v2Eff.plusSeconds(1);  // 2025-06-02T12:00:01Z
 
         try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass)) {
             // 1) catalogue seed
@@ -151,7 +159,9 @@ public class AnswersHttpLiveTest {
     }
 
     @Test
-    void get_latest_answer_without_version_param() {
+    void get_latest_answer_without_version_param() throws Exception {
+        BrokerUtil brokerUtil = new BrokerUtil();
+
         final HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
@@ -167,6 +177,20 @@ public class AnswersHttpLiveTest {
         assertThat(response.getBody()).contains("\"answer\":\"Answer v2\"");
         // This endpoint typically omits LLM input:
         assertThat(response.getBody()).doesNotContain("llmInput");
+
+        String auditRequest = brokerUtil.getMessageMatching(json ->
+                json.has("content")
+                        && caseId.equals(fromString(json.get("content").get("caseId").asText()))
+                        && queryId.equals(fromString(json.get("content").get("queryId").asText()))
+        );
+        assertNotNull(auditRequest);
+
+        String auditResponse = brokerUtil.getMessageMatching(json ->
+                json.has("content")
+                        && "Answer v2".equals(json.get("content").get("answer").asText())
+                        && !json.get("content").has("llmInput")
+        );
+        assertNotNull(auditResponse);
     }
 
     @Test

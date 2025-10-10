@@ -1,4 +1,6 @@
-package uk.gov.hmcts.cp.cdk.http;
+package uk.gov.hmcts.cp.cdk.util;
+
+import static java.util.UUID.randomUUID;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -15,24 +17,23 @@ import jakarta.jms.Session;
 import jakarta.jms.TextMessage;
 import jakarta.jms.Topic;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
-import org.junit.jupiter.api.Assertions;
 
-public class BrokerUtil {
+public class BrokerUtil implements AutoCloseable {
 
     private static final String BROKER_URL = "tcp://localhost:61616"; // match your app config
     private static final String TOPIC_NAME = "jms.topic.auditing.event";
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    private Connection connection;
-    private Session session;
-    private MessageConsumer consumer;
-    private BlockingQueue<String> receivedMessages = new LinkedBlockingQueue<>();
+    private final Connection connection;
+    private final Session session;
+    private final MessageConsumer consumer;
+    private final BlockingQueue<String> receivedMessages = new LinkedBlockingQueue<>();
 
     public BrokerUtil() throws Exception {
         ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(BROKER_URL);
         connection = connectionFactory.createConnection();
-        connection.setClientID("test-client"); // required for durable subscriptions
+        connection.setClientID(randomUUID().toString()); // required for durable subscriptions
         connection.start();
 
         session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
@@ -67,14 +68,8 @@ public class BrokerUtil {
         return null;
     }
 
-
-    public String getMessageMatching() throws Exception {
-        String message = receivedMessages.poll(5, TimeUnit.SECONDS);
-        Assertions.assertNotNull(message);
-        return message;
-    }
-
-    public void teardown() throws Exception {
+    @Override
+    public void close() throws Exception {
         consumer.close();
         session.close();
         connection.close();

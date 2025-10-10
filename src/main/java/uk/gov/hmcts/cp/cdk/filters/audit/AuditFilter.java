@@ -3,6 +3,7 @@ package uk.gov.hmcts.cp.cdk.filters.audit;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 import uk.gov.hmcts.cp.cdk.filters.audit.service.AuditService;
+import uk.gov.hmcts.cp.cdk.filters.audit.service.PathParameterService;
 import uk.gov.hmcts.cp.cdk.filters.audit.service.PayloadGenerationService;
 
 import java.io.IOException;
@@ -35,6 +36,7 @@ public class AuditFilter extends OncePerRequestFilter {
 
     private final AuditService auditService;
     private final PayloadGenerationService payloadGenerationService;
+    private PathParameterService pathParameterService;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -57,14 +59,13 @@ public class AuditFilter extends OncePerRequestFilter {
         filterChain.doFilter(wrappedRequest, wrappedResponse);
 
         // 2. Perform the audit after continuing the chain
-        String requestPayload = getPayload(wrappedRequest.getContentAsByteArray(), wrappedRequest.getCharacterEncoding());
-        Map<String, String> headers = getHeaders(wrappedRequest);
-        Map<String, String> queryParams = getQueryParams(wrappedRequest);
+        final String requestPath = wrappedRequest.getServletPath();
+        final String requestPayload = getPayload(wrappedRequest.getContentAsByteArray(), wrappedRequest.getCharacterEncoding());
+        final Map<String, String> headers = getHeaders(wrappedRequest);
+        final Map<String, String> queryParams = getQueryParams(wrappedRequest);
+        Map<String, String> pathParams = pathParameterService.getPathParameters(requestPath);
 
-        //TODO: once this is populated, will be passed to payload generation service
-        Map<String, String> pathParams = getPathParams(wrappedRequest);
-
-        ObjectNode auditRequestPayload = payloadGenerationService.generatePayload(requestPayload, headers, queryParams);
+        ObjectNode auditRequestPayload = payloadGenerationService.generatePayload(requestPayload, headers, queryParams, pathParams);
         auditService.postMessageToArtemis(auditRequestPayload);
 
         String responsePayload = getPayload(wrappedResponse.getContentAsByteArray(), wrappedResponse.getCharacterEncoding());
@@ -101,8 +102,4 @@ public class AuditFilter extends OncePerRequestFilter {
         return queryParams;
     }
 
-    private Map<String, String> getPathParams(HttpServletRequest request) {
-        // TODO: Need to figure this out as its not straightforward to do this in a filter
-        return Map.of();
-    }
 }

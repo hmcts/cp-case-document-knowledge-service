@@ -1,26 +1,24 @@
-package uk.gov.hmcts.cp.cdk.filters.audit.util;
+package uk.gov.hmcts.cp.cdk.filters.audit.service;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
 
 @Service
-public class PathMatcher {
+public class PathParameterValueExtractor {
 
-    public Map<String, String> extractPathParameters(final String path, final String regex, final List<String> parameterNames) {
-        final Pattern pattern = Pattern.compile(regex);
+    public Map<String, String> extractPathParameters(final String path, final String regex, final Set<String> parameterNames) {
+        final Matcher matcher = Pattern.compile(regex).matcher(path);
         Map<String, String> parameters = new HashMap<>();
-        Matcher matcher = pattern.matcher(path);
 
         if (matcher.matches()) {
-            for (int i = 0; i < parameterNames.size(); i++) {
-                String name = parameterNames.get(i);
-                String value = matcher.group(i + 1); // group(0) is the entire match
-                parameters.put(name, value);
+            int index = 1; // group(0) is the entire match, so start from group(1)
+            for (String name : parameterNames) {
+                parameters.put(name, matcher.group(index++));
             }
         }
         return parameters;

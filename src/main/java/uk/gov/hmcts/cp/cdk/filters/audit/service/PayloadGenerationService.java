@@ -28,17 +28,17 @@ public class PayloadGenerationService {
     private static final String PAYLOAD_KEY = "_payload";
     private static final String METADATA_KEY = "_metadata";
     private static final String HEADER_USER_ID = "CJSCPPUID";
-    private static final String HEADER_CLIENT_CORRELATION_ID = "clientCorrelationId";
+    private static final String HEADER_CLIENT_CORRELATION_ID = "CPPCLIENTCORRELATIONID";
 
     private final ObjectMapper objectMapper;
 
     public ObjectNode generatePayload(final String payloadBody, final Map<String, String> headers) {
-        return generatePayload(payloadBody, headers, Map.of());
+        return generatePayload(payloadBody, headers, Map.of(), Map.of());
     }
 
-    public ObjectNode generatePayload(final String payloadBody, final Map<String, String> headers, final Map<String, String> queryParams) {
+    public ObjectNode generatePayload(final String payloadBody, final Map<String, String> headers, final Map<String, String> queryParams, final Map<String, String> pathParams) {
         AuditPayload auditPayload = new AuditPayload.Builder()
-                .content(constructPayloadWithMetadata(payloadBody, headers, queryParams))
+                .content(constructPayloadWithMetadata(payloadBody, headers, queryParams, pathParams))
                 .timestamp(currentTimestamp())
                 .origin("casedocumentknowledge-service")
                 .component("casedocumentknowledge-service-api")
@@ -49,7 +49,7 @@ public class PayloadGenerationService {
         return objectNode;
     }
 
-    private ObjectNode constructPayloadWithMetadata(final String rawJsonString, final Map<String, String> headers, final Map<String, String> queryParams) {
+    private ObjectNode constructPayloadWithMetadata(final String rawJsonString, final Map<String, String> headers, final Map<String, String> queryParams, final Map<String, String> pathParams) {
         Metadata metadata = generateMetadata(headers);
 
         try {
@@ -58,6 +58,10 @@ public class PayloadGenerationService {
 
             if (queryParams != null) {
                 queryParams.forEach((key, value) -> objectNode.set(key, objectMapper.convertValue(value, JsonNode.class)));
+            }
+
+            if (pathParams != null) {
+                pathParams.forEach((key, value) -> objectNode.set(key, objectMapper.convertValue(value, JsonNode.class)));
             }
 
             addMetadataToNode(metadata, objectNode);
