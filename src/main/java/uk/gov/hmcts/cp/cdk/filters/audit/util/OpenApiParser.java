@@ -29,7 +29,7 @@ public class OpenApiParser {
     @Value("${cp.audit.rest-spec}")
     private String restSpecification;
 
-    public OpenApiParser(ResourceLoader resourceLoader, @Value("${cp.audit.rest-spec}") String restSpecification) {
+    public OpenApiParser(final ResourceLoader resourceLoader, @Value("${cp.audit.rest-spec}") final String restSpecification) {
         this.resourceLoader = resourceLoader;
         this.restSpecification = restSpecification;
     }
@@ -44,7 +44,7 @@ public class OpenApiParser {
             throw new IllegalArgumentException("No OpenAPI specification found at the specified path");
         }
 
-        OpenAPI openAPI = null;
+        OpenAPI openAPI;
         try {
             final String specificationUrl = optionalResource.get().getURL().toString();
             openAPI = new OpenAPIParser().readLocation(specificationUrl, null, null).getOpenAPI();
@@ -58,14 +58,14 @@ public class OpenApiParser {
             throw new IllegalArgumentException("Supplied specification has no endpoints defined: " + restSpecification);
         }
 
-        LOGGER.info("Loaded {} paths from OpenAPI specification", openAPI.getPaths().size());
+        LOGGER.info("Loaded {} paths from OpenAPI specification", ()-> openAPI.getPaths().size());
 
         openAPI.getPaths().forEach((path, pathItem) -> {
-            boolean hasPathParams = pathItem.getParameters() != null && pathItem.getParameters().stream()
+            final boolean hasPathParams = pathItem.getParameters() != null && pathItem.getParameters().stream()
                     .anyMatch(param -> "path".equalsIgnoreCase(param.getIn()));
 
             if (hasPathParams) {
-                String regexPath = path.replaceAll("\\{[^/]+}", "([^/]+)");
+                final String regexPath = path.replaceAll("\\{[^/]+}", "([^/]+)");
                 pathPatterns.put(path, Pattern.compile(regexPath));
             }
         });

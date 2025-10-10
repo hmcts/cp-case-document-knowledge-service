@@ -19,7 +19,7 @@ public class AuditService {
 
     private final ObjectMapper objectMapper;
 
-    public void postMessageToArtemis(ObjectNode auditMessage) {
+    public void postMessageToArtemis(final ObjectNode auditMessage) {
 
         try {
             final String valueAsString = objectMapper.writeValueAsString(auditMessage);
@@ -27,7 +27,7 @@ public class AuditService {
             jmsTemplate.convertAndSend("jms.topic.auditing.event", valueAsString);
         } catch (JsonProcessingException e) {
             // Log the error but don't re-throw to avoid breaking the main request flow
-            LOGGER.error("Failed to post audit message to Artemis", e);
+            LOGGER.error("Failed to post audit message to Artemis - {}", e.getMessage(), e);
         }
 
     }

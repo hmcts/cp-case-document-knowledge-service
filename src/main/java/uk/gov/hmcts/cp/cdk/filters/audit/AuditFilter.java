@@ -32,15 +32,15 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
 public class AuditFilter extends OncePerRequestFilter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuditFilter.class);
-    private static final int CACHE_LIMIT = 65536; // 64 KB
+    private static final int CACHE_LIMIT = 65_536; // 64 KB
 
     private final AuditService auditService;
     private final PayloadGenerationService payloadGenerationService;
     private PathParameterService pathParameterService;
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
+    protected boolean shouldNotFilter(final HttpServletRequest request) {
+        final String path = request.getRequestURI();
 
         // Exclude specific URLs from being filtered
         //FIXME: Should be configurable
@@ -48,13 +48,13 @@ public class AuditFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(final HttpServletRequest request, final HttpServletResponse response, final FilterChain filterChain)
             throws ServletException, IOException {
 
         //TODO: Future scope - audit enabled for endpoints based on whitelisting or blacklisting. Now, all endpoints are audited
 
-        ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request, CACHE_LIMIT);
-        ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
+        final ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request, CACHE_LIMIT);
+        final ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
 
         filterChain.doFilter(wrappedRequest, wrappedResponse);
 
@@ -63,21 +63,21 @@ public class AuditFilter extends OncePerRequestFilter {
         final String requestPayload = getPayload(wrappedRequest.getContentAsByteArray(), wrappedRequest.getCharacterEncoding());
         final Map<String, String> headers = getHeaders(wrappedRequest);
         final Map<String, String> queryParams = getQueryParams(wrappedRequest);
-        Map<String, String> pathParams = pathParameterService.getPathParameters(requestPath);
+        final Map<String, String> pathParams = pathParameterService.getPathParameters(requestPath);
 
-        ObjectNode auditRequestPayload = payloadGenerationService.generatePayload(requestPayload, headers, queryParams, pathParams);
+        final ObjectNode auditRequestPayload = payloadGenerationService.generatePayload(requestPayload, headers, queryParams, pathParams);
         auditService.postMessageToArtemis(auditRequestPayload);
 
-        String responsePayload = getPayload(wrappedResponse.getContentAsByteArray(), wrappedResponse.getCharacterEncoding());
+        final String responsePayload = getPayload(wrappedResponse.getContentAsByteArray(), wrappedResponse.getCharacterEncoding());
         if (isNotEmpty(responsePayload)) {
-            ObjectNode auditResponsePayload = payloadGenerationService.generatePayload(responsePayload, headers);
+            final ObjectNode auditResponsePayload = payloadGenerationService.generatePayload(responsePayload, headers);
             auditService.postMessageToArtemis(auditResponsePayload);
         }
 
         wrappedResponse.copyBodyToResponse();
     }
 
-    private String getPayload(byte[] content, String encoding) {
+    private String getPayload(final byte[] content, final String encoding) {
         try {
             return new String(content, encoding);
         } catch (IOException ex) {
@@ -86,18 +86,18 @@ public class AuditFilter extends OncePerRequestFilter {
         }
     }
 
-    private Map<String, String> getHeaders(HttpServletRequest request) {
-        Map<String, String> headers = new HashMap<>();
-        Enumeration<String> headerNames = request.getHeaderNames();
+    private Map<String, String> getHeaders(final HttpServletRequest request) {
+        final Map<String, String> headers = new HashMap<>();
+        final Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
-            String headerName = headerNames.nextElement();
+            final String headerName = headerNames.nextElement();
             headers.put(headerName, request.getHeader(headerName));
         }
         return headers;
     }
 
-    private Map<String, String> getQueryParams(HttpServletRequest request) {
-        Map<String, String> queryParams = new HashMap<>();
+    private Map<String, String> getQueryParams(final HttpServletRequest request) {
+        final Map<String, String> queryParams = new HashMap<>();
         request.getParameterMap().forEach((key, value) -> queryParams.put(key, String.join(",", value)));
         return queryParams;
     }

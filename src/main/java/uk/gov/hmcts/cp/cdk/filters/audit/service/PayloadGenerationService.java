@@ -9,6 +9,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -37,7 +38,7 @@ public class PayloadGenerationService {
     }
 
     public ObjectNode generatePayload(final String payloadBody, final Map<String, String> headers, final Map<String, String> queryParams, final Map<String, String> pathParams) {
-        AuditPayload auditPayload = new AuditPayload.Builder()
+        AuditPayload auditPayload = AuditPayload.builder()
                 .content(constructPayloadWithMetadata(payloadBody, headers, queryParams, pathParams))
                 .timestamp(currentTimestamp())
                 .origin("casedocumentknowledge-service")
@@ -71,7 +72,7 @@ public class PayloadGenerationService {
         }
     }
 
-    private ObjectNode createObjectNode(JsonNode node, String rawJsonString) {
+    private ObjectNode createObjectNode(final JsonNode node, final String rawJsonString) {
         ObjectNode objectNode = objectMapper.createObjectNode();
 
         if (node != null && node.isObject()) {
@@ -90,24 +91,24 @@ public class PayloadGenerationService {
     }
 
     private Metadata generateMetadata(final Map<String, String> headers, final String methodName) {
-        Metadata.Builder builder = new Metadata.Builder()
+        final Metadata.MetadataBuilder metadataBuilder = Metadata.builder()
                 .id(randomUUID())
                 .name(methodName)
                 .createdAt(currentTimestamp());
 
-        setOptionalMetadata(headers, builder);
-        return builder.build();
+        setOptionalMetadata(headers, metadataBuilder);
+        return metadataBuilder.build();
     }
 
-    private void setOptionalMetadata(Map<String, String> headers, Metadata.Builder builder) {
+    private void setOptionalMetadata(Map<String, String> headers, Metadata.MetadataBuilder metadataBuilder) {
         String userId = getHeaderMatchingKey(headers, HEADER_USER_ID);
         String clientCorrelationId = getHeaderMatchingKey(headers, HEADER_CLIENT_CORRELATION_ID);
 
         if (userId != null) {
-            builder.context(new Metadata.Context(userId));
+            metadataBuilder.context(Optional.of(new Metadata.Context(userId)));
         }
         if (clientCorrelationId != null) {
-            builder.correlation(new Metadata.Correlation(clientCorrelationId));
+            metadataBuilder.correlation(Optional.of(new Metadata.Correlation(clientCorrelationId)));
         }
     }
 
