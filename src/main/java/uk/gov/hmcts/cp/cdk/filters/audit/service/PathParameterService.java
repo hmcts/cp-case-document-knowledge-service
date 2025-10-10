@@ -4,6 +4,7 @@ import uk.gov.hmcts.cp.cdk.filters.audit.util.OpenApiParser;
 import uk.gov.hmcts.cp.cdk.filters.audit.util.PathParameterNameExtractor;
 import uk.gov.hmcts.cp.cdk.filters.audit.util.PathParameterValueExtractor;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -29,7 +30,7 @@ public class PathParameterService {
 
         if (firstApiEntry.isPresent()) {
             final Map.Entry<String, Pattern> apiEntry = firstApiEntry.get();
-            final Set<String> pathParameterNames = pathParameterNameExtractor.extractPathParametersFromApiSpec(apiEntry.getKey());
+            final List<String> pathParameterNames = pathParameterNameExtractor.extractPathParametersFromApiSpec(apiEntry.getKey());
             return pathParameterValueExtractor.extractPathParameters(servletPath, apiEntry.getValue().pattern(), pathParameterNames);
         }
         ;

@@ -81,33 +81,35 @@ public class IngestionStatusHttpLiveTest {
 
     @Test
     void latest_status_is_returned_from_view() throws Exception {
-        BrokerUtil brokerUtil = new BrokerUtil();
+        String auditResponse;
+        try (BrokerUtil brokerUtil = new BrokerUtil()) {
 
-        final HttpHeaders h = new HttpHeaders();
-        h.setAccept(List.of(MediaType.APPLICATION_JSON));
+            final HttpHeaders h = new HttpHeaders();
+            h.setAccept(List.of(MediaType.APPLICATION_JSON));
 
-        final ResponseEntity<String> res = http.exchange(
-                baseUrl + "/ingestions/status?caseId=" + caseId,
-                HttpMethod.GET,
-                new HttpEntity<>(h),
-                String.class
-        );
+            final ResponseEntity<String> res = http.exchange(
+                    baseUrl + "/ingestions/status?caseId=" + caseId,
+                    HttpMethod.GET,
+                    new HttpEntity<>(h),
+                    String.class
+            );
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).contains("\"caseId\":\"" + caseId + "\"");
-        assertThat(res.getBody()).contains("\"phase\":\"INGESTED\"");
-        assertThat(res.getBody()).contains("\"lastUpdated\":\"2025-05-01T12:05:00Z\"");
+            assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(res.getBody()).contains("\"caseId\":\"" + caseId + "\"");
+            assertThat(res.getBody()).contains("\"phase\":\"INGESTED\"");
+            assertThat(res.getBody()).contains("\"lastUpdated\":\"2025-05-01T12:05:00Z\"");
 
-        String auditRequest = brokerUtil.getMessageMatching(json ->
-                json.has("content") && caseId.equals(UUID.fromString(json.get("content").get("caseId").asText()))
-        );
-        assertNotNull(auditRequest);
+            String auditRequest = brokerUtil.getMessageMatching(json ->
+                    json.has("content") && caseId.equals(UUID.fromString(json.get("content").get("caseId").asText()))
+            );
+            assertNotNull(auditRequest);
 
-        String auditResponse = brokerUtil.getMessageMatching(json ->
-                json.has("content") &&
-                        "INGESTED".equals(json.get("content").get("phase").asText())
-                        && caseId.equals(UUID.fromString(json.get("content").get("scope").get("caseId").asText()))
-        );
+            auditResponse = brokerUtil.getMessageMatching(json ->
+                    json.has("content") &&
+                            "INGESTED".equals(json.get("content").get("phase").asText())
+                            && caseId.equals(UUID.fromString(json.get("content").get("scope").get("caseId").asText()))
+            );
+        }
         assertNotNull(auditResponse);
     }
 }

@@ -21,7 +21,7 @@ public class JacksonConfig {
      */
     @Bean
     public ObjectMapper objectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
+        final ObjectMapper mapper = new ObjectMapper();
 
         // 1. Register the JavaTimeModule (the essential fix for your error)
         mapper.registerModule(new JavaTimeModule());

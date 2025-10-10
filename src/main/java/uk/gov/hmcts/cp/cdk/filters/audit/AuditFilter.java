@@ -41,9 +41,6 @@ public class AuditFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(final HttpServletRequest request) {
         final String path = request.getRequestURI();
-
-        // Exclude specific URLs from being filtered
-        //FIXME: Should be configurable
         return path.contains("/health") || path.contains("/actuator");
     }
 
@@ -51,30 +48,32 @@ public class AuditFilter extends OncePerRequestFilter {
     protected void doFilterInternal(final HttpServletRequest request, final HttpServletResponse response, final FilterChain filterChain)
             throws ServletException, IOException {
 
-        //TODO: Future scope - audit enabled for endpoints based on whitelisting or blacklisting. Now, all endpoints are audited
-
         final ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request, CACHE_LIMIT);
         final ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
 
         filterChain.doFilter(wrappedRequest, wrappedResponse);
 
-        // 2. Perform the audit after continuing the chain
+        performAudit(wrappedRequest, wrappedResponse);
+
+        wrappedResponse.copyBodyToResponse();
+    }
+
+    private void performAudit(final ContentCachingRequestWrapper wrappedRequest, final ContentCachingResponseWrapper wrappedResponse) {
+        final String contextPath = wrappedRequest.getContextPath();
         final String requestPath = wrappedRequest.getServletPath();
         final String requestPayload = getPayload(wrappedRequest.getContentAsByteArray(), wrappedRequest.getCharacterEncoding());
         final Map<String, String> headers = getHeaders(wrappedRequest);
         final Map<String, String> queryParams = getQueryParams(wrappedRequest);
         final Map<String, String> pathParams = pathParameterService.getPathParameters(requestPath);
 
-        final ObjectNode auditRequestPayload = payloadGenerationService.generatePayload(requestPayload, headers, queryParams, pathParams);
+        final ObjectNode auditRequestPayload = payloadGenerationService.generatePayload(contextPath, requestPayload, headers, queryParams, pathParams);
         auditService.postMessageToArtemis(auditRequestPayload);
 
         final String responsePayload = getPayload(wrappedResponse.getContentAsByteArray(), wrappedResponse.getCharacterEncoding());
         if (isNotEmpty(responsePayload)) {
-            final ObjectNode auditResponsePayload = payloadGenerationService.generatePayload(responsePayload, headers);
+            final ObjectNode auditResponsePayload = payloadGenerationService.generatePayload(contextPath, responsePayload, headers);
             auditService.postMessageToArtemis(auditResponsePayload);
         }
-
-        wrappedResponse.copyBodyToResponse();
     }
 
     private String getPayload(final byte[] content, final String encoding) {

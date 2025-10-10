@@ -2,20 +2,26 @@ package uk.gov.hmcts.cp.cdk.filters.audit.util;
 
 import java.util.Optional;
 
+import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ResourceLoader {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ResourceLoader.class);
+@AllArgsConstructor
+public class ClasspathResourceLoader {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClasspathResourceLoader.class);
+
+    private final ResourceLoader resourceLoader;
 
     public Optional<Resource> loadFilesByPattern(final String resourcePattern) {
         try {
-            Resource[] resources = new PathMatchingResourcePatternResolver()
-                    .getResources("classpath*:**/*" + resourcePattern);
+            PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(resourceLoader);
+
+            Resource[] resources = resolver.getResources("classpath*:**/*" + resourcePattern);
 
             LOGGER.info("Found {} files matching pattern {}", resources.length, resourcePattern);
 

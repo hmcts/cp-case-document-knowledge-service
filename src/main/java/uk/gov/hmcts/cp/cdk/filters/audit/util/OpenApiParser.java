@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 
 import io.swagger.parser.OpenAPIParser;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Paths;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import org.slf4j.Logger;
@@ -24,12 +25,12 @@ public class OpenApiParser {
 
     private final Map<String, Pattern> pathPatterns = new HashMap<>();
 
-    private final ResourceLoader resourceLoader;
+    private final ClasspathResourceLoader resourceLoader;
 
     @Value("${cp.audit.rest-spec}")
     private String restSpecification;
 
-    public OpenApiParser(final ResourceLoader resourceLoader, @Value("${cp.audit.rest-spec}") final String restSpecification) {
+    public OpenApiParser(final ClasspathResourceLoader resourceLoader, @Value("${cp.audit.rest-spec}") final String restSpecification) {
         this.resourceLoader = resourceLoader;
         this.restSpecification = restSpecification;
     }
@@ -52,15 +53,16 @@ public class OpenApiParser {
             throw new IllegalArgumentException("Unable to parse OpenAPI specification at location", e);
         }
 
-        if (null == openAPI || null == openAPI.getPaths() || openAPI.getPaths().isEmpty()) {
+        final Paths paths = openAPI.getPaths();
+        if (null == paths || paths.isEmpty()) {
             // Perhaps fail the build
             LOGGER.warn("Supplied specification has no endpoints defined: {}", restSpecification);
             throw new IllegalArgumentException("Supplied specification has no endpoints defined: " + restSpecification);
         }
 
-        LOGGER.info("Loaded {} paths from OpenAPI specification", ()-> openAPI.getPaths().size());
+        LOGGER.info("Loaded {} paths from OpenAPI specification", paths.size());
 
-        openAPI.getPaths().forEach((path, pathItem) -> {
+        paths.forEach((path, pathItem) -> {
             final boolean hasPathParams = pathItem.getParameters() != null && pathItem.getParameters().stream()
                     .anyMatch(param -> "path".equalsIgnoreCase(param.getIn()));
 

@@ -160,36 +160,38 @@ public class AnswersHttpLiveTest {
 
     @Test
     void get_latest_answer_without_version_param() throws Exception {
-        BrokerUtil brokerUtil = new BrokerUtil();
+        String auditResponse;
+        try (BrokerUtil brokerUtil = new BrokerUtil()) {
 
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+            final HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
-        final ResponseEntity<String> response = http.exchange(
-                baseUrl + "/answers/" + caseId + "/" + queryId,
-                HttpMethod.GET,
-                new HttpEntity<>(headers),
-                String.class
-        );
+            final ResponseEntity<String> response = http.exchange(
+                    baseUrl + "/answers/" + caseId + "/" + queryId,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).contains("\"version\":2");
-        assertThat(response.getBody()).contains("\"answer\":\"Answer v2\"");
-        // This endpoint typically omits LLM input:
-        assertThat(response.getBody()).doesNotContain("llmInput");
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).contains("\"version\":2");
+            assertThat(response.getBody()).contains("\"answer\":\"Answer v2\"");
+            // This endpoint typically omits LLM input:
+            assertThat(response.getBody()).doesNotContain("llmInput");
 
-        String auditRequest = brokerUtil.getMessageMatching(json ->
-                json.has("content")
-                        && caseId.equals(fromString(json.get("content").get("caseId").asText()))
-                        && queryId.equals(fromString(json.get("content").get("queryId").asText()))
-        );
-        assertNotNull(auditRequest);
+            String auditRequest = brokerUtil.getMessageMatching(json ->
+                    json.has("content")
+                            && caseId.equals(fromString(json.get("content").get("caseId").asText()))
+                            && queryId.equals(fromString(json.get("content").get("queryId").asText()))
+            );
+            assertNotNull(auditRequest);
 
-        String auditResponse = brokerUtil.getMessageMatching(json ->
-                json.has("content")
-                        && "Answer v2".equals(json.get("content").get("answer").asText())
-                        && !json.get("content").has("llmInput")
-        );
+            auditResponse = brokerUtil.getMessageMatching(json ->
+                    json.has("content")
+                            && "Answer v2".equals(json.get("content").get("answer").asText())
+                            && !json.get("content").has("llmInput")
+            );
+        }
         assertNotNull(auditResponse);
     }
 

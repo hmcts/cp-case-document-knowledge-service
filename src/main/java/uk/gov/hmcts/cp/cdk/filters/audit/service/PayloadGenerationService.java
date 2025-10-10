@@ -16,7 +16,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AllArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -26,23 +25,23 @@ import org.springframework.stereotype.Service;
 public class PayloadGenerationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PayloadGenerationService.class);
-    private static final String PAYLOAD_KEY = "_payload";
-    private static final String METADATA_KEY = "_metadata";
+    private static final String ATTRIBUTE_PAYLOAD_KEY = "_payload";
+    private static final String ATTRIBUTE_METADATA_KEY = "_metadata";
     private static final String HEADER_USER_ID = "CJSCPPUID";
     private static final String HEADER_CLIENT_CORRELATION_ID = "CPPCLIENTCORRELATIONID";
 
     private final ObjectMapper objectMapper;
 
-    public ObjectNode generatePayload(final String payloadBody, final Map<String, String> headers) {
-        return generatePayload(payloadBody, headers, Map.of(), Map.of());
+    public ObjectNode generatePayload(final String contextPath, final String payloadBody, final Map<String, String> headers) {
+        return generatePayload(contextPath, payloadBody, headers, Map.of(), Map.of());
     }
 
-    public ObjectNode generatePayload(final String payloadBody, final Map<String, String> headers, final Map<String, String> queryParams, final Map<String, String> pathParams) {
+    public ObjectNode generatePayload(final String contextPath, final String payloadBody, final Map<String, String> headers, final Map<String, String> queryParams, final Map<String, String> pathParams) {
         AuditPayload auditPayload = AuditPayload.builder()
                 .content(constructPayloadWithMetadata(payloadBody, headers, queryParams, pathParams))
                 .timestamp(currentTimestamp())
-                .origin("casedocumentknowledge-service")
-                .component("casedocumentknowledge-service-api")
+                .origin(contextPath)
+                .component(contextPath + "-api")
                 .build();
 
         ObjectNode objectNode = objectMapper.valueToTree(auditPayload);
@@ -54,7 +53,7 @@ public class PayloadGenerationService {
         Metadata metadata = generateMetadata(headers);
 
         try {
-            JsonNode node = objectMapper.readTree(rawJsonString);
+            final JsonNode node = objectMapper.readTree(rawJsonString);
             ObjectNode objectNode = createObjectNode(node, rawJsonString);
 
             if (queryParams != null) {
@@ -73,17 +72,14 @@ public class PayloadGenerationService {
     }
 
     private ObjectNode createObjectNode(final JsonNode node, final String rawJsonString) {
-        ObjectNode objectNode = objectMapper.createObjectNode();
-
-        if (node != null && node.isObject()) {
-            return (ObjectNode) node;
-        } else if (node != null && node.isArray()) {
-            objectNode.set(PAYLOAD_KEY, node);
-        } else if (node == null && StringUtils.isNotEmpty(rawJsonString)) {
-            objectNode.put(PAYLOAD_KEY, rawJsonString);
+        if (node != null) {
+            if (node.isObject()) {
+                return (ObjectNode) node;
+            } else if (node.isArray()) {
+                return objectMapper.createObjectNode().set(ATTRIBUTE_PAYLOAD_KEY, node);
+            }
         }
-
-        return objectNode;
+        return objectMapper.createObjectNode().put(ATTRIBUTE_PAYLOAD_KEY, rawJsonString);
     }
 
     private Metadata generateMetadata(final Map<String, String> headers) {
@@ -101,24 +97,20 @@ public class PayloadGenerationService {
     }
 
     private void setOptionalMetadata(Map<String, String> headers, Metadata.MetadataBuilder metadataBuilder) {
-        String userId = getHeaderMatchingKey(headers, HEADER_USER_ID);
-        String clientCorrelationId = getHeaderMatchingKey(headers, HEADER_CLIENT_CORRELATION_ID);
+        final String userId = getHeaderMatchingKey(headers, HEADER_USER_ID);
+        final String clientCorrelationId = getHeaderMatchingKey(headers, HEADER_CLIENT_CORRELATION_ID);
 
-        if (userId != null) {
+        if (null != userId) {
             metadataBuilder.context(Optional.of(new Metadata.Context(userId)));
         }
-        if (clientCorrelationId != null) {
+        if (null != clientCorrelationId) {
             metadataBuilder.correlation(Optional.of(new Metadata.Correlation(clientCorrelationId)));
         }
     }
 
     private String getHeaderMatchingKey(final Map<String, String> headers, String... keys) {
         for (String key : keys) {
-            String value = headers.entrySet().stream()
-                    .filter(entry -> entry.getKey().equalsIgnoreCase(key))
-                    .map(Map.Entry::getValue)
-                    .findFirst()
-                    .orElse(null);
+            final String value = headers.getOrDefault(key, null);
             if (value != null) return value;
         }
         return null;
@@ -126,13 +118,13 @@ public class PayloadGenerationService {
 
     private ObjectNode createPayloadWithMetadata(String rawJsonString, Metadata metadata) {
         ObjectNode objectNode = objectMapper.createObjectNode();
-        objectNode.put(PAYLOAD_KEY, rawJsonString);
+        objectNode.put(ATTRIBUTE_PAYLOAD_KEY, rawJsonString);
         addMetadataToNode(metadata, objectNode);
         return objectNode;
     }
 
     private void addMetadataToNode(final Metadata metadata, final ObjectNode objectNode) {
-        objectNode.set(METADATA_KEY, objectMapper.valueToTree(metadata));
+        objectNode.set(ATTRIBUTE_METADATA_KEY, objectMapper.valueToTree(metadata));
     }
 
     private String currentTimestamp() {

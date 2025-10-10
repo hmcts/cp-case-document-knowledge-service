@@ -48,6 +48,8 @@ class AuditFilterTest {
     private MockHttpServletResponse mockResponse;
     private FilterChain mockFilterChain;
 
+    private static final String CONTEXT_PATH = "test-context-path";
+    private static final String SERVLET_PATH = "test-servlet-path";
     private static final String REQUEST_BODY = "{\"data\":\"test\"}";
     private static final String RESPONSE_BODY = "{\"result\":\"success\"}";
     private static final String REQUEST_URI = "/api/v1/resource/123";
@@ -69,6 +71,8 @@ class AuditFilterTest {
         auditFilter = new AuditFilter(mockAuditService, mockPayloadGenerationService, mockPathParameterService);
 
         // Setup mock servlet objects
+        mockRequest.setContextPath(CONTEXT_PATH);
+        mockRequest.setServletPath(SERVLET_PATH);
         mockRequest = new MockHttpServletRequest(REQUEST_METHOD, REQUEST_URI);
         mockRequest.setContent(REQUEST_BODY.getBytes());
         mockRequest.addHeader("Authorization", "Bearer token");
@@ -92,10 +96,10 @@ class AuditFilterTest {
         when(mockPathParameterService.getPathParameters(any())).thenReturn(Map.of("pathparam1", "pathvalue1"));
 
         // 1. Mock for Request payload: generatePayload(String, Map, Map)
-        when(mockPayloadGenerationService.generatePayload(any(String.class), anyMap(), anyMap(), anyMap())).thenReturn(mockRequestAuditNode);
+        when(mockPayloadGenerationService.generatePayload(eq(CONTEXT_PATH), any(String.class), anyMap(), anyMap(), anyMap())).thenReturn(mockRequestAuditNode);
 
         // 2. Mock for Response payload: generatePayload(String, Map)
-        when(mockPayloadGenerationService.generatePayload(any(String.class), anyMap())).thenReturn(mockResponseAuditNode);
+        when(mockPayloadGenerationService.generatePayload(eq(CONTEXT_PATH), any(String.class), anyMap())).thenReturn(mockResponseAuditNode);
     }
 
     @Test
@@ -117,7 +121,7 @@ class AuditFilterTest {
         verify(mockAuditService).postMessageToArtemis(mockResponseAuditNode);
 
 
-        verify(mockPayloadGenerationService).generatePayload(any(String.class), headerPayloadCaptor.capture(), queryParamsPayloadCaptor.capture(), pathParamsPayloadCaptor.capture());
+        verify(mockPayloadGenerationService).generatePayload(eq(CONTEXT_PATH), any(String.class), headerPayloadCaptor.capture(), queryParamsPayloadCaptor.capture(), pathParamsPayloadCaptor.capture());
         assertEquals(1, headerPayloadCaptor.getAllValues().getFirst().size());
         assertEquals("Bearer token", headerPayloadCaptor.getAllValues().getFirst().get("Authorization"));
 
@@ -127,7 +131,7 @@ class AuditFilterTest {
         assertEquals(1, pathParamsPayloadCaptor.getAllValues().getFirst().size());
         assertEquals("pathvalue1", pathParamsPayloadCaptor.getAllValues().getFirst().get("pathparam1"));
 
-        verify(mockPayloadGenerationService).generatePayload(eq(RESPONSE_BODY), headerPayloadCaptor.capture());
+        verify(mockPayloadGenerationService).generatePayload(eq(CONTEXT_PATH), eq(RESPONSE_BODY), headerPayloadCaptor.capture());
         assertEquals(1, headerPayloadCaptor.getAllValues().get(1).size());
         assertEquals("Bearer token", headerPayloadCaptor.getAllValues().get(1).get("Authorization"));
     }
@@ -135,7 +139,6 @@ class AuditFilterTest {
     @Test
     void doFilterInternal_ShouldOnlyAuditRequest_WhenResponseBodyIsEmpty() throws ServletException, IOException {
         // Arrange: Override the chain behavior to write nothing (empty response body)
-        MockHttpServletResponse emptyMockResponse = new MockHttpServletResponse();
         doAnswer(invocation -> {
             HttpServletResponse currentResponse = (HttpServletResponse) invocation.getArguments()[1];
             currentResponse.setStatus(200);
@@ -151,7 +154,7 @@ class AuditFilterTest {
         verify(mockAuditService).postMessageToArtemis(eq(mockRequestAuditNode));
 
         // Verify that the response payload generation service was not called with the (String, Map) signature
-        verify(mockPayloadGenerationService, never()).generatePayload(
+        verify(mockPayloadGenerationService, never()).generatePayload(eq(CONTEXT_PATH),
                 any(String.class), anyMap() // Response signature
         );
 
