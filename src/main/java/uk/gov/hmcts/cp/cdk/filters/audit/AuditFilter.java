@@ -60,7 +60,7 @@ public class AuditFilter extends OncePerRequestFilter {
     }
 
     private void performAudit(final ContentCachingRequestWrapper wrappedRequest, final ContentCachingResponseWrapper wrappedResponse) {
-        final String contextPath = wrappedRequest.getContextPath();
+        final String contextPath = removeLeadingForwardSlash(wrappedRequest.getContextPath());
         final String requestPath = wrappedRequest.getServletPath();
         final String requestPayload = getPayload(wrappedRequest.getContentAsByteArray(), wrappedRequest.getCharacterEncoding());
         final Map<String, String> headers = getHeaders(wrappedRequest);
@@ -100,6 +100,14 @@ public class AuditFilter extends OncePerRequestFilter {
         final Map<String, String> queryParams = new HashMap<>();
         request.getParameterMap().forEach((key, value) -> queryParams.put(key, String.join(",", value)));
         return queryParams;
+    }
+
+
+    private String removeLeadingForwardSlash(final String contextPath) {
+        if (contextPath != null && contextPath.startsWith("/")) {
+            return contextPath.substring(1);
+        }
+        return contextPath;
     }
 
 }

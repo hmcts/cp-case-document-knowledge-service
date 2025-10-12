@@ -45,7 +45,8 @@ class AuditFilterTest {
     private FilterChain mockFilterChain;
 
     private static final String CONTEXT_PATH = "test-context-path";
-    private static final String SERVLET_PATH = "test-servlet-path";
+    private static final String CONTEXT_PATH_WITH_LEADING_SLASH = "/" + CONTEXT_PATH;
+    private static final String SERVLET_PATH = "/test-servlet-path";
     private static final String REQUEST_BODY = "{\"data\":\"test\"}";
     private static final String RESPONSE_BODY = "{\"result\":\"success\"}";
     private static final String REQUEST_URI = "/api/v1/resource/123";
@@ -68,7 +69,7 @@ class AuditFilterTest {
 
         // Setup mock servlet objects
         mockRequest = new MockHttpServletRequest(REQUEST_METHOD, REQUEST_URI);
-        mockRequest.setContextPath(CONTEXT_PATH);
+        mockRequest.setContextPath(CONTEXT_PATH_WITH_LEADING_SLASH);
         mockRequest.setServletPath(SERVLET_PATH);
         mockRequest.setContent(REQUEST_BODY.getBytes());
         mockRequest.addHeader("Authorization", "Bearer token");

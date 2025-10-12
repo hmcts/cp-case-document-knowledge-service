@@ -1,4 +1,6 @@
-package uk.gov.hmcts.cp.cdk.filters.audit.util;
+package uk.gov.hmcts.cp.cdk.filters.audit.parser;
+
+import uk.gov.hmcts.cp.cdk.filters.audit.util.ClasspathResourceLoader;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -19,20 +21,23 @@ import org.springframework.stereotype.Component;
 
 @Getter
 @Component
-public class OpenApiParser {
+public class OpenApiSpecificationParser implements RestApiParser {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(OpenApiParser.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(OpenApiSpecificationParser.class);
 
     private final Map<String, Pattern> pathPatterns = new HashMap<>();
 
     private final ClasspathResourceLoader resourceLoader;
 
+    private final OpenAPIParser openAPIParser;
+
     @Value("${cp.audit.rest-spec}")
     private String restSpecification;
 
-    public OpenApiParser(final ClasspathResourceLoader resourceLoader, @Value("${cp.audit.rest-spec}") final String restSpecification) {
+    public OpenApiSpecificationParser(final ClasspathResourceLoader resourceLoader, @Value("${cp.audit.rest-spec}") final String restSpecification, final OpenAPIParser openAPIParser) {
         this.resourceLoader = resourceLoader;
         this.restSpecification = restSpecification;
+        this.openAPIParser = openAPIParser;
     }
 
     @PostConstruct
@@ -48,7 +53,7 @@ public class OpenApiParser {
         OpenAPI openAPI;
         try {
             final String specificationUrl = optionalResource.get().getURL().toString();
-            openAPI = new OpenAPIParser().readLocation(specificationUrl, null, null).getOpenAPI();
+            openAPI = openAPIParser.readLocation(specificationUrl, null, null).getOpenAPI();
         } catch (IOException e) {
             throw new IllegalArgumentException("Unable to parse OpenAPI specification at location", e);
         }
@@ -63,6 +68,9 @@ public class OpenApiParser {
         LOGGER.info("Loaded {} paths from OpenAPI specification", paths.size());
 
         paths.forEach((path, pathItem) -> {
+            if (null == pathItem || null == path) {
+                throw new IllegalArgumentException("Invalid path specifications in file : " + restSpecification);
+            }
             final boolean hasPathParams = pathItem.getParameters() != null && pathItem.getParameters().stream()
                     .anyMatch(param -> "path".equalsIgnoreCase(param.getIn()));
 

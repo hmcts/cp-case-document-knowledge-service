@@ -160,7 +160,7 @@ public class AnswersHttpLiveTest {
 
     @Test
     void get_latest_answer_without_version_param() throws Exception {
-        String auditResponse;
+
         try (BrokerUtil brokerUtil = new BrokerUtil()) {
 
             final HttpHeaders headers = new HttpHeaders();
@@ -181,6 +181,8 @@ public class AnswersHttpLiveTest {
 
             String auditRequest = brokerUtil.getMessageMatching(json ->
                     json.has("content")
+                            && "casedocumentknowledge-service".equals(json.get("origin").asText())
+                            && "casedocumentknowledge-service-api".equals(json.get("component").asText())
                             && caseId.equals(fromString(json.get("content").get("caseId").asText()))
                             && queryId.equals(fromString(json.get("content").get("queryId").asText()))
                             && "application/json".equals(json.get("content").get("_metadata").get("name").asText())
@@ -188,15 +190,17 @@ public class AnswersHttpLiveTest {
             );
             assertNotNull(auditRequest);
 
-            auditResponse = brokerUtil.getMessageMatching(json ->
+            String auditResponse = brokerUtil.getMessageMatching(json ->
                     json.has("content")
+                            && "casedocumentknowledge-service".equals(json.get("origin").asText())
+                            && "casedocumentknowledge-service-api".equals(json.get("component").asText())
                             && "Answer v2".equals(json.get("content").get("answer").asText())
                             && !json.get("content").has("llmInput")
                             && "application/json".equals(json.get("content").get("_metadata").get("name").asText())
                             && "audit.events.audit-recorded".equals(json.get("_metadata").get("name").asText())
             );
+            assertNotNull(auditResponse);
         }
-        assertNotNull(auditResponse);
     }
 
     @Test
