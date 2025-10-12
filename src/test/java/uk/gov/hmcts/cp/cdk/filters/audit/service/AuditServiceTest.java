@@ -7,9 +7,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jms.core.JmsTemplate;
@@ -29,25 +30,25 @@ class AuditServiceTest {
 
     @Test
     void postMessageToArtemis_logsAndSendsMessageWhenSerializationSucceeds() throws JsonProcessingException {
-        ObjectNode auditMessage = mock(ObjectNode.class);
+        AuditPayload auditPayload = mock(AuditPayload.class);
         String serializedMessage = "{\"key\":\"value\"}";
-        when(objectMapper.writeValueAsString(auditMessage)).thenReturn(serializedMessage);
+        when(objectMapper.writeValueAsString(auditPayload)).thenReturn(serializedMessage);
 
-        auditService.postMessageToArtemis(auditMessage);
+        auditService.postMessageToArtemis(auditPayload);
 
-        verify(objectMapper).writeValueAsString(auditMessage);
+        verify(objectMapper).writeValueAsString(auditPayload);
         verify(jmsTemplate).convertAndSend(eq("jms.topic.auditing.event"), eq(serializedMessage));
     }
 
     @Test
     void postMessageToArtemis_logsErrorWhenSerializationFails() throws JsonProcessingException {
-        ObjectNode auditMessage = mock(ObjectNode.class);
-        when(objectMapper.writeValueAsString(auditMessage)).thenThrow(new JsonProcessingException("Serialization error") {
+        AuditPayload auditPayload = mock(AuditPayload.class);
+        when(objectMapper.writeValueAsString(auditPayload)).thenThrow(new JsonProcessingException("Serialization error") {
         });
 
-        auditService.postMessageToArtemis(auditMessage);
+        auditService.postMessageToArtemis(auditPayload);
 
-        verify(objectMapper).writeValueAsString(auditMessage);
+        verify(objectMapper).writeValueAsString(auditPayload);
         verify(jmsTemplate, never()).convertAndSend(anyString(), anyString());
     }
 }

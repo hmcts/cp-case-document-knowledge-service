@@ -10,7 +10,6 @@ import java.util.function.Predicate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.jms.Connection;
-import jakarta.jms.ConnectionFactory;
 import jakarta.jms.JMSException;
 import jakarta.jms.MessageConsumer;
 import jakarta.jms.Session;
@@ -31,19 +30,19 @@ public class BrokerUtil implements AutoCloseable {
     private final BlockingQueue<String> receivedMessages = new LinkedBlockingQueue<>();
 
     public BrokerUtil() throws Exception {
-        ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(BROKER_URL);
+
+        ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(BROKER_URL);
         connection = connectionFactory.createConnection();
         connection.setClientID(randomUUID().toString()); // required for durable subscriptions
         connection.start();
-
         session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
         Topic topic = session.createTopic(TOPIC_NAME);
         consumer = session.createConsumer(topic);
 
         consumer.setMessageListener(message -> {
-            if (message instanceof TextMessage) {
+            if (message instanceof TextMessage textMessage) {
                 try {
-                    receivedMessages.add(((TextMessage) message).getText());
+                    receivedMessages.add(textMessage.getText());
                 } catch (JMSException e) {
                     // do something
                 }

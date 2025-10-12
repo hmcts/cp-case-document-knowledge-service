@@ -2,16 +2,16 @@ package uk.gov.hmcts.cp.cdk.filters.audit;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
+import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
+import uk.gov.hmcts.cp.cdk.filters.audit.service.AuditPayloadGenerationService;
 import uk.gov.hmcts.cp.cdk.filters.audit.service.AuditService;
 import uk.gov.hmcts.cp.cdk.filters.audit.service.PathParameterService;
-import uk.gov.hmcts.cp.cdk.filters.audit.service.PayloadGenerationService;
 
 import java.io.IOException;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,10 +32,11 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
 public class AuditFilter extends OncePerRequestFilter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuditFilter.class);
+
     private static final int CACHE_LIMIT = 65_536; // 64 KB
 
     private final AuditService auditService;
-    private final PayloadGenerationService payloadGenerationService;
+    private final AuditPayloadGenerationService auditPayloadGenerationService;
     private PathParameterService pathParameterService;
 
     @Override
@@ -66,12 +67,12 @@ public class AuditFilter extends OncePerRequestFilter {
         final Map<String, String> queryParams = getQueryParams(wrappedRequest);
         final Map<String, String> pathParams = pathParameterService.getPathParameters(requestPath);
 
-        final ObjectNode auditRequestPayload = payloadGenerationService.generatePayload(contextPath, requestPayload, headers, queryParams, pathParams);
+        final AuditPayload auditRequestPayload = auditPayloadGenerationService.generatePayload(contextPath, requestPayload, headers, queryParams, pathParams);
         auditService.postMessageToArtemis(auditRequestPayload);
 
         final String responsePayload = getPayload(wrappedResponse.getContentAsByteArray(), wrappedResponse.getCharacterEncoding());
         if (isNotEmpty(responsePayload)) {
-            final ObjectNode auditResponsePayload = payloadGenerationService.generatePayload(contextPath, responsePayload, headers);
+            final AuditPayload auditResponsePayload = auditPayloadGenerationService.generatePayload(contextPath, responsePayload, headers);
             auditService.postMessageToArtemis(auditResponsePayload);
         }
     }

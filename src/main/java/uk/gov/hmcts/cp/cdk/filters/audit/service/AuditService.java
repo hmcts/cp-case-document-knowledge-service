@@ -1,8 +1,9 @@
 package uk.gov.hmcts.cp.cdk.filters.audit.service;
 
+import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,10 +20,10 @@ public class AuditService {
 
     private final ObjectMapper objectMapper;
 
-    public void postMessageToArtemis(final ObjectNode auditMessage) {
+    public void postMessageToArtemis(final AuditPayload auditPayload) {
 
         try {
-            final String valueAsString = objectMapper.writeValueAsString(auditMessage);
+            final String valueAsString = objectMapper.writeValueAsString(auditPayload);
             LOGGER.info("Posting audit message to Artemis: {}", valueAsString);
             jmsTemplate.convertAndSend("jms.topic.auditing.event", valueAsString);
         } catch (JsonProcessingException e) {

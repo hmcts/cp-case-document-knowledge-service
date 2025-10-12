@@ -183,6 +183,8 @@ public class AnswersHttpLiveTest {
                     json.has("content")
                             && caseId.equals(fromString(json.get("content").get("caseId").asText()))
                             && queryId.equals(fromString(json.get("content").get("queryId").asText()))
+                            && "application/json".equals(json.get("content").get("_metadata").get("name").asText())
+                            && "audit.events.audit-recorded".equals(json.get("_metadata").get("name").asText())
             );
             assertNotNull(auditRequest);
 
@@ -190,6 +192,8 @@ public class AnswersHttpLiveTest {
                     json.has("content")
                             && "Answer v2".equals(json.get("content").get("answer").asText())
                             && !json.get("content").has("llmInput")
+                            && "application/json".equals(json.get("content").get("_metadata").get("name").asText())
+                            && "audit.events.audit-recorded".equals(json.get("_metadata").get("name").asText())
             );
         }
         assertNotNull(auditResponse);

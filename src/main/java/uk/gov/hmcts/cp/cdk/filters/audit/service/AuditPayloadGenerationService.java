@@ -1,6 +1,8 @@
 package uk.gov.hmcts.cp.cdk.filters.audit.service;
 
 import static java.util.UUID.randomUUID;
+import static org.apache.commons.collections.MapUtils.isEmpty;
+import static org.apache.commons.collections.MapUtils.isNotEmpty;
 
 import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
 import uk.gov.hmcts.cp.cdk.filters.audit.model.Metadata;
@@ -16,15 +18,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AllArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 @Service
 @AllArgsConstructor
-public class PayloadGenerationService {
+public class AuditPayloadGenerationService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PayloadGenerationService.class);
     private static final String ATTRIBUTE_PAYLOAD_KEY = "_payload";
     private static final String ATTRIBUTE_METADATA_KEY = "_metadata";
     private static final String HEADER_USER_ID = "CJSCPPUID";
@@ -32,21 +32,18 @@ public class PayloadGenerationService {
 
     private final ObjectMapper objectMapper;
 
-    public ObjectNode generatePayload(final String contextPath, final String payloadBody, final Map<String, String> headers) {
+    public AuditPayload generatePayload(final String contextPath, final String payloadBody, final Map<String, String> headers) {
         return generatePayload(contextPath, payloadBody, headers, Map.of(), Map.of());
     }
 
-    public ObjectNode generatePayload(final String contextPath, final String payloadBody, final Map<String, String> headers, final Map<String, String> queryParams, final Map<String, String> pathParams) {
-        AuditPayload auditPayload = AuditPayload.builder()
+    public AuditPayload generatePayload(final String contextPath, final String payloadBody, final Map<String, String> headers, final Map<String, String> queryParams, final Map<String, String> pathParams) {
+        return AuditPayload.builder()
                 .content(constructPayloadWithMetadata(payloadBody, headers, queryParams, pathParams))
                 .timestamp(currentTimestamp())
                 .origin(contextPath)
                 .component(contextPath + "-api")
+                ._metadata(generateMetadata(headers, "audit.events.audit-recorded"))
                 .build();
-
-        ObjectNode objectNode = objectMapper.valueToTree(auditPayload);
-        addMetadataToNode(generateMetadata(headers, "audit.events.audit-recorded"), objectNode);
-        return objectNode;
     }
 
     private ObjectNode constructPayloadWithMetadata(final String rawJsonString, final Map<String, String> headers, final Map<String, String> queryParams, final Map<String, String> pathParams) {
@@ -56,11 +53,11 @@ public class PayloadGenerationService {
             final JsonNode node = objectMapper.readTree(rawJsonString);
             ObjectNode objectNode = createObjectNode(node, rawJsonString);
 
-            if (queryParams != null) {
+            if (isNotEmpty(queryParams)) {
                 queryParams.forEach((key, value) -> objectNode.set(key, objectMapper.convertValue(value, JsonNode.class)));
             }
 
-            if (pathParams != null) {
+            if (isNotEmpty(pathParams)) {
                 pathParams.forEach((key, value) -> objectNode.set(key, objectMapper.convertValue(value, JsonNode.class)));
             }
 
@@ -72,21 +69,29 @@ public class PayloadGenerationService {
     }
 
     private ObjectNode createObjectNode(final JsonNode node, final String rawJsonString) {
-        if (node != null) {
-            if (node.isObject()) {
-                return (ObjectNode) node;
-            } else if (node.isArray()) {
-                return objectMapper.createObjectNode().set(ATTRIBUTE_PAYLOAD_KEY, node);
-            }
+        if (node == null) {
+            return objectMapper.createObjectNode();
+        } else if (node.isObject()) {
+            return (ObjectNode) node;
+        } else if (node.isArray()) {
+            return objectMapper.createObjectNode().set(ATTRIBUTE_PAYLOAD_KEY, node);
         }
         return objectMapper.createObjectNode().put(ATTRIBUTE_PAYLOAD_KEY, rawJsonString);
     }
 
     private Metadata generateMetadata(final Map<String, String> headers) {
+        if (isEmpty(headers)) {
+            return Metadata.builder().build();
+        }
+
         return generateMetadata(headers, getHeaderMatchingKey(headers, "Accept", "Content-Type"));
     }
 
     private Metadata generateMetadata(final Map<String, String> headers, final String methodName) {
+        if (isEmpty(headers)) {
+            return Metadata.builder().build();
+        }
+
         final Metadata.MetadataBuilder metadataBuilder = Metadata.builder()
                 .id(randomUUID())
                 .name(methodName)
@@ -109,9 +114,17 @@ public class PayloadGenerationService {
     }
 
     private String getHeaderMatchingKey(final Map<String, String> headers, String... keys) {
-        for (String key : keys) {
-            final String value = headers.getOrDefault(key, null);
-            if (value != null) return value;
+        for (String searchKey : keys) {
+            if (StringUtils.isBlank(searchKey)) {
+                continue;
+            }
+
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+                if (entry.getKey() != null && entry.getKey().trim().equalsIgnoreCase(searchKey.trim())) {
+                    return entry.getValue();
+                }
+            }
+
         }
         return null;
     }

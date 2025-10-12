@@ -8,5 +8,7 @@ public record AuditPayload(
         ObjectNode content,
         String origin,
         String component,
-        String timestamp
+        String timestamp,
+        Metadata _metadata
+
 ) {}
