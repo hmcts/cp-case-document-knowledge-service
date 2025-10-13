@@ -2,6 +2,8 @@ package uk.gov.hmcts.cp.cdk.filters.audit.service;
 
 import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
 
+import java.util.UUID;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -22,13 +24,23 @@ public class AuditService {
 
     public void postMessageToArtemis(final AuditPayload auditPayload) {
 
+        if (null == auditPayload) {
+            LOGGER.warn("AuditPayload is null");
+            return;
+        }
+
         try {
             final String valueAsString = objectMapper.writeValueAsString(auditPayload);
             LOGGER.info("Posting audit message to Artemis: {}", valueAsString);
             jmsTemplate.convertAndSend("jms.topic.auditing.event", valueAsString);
         } catch (JsonProcessingException e) {
             // Log the error but don't re-throw to avoid breaking the main request flow
-            LOGGER.error("Failed to post audit message to Artemis - {}", e.getMessage(), e);
+            final UUID auditMetadataId = (auditPayload._metadata() != null) ? auditPayload._metadata().id() : null;
+            if (auditMetadataId != null) {
+                LOGGER.error("Failed to post audit message with ID {} to Artemis", auditMetadataId);
+            } else {
+                LOGGER.error("Failed to post audit message to Artemis");
+            }
         }
 
     }

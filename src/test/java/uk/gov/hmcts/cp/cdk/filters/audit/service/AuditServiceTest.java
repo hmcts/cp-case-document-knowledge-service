@@ -5,6 +5,7 @@ import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
@@ -26,6 +27,14 @@ class AuditServiceTest {
         jmsTemplate = mock(JmsTemplate.class);
         objectMapper = mock(ObjectMapper.class);
         auditService = new AuditService(jmsTemplate, objectMapper);
+    }
+
+    @Test
+    void dontPostMessageToArtemis_WhenAuditPayloadIsNull() throws JsonProcessingException {
+
+        auditService.postMessageToArtemis(null);
+
+        verifyNoInteractions(objectMapper, jmsTemplate);
     }
 
     @Test
