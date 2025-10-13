@@ -1,11 +1,10 @@
 package uk.gov.hmcts.cp.cdk.http;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.postgresql.util.PGobject;
-import org.springframework.http.*;
-import org.springframework.web.client.RestTemplate;
+import static java.util.UUID.fromString;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -14,7 +13,16 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 
 /**
  * End-to-end tests for Answers & Queries endpoints.
@@ -30,7 +38,7 @@ public class AnswersHttpLiveTest {
             "http://localhost:8082/casedocumentknowledge-service"
     );
 
-    private final String jdbcUrl  = System.getProperty("it.db.url",  "jdbc:postgresql://localhost:55432/casedocumentknowledgeDatabase");
+    private final String jdbcUrl = System.getProperty("it.db.url", "jdbc:postgresql://localhost:55432/casedocumentknowledgeDatabase");
     private final String jdbcUser = System.getProperty("it.db.user", "casedocumentknowledge");
     private final String jdbcPass = System.getProperty("it.db.pass", "casedocumentknowledge");
 
@@ -47,8 +55,8 @@ public class AnswersHttpLiveTest {
         final OffsetDateTime v1Eff = OffsetDateTime.parse("2025-06-01T12:00:00Z");
         final OffsetDateTime v2Eff = OffsetDateTime.parse("2025-06-02T12:00:00Z");
         // Make the latest answer created_at slightly after v2 definition to ensure "latest"
-        final OffsetDateTime a1At  = v1Eff;                 // 2025-06-01T12:00:00Z
-        final OffsetDateTime a2At  = v2Eff.plusSeconds(1);  // 2025-06-02T12:00:01Z
+        final OffsetDateTime a1At = v1Eff;                 // 2025-06-01T12:00:00Z
+        final OffsetDateTime a2At = v2Eff.plusSeconds(1);  // 2025-06-02T12:00:01Z
 
         try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass)) {
             // 1) catalogue seed
@@ -151,22 +159,48 @@ public class AnswersHttpLiveTest {
     }
 
     @Test
-    void get_latest_answer_without_version_param() {
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+    void get_latest_answer_without_version_param() throws Exception {
 
-        final ResponseEntity<String> response = http.exchange(
-                baseUrl + "/answers/" + caseId + "/" + queryId,
-                HttpMethod.GET,
-                new HttpEntity<>(headers),
-                String.class
-        );
+        try (BrokerUtil brokerUtil = new BrokerUtil()) {
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).contains("\"version\":2");
-        assertThat(response.getBody()).contains("\"answer\":\"Answer v2\"");
-        // This endpoint typically omits LLM input:
-        assertThat(response.getBody()).doesNotContain("llmInput");
+            final HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+
+            final ResponseEntity<String> response = http.exchange(
+                    baseUrl + "/answers/" + caseId + "/" + queryId,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            );
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).contains("\"version\":2");
+            assertThat(response.getBody()).contains("\"answer\":\"Answer v2\"");
+            // This endpoint typically omits LLM input:
+            assertThat(response.getBody()).doesNotContain("llmInput");
+
+            String auditRequest = brokerUtil.getMessageMatching(json ->
+                    json.has("content")
+                            && "casedocumentknowledge-service".equals(json.get("origin").asText())
+                            && "casedocumentknowledge-service-api".equals(json.get("component").asText())
+                            && caseId.equals(fromString(json.get("content").get("caseId").asText()))
+                            && queryId.equals(fromString(json.get("content").get("queryId").asText()))
+                            && "application/json".equals(json.get("content").get("_metadata").get("name").asText())
+                            && "audit.events.audit-recorded".equals(json.get("_metadata").get("name").asText())
+            );
+            assertNotNull(auditRequest);
+
+            String auditResponse = brokerUtil.getMessageMatching(json ->
+                    json.has("content")
+                            && "casedocumentknowledge-service".equals(json.get("origin").asText())
+                            && "casedocumentknowledge-service-api".equals(json.get("component").asText())
+                            && "Answer v2".equals(json.get("content").get("answer").asText())
+                            && !json.get("content").has("llmInput")
+                            && "application/json".equals(json.get("content").get("_metadata").get("name").asText())
+                            && "audit.events.audit-recorded".equals(json.get("_metadata").get("name").asText())
+            );
+            assertNotNull(auditResponse);
+        }
     }
 
     @Test

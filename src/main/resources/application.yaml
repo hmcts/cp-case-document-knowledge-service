@@ -32,6 +32,16 @@ spring:
       locations: classpath:db/migration
       baseline-on-migrate: false
 
+  artemis:
+    mode: native
+    broker-url: tcp://artemis:61616
+
+  jms:
+    pub-sub-domain: true
+    cache:
+      session-cache-size: 5
+
+
 server:
   port: ${SERVER_PORT:8082}
   shutdown: graceful
@@ -44,6 +54,11 @@ server:
     mime-types: "application/json,application/xml,text/html,text/plain,text/xml,text/css,application/javascript"
 
 management:
+
+  # specifically disabling JMS health check due to library compatiblity issue with spring and artemis version
+  health:
+    jms:
+      enabled: false
   server:
     # Keep actuator on same port by default; override if you want a separate port
     port: ${MANAGEMENT_SERVER_PORT:${SERVER_PORT:8082}}
@@ -82,3 +97,7 @@ logging:
 
 # Optional: Java 21 virtual threads (Boot 3.2+ / 4.x)
 spring.threads.virtual.enabled: ${VIRTUAL_THREADS:false}
+
+cp:
+  audit:
+    rest-spec: ${CP_CDK_REST_SPECIFICATION}
