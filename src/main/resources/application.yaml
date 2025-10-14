@@ -34,7 +34,7 @@ spring:
 
   artemis:
     mode: native
-    broker-url: tcp://artemis:61616
+    broker-url: ${CP_CDK_ARTEMIS_URL}
 
   jms:
     pub-sub-domain: true
