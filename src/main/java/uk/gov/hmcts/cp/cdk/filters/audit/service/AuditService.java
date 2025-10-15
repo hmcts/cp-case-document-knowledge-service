@@ -31,8 +31,11 @@ public class AuditService {
 
         try {
             final String valueAsString = objectMapper.writeValueAsString(auditPayload);
-            LOGGER.info("Posting audit message to Artemis: {}", valueAsString);
-            jmsTemplate.convertAndSend("jms.topic.auditing.event", valueAsString);
+            LOGGER.info("Posting audit message to Artemis with ID = {} and timestamp = {}", auditPayload._metadata().id(), auditPayload.timestamp());
+            jmsTemplate.convertAndSend("jms.topic.auditing.event", valueAsString, message -> {
+                message.setStringProperty("CPPNAME", auditPayload._metadata().name());
+                return message;
+            });
         } catch (JsonProcessingException e) {
             // Log the error but don't re-throw to avoid breaking the main request flow
             final UUID auditMetadataId = (auditPayload._metadata() != null) ? auditPayload._metadata().id() : null;

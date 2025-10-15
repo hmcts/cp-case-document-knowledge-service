@@ -36,8 +36,9 @@ public class BrokerUtil implements AutoCloseable {
         connection.setClientID(randomUUID().toString()); // required for durable subscriptions
         connection.start();
         session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-        Topic topic = session.createTopic(TOPIC_NAME);
-        consumer = session.createConsumer(topic);
+        final String selector = "CPPNAME = 'audit.events.audit-recorded'";
+        final Topic topic = session.createTopic(TOPIC_NAME);
+        consumer = session.createConsumer(topic, selector);
 
         consumer.setMessageListener(message -> {
             if (message instanceof TextMessage textMessage) {
