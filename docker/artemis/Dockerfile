@@ -1,10 +1,9 @@
-FROM eclipse-temurin:11-jre-alpine
+FROM eclipse-temurin:17.0.16_8-jre-noble
 
 SHELL ["/bin/sh", "-c"]
 WORKDIR /opt
 
-ARG version=2.18.0
-ENV ARTEMIS_VERSION=${version}
+ENV ARTEMIS_VERSION=2.18.0
 ENV ARTEMIS_USER artemis
 ENV ARTEMIS_PASSWORD artemis
 ENV EXTRA_ARGS --nio --host 0.0.0.0 --http-host 0.0.0.0 --relax-jolokia
@@ -14,8 +13,12 @@ ENV ARTEMIS_HOME=/opt/artemis
 ENV ARTEMIS_INSTANCE=/var/lib/artemis-instance
 
 RUN mkdir -p /var/lib/artemis-instance
-RUN adduser -D -h /var/lib/artemis-instance artemis
-RUN chown -R artemis.artemis /var/lib/artemis-instance
+RUN addgroup --system artemis && adduser --system --no-create-home --ingroup artemis artemis
+RUN chown -R artemis:artemis /var/lib/artemis-instance
+
+# Install unzip
+RUN apt-get update && apt-get install -y unzip && rm -rf /var/lib/apt/lists/*
+
 
 RUN wget --no-check-certificate https://archive.apache.org/dist/activemq/activemq-artemis/${ARTEMIS_VERSION}/apache-artemis-${ARTEMIS_VERSION}-bin.zip
 RUN unzip apache-artemis-${ARTEMIS_VERSION}-bin.zip && rm -r apache-artemis-${ARTEMIS_VERSION}-bin.zip && mv apache-artemis-${ARTEMIS_VERSION} ${ARTEMIS_HOME}
