@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17.0.16_8-jre-noble
+FROM openjdk:21-jdk-slim
 
 SHELL ["/bin/sh", "-c"]
 WORKDIR /opt
@@ -16,9 +16,10 @@ RUN mkdir -p /var/lib/artemis-instance
 RUN addgroup --system artemis && adduser --system --no-create-home --ingroup artemis artemis
 RUN chown -R artemis:artemis /var/lib/artemis-instance
 
-# Install unzip
-RUN apt-get update && apt-get install -y unzip && rm -rf /var/lib/apt/lists/*
-
+# Install required tooling
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends unzip wget \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN wget --no-check-certificate https://archive.apache.org/dist/activemq/activemq-artemis/${ARTEMIS_VERSION}/apache-artemis-${ARTEMIS_VERSION}-bin.zip
 RUN unzip apache-artemis-${ARTEMIS_VERSION}-bin.zip && rm -r apache-artemis-${ARTEMIS_VERSION}-bin.zip && mv apache-artemis-${ARTEMIS_VERSION} ${ARTEMIS_HOME}
@@ -29,7 +30,6 @@ EXPOSE 8161 9404 61616 5445 5672 1883 61613
 USER artemis
 WORKDIR ${ARTEMIS_INSTANCE}
 RUN ${ARTEMIS_HOME}/bin/artemis create --user ${ARTEMIS_USER} --password ${ARTEMIS_PASSWORD} --silent $LOGIN_OPTION ${EXTRA_ARGS} .
-
 
 USER root
 
