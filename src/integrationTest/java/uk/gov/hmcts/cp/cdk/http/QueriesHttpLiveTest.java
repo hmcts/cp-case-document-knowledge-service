@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class QueriesHttpLiveTest {
 
+    public final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
     private final String baseUrl = System.getProperty(
             "app.baseUrl",
             "http://localhost:8082/casedocumentknowledge-service"
@@ -44,7 +45,7 @@ public class QueriesHttpLiveTest {
         }
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setContentType(VND_TYPE_JSON);
 
         // ---------- Snapshot t1 ----------
         Map<String, Object> body1 = new HashMap<>();
@@ -89,10 +90,10 @@ public class QueriesHttpLiveTest {
     @Test
     void queries_without_at_returns_latest_version() {
         HttpHeaders h = new HttpHeaders();
-        h.setAccept(List.of(MediaType.APPLICATION_JSON));
+        h.setAccept(List.of(VND_TYPE_JSON));
 
         ResponseEntity<String> res = http.exchange(
-                baseUrl + "/queries",
+                baseUrl + "/queries?caseId=e9987338-ebae-480c-825e-aad78da3ef4f",
                 HttpMethod.GET,
                 new HttpEntity<>(h),
                 String.class
@@ -109,10 +110,10 @@ public class QueriesHttpLiveTest {
         String at = "2025-05-15T00:00:00Z";
 
         HttpHeaders h = new HttpHeaders();
-        h.setAccept(List.of(MediaType.APPLICATION_JSON));
+        h.setAccept(List.of(VND_TYPE_JSON));
 
         ResponseEntity<String> res = http.exchange(
-                baseUrl + "/queries?at=" + at,
+                baseUrl + "/queries?caseId=e9987338-ebae-480c-825e-aad78da3ef4f&at=" + at,
                 HttpMethod.GET,
                 new HttpEntity<>(h),
                 String.class

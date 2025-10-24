@@ -95,6 +95,27 @@ logging:
     root: INFO
   config: classpath:logback-spring.xml
 
+authz:
+  http:
+    enabled: false
+    identity-url-template: "http://localhost:${server.port}/casedocumentknowledge-service/usersgroups-query-api/query/api/rest/usersgroups/users/logged-in-user/permissions"
+    user-id-header: "CJSCPPUID"
+    action-header: "CPP-ACTION"
+    accept-header: "application/vnd.usersgroups.get-logged-in-user-permissions+json"
+    drools-classpath-pattern: "classpath:/acl/**/*.drl"
+    reload-on-each-request: true
+    action-required: false
+    deny-when-no-rules: true
+    group-aliases:
+      "Legal Advisers": "Legal Advisers"
+      "Prosecuting Authority Access": "Prosecuting Authority Access"
+    exclude-path-prefixes:
+      - "/usersgroups-query-api/"
+      - "/actuator"
+      - "/error"
+      - "/casedocumentknowledge-service/"
+
+
 # Optional: Java 21 virtual threads (Boot 3.2+ / 4.x)
 spring.threads.virtual.enabled: ${VIRTUAL_THREADS:false}
 
