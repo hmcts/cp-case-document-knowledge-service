@@ -2,17 +2,17 @@ plugins {
     id 'application'
     id 'java'
 
-    id 'org.springframework.boot' version '4.0.0-M3'
+    id 'org.springframework.boot' version '4.0.0-RC1'
     id 'io.spring.dependency-management' version '1.1.7'
 
     id 'jacoco'
     id 'pmd'
     id 'maven-publish'
     id 'com.github.ben-manes.versions' version '0.53.0'
-    id 'org.cyclonedx.bom' version '2.4.1'
+    id 'org.cyclonedx.bom' version '3.0.1'
     id 'au.com.dius.pact' version '4.6.17'
     id 'com.gorylenko.gradle-git-properties' version '2.5.3'
-    id 'com.avast.gradle.docker-compose' version '0.17.12'
+    id 'com.avast.gradle.docker-compose' version '0.17.18'
 }
 
 group = 'uk.gov.hmcts.cp'
@@ -66,9 +66,9 @@ configurations {
 ext {
     lombokVersion = "1.18.42"
     apiSpecVersion = "0.4.2"
-    testcontainersBom = "1.20.1"
-    cdk = "0.0.4-02dc81b"
-    mapstruct = "1.5.5.Final"
+    testcontainersBom = "2.0.1"
+    cdk = "0.0.5-8e8d30d"
+    mapstruct = "1.6.3"
 }
 
 // ---- Dependencies ----
@@ -112,7 +112,7 @@ dependencies {
 
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
 
-    implementation 'io.swagger.parser.v3:swagger-parser:2.1.20' // Use the latest version
+    implementation 'io.swagger.parser.v3:swagger-parser:2.1.35' // Use the latest version
 
     // Lombok for handwritten code
     compileOnly "org.projectlombok:lombok:$lombokVersion"
