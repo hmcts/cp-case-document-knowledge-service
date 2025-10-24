@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class QueryVersionsHttpLiveTest {
 
+    public final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
     private final String baseUrl = System.getProperty(
             "app.baseUrl",
             "http://localhost:8082/casedocumentknowledge-service"
@@ -43,7 +44,7 @@ public class QueryVersionsHttpLiveTest {
         }
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setContentType(VND_TYPE_JSON);
 
         // v1 @ 2025-05-01
         Map<String, Object> b1 = new HashMap<>();
@@ -85,7 +86,7 @@ public class QueryVersionsHttpLiveTest {
     @Test
     void list_versions_returns_all_versions_for_query() {
         HttpHeaders h = new HttpHeaders();
-        h.setAccept(List.of(MediaType.APPLICATION_JSON));
+        h.setAccept(List.of(VND_TYPE_JSON));
 
         ResponseEntity<String> res = http.exchange(
                 baseUrl + "/queries/" + queryId + "/versions",

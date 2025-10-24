@@ -67,7 +67,7 @@ ext {
     lombokVersion = "1.18.42"
     apiSpecVersion = "0.4.2"
     testcontainersBom = "1.20.1"
-    cdk = "0.0.4-02dc81b"
+    cdk = "0.0.5-537aa57"
     mapstruct = "1.5.5.Final"
 }
 
@@ -79,6 +79,10 @@ dependencies {
     // MapStruct
     implementation "org.mapstruct:mapstruct:$mapstruct"
     annotationProcessor "org.mapstruct:mapstruct-processor:$mapstruct"
+
+    //Auth and Audit
+    implementation "uk.gov.hmcts.cp:cp-springboot-auth-rules-filter:1.0.1"
+    //implementation "uk.gov.hmcts.cp:cp-springboot-audit-filter:1.0.0"
 
     // Web / validation
     implementation 'org.springframework.boot:spring-boot-starter-web'

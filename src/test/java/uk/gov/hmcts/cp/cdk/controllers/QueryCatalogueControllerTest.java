@@ -20,6 +20,7 @@ import uk.gov.hmcts.cp.openapi.model.cdk.QueryCatalogueItem;
 
 class QueryCatalogueControllerTest {
 
+    public final String VND_TYPE_JSON = "application/vnd.casedocumentknowledge-service.query-catalogue+json";
     @Test
     void listQueryCatalogue_returns_items() throws Exception {
         final QueryCatalogueService service = Mockito.mock(QueryCatalogueService.class);
@@ -78,7 +79,7 @@ class QueryCatalogueControllerTest {
 
         mvc.perform(
                         put("/query-catalogue/{queryId}/label", id)
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(VND_TYPE_JSON)
                                 .content("{\"label\":\"New Label\"}")
                 )
                 .andExpect(status().isOk())

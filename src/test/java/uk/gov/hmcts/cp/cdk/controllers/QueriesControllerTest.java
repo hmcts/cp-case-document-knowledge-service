@@ -21,6 +21,7 @@ import uk.gov.hmcts.cp.openapi.model.cdk.*;
 
 class QueriesControllerTest {
 
+    public final String VND_TYPE_JSON = "application/vnd.casedocumentknowledge-service.queries+json";
     @Test
     void listQueries_returns_case_as_of() throws Exception {
         final QueryService service = Mockito.mock(QueryService.class);
@@ -75,7 +76,7 @@ class QueriesControllerTest {
 
         mvc.perform(
                         post("/queries")
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(VND_TYPE_JSON)
                                 .content("""
                         {
                           "effectiveAt":"2025-05-01T12:00:00Z",

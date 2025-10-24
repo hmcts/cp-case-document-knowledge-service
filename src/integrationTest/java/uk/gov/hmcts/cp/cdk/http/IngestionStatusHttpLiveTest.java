@@ -30,6 +30,7 @@ import org.springframework.web.client.RestTemplate;
  */
 public class IngestionStatusHttpLiveTest {
 
+    public final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.ingestion+json");
     private final String baseUrl = System.getProperty(
             "app.baseUrl",
             "http://localhost:8082/casedocumentknowledge-service"
@@ -85,7 +86,7 @@ public class IngestionStatusHttpLiveTest {
         try (BrokerUtil brokerUtil = new BrokerUtil()) {
 
             final HttpHeaders h = new HttpHeaders();
-            h.setAccept(List.of(MediaType.APPLICATION_JSON));
+            h.setAccept(List.of(VND_TYPE_JSON));
 
             final ResponseEntity<String> res = http.exchange(
                     baseUrl + "/ingestions/status?caseId=" + caseId,

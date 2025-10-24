@@ -33,6 +33,8 @@ import org.springframework.web.client.RestTemplate;
  */
 public class AnswersHttpLiveTest {
 
+    public final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.answers+json");
+    public final MediaType VND_TYPE_JSON_QUERIES = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
     private final String baseUrl = System.getProperty(
             "app.baseUrl",
             "http://localhost:8082/casedocumentknowledge-service"
@@ -164,7 +166,7 @@ public class AnswersHttpLiveTest {
         try (BrokerUtil brokerUtil = new BrokerUtil()) {
 
             final HttpHeaders headers = new HttpHeaders();
-            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+            headers.setAccept(List.of(VND_TYPE_JSON));
 
             final ResponseEntity<String> response = http.exchange(
                     baseUrl + "/answers/" + caseId + "/" + queryId,
@@ -185,7 +187,7 @@ public class AnswersHttpLiveTest {
                             && "casedocumentknowledge-service-api".equals(json.get("component").asText())
                             && caseId.equals(fromString(json.get("content").get("caseId").asText()))
                             && queryId.equals(fromString(json.get("content").get("queryId").asText()))
-                            && "application/json".equals(json.get("content").get("_metadata").get("name").asText())
+                            && "application/vnd.casedocumentknowledge-service.answers+json".equals(json.get("content").get("_metadata").get("name").asText())
                             && "audit.events.audit-recorded".equals(json.get("_metadata").get("name").asText())
             );
             assertNotNull(auditRequest);
@@ -196,7 +198,7 @@ public class AnswersHttpLiveTest {
                             && "casedocumentknowledge-service-api".equals(json.get("component").asText())
                             && "Answer v2".equals(json.get("content").get("answer").asText())
                             && !json.get("content").has("llmInput")
-                            && "application/json".equals(json.get("content").get("_metadata").get("name").asText())
+                            && "application/vnd.casedocumentknowledge-service.answers+json".equals(json.get("content").get("_metadata").get("name").asText())
                             && "audit.events.audit-recorded".equals(json.get("_metadata").get("name").asText())
             );
             assertNotNull(auditResponse);
@@ -206,7 +208,7 @@ public class AnswersHttpLiveTest {
     @Test
     void get_specific_answer_version() {
         final HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        headers.setAccept(List.of(VND_TYPE_JSON));
 
         final ResponseEntity<String> response = http.exchange(
                 baseUrl + "/answers/" + caseId + "/" + queryId + "?version=1",
@@ -223,7 +225,7 @@ public class AnswersHttpLiveTest {
     @Test
     void get_answer_with_llm_latest() {
         final HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        headers.setAccept(List.of(VND_TYPE_JSON));
 
         final ResponseEntity<String> response = http.exchange(
                 baseUrl + "/answers/" + caseId + "/" + queryId + "/with-llm",
@@ -241,7 +243,7 @@ public class AnswersHttpLiveTest {
     @Test
     void list_queries_as_of_for_case_returns_latest_definition_and_status() {
         final HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        headers.setAccept(List.of(VND_TYPE_JSON_QUERIES));
 
         // Choose an as-of after v2 to ensure v2 definition is selected
         final String asOf = "2025-06-03T00:00:00Z";

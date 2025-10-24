@@ -24,6 +24,7 @@ import uk.gov.hmcts.cp.openapi.model.cdk.AnswerWithLlmResponse;
 
 class AnswersControllerTest {
 
+    public final String VND_TYPE_JSON = "application/vnd.casedocumentknowledge-service.answers+json";
     @Test
     void getAnswerByCaseAndQuery_latest_returns_answer() throws Exception {
         final AnswerService service = Mockito.mock(AnswerService.class);
@@ -44,9 +45,9 @@ class AnswersControllerTest {
                 .thenReturn(resp);
 
         mvc.perform(get("/answers/{caseId}/{queryId}", caseId, queryId)
-                        .accept(MediaType.APPLICATION_JSON))
+                        .accept(VND_TYPE_JSON))
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(content().contentTypeCompatibleWith(VND_TYPE_JSON))
                 .andExpect(jsonPath("$.queryId").value(queryId.toString()))
                 .andExpect(jsonPath("$.version").value(2));
 
@@ -77,9 +78,9 @@ class AnswersControllerTest {
         mvc.perform(get("/answers/{caseId}/{queryId}", caseId, queryId)
                         .param("version", "3")
                         .param("at", asOfStr)
-                        .accept(MediaType.APPLICATION_JSON))
+                        .accept(VND_TYPE_JSON))
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(content().contentTypeCompatibleWith(VND_TYPE_JSON))
                 .andExpect(jsonPath("$.queryId").value(queryId.toString()))
                 .andExpect(jsonPath("$.version").value(3));
 
@@ -107,9 +108,9 @@ class AnswersControllerTest {
                 .thenReturn(resp);
 
         mvc.perform(get("/answers/{caseId}/{queryId}/with-llm", caseId, queryId)
-                        .accept(MediaType.APPLICATION_JSON))
+                        .accept(VND_TYPE_JSON))
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(content().contentTypeCompatibleWith(VND_TYPE_JSON))
                 .andExpect(jsonPath("$.queryId").value(queryId.toString()))
                 .andExpect(jsonPath("$.llmInput").value("LLM"));
 
@@ -141,9 +142,9 @@ class AnswersControllerTest {
         mvc.perform(get("/answers/{caseId}/{queryId}/with-llm", caseId, queryId)
                         .param("version", "5")
                         .param("at", asOfStr)
-                        .accept(MediaType.APPLICATION_JSON))
+                        .accept(VND_TYPE_JSON))
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(content().contentTypeCompatibleWith(VND_TYPE_JSON))
                 .andExpect(jsonPath("$.queryId").value(queryId.toString()))
                 .andExpect(jsonPath("$.version").value(5))
                 .andExpect(jsonPath("$.llmInput").value("LLM-INPUT"));
