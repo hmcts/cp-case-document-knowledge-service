@@ -26,11 +26,6 @@ public class QueriesController implements QueriesApi {
         this.service = service;
     }
 
-    /**
-     * Convenience endpoint: allow GET /queries without "caseId" (treat as null).
-     * Disambiguated from the contract mapping via {@code params="!caseId"}.
-     */
-    //@GetMapping(value = "/queries", produces = MediaType.APPLICATION_JSON_VALUE, params = "!caseId")
     public ResponseEntity<QueryStatusResponse> listQueriesNoCase(
             @RequestParam(value = "at", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) final OffsetDateTime asOf
@@ -38,7 +33,6 @@ public class QueriesController implements QueriesApi {
         return listQueries(null, asOf);
     }
 
-    // ========== Contract endpoints (from QueriesApi) ==========
 
     @Override
     public ResponseEntity<QueryStatusResponse> listQueries(
