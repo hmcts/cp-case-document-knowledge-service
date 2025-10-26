@@ -1,13 +1,7 @@
 package uk.gov.hmcts.cp.cdk.repo;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -20,11 +14,14 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import uk.gov.hmcts.cp.cdk.domain.CaseQueryStatus;
-import uk.gov.hmcts.cp.cdk.domain.Query;
-import uk.gov.hmcts.cp.cdk.domain.QueryLifecycleStatus;
-import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
-import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
+import uk.gov.hmcts.cp.cdk.domain.*;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @DataJpaTest(
         properties = {
@@ -52,6 +49,17 @@ class QueriesAsOfRepositoryTest {
         POSTGRES.start();
     }
 
+    @jakarta.annotation.Resource
+    private QueriesAsOfRepository repo;
+    @jakarta.annotation.Resource
+    private QueryVersionRepository versionRepo;
+    @jakarta.annotation.Resource
+    private QueryRepository queryRepo;
+    @PersistenceContext
+    private EntityManager em;
+    private UUID caseId;
+    private UUID qid;
+
     @DynamicPropertySource
     static void dbProps(final DynamicPropertyRegistry r) {
         r.add("spring.datasource.url", POSTGRES::getJdbcUrl);
@@ -60,22 +68,6 @@ class QueriesAsOfRepositoryTest {
         r.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
         r.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
     }
-
-
-    @jakarta.annotation.Resource
-    private QueriesAsOfRepository repo;
-
-    @jakarta.annotation.Resource
-    private QueryVersionRepository versionRepo;
-
-    @jakarta.annotation.Resource
-    private QueryRepository queryRepo;
-
-    @PersistenceContext
-    private EntityManager em;
-
-    private UUID caseId;
-    private UUID qid;
 
     @BeforeEach
     void seed() {

@@ -1,27 +1,5 @@
 package uk.gov.hmcts.cp.cdk.filters.audit;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
-import uk.gov.hmcts.cp.cdk.filters.audit.service.AuditPayloadGenerationService;
-import uk.gov.hmcts.cp.cdk.filters.audit.service.AuditService;
-import uk.gov.hmcts.cp.cdk.filters.audit.service.PathParameterService;
-
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Map;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletResponse;
@@ -32,17 +10,20 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
+import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
+import uk.gov.hmcts.cp.cdk.filters.audit.service.AuditPayloadGenerationService;
+import uk.gov.hmcts.cp.cdk.filters.audit.service.AuditService;
+import uk.gov.hmcts.cp.cdk.filters.audit.service.PathParameterService;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.Mockito.*;
 
 class AuditFilterTest {
-
-    private AuditFilter auditFilter;
-
-    private AuditService mockAuditService;
-    private AuditPayloadGenerationService mockAuditPayloadGenerationService;
-
-    private MockHttpServletRequest mockRequest;
-    private MockHttpServletResponse mockResponse;
-    private FilterChain mockFilterChain;
 
     private static final String CONTEXT_PATH = "test-context-path";
     private static final String CONTEXT_PATH_WITH_LEADING_SLASH = "/" + CONTEXT_PATH;
@@ -52,10 +33,23 @@ class AuditFilterTest {
     private static final String REQUEST_URI = "/api/v1/resource/123";
     private static final String REQUEST_METHOD = "POST";
     private static final int RESPONSE_STATUS = 201;
-
     private final AuditPayload mockRequestAuditNode = mock(AuditPayload.class);
     private final AuditPayload mockResponseAuditNode = mock(AuditPayload.class);
+    private AuditFilter auditFilter;
+    private AuditService mockAuditService;
+    private AuditPayloadGenerationService mockAuditPayloadGenerationService;
+    private MockHttpServletRequest mockRequest;
+    private MockHttpServletResponse mockResponse;
+    private FilterChain mockFilterChain;
 
+    /**
+     * Helper method to safely create a type-specific ArgumentCaptor for Map<String, String>.
+     * This is the recommended way to handle generic capture with Mockito's type erasure issues.
+     */
+    @SuppressWarnings("unchecked")
+    private static ArgumentCaptor<Map<String, String>> argumentCaptorForMapStringString() {
+        return ArgumentCaptor.forClass(Map.class);
+    }
 
     @BeforeEach
     void setUp() throws IOException, ServletException {
@@ -173,14 +167,5 @@ class AuditFilterTest {
         MockHttpServletRequest apiRequest = new MockHttpServletRequest("POST", "/api/data");
 
         assertFalse(auditFilter.shouldNotFilter(apiRequest));
-    }
-
-    /**
-     * Helper method to safely create a type-specific ArgumentCaptor for Map<String, String>.
-     * This is the recommended way to handle generic capture with Mockito's type erasure issues.
-     */
-    @SuppressWarnings("unchecked")
-    private static ArgumentCaptor<Map<String, String>> argumentCaptorForMapStringString() {
-        return ArgumentCaptor.forClass(Map.class);
     }
 }

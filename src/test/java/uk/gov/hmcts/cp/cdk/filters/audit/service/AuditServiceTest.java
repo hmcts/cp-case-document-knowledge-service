@@ -1,17 +1,5 @@
 package uk.gov.hmcts.cp.cdk.filters.audit.service;
 
-import static java.util.UUID.randomUUID;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-
-import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
-import uk.gov.hmcts.cp.cdk.filters.audit.model.Metadata;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.jms.JMSException;
@@ -21,6 +9,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessagePostProcessor;
+import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
+import uk.gov.hmcts.cp.cdk.filters.audit.model.Metadata;
+
+import static java.util.UUID.randomUUID;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
 class AuditServiceTest {
 

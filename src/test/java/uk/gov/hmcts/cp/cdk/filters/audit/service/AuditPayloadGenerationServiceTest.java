@@ -1,15 +1,14 @@
 package uk.gov.hmcts.cp.cdk.filters.audit.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import uk.gov.hmcts.cp.cdk.filters.audit.JacksonConfig;
 import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
 
 import java.util.Map;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class AuditPayloadGenerationServiceTest {
 

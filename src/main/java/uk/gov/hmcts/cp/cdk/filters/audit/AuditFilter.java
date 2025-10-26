@@ -1,17 +1,5 @@
 package uk.gov.hmcts.cp.cdk.filters.audit;
 
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-
-import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
-import uk.gov.hmcts.cp.cdk.filters.audit.service.AuditPayloadGenerationService;
-import uk.gov.hmcts.cp.cdk.filters.audit.service.AuditService;
-import uk.gov.hmcts.cp.cdk.filters.audit.service.PathParameterService;
-
-import java.io.IOException;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,6 +13,17 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
+import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
+import uk.gov.hmcts.cp.cdk.filters.audit.service.AuditPayloadGenerationService;
+import uk.gov.hmcts.cp.cdk.filters.audit.service.AuditService;
+import uk.gov.hmcts.cp.cdk.filters.audit.service.PathParameterService;
+
+import java.io.IOException;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)

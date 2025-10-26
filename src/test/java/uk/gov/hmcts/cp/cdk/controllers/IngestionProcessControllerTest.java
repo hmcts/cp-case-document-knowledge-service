@@ -2,7 +2,6 @@ package uk.gov.hmcts.cp.cdk.controllers;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import uk.gov.hmcts.cp.cdk.services.IngestionProcessService;
@@ -54,13 +53,13 @@ class IngestionProcessControllerTest {
                                 .contentType("application/vnd.casedocumentknowledge-service.ingestion-process+json")
                                 .accept("application/vnd.casedocumentknowledge-service.ingestion-process+json")
                                 .content("""
-                            {
-                              "courtCentreId": "f8254db1-1683-483e-afb3-b87fde5a0a26",
-                              "roomId": "9e4932f7-97b2-3010-b942-ddd2624e4dd8",
-                              "date": "2025-10-23",
-                              "effectiveAt": "2025-05-01T12:00:00Z"
-                            }
-                        """)
+                                            {
+                                              "courtCentreId": "f8254db1-1683-483e-afb3-b87fde5a0a26",
+                                              "roomId": "9e4932f7-97b2-3010-b942-ddd2624e4dd8",
+                                              "date": "2025-10-23",
+                                              "effectiveAt": "2025-05-01T12:00:00Z"
+                                            }
+                                        """)
                 )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.phase").value("STARTED"))

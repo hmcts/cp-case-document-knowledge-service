@@ -1,14 +1,8 @@
 // src/test/java/uk/gov/hmcts/cp/cdk/repo/IngestionStatusViewRepositoryTest.java
 package uk.gov.hmcts.cp.cdk.repo;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import java.time.OffsetDateTime;
-import java.util.Optional;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -23,6 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+
+import java.time.OffsetDateTime;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DataJpaTest(
         properties = {
@@ -48,6 +49,14 @@ class IngestionStatusViewRepositoryTest {
         POSTGRES.start();
     }
 
+    @jakarta.annotation.Resource
+    private IngestionStatusViewRepository repo;
+    @jakarta.annotation.Resource
+    private JdbcTemplate jdbc;
+    @PersistenceContext
+    private EntityManager em;
+    private UUID caseId;
+
     @DynamicPropertySource
     static void dbProps(final DynamicPropertyRegistry r) {
         r.add("spring.datasource.url", POSTGRES::getJdbcUrl);
@@ -57,35 +66,24 @@ class IngestionStatusViewRepositoryTest {
         r.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
     }
 
-    @jakarta.annotation.Resource
-    private IngestionStatusViewRepository repo;
-
-    @jakarta.annotation.Resource
-    private JdbcTemplate jdbc;
-
-    @PersistenceContext
-    private EntityManager em;
-
-    private UUID caseId;
-
     @BeforeEach
     void initViewAndData() {
         jdbc.execute("""
-            CREATE OR REPLACE VIEW v_case_ingestion_status AS
-            SELECT DISTINCT ON (case_id)
-              case_id,
-              ingestion_phase     AS phase,
-              ingestion_phase_at  AS last_updated
-            FROM case_documents
-            ORDER BY case_id, ingestion_phase_at DESC;
-        """);
+                    CREATE OR REPLACE VIEW v_case_ingestion_status AS
+                    SELECT DISTINCT ON (case_id)
+                      case_id,
+                      ingestion_phase     AS phase,
+                      ingestion_phase_at  AS last_updated
+                    FROM case_documents
+                    ORDER BY case_id, ingestion_phase_at DESC;
+                """);
 
         caseId = UUID.randomUUID();
 
         jdbc.update("""
-            INSERT INTO case_documents (doc_id, case_id, source, blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
-            VALUES (?, ?, 'IDPC', 'blob://uri', ?, 'INGESTING', ?)
-        """,
+                            INSERT INTO case_documents (doc_id, case_id, source, blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
+                            VALUES (?, ?, 'IDPC', 'blob://uri', ?, 'INGESTING', ?)
+                        """,
                 UUID.randomUUID(),
                 caseId,
                 OffsetDateTime.parse("2025-05-01T12:00:00Z"),
@@ -93,9 +91,9 @@ class IngestionStatusViewRepositoryTest {
         );
 
         jdbc.update("""
-            INSERT INTO case_documents (doc_id, case_id, source, blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
-            VALUES (?, ?, 'IDPC', 'blob://uri2', ?, 'INGESTED', ?)
-        """,
+                            INSERT INTO case_documents (doc_id, case_id, source, blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
+                            VALUES (?, ?, 'IDPC', 'blob://uri2', ?, 'INGESTED', ?)
+                        """,
                 UUID.randomUUID(),
                 caseId,
                 OffsetDateTime.parse("2025-05-01T12:05:00Z"),

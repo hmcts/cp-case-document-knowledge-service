@@ -1,13 +1,7 @@
 package uk.gov.hmcts.cp.cdk.repo;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -22,6 +16,13 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @DataJpaTest(
         properties = {
@@ -47,6 +48,14 @@ class QueryVersionRepositoryTest {
         POSTGRES.start();
     }
 
+    @jakarta.annotation.Resource
+    private QueryVersionRepository repo;
+    @jakarta.annotation.Resource
+    private QueryRepository queryRepo;
+    @PersistenceContext
+    private EntityManager em;
+    private UUID qid;
+
     @DynamicPropertySource
     static void dbProps(final DynamicPropertyRegistry r) {
         r.add("spring.datasource.url", POSTGRES::getJdbcUrl);
@@ -55,17 +64,6 @@ class QueryVersionRepositoryTest {
         r.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
         r.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
     }
-
-    @jakarta.annotation.Resource
-    private QueryVersionRepository repo;
-
-    @jakarta.annotation.Resource
-    private QueryRepository queryRepo;
-
-    @PersistenceContext
-    private EntityManager em;
-
-    private UUID qid;
 
     @BeforeEach
     void seed() {

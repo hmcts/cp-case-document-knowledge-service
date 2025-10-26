@@ -1,9 +1,8 @@
 package uk.gov.hmcts.cp.cdk.filters.audit.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import uk.gov.hmcts.cp.cdk.filters.audit.parser.OpenApiSpecificationParser;
 import uk.gov.hmcts.cp.cdk.filters.audit.util.PathParameterNameExtractor;
 import uk.gov.hmcts.cp.cdk.filters.audit.util.PathParameterValueExtractor;
@@ -12,9 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class OpenApiSpecPathParameterServiceTest {
 

@@ -23,20 +23,17 @@ public class IngestionStatusViewRepository {
     @PersistenceContext
     private EntityManager entityManager;
 
-    public record Row(UUID caseId, String phase, OffsetDateTime lastUpdated) { }
-
     public Optional<Row> findByCaseId(final UUID caseId) {
         final String sql = """
-            SELECT case_id, phase, last_updated
-              FROM v_case_ingestion_status
-             WHERE case_id = :caseId
-            """;
+                SELECT case_id, phase, last_updated
+                  FROM v_case_ingestion_status
+                 WHERE case_id = :caseId
+                """;
 
         final Query nativeQuery = entityManager.createNativeQuery(sql);
         nativeQuery.setParameter("caseId", caseId);
 
-        @SuppressWarnings("unchecked")
-        final List<Object[]> resultRows = nativeQuery.getResultList();
+        @SuppressWarnings("unchecked") final List<Object[]> resultRows = nativeQuery.getResultList();
 
         final Optional<Row> result;
         if (resultRows.isEmpty()) {
@@ -49,5 +46,8 @@ public class IngestionStatusViewRepository {
             result = Optional.of(new Row(foundCaseId, phaseText, lastUpdatedUtc));
         }
         return result;
+    }
+
+    public record Row(UUID caseId, String phase, OffsetDateTime lastUpdated) {
     }
 }

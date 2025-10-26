@@ -12,13 +12,7 @@ import uk.gov.hmcts.cp.cdk.repo.QueryRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryVersionRepository;
 import uk.gov.hmcts.cp.cdk.services.mapper.QueryMapper;
 import uk.gov.hmcts.cp.cdk.util.TimeUtils;
-import uk.gov.hmcts.cp.openapi.model.cdk.QueryDefinitionsResponse;
-import uk.gov.hmcts.cp.openapi.model.cdk.QueryLifecycleStatus;
-import uk.gov.hmcts.cp.openapi.model.cdk.QueryStatusResponse;
-import uk.gov.hmcts.cp.openapi.model.cdk.QuerySummary;
-import uk.gov.hmcts.cp.openapi.model.cdk.QueryUpsertRequest;
-import uk.gov.hmcts.cp.openapi.model.cdk.QueryVersionSummary;
-import uk.gov.hmcts.cp.openapi.model.cdk.Scope;
+import uk.gov.hmcts.cp.openapi.model.cdk.*;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -26,25 +20,27 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Query read/write operations with as-of semantics and versioned definitions. */
+/**
+ * Query read/write operations with as-of semantics and versioned definitions.
+ */
 @Service
 public class QueryService {
 
     // ---------- Definition snapshot (no case) ----------
-    private static final int DEF_COL_QUERY_ID     = 0;
-    private static final int DEF_COL_LABEL        = 1;
-    private static final int DEF_COL_USER_QUERY   = 2;
-    private static final int DEF_COL_PROMPT       = 3;
+    private static final int DEF_COL_QUERY_ID = 0;
+    private static final int DEF_COL_LABEL = 1;
+    private static final int DEF_COL_USER_QUERY = 2;
+    private static final int DEF_COL_PROMPT = 3;
     private static final int DEF_COL_EFFECTIVE_AT = 4;
 
     // ---------- Case-scoped (has extra case_id at index 1) ----------
-    private static final int CASE_COL_QUERY_ID     = 0;
-    private static final int CASE_COL_CASE_ID      = 1;
-    private static final int CASE_COL_LABEL        = 2;
-    private static final int CASE_COL_USER_QUERY   = 3;
-    private static final int CASE_COL_PROMPT       = 4;
+    private static final int CASE_COL_QUERY_ID = 0;
+    private static final int CASE_COL_CASE_ID = 1;
+    private static final int CASE_COL_LABEL = 2;
+    private static final int CASE_COL_USER_QUERY = 3;
+    private static final int CASE_COL_PROMPT = 4;
     private static final int CASE_COL_EFFECTIVE_AT = 5;
-    private static final int CASE_COL_STATUS_TXT   = 6;
+    private static final int CASE_COL_STATUS_TXT = 6;
 
 
     private final QueryRepository queryRepository;

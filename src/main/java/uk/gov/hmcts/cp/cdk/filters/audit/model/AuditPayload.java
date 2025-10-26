@@ -11,4 +11,5 @@ public record AuditPayload(
         String timestamp,
         Metadata _metadata
 
-) {}
+) {
+}

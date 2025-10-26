@@ -84,10 +84,11 @@ dependencies {
     implementation "uk.gov.hmcts.cp:cp-springboot-auth-rules-filter:1.0.1"
     //implementation "uk.gov.hmcts.cp:cp-springboot-audit-filter:1.0.0"
 
-    // Web / validation
+    // Web / validation/ Batch
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-
+    implementation 'org.springframework.boot:spring-boot-starter-batch'
+    implementation 'org.springframework.batch:spring-batch-core'
     implementation 'org.springframework.boot:spring-boot-starter-artemis'
 
     // Observability
@@ -104,6 +105,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.postgresql:postgresql'
     implementation 'org.flywaydb:flyway-core'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+
     implementation 'org.flywaydb:flyway-database-postgresql'
 
     // Logging / utils
@@ -118,6 +121,9 @@ dependencies {
 
     implementation 'io.swagger.parser.v3:swagger-parser:2.1.20' // Use the latest version
 
+    //Azure
+    implementation 'com.azure:azure-storage-blob:12.27.0'
+
     // Lombok for handwritten code
     compileOnly "org.projectlombok:lombok:$lombokVersion"
     annotationProcessor "org.projectlombok:lombok:$lombokVersion"
@@ -128,6 +134,9 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-test'
     testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
+    testImplementation 'org.springframework.batch:spring-batch-test'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
+    testImplementation 'org.assertj:assertj-core:3.26.0'
 
     // Testcontainers (BOM-managed)
     testImplementation platform("org.testcontainers:testcontainers-bom:$testcontainersBom")

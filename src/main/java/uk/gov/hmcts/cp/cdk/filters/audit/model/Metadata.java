@@ -1,9 +1,9 @@
 package uk.gov.hmcts.cp.cdk.filters.audit.model;
 
+import lombok.Builder;
+
 import java.util.Optional;
 import java.util.UUID;
-
-import lombok.Builder;
 
 @Builder
 public record Metadata(

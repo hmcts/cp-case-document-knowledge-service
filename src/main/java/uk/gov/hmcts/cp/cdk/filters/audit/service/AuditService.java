@@ -1,9 +1,5 @@
 package uk.gov.hmcts.cp.cdk.filters.audit.service;
 
-import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
-
-import java.util.UUID;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -11,6 +7,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Service;
+import uk.gov.hmcts.cp.cdk.filters.audit.model.AuditPayload;
+
+import java.util.UUID;
 
 @Service
 @AllArgsConstructor

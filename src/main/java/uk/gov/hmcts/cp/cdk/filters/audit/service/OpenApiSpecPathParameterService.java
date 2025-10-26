@@ -1,5 +1,7 @@
 package uk.gov.hmcts.cp.cdk.filters.audit.service;
 
+import lombok.AllArgsConstructor;
+import org.springframework.stereotype.Service;
 import uk.gov.hmcts.cp.cdk.filters.audit.parser.OpenApiSpecificationParser;
 import uk.gov.hmcts.cp.cdk.filters.audit.util.PathParameterNameExtractor;
 import uk.gov.hmcts.cp.cdk.filters.audit.util.PathParameterValueExtractor;
@@ -8,9 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
-
-import lombok.AllArgsConstructor;
-import org.springframework.stereotype.Service;
 
 /**
  * Service to extract path parameters from servlet paths based on OpenAPI specifications.

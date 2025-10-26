@@ -1,27 +1,28 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
 
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import uk.gov.hmcts.cp.cdk.services.QueryService;
+import uk.gov.hmcts.cp.openapi.model.cdk.*;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.UUID;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import uk.gov.hmcts.cp.cdk.services.QueryService;
-import uk.gov.hmcts.cp.openapi.model.cdk.*;
-
 
 class QueriesControllerTest {
 
     public final String VND_TYPE_JSON = "application/vnd.casedocumentknowledge-service.queries+json";
+
     @Test
     void listQueries_returns_case_as_of() throws Exception {
         final QueryService service = Mockito.mock(QueryService.class);
@@ -78,17 +79,17 @@ class QueriesControllerTest {
                         post("/queries")
                                 .contentType(VND_TYPE_JSON)
                                 .content("""
-                        {
-                          "effectiveAt":"2025-05-01T12:00:00Z",
-                          "queries":[
-                            {
-                              "queryId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-                              "userQuery":"UQ",
-                              "queryPrompt":"QP"
-                            }
-                          ]
-                        }
-                        """)
+                                        {
+                                          "effectiveAt":"2025-05-01T12:00:00Z",
+                                          "queries":[
+                                            {
+                                              "queryId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                              "userQuery":"UQ",
+                                              "queryPrompt":"QP"
+                                            }
+                                          ]
+                                        }
+                                        """)
                 )
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.queries[0].label").value("Case Summary"))

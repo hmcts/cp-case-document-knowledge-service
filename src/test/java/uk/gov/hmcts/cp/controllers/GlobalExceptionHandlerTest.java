@@ -9,7 +9,6 @@ import org.springframework.web.server.ResponseStatusException;
 import uk.gov.hmcts.cp.cdk.controllers.GlobalExceptionHandler;
 import uk.gov.hmcts.cp.openapi.model.cdk.ErrorResponse;
 
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;

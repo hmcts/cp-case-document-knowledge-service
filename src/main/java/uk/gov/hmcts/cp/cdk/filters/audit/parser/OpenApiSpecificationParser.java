@@ -1,13 +1,5 @@
 package uk.gov.hmcts.cp.cdk.filters.audit.parser;
 
-import uk.gov.hmcts.cp.cdk.filters.audit.util.ClasspathResourceLoader;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.regex.Pattern;
-
 import io.swagger.parser.OpenAPIParser;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Paths;
@@ -18,6 +10,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
+import uk.gov.hmcts.cp.cdk.filters.audit.util.ClasspathResourceLoader;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Getter
 @Component

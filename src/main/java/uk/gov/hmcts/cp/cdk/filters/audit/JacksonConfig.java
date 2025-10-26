@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Global configuration to ensure Jackson's ObjectMapper correctly handles 
+ * Global configuration to ensure Jackson's ObjectMapper correctly handles
  * Java 8 Date/Time types (like ZonedDateTime, Instant, and LocalDate).
  * * This prevents the "Java 8 date/time type not supported by default" error
  * in framework-managed components (like filters and services).

@@ -1,13 +1,13 @@
 package uk.gov.hmcts.cp.cdk.filters.audit.util;
 
-import static java.util.regex.Pattern.compile;
+import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 
-import org.springframework.stereotype.Service;
+import static java.util.regex.Pattern.compile;
 
 @Service
 public class PathParameterValueExtractor {
