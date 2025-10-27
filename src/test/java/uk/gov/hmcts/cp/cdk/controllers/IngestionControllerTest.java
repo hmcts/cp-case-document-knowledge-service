@@ -33,7 +33,7 @@ class IngestionControllerTest {
 
     private MockMvc mvc(final IngestionService service) {
         return MockMvcBuilders
-                .standaloneSetup(new IngestionControllerTest())
+                .standaloneSetup(new IngestionController(service))
                 .setControllerAdvice(new IngestionExceptionHandler())
                 .build();
     }
@@ -84,11 +84,11 @@ class IngestionControllerTest {
                 }
                 """;
 
-        mvc.perform(post("/ingestions/start").contentType(VND).accept(VND).content(body));
-               /** .andExpect(status().isOk())
+        mvc.perform(post("/ingestions/start").contentType(VND).accept(VND).content(body))
+                .andExpect(status().isOk())
                 .andExpect(content().contentType(VND))
                 .andExpect(jsonPath("$.phase").value("STARTED"))
-                .andExpect(jsonPath("$.message", containsString("executionId=42")));**/
+                .andExpect(jsonPath("$.message", containsString("executionId=42")));
     }
 
     @Test
@@ -108,10 +108,10 @@ class IngestionControllerTest {
                 }
                 """;
 
-        mvc.perform(post("/ingestions/start").contentType(VND).accept(VND).content(body));
-               /** .andExpect(status().isNotFound())
+        mvc.perform(post("/ingestions/start").contentType(VND).accept(VND).content(body))
+                .andExpect(status().isNotFound())
                 .andExpect(content().contentType(VND))
-                .andExpect(jsonPath("$.message", containsString("caseIngestionJob")));**/
+                .andExpect(jsonPath("$.message", containsString("caseIngestionJob")));
     }
 
     @Test
@@ -131,10 +131,10 @@ class IngestionControllerTest {
                 }
                 """;
 
-        mvc.perform(post("/ingestions/start").contentType(VND).accept(VND).content(body));
-                //.andExpect(status().isBadRequest())
-                //.andExpect(content().contentType(VND))
-                //.andExpect(jsonPath("$.message", containsString("invalid parameters")));
+        mvc.perform(post("/ingestions/start").contentType(VND).accept(VND).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(VND))
+                .andExpect(jsonPath("$.message", containsString("invalid parameters")));
     }
 
     @Test
@@ -154,10 +154,10 @@ class IngestionControllerTest {
                 }
                 """;
 
-        mvc.perform(post("/ingestions/start").contentType(VND).accept(VND).content(body));
-                //.andExpect(status().isConflict())
-               // .andExpect(content().contentType(VND))
-                //.andExpect(jsonPath("$.message", containsString("already running")));
+        mvc.perform(post("/ingestions/start").contentType(VND).accept(VND).content(body))
+                .andExpect(status().isConflict())
+               .andExpect(content().contentType(VND))
+                .andExpect(jsonPath("$.message", containsString("already running")));
     }
 }
 
