@@ -9,7 +9,6 @@ public class HearingSummariesApiProperties {
     private String actionHeader;
     private String userIdHeader;
 
-
     public String getHearingSummariesUrlTemplate() {
         return hearingSummariesUrlTemplate;
     }
