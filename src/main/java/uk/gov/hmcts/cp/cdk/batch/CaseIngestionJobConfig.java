@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
@@ -158,7 +159,7 @@ public class CaseIngestionJobConfig {
     @Bean
     public Step step2FilterCaseIdpcForSingleDefendant(final JobRepository jobRepository,
                                                       final PlatformTransactionManager transactionManager,
-                                                      final QueryClient queryClient) {
+                                                      final ProgressionClient progressionClient) {
         return new StepBuilder("step2_check_single_defendant_idpc", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
                     final List<String> rawCaseIds = getStringListFromContext(contribution, CONTEXT_KEY_CASE_IDS);
@@ -166,7 +167,7 @@ public class CaseIngestionJobConfig {
 
                     for (final String idStr : rawCaseIds) {
                         final UUID caseId = UUID.fromString(idStr);
-                        final Optional<LatestMaterialInfo> meta = queryClient.getCourtDocuments(caseId);
+                        final Optional<LatestMaterialInfo> meta = progressionClient.getCourtDocuments(caseId);
                         if (meta.isPresent()) {
                             LatestMaterialInfo info = meta.get();
 
@@ -192,7 +193,7 @@ public class CaseIngestionJobConfig {
     @Bean
     public Step step3UploadIdpc(final JobRepository jobRepository,
                                 final PlatformTransactionManager transactionManager,
-                                final QueryClient queryClient,
+                                final ProgressionClient progressionClient,
                                 final StorageService storageService,
                                 final CaseDocumentRepository caseDocumentRepository) {
         return new StepBuilder("step3_upload_idpc", jobRepository)
@@ -202,7 +203,7 @@ public class CaseIngestionJobConfig {
 
                     for (final String idStr : rawEligibleIds) {
                         final UUID materialID = UUID.fromString(idStr);
-                        final Optional<String> downloadUrl = queryClient.getMaterialDownloadUrl(materialID);
+                        final Optional<String> downloadUrl = progressionClient.getMaterialDownloadUrl(materialID);
 
 
                         if (downloadUrl.isEmpty()) {
@@ -212,6 +213,7 @@ public class CaseIngestionJobConfig {
                         final QueryClient.CourtDocMeta meta = new QueryClient.CourtDocMeta(true,true,downloadUrl
                                 .get(),"application/pdf",0L);
 
+                        /** need to update this code with copyurl once we have destination path
                         try (InputStream inputStream = queryClient.downloadIdpc(downloadUrl.get())) {
                             final long size = meta.sizeBytes() == null ? 0L : meta.sizeBytes();
                             final String contentType = meta.contentType();
@@ -221,6 +223,7 @@ public class CaseIngestionJobConfig {
                                     buildCaseDocument(materialID, blobUrl, contentType, size);
                             caseDocumentRepository.save(caseDocument);
                         }
+                         **/
                     }
                     return RepeatStatus.FINISHED;
                 }, transactionManager)

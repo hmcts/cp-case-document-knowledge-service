@@ -14,6 +14,7 @@ import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.support.transaction.ResourcelessTransactionManager;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.query.QueryClient;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
@@ -38,6 +39,7 @@ class CaseIngestionJobConfigTest {
     private PlatformTransactionManager transactionManager;
 
     private QueryClient queryClient;
+    private ProgressionClient progressionClient;
     private StorageService storageService;
     private CaseDocumentRepository caseDocumentRepository;
     private QueryRepository queryRepository;
@@ -56,6 +58,7 @@ class CaseIngestionJobConfigTest {
         transactionManager = new ResourcelessTransactionManager();
 
         queryClient = mock(QueryClient.class);
+        progressionClient = mock(ProgressionClient.class);
         storageService = mock(StorageService.class);
         caseDocumentRepository = mock(CaseDocumentRepository.class);
         queryRepository = mock(QueryRepository.class);
@@ -75,8 +78,8 @@ class CaseIngestionJobConfigTest {
 
         CaseIngestionJobConfig config = new CaseIngestionJobConfig();
         step1 = config.step1FetchHearingsCasesWithSingleDefendant(jobRepository, transactionManager, queryClient);
-        step2 = config.step2FilterCaseIdpcForSingleDefendant(jobRepository, transactionManager, queryClient);
-        step3 = config.step3UploadIdpc(jobRepository, transactionManager, queryClient, storageService, caseDocumentRepository);
+        step2 = config.step2FilterCaseIdpcForSingleDefendant(jobRepository, transactionManager, progressionClient);
+        step3 = config.step3UploadIdpc(jobRepository, transactionManager, progressionClient, storageService, caseDocumentRepository);
         step4 = config.step4CheckUploadStatus(jobRepository, transactionManager, storageService);
         step5 = config.step5EnqueueAnswerTasks(jobRepository, transactionManager, questionsProperties, queryRepository, namedParameterJdbcTemplate);
     }
