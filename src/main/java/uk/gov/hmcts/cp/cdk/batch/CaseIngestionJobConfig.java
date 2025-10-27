@@ -14,6 +14,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.domain.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.query.QueryClient;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
@@ -23,10 +24,7 @@ import uk.gov.hmcts.cp.cdk.storage.StorageService;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Configuration
 public class CaseIngestionJobConfig {
@@ -34,9 +32,10 @@ public class CaseIngestionJobConfig {
     public static final String JOB_NAME = "caseIngestionJob";
 
     private static final String CONTEXT_KEY_CASE_IDS = "caseIds";
-    private static final String CONTEXT_KEY_ELIGIBLE_CASE_IDS = "eligibleCaseIds";
+    private static final String CONTEXT_KEY_ELIGIBLE_MATERIAL_IDS = "eligibleMaterialIds";
     private static final String EXIT_CODE_RETRY = "RETRY";
     private static final String BLOB_TEMPLATE = "cases/%s/idpc.pdf";
+    private static final String DOC_TYPE_ID = "41be14e8-9df5-4b08-80b0-1e670bc80a5b";
 
     private static final String INSERT_ANSWER_TASK_SQL = """
             INSERT INTO answer_tasks(case_id, query_id, status, created_at)
@@ -163,20 +162,27 @@ public class CaseIngestionJobConfig {
         return new StepBuilder("step2_check_single_defendant_idpc", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
                     final List<String> rawCaseIds = getStringListFromContext(contribution, CONTEXT_KEY_CASE_IDS);
-                    final List<String> eligibleCaseIds = new ArrayList<>();
+                    final List<String> eligibleMaterialIds = new ArrayList<>();
 
                     for (final String idStr : rawCaseIds) {
                         final UUID caseId = UUID.fromString(idStr);
-                        final QueryClient.CourtDocMeta meta = queryClient.getCourtDocuments(caseId);
-                        if (meta.singleDefendant() && meta.idpcAvailable()) {
-                            eligibleCaseIds.add(caseId.toString());
+                        final Optional<LatestMaterialInfo> meta = queryClient.getCourtDocuments(caseId);
+                        if (meta.isPresent()) {
+                            LatestMaterialInfo info = meta.get();
+
+                            if(info.documentTypeId().equals(DOC_TYPE_ID)) {
+                                eligibleMaterialIds.add(info.materialId());
+                            }
+                        } else {
+                            System.out.println("No latest material found");//No PMD
                         }
+
                     }
 
                     contribution.getStepExecution()
                             .getJobExecution()
                             .getExecutionContext()
-                            .put(CONTEXT_KEY_ELIGIBLE_CASE_IDS, eligibleCaseIds);
+                            .put(CONTEXT_KEY_ELIGIBLE_MATERIAL_IDS, eligibleMaterialIds);
 
                     return RepeatStatus.FINISHED;
                 }, transactionManager)
@@ -192,23 +198,27 @@ public class CaseIngestionJobConfig {
         return new StepBuilder("step3_upload_idpc", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
                     final List<String> rawEligibleIds =
-                            getStringListFromContext(contribution, CONTEXT_KEY_ELIGIBLE_CASE_IDS);
+                            getStringListFromContext(contribution, CONTEXT_KEY_ELIGIBLE_MATERIAL_IDS);
 
                     for (final String idStr : rawEligibleIds) {
-                        final UUID caseId = UUID.fromString(idStr);
-                        final QueryClient.CourtDocMeta meta = queryClient.getCourtDocuments(caseId);
-                        final String downloadUrl = meta.idpcDownloadUrl();
-                        if (downloadUrl == null) {
+                        final UUID materialID = UUID.fromString(idStr);
+                        final Optional<String> downloadUrl = queryClient.getMaterialDownloadUrl(materialID);
+
+
+                        if (downloadUrl.isEmpty()) {
                             continue;
                         }
+                        // this needs to be disucssed and change
+                        final QueryClient.CourtDocMeta meta = new QueryClient.CourtDocMeta(true,true,downloadUrl
+                                .get(),"application/pdf",0L);
 
-                        try (InputStream inputStream = queryClient.downloadIdpc(downloadUrl)) {
+                        try (InputStream inputStream = queryClient.downloadIdpc(downloadUrl.get())) {
                             final long size = meta.sizeBytes() == null ? 0L : meta.sizeBytes();
                             final String contentType = meta.contentType();
-                            final String blobPath = buildIdpcBlobPath(caseId);
+                            final String blobPath = buildIdpcBlobPath(materialID);
                             final String blobUrl = storageService.upload(blobPath, inputStream, size, contentType);
                             final CaseDocument caseDocument =
-                                    buildCaseDocument(caseId, blobUrl, contentType, size);
+                                    buildCaseDocument(materialID, blobUrl, contentType, size);
                             caseDocumentRepository.save(caseDocument);
                         }
                     }
@@ -224,7 +234,7 @@ public class CaseIngestionJobConfig {
         return new StepBuilder("step4_check_upload_status", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
                     final List<String> rawEligibleIds =
-                            getStringListFromContext(contribution, CONTEXT_KEY_ELIGIBLE_CASE_IDS);
+                            getStringListFromContext(contribution, CONTEXT_KEY_ELIGIBLE_MATERIAL_IDS);
 
                     boolean anyPending = false;
                     for (final String idStr : rawEligibleIds) {
@@ -255,7 +265,7 @@ public class CaseIngestionJobConfig {
         return new StepBuilder("step5_enqueue_answer_tasks", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
                     final List<String> rawEligibleIds =
-                            getStringListFromContext(contribution, CONTEXT_KEY_ELIGIBLE_CASE_IDS);
+                            getStringListFromContext(contribution, CONTEXT_KEY_ELIGIBLE_MATERIAL_IDS);
 
                     if (rawEligibleIds.isEmpty()) {
                         return RepeatStatus.FINISHED;

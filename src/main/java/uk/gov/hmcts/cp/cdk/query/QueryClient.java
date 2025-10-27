@@ -5,27 +5,33 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import uk.gov.hmcts.cp.cdk.domain.CourtDocumentSearchResponse;
+import uk.gov.hmcts.cp.cdk.domain.LatestMaterialInfo;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URI;
 import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Component
 public class QueryClient {
 
     private static final String HEARINGS_PATH = "/hearings";
-    private static final String COURT_DOCS_PATH = "/progression.query.courtdocuments";
+    private static final String COURT_DOCS_PATH = "/progression-query-api/query/api/rest/progression/courtdocumentsearch";
+    private static final String ACCEPT_FOR_COURTDOCSEARCH = "application/vnd.progression.query.courtdocuments+json";
+    private static final String MATERIAL_CONTENT_PATH =
+            "/progression-query-api/query/api/rest/progression/material/{materialId}/content";
+    private static final String ACCEPT_FOR_MATERIAL_CONTENT= "application/vnd.progression.query.material-content+json";
+
+
     private static final String DEFAULT_CONTENT_TYPE = "application/pdf";
     private static final String SYSTEM_ACTOR = "system";
 
     private final RestClient restClient;
     private final String acceptHeader;
     private final String cppuidHeader;
+
 
     public QueryClient(final QueryClientProperties props) {
         this.acceptHeader = props.acceptHeader();
@@ -106,30 +112,90 @@ public class QueryClient {
 
     // ---------- helpers (PMD: single exit point + braces + readable names) ----------
 
-    public CourtDocMeta getCourtDocuments(final UUID caseId) {
+    public Optional<LatestMaterialInfo> getCourtDocuments(final UUID caseId) {
+
+        // Build the URL from template in properties
         final URI uri = UriComponentsBuilder
                 .fromPath(COURT_DOCS_PATH)
                 .queryParam("caseId", caseId)
                 .build()
                 .toUri();
 
-        @SuppressWarnings("unchecked") final Map<String, Object> map = restClient.get()
+
+
+        // Build request
+        CourtDocumentSearchResponse response = restClient.get()
                 .uri(uri)
                 .header(cppuidHeader, SYSTEM_ACTOR)
+                .header(HttpHeaders.ACCEPT, ACCEPT_FOR_COURTDOCSEARCH)
                 .retrieve()
-                .body(Map.class);
+                .body(CourtDocumentSearchResponse.class);
 
-        final boolean single = asBoolean(map == null ? null : map.get("singleDefendant"));
-        final boolean idpc = asBoolean(map == null ? null : map.get("idpcAvailable"));
-        final String url = asString(map == null ? null : map.get("idpcDownloadUrl"));
-        final String contentType = defaultIfBlank(
-                asString(map == null ? null : map.get("contentType")),
-                DEFAULT_CONTENT_TYPE
-        );
-        final Long size = asLong(map == null ? null : map.get("sizeBytes"));
 
-        return new CourtDocMeta(single, idpc, url, contentType, size);
+
+        if (response == null || response.documentIndices() == null || response.documentIndices().isEmpty()) {
+            return Optional.empty(); // empty list if no data
+        }
+
+        // Process each DocumentIndex and extract latest Material
+        return response.documentIndices().stream()
+                .map(this::mapToLatestMaterialInfo)
+                .flatMap(Optional::stream) // remove empty optionals
+                .max(Comparator.comparing(LatestMaterialInfo::uploadDateTime));
     }
+
+    private Optional<LatestMaterialInfo> mapToLatestMaterialInfo(CourtDocumentSearchResponse.DocumentIndex index) {
+        List<String> caseIds = index.caseIds();
+        CourtDocumentSearchResponse.Document document = index.document();
+
+        if (document == null) return Optional.empty();
+
+        String documentTypeId = document.documentTypeId();
+        String documentTypeDescription = document.documentTypeDescription();
+
+        // Find latest material
+        Optional<CourtDocumentSearchResponse.Material> latestMaterial = document.materials() == null ? Optional.empty() :
+                document.materials().stream()
+                        .filter(m -> m.uploadDateTime() != null)
+                        .max(Comparator.comparing(CourtDocumentSearchResponse.Material::uploadDateTime));
+
+        return latestMaterial.map(material ->
+                new LatestMaterialInfo(
+                        caseIds,
+                        documentTypeId,
+                        documentTypeDescription,
+                        material.id(),
+                        material.uploadDateTime()
+                )
+        );
+    }
+
+
+    public Optional<String> getMaterialDownloadUrl(final UUID materialId) {
+
+
+        final String url = MATERIAL_CONTENT_PATH.replace("{materialId}", materialId.toString());
+        // Build the full URI for material content
+        // Build the URL from template in properties
+        final URI uri = UriComponentsBuilder
+                .fromPath(url)
+                .build()
+                .toUri();
+
+        record UrlResponse(String url) {}
+
+        UrlResponse response = restClient.get()
+                .uri(uri)
+                .header(cppuidHeader, SYSTEM_ACTOR)
+                .header(HttpHeaders.ACCEPT, ACCEPT_FOR_MATERIAL_CONTENT)
+                .retrieve()
+                .body(UrlResponse.class);
+
+        return Optional.ofNullable(response)
+                .map(UrlResponse::url)
+                .filter(u -> !u.isBlank());
+    }
+
 
     public InputStream downloadIdpc(final String url) {
         byte[] bytes = restClient.get()
