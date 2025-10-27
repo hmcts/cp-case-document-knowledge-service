@@ -104,7 +104,7 @@ class IngestionControllerTest {
                 {
                   "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
                   "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-                  "date": "2025-10-23"
+                  "date": "2025-10-24"
                 }
                 """;
 
