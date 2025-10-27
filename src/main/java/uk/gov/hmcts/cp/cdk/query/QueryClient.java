@@ -2,9 +2,12 @@ package uk.gov.hmcts.cp.cdk.query;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import uk.gov.hmcts.cp.cdk.domain.hearing.HearingSummaries;
+import uk.gov.hmcts.cp.cdk.domain.hearing.ProsecutionCaseSummaries;
 import uk.gov.hmcts.cp.cdk.domain.progression.CourtDocumentSearchResponse;
 import uk.gov.hmcts.cp.cdk.domain.progression.LatestMaterialInfo;
 
@@ -13,6 +16,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class QueryClient {
@@ -108,6 +112,45 @@ public class QueryClient {
             result = Arrays.asList(response);
         }
         return result;
+    }
+// MM Hearing code to test
+    public List<String> getHearingsAndCases(final String courtId, final String roomId, final LocalDate date) {
+        final URI uri_hearing = UriComponentsBuilder
+                .fromPath(HEARINGS_PATH)
+                .queryParam("courtId", courtId)
+                .queryParam("roomId", roomId)
+                .queryParam("date", date)
+                .build()
+                .toUri();
+
+        final HearingSummaries[] response = restClient.get()
+                .uri(uri_hearing)
+                .header(cppuidHeader, SYSTEM_ACTOR)
+                .retrieve()
+                .body(HearingSummaries[].class);
+
+        final List<HearingSummaries> result;
+        if (response == null) {
+            result = List.of();
+        } else {
+            result = Arrays.asList(response);
+        }
+        List<String> resultIds = result.stream()
+                // for each HearingSummaries
+                .flatMap(hearingSummaries -> {
+                    if (hearingSummaries.getProsecutionCaseSummaries() == null) {
+                        return java.util.stream.Stream.empty();
+                    }
+                    return hearingSummaries.getProsecutionCaseSummaries().stream()
+                            // filter ProsecutionCaseSummaries objects where person list size == 1
+                            .filter(prosecutionCaseSummaries -> prosecutionCaseSummaries.getDefendants() != null && prosecutionCaseSummaries.getDefendants().size() == 1)
+                            // map to id
+                            .map(ProsecutionCaseSummaries::getId);
+                })
+                .distinct() // optional: ensure unique ids
+                .collect(Collectors.toList());
+
+        return resultIds;
     }
 
     // ---------- helpers (PMD: single exit point + braces + readable names) ----------
