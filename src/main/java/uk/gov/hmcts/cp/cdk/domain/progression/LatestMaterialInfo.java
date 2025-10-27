@@ -1,4 +1,4 @@
-package uk.gov.hmcts.cp.cdk.domain;
+package uk.gov.hmcts.cp.cdk.domain.progression;
 
 import java.util.List;
 

@@ -6,7 +6,7 @@ import okio.Buffer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.hmcts.cp.cdk.domain.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.domain.progression.LatestMaterialInfo;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
