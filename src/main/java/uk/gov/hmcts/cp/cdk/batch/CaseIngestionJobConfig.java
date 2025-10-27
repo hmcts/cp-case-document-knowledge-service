@@ -114,14 +114,14 @@ public class CaseIngestionJobConfig {
 
     @Bean
     public Job caseIngestionJob(final JobRepository jobRepository,
-                                final Step step1FetchHearingsCases,
-                                final Step step2FilterSingleDefendantWithIdpc,
+                                final Step step1FetchHearingsCasesWithSingleDefendant,
+                                final Step step2FilterCaseIdpcForSingleDefendant,
                                 final Step step3UploadIdpc,
                                 final Step step4CheckUploadStatus,
                                 final Step step5EnqueueAnswerTasks) {
         return new JobBuilder(JOB_NAME, jobRepository)
-                .start(step1FetchHearingsCases)
-                .next(step2FilterSingleDefendantWithIdpc)
+                .start(step1FetchHearingsCasesWithSingleDefendant)
+                .next(step2FilterCaseIdpcForSingleDefendant)
                 .next(step3UploadIdpc)
                 .next(step4CheckUploadStatus).on(EXIT_CODE_RETRY).stopAndRestart(step4CheckUploadStatus)
                 .from(step4CheckUploadStatus).on("*").to(step5EnqueueAnswerTasks)
