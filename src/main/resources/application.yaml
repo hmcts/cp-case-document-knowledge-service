@@ -122,3 +122,10 @@ spring.threads.virtual.enabled: ${VIRTUAL_THREADS:false}
 cp:
   audit:
     rest-spec: ${CP_CDK_REST_SPECIFICATION}
+
+
+hearingsummaries:
+  api:
+    hearingSummariesUrlTemplate: "http://localhost:${server.port}/hearing-query-api/query/api/rest/hearing/hearings?date={date}&courtCentreId={courtCentreId}&roomId={roomId}"
+    actionHeader: "application/vnd.hearing.get.hearings+json"
+    userIdHeader: "CJSCPPUID"
