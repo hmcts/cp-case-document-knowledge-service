@@ -1,4 +1,4 @@
-package uk.gov.hmcts.cp.cdk.domain.progression;
+package uk.gov.hmcts.cp.cdk.clients.progression.dto;
 
 import java.util.List;
 import java.time.ZonedDateTime;

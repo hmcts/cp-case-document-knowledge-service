@@ -2,14 +2,13 @@ package uk.gov.hmcts.cp.cdk.query;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import uk.gov.hmcts.cp.cdk.domain.hearing.HearingSummaries;
 import uk.gov.hmcts.cp.cdk.domain.hearing.ProsecutionCaseSummaries;
-import uk.gov.hmcts.cp.cdk.domain.progression.CourtDocumentSearchResponse;
-import uk.gov.hmcts.cp.cdk.domain.progression.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.clients.progression.dto.CourtDocumentSearchResponse;
+import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
