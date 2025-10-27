@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 public class QueryClient {
 
     private static final String HEARINGS_PATH = "/hearing-query-api/query/api/rest/hearing/hearings";
+    private static final String ACCEPT_FOR_HEARINGS = "application/vnd.hearing.get.hearings+json";
     private static final String COURT_DOCS_PATH = "/progression-query-api/query/api/rest/progression/courtdocumentsearch";
     private static final String ACCEPT_FOR_COURTDOCSEARCH = "application/vnd.progression.query.courtdocuments+json";
     private static final String MATERIAL_CONTENT_PATH =
@@ -126,6 +127,7 @@ public class QueryClient {
         final HearingSummaries[] response = restClient.get()
                 .uri(uri_hearing)
                 .header(cppuidHeader, SYSTEM_ACTOR)
+                .header(HttpHeaders.ACCEPT, ACCEPT_FOR_HEARINGS)
                 .retrieve()
                 .body(HearingSummaries[].class);
 
