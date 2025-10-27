@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 @Component
 public class QueryClient {
 
-    private static final String HEARINGS_PATH = "/hearings";
+    private static final String HEARINGS_PATH = "/hearing-query-api/query/api/rest/hearing/hearings";
     private static final String COURT_DOCS_PATH = "/progression-query-api/query/api/rest/progression/courtdocumentsearch";
     private static final String ACCEPT_FOR_COURTDOCSEARCH = "application/vnd.progression.query.courtdocuments+json";
     private static final String MATERIAL_CONTENT_PATH =
@@ -113,7 +113,7 @@ public class QueryClient {
         }
         return result;
     }
-// MM Hearing code to test
+
     public List<String> getHearingsAndCases(final String courtId, final String roomId, final LocalDate date) {
         final URI uri_hearing = UriComponentsBuilder
                 .fromPath(HEARINGS_PATH)
