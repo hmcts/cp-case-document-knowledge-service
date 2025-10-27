@@ -67,7 +67,7 @@ jobs:
         # - It's available to download and inspect from the GitHub Actions UI
       - name: Upload SBOM
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sbom
           path: build/resources/main/META-INF/sbom/application.cdx.json
@@ -115,7 +115,7 @@ jobs:
           cmd_options: "-a -J zap_report.json -r zap_report.html"
 
       - name: Upload ZAP HTML Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: zap-html-report
           path: zap_report.html
