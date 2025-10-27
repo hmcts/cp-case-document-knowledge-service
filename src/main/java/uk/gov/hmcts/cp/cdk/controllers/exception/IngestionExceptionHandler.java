@@ -6,12 +6,13 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
-import uk.gov.hmcts.cp.cdk.controllers.IngestionProcessController;
+import uk.gov.hmcts.cp.cdk.controllers.IngestionController;
 import uk.gov.hmcts.cp.openapi.model.cdk.ErrorResponse;
 
-import static uk.gov.hmcts.cp.cdk.controllers.IngestionProcessController.VND_INGESTION;
+import static uk.gov.hmcts.cp.cdk.controllers.IngestionController.VND_INGESTION;
 
-@RestControllerAdvice(assignableTypes = IngestionProcessController.class)
+
+@RestControllerAdvice(assignableTypes = IngestionController.class)
 public class IngestionExceptionHandler {
 
     @ExceptionHandler(ResponseStatusException.class)

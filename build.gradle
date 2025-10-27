@@ -67,7 +67,7 @@ ext {
     lombokVersion = "1.18.42"
     apiSpecVersion = "0.4.2"
     testcontainersBom = "1.20.1"
-    cdk = "0.0.5-537aa57"
+    cdk = "0.0.5-bbc6567"
     mapstruct = "1.5.5.Final"
 }
 

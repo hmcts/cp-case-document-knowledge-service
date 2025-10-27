@@ -8,6 +8,7 @@ import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.launch.JobOperator;
+import uk.gov.hmcts.cp.cdk.repo.IngestionStatusViewRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
 
@@ -18,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-class IngestionProcessServiceTest {
+class IngestionServiceTest {
 
     @Test
     @DisplayName("uses JobOperator.start(Job, JobParameters) and returns STARTED")
@@ -31,8 +32,8 @@ class IngestionProcessServiceTest {
 
         ArgumentCaptor<JobParameters> paramsCaptor = ArgumentCaptor.forClass(JobParameters.class);
         when(operator.start(eq(job), paramsCaptor.capture())).thenReturn(mockedExecution);
-
-        IngestionProcessService svc = new IngestionProcessService(operator, job);
+        IngestionStatusViewRepository repo = new IngestionStatusViewRepository();
+        IngestionService svc = new IngestionService(repo,operator, job);
 
         IngestionProcessRequest req = new IngestionProcessRequest();
         req.setCourtCentreId(UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
