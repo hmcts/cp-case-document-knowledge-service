@@ -1,9 +1,10 @@
-// src/test/java/uk/gov/hmcts/cp/cdk/storage/AzureBlobStorageServiceTest.java
 package uk.gov.hmcts.cp.cdk.storage;
 
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobHttpHeaders;
+import com.azure.storage.blob.models.BlobProperties;
+import com.azure.storage.blob.models.CopyStatusType;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,31 +29,44 @@ class AzureBlobStorageServiceTest {
         blob = mock(BlobClient.class);
         block = mock(BlockBlobClient.class);
         when(blob.getBlockBlobClient()).thenReturn(block);
+
+        // Use the package-visible constructor with sane defaults for polling
         service = new AzureBlobStorageService(container);
     }
 
     @Test
     @DisplayName("copyFromUrl copies server-side and sets content-type")
     void copyFromUrl_setsHeaders() {
-        String src = "https://source.blob.core.windows.net/c/src.pdf?sv=..."; // SAS
-        String path = "cases/123/idpc.pdf";
+        final String src = "https://source.blob.core.windows.net/c/src.pdf?sv=..."; // SAS
+        final String path = "cases/123/idpc.pdf";
+
         when(container.getBlobClient(path)).thenReturn(blob);
         when(blob.getBlobUrl()).thenReturn("https://dst/container/" + path);
 
-        String out = service.copyFromUrl(src, path, "application/pdf");
+        final BlobProperties props = mock(BlobProperties.class);
+        when(props.getCopyStatus()).thenReturn(CopyStatusType.SUCCESS);
+        when(blob.getProperties()).thenReturn(props);
+
+        final String out = service.copyFromUrl(src, path, "application/pdf");
 
         assertThat(out).endsWith(path);
         verify(block, times(1)).copyFromUrl(eq(src));
-        verify(blob, times(1)).setHttpHeaders(argThat(h -> "application/pdf".equals(h.getContentType())));
+        verify(blob, times(1)).setHttpHeaders(argThat((BlobHttpHeaders h) ->
+                "application/pdf".equals(h.getContentType())));
     }
 
     @Test
     @DisplayName("copyFromUrl defaults blank content-type")
     void copyFromUrl_defaultsContentType() {
-        String src = "https://source/blob?sv=...";
-        String path = "f.bin";
+        final String src = "https://source/blob?sv=...";
+        final String path = "f.bin";
+
         when(container.getBlobClient(path)).thenReturn(blob);
         when(blob.getBlobUrl()).thenReturn("u");
+
+        final BlobProperties props = mock(BlobProperties.class);
+        when(props.getCopyStatus()).thenReturn(CopyStatusType.SUCCESS);
+        when(blob.getProperties()).thenReturn(props);
 
         service.copyFromUrl(src, path, null);
 
@@ -63,7 +77,7 @@ class AzureBlobStorageServiceTest {
     @Test
     @DisplayName("upload still works for streams")
     void upload_setsHeaders() {
-        String path = "x/y.pdf";
+        final String path = "x/y.pdf";
         when(container.getBlobClient(path)).thenReturn(blob);
         when(blob.getBlobUrl()).thenReturn("u");
 
@@ -76,7 +90,7 @@ class AzureBlobStorageServiceTest {
     @Test
     @DisplayName("exists delegates")
     void exists_delegates() {
-        String path = "z";
+        final String path = "z";
         when(container.getBlobClient(path)).thenReturn(blob);
         when(blob.exists()).thenReturn(true);
         assertThat(service.exists(path)).isTrue();

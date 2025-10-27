@@ -120,7 +120,13 @@ cdk:
     baseUrl: "http://localhost:8080"
     actionHeader: "application/json"
     cjsCppuidHeader: "CJSCPPUID"
-
+  storage:
+    azure:
+      connection-string: ${CDK_AZURE_STORAGE_CONNECTION_STRING}   # or put literal connection string
+      container: idpc
+      # Optional tuning (defaults shown)
+      copy-poll-interval-ms: 5000
+      copy-timeout-seconds: 300
 # Optional: Java 21 virtual threads (Boot 3.2+ / 4.x)
 spring.threads.virtual.enabled: ${VIRTUAL_THREADS:false}
 
