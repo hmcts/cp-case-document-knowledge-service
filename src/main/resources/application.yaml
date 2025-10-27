@@ -116,10 +116,16 @@ authz:
       - "/casedocumentknowledge-service/"
 
 cdk:
-  cqrs:
-    baseUrl: "http://localhost:8080"
-    actionHeader: "application/json"
-    cjsCppuidHeader: "CJSCPPUID"
+  client:
+    progression:
+      base-url: "http://localhost:8080"
+      cjs-cppuid-header: "CJSCPPUID"
+      accept-header: "application/vnd.progression.query.courtdocuments+json"
+      doc-type-id: "41be14e8-9df5-4b08-80b0-1e670bc80a5b"
+      court-docs-path: "/progression-query-api/query/api/rest/progression/courtdocumentsearch"
+      material-content-path: "/progression-query-api/query/api/rest/progression/material/{materialId}/content"
+      accept-for-court-doc-search: "application/vnd.progression.query.courtdocuments+json"
+      accept-for-material-content: "application/vnd.progression.query.material-content+json"
   storage:
     azure:
       connection-string: ${CP_CDK_AZURE_STORAGE_CONNECTION_STRING}   # or put literal connection string

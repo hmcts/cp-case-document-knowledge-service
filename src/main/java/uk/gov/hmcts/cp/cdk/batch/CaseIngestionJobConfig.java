@@ -36,7 +36,7 @@ public class CaseIngestionJobConfig {
     private static final String CONTEXT_KEY_ELIGIBLE_MATERIAL_IDS = "eligibleMaterialIds";
     private static final String EXIT_CODE_RETRY = "RETRY";
     private static final String BLOB_TEMPLATE = "cases/%s/idpc.pdf";
-    private static final String DOC_TYPE_ID = "41be14e8-9df5-4b08-80b0-1e670bc80a5b";
+
 
     private static final String INSERT_ANSWER_TASK_SQL = """
             INSERT INTO answer_tasks(case_id, query_id, status, created_at)
@@ -168,15 +168,7 @@ public class CaseIngestionJobConfig {
                     for (final String idStr : rawCaseIds) {
                         final UUID caseId = UUID.fromString(idStr);
                         final Optional<LatestMaterialInfo> meta = progressionClient.getCourtDocuments(caseId);
-                        if (meta.isPresent()) {
-                            LatestMaterialInfo info = meta.get();
-
-                            if(info.documentTypeId().equals(DOC_TYPE_ID)) {
-                                eligibleMaterialIds.add(info.materialId());
-                            }
-                        } else {
-                            System.out.println("No latest material found");//No PMD
-                        }
+                        meta.ifPresent(info -> eligibleMaterialIds.add(info.materialId()));
 
                     }
 

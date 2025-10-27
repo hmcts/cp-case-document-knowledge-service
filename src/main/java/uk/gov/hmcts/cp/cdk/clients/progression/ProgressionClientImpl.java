@@ -17,24 +17,24 @@ import java.util.UUID;
 @Component
 public class ProgressionClientImpl implements ProgressionClient {
 
-    private static final String COURT_DOCS_PATH =
-            "/progression-query-api/query/api/rest/progression/courtdocumentsearch";
-    private static final String MATERIAL_CONTENT_PATH =
-            "/progression-query-api/query/api/rest/progression/material/{materialId}/content";
 
-    private static final String ACCEPT_FOR_COURTDOCSEARCH =
-            "application/vnd.progression.query.courtdocuments+json";
-    private static final String ACCEPT_FOR_MATERIAL_CONTENT =
-            "application/vnd.progression.query.material-content+json";
     private static final String SYSTEM_ACTOR = "system";
 
     private final RestClient restClient;
     private final String cppuidHeader;
     private final ProgressionDtoMapper mapper;
+    private final String courtDocsPath;
+    private final String materialContentPath;
+    private final String acceptForCourtDocSearch;
+    private final String acceptForMaterialContent;
 
-    public ProgressionClientImpl(QueryClientProperties props, ProgressionDtoMapper mapper) {
+    public ProgressionClientImpl(ProgressionClientConfig props, ProgressionDtoMapper mapper) {
         this.cppuidHeader = props.cjsCppuidHeader();
         this.mapper = mapper;
+        this.courtDocsPath = props.courtDocsPath();
+        this.materialContentPath = props.materialContentPath();
+        this.acceptForCourtDocSearch = props.acceptForCourtDocSearch();
+        this.acceptForMaterialContent = props.acceptForMaterialContent();
         this.restClient = RestClient.builder()
                 .baseUrl(props.baseUrl())
                 .defaultHeader(HttpHeaders.ACCEPT, props.acceptHeader())
@@ -44,7 +44,7 @@ public class ProgressionClientImpl implements ProgressionClient {
     @Override
     public Optional<LatestMaterialInfo> getCourtDocuments(final UUID caseId) {
         final URI uri = UriComponentsBuilder
-                .fromPath(COURT_DOCS_PATH)
+                .fromPath(courtDocsPath)
                 .queryParam("caseId", caseId)
                 .build()
                 .toUri();
@@ -52,7 +52,7 @@ public class ProgressionClientImpl implements ProgressionClient {
         CourtDocumentSearchResponse response = restClient.get()
                 .uri(uri)
                 .header(cppuidHeader, SYSTEM_ACTOR)
-                .header(HttpHeaders.ACCEPT, ACCEPT_FOR_COURTDOCSEARCH)
+                .header(HttpHeaders.ACCEPT, acceptForCourtDocSearch)
                 .retrieve()
                 .body(CourtDocumentSearchResponse.class);
 
@@ -68,7 +68,7 @@ public class ProgressionClientImpl implements ProgressionClient {
 
     @Override
     public Optional<String> getMaterialDownloadUrl(final UUID materialId) {
-        final String path = MATERIAL_CONTENT_PATH.replace("{materialId}", materialId.toString());
+        final String path = materialContentPath.replace("{materialId}", materialId.toString());
         final URI uri = UriComponentsBuilder.fromPath(path).build().toUri();
 
         record UrlResponse(String url) {}
@@ -76,7 +76,7 @@ public class ProgressionClientImpl implements ProgressionClient {
         UrlResponse response = restClient.get()
                 .uri(uri)
                 .header(cppuidHeader, SYSTEM_ACTOR)
-                .header(HttpHeaders.ACCEPT, ACCEPT_FOR_MATERIAL_CONTENT)
+                .header(HttpHeaders.ACCEPT, acceptForMaterialContent)
                 .retrieve()
                 .body(UrlResponse.class);
 

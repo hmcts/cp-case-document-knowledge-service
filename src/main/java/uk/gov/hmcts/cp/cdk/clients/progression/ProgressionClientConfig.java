@@ -6,6 +6,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record ProgressionClientConfig(
         String baseUrl,
         String cjsCppuidHeader,
-        String acceptHeader
+        String acceptHeader,
+        String docTypeId,
+        String courtDocsPath,
+        String materialContentPath,
+        String acceptForCourtDocSearch,
+        String acceptForMaterialContent
 ) {
 }
