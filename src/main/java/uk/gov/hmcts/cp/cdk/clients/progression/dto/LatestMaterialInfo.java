@@ -8,4 +8,5 @@ public record LatestMaterialInfo(
         String documentTypeDescription,
         String materialId,
         java.time.ZonedDateTime uploadDateTime
-) {}
+) {
+}

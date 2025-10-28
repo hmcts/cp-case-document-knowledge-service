@@ -1,8 +1,5 @@
 package uk.gov.hmcts.cp.cdk.storage;
 
-import com.azure.storage.blob.BlobClient;
-import com.azure.storage.blob.models.BlobProperties;
-
 import java.io.InputStream;
 import java.util.Map;
 
@@ -15,8 +12,7 @@ public interface StorageService {
     boolean exists(String blobPath);
 
 
-    public long getBlobSize(final String blobPath);
-
+    long getBlobSize(final String blobPath);
 
 
 }

@@ -65,8 +65,7 @@ public class CaseIngestionJobConfigNew {
                 final Map<String, Object> jobCtx = sync.getJobExecutionContext();
                 final Object v = (jobCtx != null) ? jobCtx.get(CTX_ELIGIBLE_CASE_IDS) : null;
                 if (v instanceof List<?>) {
-                    @SuppressWarnings("unchecked")
-                    final List<String> tmp = (List<String>) v;
+                    @SuppressWarnings("unchecked") final List<String> tmp = (List<String>) v;
                     ids = tmp;
                 }
             }

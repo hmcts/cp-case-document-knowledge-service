@@ -27,7 +27,7 @@ public class IngestionService {
     private final JobOperator jobOperator;
     private final Job caseIngestionJob;
 
-    public IngestionService(final IngestionStatusViewRepository repo,final JobOperator jobOperator, final Job caseIngestionJob) {
+    public IngestionService(final IngestionStatusViewRepository repo, final JobOperator jobOperator, final Job caseIngestionJob) {
         this.repo = repo;
         this.jobOperator = Objects.requireNonNull(jobOperator);
         this.caseIngestionJob = Objects.requireNonNull(caseIngestionJob);

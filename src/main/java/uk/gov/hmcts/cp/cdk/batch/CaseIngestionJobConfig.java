@@ -10,30 +10,23 @@ import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.web.util.UriComponentsBuilder;
 import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
-import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.Query;
-import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummaries;
-import uk.gov.hmcts.cp.cdk.clients.hearing.dto.ProsecutionCaseSummaries;
 import uk.gov.hmcts.cp.cdk.query.QueryClient;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryRepository;
 import uk.gov.hmcts.cp.cdk.storage.StorageService;
 
-import java.io.InputStream;
-import java.net.URI;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Configuration
 @Deprecated
@@ -153,7 +146,7 @@ public class CaseIngestionJobConfig {
                     final List<HearingSummariesInfo> summaries = hearingClient.getHearingsAndCases(court, roomId, date);
                     final List<String> caseIdStrings = new ArrayList<>(summaries.size());
                     for (final HearingSummariesInfo summary : summaries) {
-                        caseIdStrings.add(summary.caseId().toString());
+                        caseIdStrings.add(summary.caseId());
                     }
 
 
@@ -214,19 +207,19 @@ public class CaseIngestionJobConfig {
                         }
                         //
                         // this needs to be disucssed and change
-                        final QueryClient.CourtDocMeta meta = new QueryClient.CourtDocMeta(true,true,downloadUrl
-                                .get(),"application/pdf",0L);
+                        final QueryClient.CourtDocMeta meta = new QueryClient.CourtDocMeta(true, true, downloadUrl
+                                .get(), "application/pdf", 0L);
 
                         /** need to update this code with copyurl once we have destination path
-                        try (InputStream inputStream = queryClient.downloadIdpc(downloadUrl.get())) {
-                            final long size = meta.sizeBytes() == null ? 0L : meta.sizeBytes();
-                            final String contentType = meta.contentType();
-                            final String blobPath = buildIdpcBlobPath(materialID);
-                            final String blobUrl = storageService.upload(blobPath, inputStream, size, contentType);
-                            final CaseDocument caseDocument =
-                                    buildCaseDocument(materialID, blobUrl, contentType, size);
-                            caseDocumentRepository.save(caseDocument);
-                        }
+                         try (InputStream inputStream = queryClient.downloadIdpc(downloadUrl.get())) {
+                         final long size = meta.sizeBytes() == null ? 0L : meta.sizeBytes();
+                         final String contentType = meta.contentType();
+                         final String blobPath = buildIdpcBlobPath(materialID);
+                         final String blobUrl = storageService.upload(blobPath, inputStream, size, contentType);
+                         final CaseDocument caseDocument =
+                         buildCaseDocument(materialID, blobUrl, contentType, size);
+                         caseDocumentRepository.save(caseDocument);
+                         }
                          **/
                     }
                     return RepeatStatus.FINISHED;

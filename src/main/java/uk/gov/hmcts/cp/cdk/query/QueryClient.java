@@ -26,7 +26,7 @@ public class QueryClient {
     private static final String ACCEPT_FOR_COURTDOCSEARCH = "application/vnd.progression.query.courtdocuments+json";
     private static final String MATERIAL_CONTENT_PATH =
             "/progression-query-api/query/api/rest/progression/material/{materialId}/content";
-    private static final String ACCEPT_FOR_MATERIAL_CONTENT= "application/vnd.progression.query.material-content+json";
+    private static final String ACCEPT_FOR_MATERIAL_CONTENT = "application/vnd.progression.query.material-content+json";
 
 
     private static final String DEFAULT_CONTENT_TYPE = "application/pdf";
@@ -166,7 +166,6 @@ public class QueryClient {
                 .toUri();
 
 
-
         // Build request
         CourtDocumentSearchResponse response = restClient.get()
                 .uri(uri)
@@ -174,7 +173,6 @@ public class QueryClient {
                 .header(HttpHeaders.ACCEPT, ACCEPT_FOR_COURTDOCSEARCH)
                 .retrieve()
                 .body(CourtDocumentSearchResponse.class);
-
 
 
         if (response == null || response.documentIndices() == null || response.documentIndices().isEmpty()) {
@@ -226,7 +224,8 @@ public class QueryClient {
                 .build()
                 .toUri();
 
-        record UrlResponse(String url) {}
+        record UrlResponse(String url) {
+        }
 
         UrlResponse response = restClient.get()
                 .uri(uri)

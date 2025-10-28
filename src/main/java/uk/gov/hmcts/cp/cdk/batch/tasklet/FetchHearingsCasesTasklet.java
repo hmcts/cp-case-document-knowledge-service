@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.stereotype.Component;
 import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
@@ -23,13 +22,13 @@ public class FetchHearingsCasesTasklet implements Tasklet {
 
     @Override
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) throws Exception {
-        final String courtId = contribution.getStepExecution().getJobParameters().getString("courtCentreId");
+        final String courtCentreId = contribution.getStepExecution().getJobParameters().getString("courtCentreId");
         final String roomId = contribution.getStepExecution().getJobParameters().getString("roomId");
         final LocalDate date = LocalDate.parse(contribution.getStepExecution().getJobParameters().getString("date"));
-        final List<HearingSummariesInfo> summaries = hearingClient.getHearingsAndCases(courtId, roomId, date);
+        final List<HearingSummariesInfo> summaries = hearingClient.getHearingsAndCases(courtCentreId, roomId, date);
         final List<String> caseIdStrings = new ArrayList<>(summaries.size());
         for (final HearingSummariesInfo summary : summaries) {
-            caseIdStrings.add(summary.caseId().toString());
+            caseIdStrings.add(summary.caseId());
         }
 
         contribution.getStepExecution()

@@ -24,10 +24,9 @@ import java.util.UUID;
 @RestController
 public class IngestionController implements IngestionApi {
 
-    private final IngestionService service;
-
     static final public MediaType VND_INGESTION =
             MediaType.valueOf("application/vnd.casedocumentknowledge-service.ingestion-process+json");
+    private final IngestionService service;
 
     public IngestionController(final IngestionService service) {
         this.service = service;

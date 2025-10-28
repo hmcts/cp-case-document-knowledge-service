@@ -31,11 +31,11 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final ExecutionContext stepCtx = contribution.getStepExecution().getExecutionContext();
         final String caseIdStr = stepCtx.getString("caseId", null);
-        final String docIdStr  = stepCtx.getString(CTX_DOC_ID, null);
+        final String docIdStr = stepCtx.getString(CTX_DOC_ID, null);
         if (caseIdStr == null || docIdStr == null) return RepeatStatus.FINISHED;
 
         final UUID caseId = UUID.fromString(caseIdStr);
-        final UUID docId  = UUID.fromString(docIdStr);
+        final UUID docId = UUID.fromString(docIdStr);
 
         final List<Query> queries = queryResolver.resolve();
         if (queries.isEmpty()) return RepeatStatus.FINISHED;

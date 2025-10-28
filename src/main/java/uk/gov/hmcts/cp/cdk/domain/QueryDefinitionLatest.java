@@ -1,6 +1,10 @@
 package uk.gov.hmcts.cp.cdk.domain;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -24,18 +28,43 @@ public class QueryDefinitionLatest {
     @Column(name = "query_prompt", nullable = false)
     private String queryPrompt;
 
-    public UUID getQueryId() { return queryId; }
-    public void setQueryId(UUID queryId) { this.queryId = queryId; }
+    public UUID getQueryId() {
+        return queryId;
+    }
 
-    public String getLabel() { return label; }
-    public void setLabel(String label) { this.label = label; }
+    public void setQueryId(UUID queryId) {
+        this.queryId = queryId;
+    }
 
-    public OffsetDateTime getEffectiveAt() { return effectiveAt; }
-    public void setEffectiveAt(OffsetDateTime effectiveAt) { this.effectiveAt = effectiveAt; }
+    public String getLabel() {
+        return label;
+    }
 
-    public String getUserQuery() { return userQuery; }
-    public void setUserQuery(String userQuery) { this.userQuery = userQuery; }
+    public void setLabel(String label) {
+        this.label = label;
+    }
 
-    public String getQueryPrompt() { return queryPrompt; }
-    public void setQueryPrompt(String queryPrompt) { this.queryPrompt = queryPrompt; }
+    public OffsetDateTime getEffectiveAt() {
+        return effectiveAt;
+    }
+
+    public void setEffectiveAt(OffsetDateTime effectiveAt) {
+        this.effectiveAt = effectiveAt;
+    }
+
+    public String getUserQuery() {
+        return userQuery;
+    }
+
+    public void setUserQuery(String userQuery) {
+        this.userQuery = userQuery;
+    }
+
+    public String getQueryPrompt() {
+        return queryPrompt;
+    }
+
+    public void setQueryPrompt(String queryPrompt) {
+        this.queryPrompt = queryPrompt;
+    }
 }

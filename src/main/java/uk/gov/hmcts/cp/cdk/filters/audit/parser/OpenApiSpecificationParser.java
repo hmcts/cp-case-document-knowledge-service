@@ -31,7 +31,7 @@ public class OpenApiSpecificationParser implements RestApiParser {
     private final OpenAPIParser openAPIParser;
 
     @Value("${cp.audit.rest-spec}")
-    private String restSpecification;
+    private final String restSpecification;
 
     public OpenApiSpecificationParser(final ClasspathResourceLoader resourceLoader, @Value("${cp.audit.rest-spec}") final String restSpecification, final OpenAPIParser openAPIParser) {
         this.resourceLoader = resourceLoader;

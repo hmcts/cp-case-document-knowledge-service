@@ -7,7 +7,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.CourtDocumentSearchResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
-import uk.gov.hmcts.cp.cdk.query.QueryClientProperties;
 
 import java.net.URI;
 import java.util.Comparator;
@@ -71,7 +70,8 @@ public class ProgressionClientImpl implements ProgressionClient {
         final String path = materialContentPath.replace("{materialId}", materialId.toString());
         final URI uri = UriComponentsBuilder.fromPath(path).build().toUri();
 
-        record UrlResponse(String url) {}
+        record UrlResponse(String url) {
+        }
 
         UrlResponse response = restClient.get()
                 .uri(uri)

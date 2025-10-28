@@ -5,4 +5,5 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableConfigurationProperties(ProgressionClientConfig.class)
-public class ProgressionConfig {}
+public class ProgressionConfig {
+}

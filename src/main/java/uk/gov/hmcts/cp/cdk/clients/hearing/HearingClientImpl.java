@@ -4,8 +4,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
-import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummaries;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.ProsecutionCaseSummaries;
 import uk.gov.hmcts.cp.cdk.query.QueryClientProperties;
 
@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
-public class HearingClientImpl implements HearingClient{
+public class HearingClientImpl implements HearingClient {
 
     private static final String HEARINGS_PATH = "/hearing-query-api/query/api/rest/hearing/hearings";
     private static final String ACCEPT_FOR_HEARINGS = "application/vnd.hearing.get.hearings+json";

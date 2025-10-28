@@ -10,12 +10,10 @@ import org.springframework.stereotype.Component;
 import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
-import uk.gov.hmcts.cp.cdk.query.QueryClient;
 
 import java.util.*;
 
 import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_IDS;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_ELIGIBLE_CASE_IDS;
 
 @Component
 @RequiredArgsConstructor
@@ -25,8 +23,7 @@ public class FilterEligibleCasesTasklet implements Tasklet {
     @Override
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final ExecutionContext jobCtx = contribution.getStepExecution().getJobExecution().getExecutionContext();
-        @SuppressWarnings("unchecked")
-        final List<String> rawCaseIds = (List<String>)jobCtx.get(CTX_CASE_IDS);
+        @SuppressWarnings("unchecked") final List<String> rawCaseIds = (List<String>) jobCtx.get(CTX_CASE_IDS);
         final List<String> eligibleMaterialIds = new ArrayList<>();
         final Map<String, String> materialToCaseMap = new HashMap<>();
 

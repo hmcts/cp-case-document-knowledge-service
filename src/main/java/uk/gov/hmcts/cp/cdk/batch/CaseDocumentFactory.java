@@ -7,7 +7,8 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 final class CaseDocumentFactory {
-    private CaseDocumentFactory() {}
+    private CaseDocumentFactory() {
+    }
 
     static CaseDocument build(final UUID caseId,
                               final UUID docId,
