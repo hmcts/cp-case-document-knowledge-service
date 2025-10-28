@@ -5,8 +5,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record HearingClientConfig(
         String baseUrl,
         String cjsCppuidHeader,
-        String acceptHeader,
-        String docTypeId,
-        String acceptForHearingContent
+        String acceptHeader
 ) {
 }

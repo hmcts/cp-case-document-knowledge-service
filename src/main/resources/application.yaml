@@ -126,6 +126,13 @@ cdk:
       material-content-path: "/progression-query-api/query/api/rest/progression/material/{materialId}/content"
       accept-for-court-doc-search: "application/vnd.progression.query.courtdocuments+json"
       accept-for-material-content: "application/vnd.progression.query.material-content+json"
+
+    hearing:
+      base-url: "http://localhost:8080"
+      cjs-cppuid-header: "CJSCPPUID"
+      hearing-content-path: "/hearing-query-api/query/api/rest/hearing/hearings"
+      accept-header: "application/vnd.hearing.get.hearings+json"
+
   storage:
     azure:
       connection-string: ${CP_CDK_AZURE_STORAGE_CONNECTION_STRING}   # or put literal connection string
