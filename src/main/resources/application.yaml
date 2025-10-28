@@ -118,7 +118,6 @@ authz:
 cdk:
   client:
     progression:
-<<<<<<< Updated upstream
       base-url: "http://localhost:8080"
       cjs-cppuid-header: "CJSCPPUID"
       accept-header: "application/vnd.progression.query.courtdocuments+json"
@@ -133,12 +132,6 @@ cdk:
       cjs-cppuid-header: "CJSCPPUID"
       hearing-content-path: "/hearing-query-api/query/api/rest/hearing/hearings"
       accept-header: "application/vnd.hearing.get.hearings+json"
-
-=======
-      baseUrl: "http://localhost:8080/pro"
-      actionHeader: "application/json"
-      cjsCppuidHeader: "CJSCPPUID"
->>>>>>> Stashed changes
   storage:
     azure:
       connection-string: ${CP_CDK_AZURE_STORAGE_CONNECTION_STRING}   # or put literal connection string
