@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Objects;
 
 @Service
@@ -50,18 +51,12 @@ public class AzureBlobStorageService implements StorageService {
         return blob.getBlobUrl();
     }
 
-    /**
-     * Server-side copy. Starts a copy from the source URL into the destination blob,
-     * polls until status is SUCCESS/FAILED/ABORTED, applies the desired Content-Type,
-     * and returns the destination blob URL.
-     */
-    @Override
-    public String copyFromUrl(final String sourceUrl, final String destBlobPath, final String contentType) {
+    public String copyFromUrl(final String sourceUrl, final String destBlobPath, final String contentType,
+                              final Map<String, String> metadata) {
         final BlobClient blob = container.getBlobClient(destBlobPath);
         final BlockBlobClient block = blob.getBlockBlobClient();
 
         // Start server-side copy (overwrite if exists)
-        // Note: copyFromUrl returns copyId in newer SDKs; older may return void. We don't need the ID for polling.
         block.copyFromUrl(sourceUrl);
 
         // Poll copy status
@@ -93,10 +88,15 @@ public class AzureBlobStorageService implements StorageService {
             throw new IllegalStateException("Timed out after " + timeoutSeconds + "s waiting for blob copy to succeed");
         }
 
-        // Apply Content-Type (if provided; else default)
+        // Apply Content-Type
         final String contentTypeToApply =
                 (contentType == null || contentType.isBlank()) ? DEFAULT_CONTENT_TYPE : contentType;
         blob.setHttpHeaders(new BlobHttpHeaders().setContentType(contentTypeToApply));
+
+        // Set metadata after copy completes (Azure Java SDK doesn't support setting metadata during copy)
+        if (metadata != null && !metadata.isEmpty()) {
+            blob.setMetadata(metadata);
+        }
 
         return blob.getBlobUrl();
     }
@@ -105,4 +105,13 @@ public class AzureBlobStorageService implements StorageService {
     public boolean exists(final String blobPath) {
         return container.getBlobClient(blobPath).exists();
     }
+
+    @Override
+    public long getBlobSize(final String blobPath) {
+        final BlobClient blob = container.getBlobClient(blobPath);
+        final BlobProperties props = blob.getProperties();
+        return props.getBlobSize();
+    }
+
+
 }

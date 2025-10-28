@@ -12,10 +12,7 @@ import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.query.QueryClient;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_IDS;
 import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_ELIGIBLE_CASE_IDS;
@@ -31,11 +28,15 @@ public class FilterEligibleCasesTasklet implements Tasklet {
         @SuppressWarnings("unchecked")
         final List<String> rawCaseIds = (List<String>)jobCtx.get(CTX_CASE_IDS);
         final List<String> eligibleMaterialIds = new ArrayList<>();
+        final Map<String, String> materialToCaseMap = new HashMap<>();
 
         for (final String idStr : rawCaseIds) {
             final UUID caseId = UUID.fromString(idStr);
             final Optional<LatestMaterialInfo> meta = progressionClient.getCourtDocuments(caseId);
             meta.ifPresent(info -> eligibleMaterialIds.add(info.materialId()));
+
+            // Store mapping from materialId to caseId (use first caseId from the list)
+            materialToCaseMap.put(meta.get().materialId(), idStr);
 
         }
 
@@ -43,6 +44,11 @@ public class FilterEligibleCasesTasklet implements Tasklet {
                 .getJobExecution()
                 .getExecutionContext()
                 .put(BatchKeys.CONTEXT_KEY_ELIGIBLE_MATERIAL_IDS, eligibleMaterialIds);
+
+        contribution.getStepExecution()
+                .getJobExecution()
+                .getExecutionContext()
+                .put(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP, materialToCaseMap);
 
         return RepeatStatus.FINISHED;
 

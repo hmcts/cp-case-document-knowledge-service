@@ -27,6 +27,9 @@ public class CaseDocument {
     @Column(name = "source", nullable = false)
     private String source = "IDPC";
 
+    @Column(name = "doc_name", nullable = false)
+    private String docName;
+
     @Column(name = "blob_uri", nullable = false)
     private String blobUri;
 
@@ -127,6 +130,14 @@ public class CaseDocument {
 
     public void setIngestionPhaseAt(final OffsetDateTime ingestionPhaseAt) {
         this.ingestionPhaseAt = ingestionPhaseAt;
+    }
+
+    public String getDocName() {
+        return docName;
+    }
+
+    public void setDocName(String docName) {
+        this.docName = docName;
     }
 
     @Override

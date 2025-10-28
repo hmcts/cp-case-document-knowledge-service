@@ -47,7 +47,7 @@ class AzureBlobStorageServiceTest {
         when(props.getCopyStatus()).thenReturn(CopyStatusType.SUCCESS);
         when(blob.getProperties()).thenReturn(props);
 
-        final String out = service.copyFromUrl(src, path, "application/pdf");
+        final String out = service.copyFromUrl(src, path, "application/pdf",null);
 
         assertThat(out).endsWith(path);
         verify(block, times(1)).copyFromUrl(eq(src));
@@ -68,7 +68,7 @@ class AzureBlobStorageServiceTest {
         when(props.getCopyStatus()).thenReturn(CopyStatusType.SUCCESS);
         when(blob.getProperties()).thenReturn(props);
 
-        service.copyFromUrl(src, path, null);
+        service.copyFromUrl(src, path, null,null);
 
         verify(blob).setHttpHeaders(argThat((BlobHttpHeaders h) ->
                 "application/octet-stream".equals(h.getContentType())));

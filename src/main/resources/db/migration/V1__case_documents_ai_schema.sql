@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS case_documents (
   doc_id             UUID        PRIMARY KEY, -- consider DEFAULT gen_random_uuid()
   case_id            UUID        NOT NULL,
   source             TEXT        NOT NULL DEFAULT 'IDPC',
-  blob_uri           TEXT        NOT NULL,
+  doc_name           TEXT        NOT NULL,
   blob_uri           TEXT        NOT NULL,
   content_type       TEXT        NULL,
   size_bytes         BIGINT      NULL,

@@ -43,7 +43,7 @@ class IngestionServiceTest {
         IngestionProcessResponse resp = svc.startIngestionProcess(req);
 
         JobParameters p = paramsCaptor.getValue();
-        assertThat(p.getString("court")).isEqualTo("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        assertThat(p.getString("courtCentreId")).isEqualTo("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         assertThat(p.getString("roomId")).isEqualTo("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         assertThat(p.getString("date")).isEqualTo("2025-10-01");
         assertThat(p.getLong("run")).isNotNull();
