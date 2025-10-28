@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS case_documents (
   case_id            UUID        NOT NULL,
   source             TEXT        NOT NULL DEFAULT 'IDPC',
   blob_uri           TEXT        NOT NULL,
+  blob_uri           TEXT        NOT NULL,
   content_type       TEXT        NULL,
   size_bytes         BIGINT      NULL,
   sha256_hex         TEXT        NULL,
@@ -220,9 +221,74 @@ AFTER INSERT ON answers
 FOR EACH ROW
 EXECUTE FUNCTION trg_answers_after_insert();
 
--- ----------------------------------------------------------------------------
--- Views
--- ----------------------------------------------------------------------------
+-- =======================
+-- Minimal workflow reservation (no answer duplication)
+-- =======================
+CREATE TABLE IF NOT EXISTS answer_reservations (
+  reservation_id UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_id        UUID        NOT NULL,
+  query_id       UUID        NOT NULL,
+  doc_id         UUID        NOT NULL,
+  version        INTEGER     NOT NULL,
+  status         TEXT        NOT NULL DEFAULT 'NEW',  -- NEW | IN_PROGRESS | DONE | FAILED
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_ans_res UNIQUE (case_id, query_id, doc_id),
+  CONSTRAINT fk_ar_query FOREIGN KEY (query_id) REFERENCES queries (query_id) ON DELETE CASCADE,
+  CONSTRAINT fk_ar_doc   FOREIGN KEY (doc_id)   REFERENCES case_documents (doc_id) ON DELETE CASCADE,
+  CONSTRAINT ar_version_positive CHECK (version >= 1)
+);
+CREATE INDEX IF NOT EXISTS idx_ar_status ON answer_reservations (status);
+CREATE INDEX IF NOT EXISTS idx_ar_case_query ON answer_reservations (case_id, query_id);
+
+-- One-call, idempotent allocator: reuse version for same (case, query, doc); else allocate new
+CREATE OR REPLACE FUNCTION get_or_create_answer_version(p_case_id UUID, p_query_id UUID, p_doc_id UUID)
+RETURNS INTEGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_res INTEGER;
+  k1 INT;
+  k2 INT;
+  k3 INT;
+BEGIN
+  SELECT ('x'||substr(md5(p_case_id::text),1,8))::bit(32)::int,
+         ('x'||substr(md5(p_query_id::text),1,8))::bit(32)::int
+    INTO k1, k2;
+  SELECT ('x'||substr(md5(p_doc_id::text),1,8))::bit(32)::int INTO k3;
+
+  PERFORM pg_advisory_xact_lock(k1, k2);
+
+  SELECT version INTO v_res
+    FROM answer_reservations
+   WHERE case_id = p_case_id AND query_id = p_query_id AND doc_id = p_doc_id
+   LIMIT 1;
+
+  IF v_res IS NOT NULL THEN
+    UPDATE answer_reservations
+       SET updated_at = NOW()
+     WHERE case_id = p_case_id AND query_id = p_query_id AND doc_id = p_doc_id;
+    RETURN v_res;
+  END IF;
+
+  SELECT version INTO v_res
+    FROM answers
+   WHERE case_id = p_case_id AND query_id = p_query_id AND doc_id = p_doc_id
+   ORDER BY version DESC
+   LIMIT 1;
+
+  IF v_res IS NULL THEN
+    v_res := next_answer_version(p_case_id, p_query_id);
+  END IF;
+
+  INSERT INTO answer_reservations(case_id, query_id, doc_id, version, status)
+  VALUES (p_case_id, p_query_id, p_doc_id, v_res, 'NEW')
+  ON CONFLICT (case_id, query_id, doc_id) DO NOTHING;
+
+  RETURN v_res;
+END
+$$;
+
 -- Latest answer per (case, query)
 CREATE OR REPLACE VIEW v_latest_answers AS
 SELECT DISTINCT ON (case_id, query_id)
