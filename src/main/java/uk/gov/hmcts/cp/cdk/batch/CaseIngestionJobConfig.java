@@ -212,6 +212,7 @@ public class CaseIngestionJobConfig {
                         if (downloadUrl.isEmpty()) {
                             continue;
                         }
+                        //
                         // this needs to be disucssed and change
                         final QueryClient.CourtDocMeta meta = new QueryClient.CourtDocMeta(true,true,downloadUrl
                                 .get(),"application/pdf",0L);
