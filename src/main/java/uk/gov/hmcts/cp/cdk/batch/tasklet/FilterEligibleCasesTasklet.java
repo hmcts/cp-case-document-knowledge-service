@@ -30,10 +30,12 @@ public class FilterEligibleCasesTasklet implements Tasklet {
         for (final String idStr : rawCaseIds) {
             final UUID caseId = UUID.fromString(idStr);
             final Optional<LatestMaterialInfo> meta = progressionClient.getCourtDocuments(caseId);
-            meta.ifPresent(info -> eligibleMaterialIds.add(info.materialId()));
+            if (meta.isPresent()) {
+                LatestMaterialInfo info = meta.get();
+                eligibleMaterialIds.add(info.materialId());
+                materialToCaseMap.put(info.materialId(), idStr);
+            }
 
-            // Store mapping from materialId to caseId (use first caseId from the list)
-            materialToCaseMap.put(meta.get().materialId(), idStr);
 
         }
 
