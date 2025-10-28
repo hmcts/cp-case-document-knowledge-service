@@ -1,4 +1,8 @@
 package uk.gov.hmcts.cp.cdk.clients.hearing.dto;
 
-public class HearingSummariesInfo {
-}
+import java.util.List;
+
+public record HearingSummariesInfo (
+        String caseId
+        )
+{}

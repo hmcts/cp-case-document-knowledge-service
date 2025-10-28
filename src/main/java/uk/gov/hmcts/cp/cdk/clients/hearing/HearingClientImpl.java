@@ -1,18 +1,22 @@
 package uk.gov.hmcts.cp.cdk.clients.hearing;
 
 import org.springframework.http.HttpHeaders;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
 import uk.gov.hmcts.cp.cdk.domain.hearing.HearingSummaries;
 import uk.gov.hmcts.cp.cdk.domain.hearing.ProsecutionCaseSummaries;
 import uk.gov.hmcts.cp.cdk.query.QueryClientProperties;
 
 import java.net.URI;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Component
 public class HearingClientImpl implements HearingClient{
 
     private static final String HEARINGS_PATH = "/hearing-query-api/query/api/rest/hearing/hearings";
@@ -33,7 +37,7 @@ public class HearingClientImpl implements HearingClient{
                 .build();
     }
 
-    public List<String> getHearingsAndCases(final String courtId, final String roomId, final LocalDate date) {
+    public List<HearingSummariesInfo> getHearingsAndCases(final String courtId, final String roomId, final LocalDate date) {
         final URI uri_hearing = UriComponentsBuilder
                 .fromPath(HEARINGS_PATH)
                 .queryParam("courtId", courtId)
@@ -69,8 +73,14 @@ public class HearingClientImpl implements HearingClient{
                 })
                 .distinct() // optional: ensure unique ids
                 .collect(Collectors.toList());
+        List<HearingSummariesInfo> hearingSummariesInfos = new ArrayList<HearingSummariesInfo>();
+        for (String id : resultIds) {
+            HearingSummariesInfo hearingSummariesInfo = new HearingSummariesInfo(id);
 
-        return resultIds;
+            hearingSummariesInfos.add(hearingSummariesInfo);
+
+        }
+        return hearingSummariesInfos;
     }
 
 }

@@ -10,22 +10,30 @@ import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.web.util.UriComponentsBuilder;
+import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.domain.hearing.HearingSummaries;
+import uk.gov.hmcts.cp.cdk.domain.hearing.ProsecutionCaseSummaries;
 import uk.gov.hmcts.cp.cdk.query.QueryClient;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryRepository;
 import uk.gov.hmcts.cp.cdk.storage.StorageService;
 
 import java.io.InputStream;
+import java.net.URI;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Configuration
 public class CaseIngestionJobConfig {
@@ -133,18 +141,20 @@ public class CaseIngestionJobConfig {
     @Bean
     public Step step1FetchHearingsCasesWithSingleDefendant(final JobRepository jobRepository,
                                                            final PlatformTransactionManager transactionManager,
-                                                           final QueryClient queryClient) {
+                                                           final HearingClient hearingClient) {
         return new StepBuilder("step1_fetch_hearings_cases", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
                     final String court = contribution.getStepExecution().getJobParameters().getString("court");
+                    final String roomId = contribution.getStepExecution().getJobParameters().getString("roomId");
                     final LocalDate date =
                             LocalDate.parse(contribution.getStepExecution().getJobParameters().getString("date"));
 
-                    final List<QueryClient.CaseSummary> summaries = queryClient.getHearingsAndCases(court, date);
+                    final List<HearingSummariesInfo> summaries = hearingClient.getHearingsAndCases(court, roomId, date);
                     final List<String> caseIdStrings = new ArrayList<>(summaries.size());
-                    for (final QueryClient.CaseSummary summary : summaries) {
+                    for (final HearingSummariesInfo summary : summaries) {
                         caseIdStrings.add(summary.caseId().toString());
                     }
+
 
                     contribution.getStepExecution()
                             .getJobExecution()
