@@ -4,18 +4,19 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import uk.gov.hmcts.cp.cdk.clients.common.CdkClientProperties;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.CourtDocumentSearchResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
 
 import java.net.URI;
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
 @Component
 public class ProgressionClientImpl implements ProgressionClient {
-
 
     private static final String SYSTEM_ACTOR = "system";
 
@@ -27,17 +28,17 @@ public class ProgressionClientImpl implements ProgressionClient {
     private final String acceptForCourtDocSearch;
     private final String acceptForMaterialContent;
 
-    public ProgressionClientImpl(ProgressionClientConfig props, ProgressionDtoMapper mapper) {
-        this.cppuidHeader = props.cjsCppuidHeader();
-        this.mapper = mapper;
-        this.courtDocsPath = props.courtDocsPath();
-        this.materialContentPath = props.materialContentPath();
-        this.acceptForCourtDocSearch = props.acceptForCourtDocSearch();
-        this.acceptForMaterialContent = props.acceptForMaterialContent();
-        this.restClient = RestClient.builder()
-                .baseUrl(props.baseUrl())
-                .defaultHeader(HttpHeaders.ACCEPT, props.acceptHeader())
-                .build();
+    public ProgressionClientImpl(final RestClient restClient,
+                                 final CdkClientProperties rootProps,
+                                 final ProgressionClientConfig props,
+                                 final ProgressionDtoMapper mapper) {
+        this.restClient = Objects.requireNonNull(restClient, "restClient");
+        this.cppuidHeader = Objects.requireNonNull(rootProps.headers().cjsCppuid(), "cjsCppuidHeader");
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+        this.courtDocsPath = Objects.requireNonNull(props.courtDocsPath(), "courtDocsPath");
+        this.materialContentPath = Objects.requireNonNull(props.materialContentPath(), "materialContentPath");
+        this.acceptForCourtDocSearch = Objects.requireNonNull(props.acceptForCourtDocSearch(), "acceptForCourtDocSearch");
+        this.acceptForMaterialContent = Objects.requireNonNull(props.acceptForMaterialContent(), "acceptForMaterialContent");
     }
 
     @Override
@@ -48,7 +49,7 @@ public class ProgressionClientImpl implements ProgressionClient {
                 .build()
                 .toUri();
 
-        CourtDocumentSearchResponse response = restClient.get()
+        final CourtDocumentSearchResponse response = restClient.get()
                 .uri(uri)
                 .header(cppuidHeader, SYSTEM_ACTOR)
                 .header(HttpHeaders.ACCEPT, acceptForCourtDocSearch)
@@ -60,7 +61,7 @@ public class ProgressionClientImpl implements ProgressionClient {
         }
 
         return response.documentIndices().stream()
-                .map(mapper::mapToLatestMaterialInfo) // <-- delegate to mapper
+                .map(mapper::mapToLatestMaterialInfo)
                 .flatMap(Optional::stream)
                 .max(Comparator.comparing(LatestMaterialInfo::uploadDateTime));
     }
@@ -73,7 +74,7 @@ public class ProgressionClientImpl implements ProgressionClient {
         record UrlResponse(String url) {
         }
 
-        UrlResponse response = restClient.get()
+        final UrlResponse response = restClient.get()
                 .uri(uri)
                 .header(cppuidHeader, SYSTEM_ACTOR)
                 .header(HttpHeaders.ACCEPT, acceptForMaterialContent)

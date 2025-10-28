@@ -1,25 +1,9 @@
 package uk.gov.hmcts.cp.cdk.clients.hearing.dto;
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class ProsecutionCaseSummaries {
-    private List<Defendants> defendants;
-    private String id;
-
-    // getters & setters
-    public List<Defendants> getDefendants() {
-        return defendants;
-    }
-
-    public void setDefendants(List<Defendants> defendants) {
-        this.defendants = defendants;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
+public record ProsecutionCaseSummaries(
+        @JsonProperty("id") String prosecutionCaseId,
+        Defendants defendants
+) {
 }

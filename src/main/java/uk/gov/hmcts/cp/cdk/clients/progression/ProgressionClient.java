@@ -6,6 +6,7 @@ import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import java.util.Optional;
 import java.util.UUID;
 
+@SuppressWarnings("PMD.ImplicitFunctionalInterface")
 public interface ProgressionClient {
 
     /**

@@ -1,86 +1,72 @@
 package uk.gov.hmcts.cp.cdk.clients.hearing;
 
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import uk.gov.hmcts.cp.cdk.clients.common.CdkClientProperties;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummaries;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
-import uk.gov.hmcts.cp.cdk.clients.hearing.dto.ProsecutionCaseSummaries;
-import uk.gov.hmcts.cp.cdk.query.QueryClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesListRequest;
+import uk.gov.hmcts.cp.cdk.clients.hearing.mapper.HearingDtoMapper;
 
 import java.net.URI;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Objects;
+
 
 @Component
 public class HearingClientImpl implements HearingClient {
-
-    private static final String HEARINGS_PATH = "/hearing-query-api/query/api/rest/hearing/hearings";
-    private static final String ACCEPT_FOR_HEARINGS = "application/vnd.hearing.get.hearings+json";
-
     private static final String SYSTEM_ACTOR = "system";
-
     private final RestClient restClient;
     private final String acceptHeader;
-    private final String cppuidHeader;
+    private final String cppuidHeaderName;
+    private final String hearingsPath;
+    private final HearingDtoMapper mapper;
 
-    public HearingClientImpl(final QueryClientProperties props) {
-        this.acceptHeader = props.acceptHeader();
-        this.cppuidHeader = props.cjsCppuidHeader();
-        this.restClient = RestClient.builder()
-                .baseUrl(props.baseUrl())
-                .defaultHeader(HttpHeaders.ACCEPT, this.acceptHeader)
-                .build();
+
+    public HearingClientImpl(final RestClient restClient,
+                             final CdkClientProperties rootProps,
+                             final HearingClientConfig hearingProps,
+                             final HearingDtoMapper mapper) {
+        this.restClient = Objects.requireNonNull(restClient, "restClient");
+        this.acceptHeader = Objects.requireNonNull(hearingProps.acceptHeader(), "acceptHeader");
+        this.cppuidHeaderName = Objects.requireNonNull(rootProps.headers().cjsCppuid(), "cjsCppuidHeader");
+        this.hearingsPath = Objects.requireNonNull(hearingProps.hearingsPath(), "hearingsPath");
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
     }
 
+    @Override
     public List<HearingSummariesInfo> getHearingsAndCases(final String courtId, final String roomId, final LocalDate date) {
-        final URI uri_hearing = UriComponentsBuilder
-                .fromPath(HEARINGS_PATH)
-                .queryParam("courtId", courtId)
+        final URI uriHearing = UriComponentsBuilder
+                .fromPath(hearingsPath)
+                .queryParam("courtCentreId", courtId)
                 .queryParam("roomId", roomId)
                 .queryParam("date", date)
                 .build()
                 .toUri();
 
-        final HearingSummaries[] response = restClient.get()
-                .uri(uri_hearing)
-                .header(cppuidHeader, SYSTEM_ACTOR)
-                .header(HttpHeaders.ACCEPT, ACCEPT_FOR_HEARINGS)
+
+        final HearingSummariesListRequest summariesList = restClient.get()
+                .uri(uriHearing)
+                .header(cppuidHeaderName, SYSTEM_ACTOR)
+                .header(HttpHeaders.ACCEPT, acceptHeader)
                 .retrieve()
-                .body(HearingSummaries[].class);
+                .body(HearingSummariesListRequest.class);
 
-        final List<HearingSummaries> result;
-        if (response == null) {
-            result = List.of();
-        } else {
-            result = Arrays.asList(response);
+
+        if (summariesList == null || summariesList.hearingSummaries() == null) {
+            return List.of();
         }
-        List<String> resultIds = result.stream()
-                // for each HearingSummaries
-                .flatMap(hearingSummaries -> {
-                    if (hearingSummaries.getProsecutionCaseSummaries() == null) {
-                        return java.util.stream.Stream.empty();
-                    }
-                    return hearingSummaries.getProsecutionCaseSummaries().stream()
-                            // filter ProsecutionCaseSummaries objects where person list size == 1
-                            .filter(prosecutionCaseSummaries -> prosecutionCaseSummaries.getDefendants() != null && prosecutionCaseSummaries.getDefendants().size() == 1)
-                            // map to id
-                            .map(ProsecutionCaseSummaries::getId);
-                })
-                .distinct() // optional: ensure unique ids
-                .collect(Collectors.toList());
-        List<HearingSummariesInfo> hearingSummariesInfos = new ArrayList<HearingSummariesInfo>();
-        for (String id : resultIds) {
-            HearingSummariesInfo hearingSummariesInfo = new HearingSummariesInfo(id);
 
-            hearingSummariesInfos.add(hearingSummariesInfo);
 
+        final List<String> resultIds = new ArrayList<>();
+        for (final HearingSummaries hs : summariesList.hearingSummaries()) {
+            resultIds.addAll(mapper.collectProsecutionCaseIds(hs));
         }
-        return hearingSummariesInfos;
+        return mapper.toHearingSummariesInfo(resultIds);
     }
-
 }

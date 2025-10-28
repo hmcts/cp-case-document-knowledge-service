@@ -1,18 +1,16 @@
 # CDK clients configuration (progression and hearing)
 cdk:
   client:
+    base-url: ${CP_CDK_BASE_URL:http://localhost:8080}
+    headers:
+      cjs-cppuid: ${CP_CDK_CJSCPPUID_HEADER:CJSCPPUID}
+    hearing:
+      accept-header: "application/vnd.hearing.get.hearings+json"
+      hearings-path: "/hearing-query-api/query/api/rest/hearing/hearings"
     progression:
-      base-url: ${CP_CDK_PROGRESSION_BASE_URL}
-      cjs-cppuid-header: ${CP_CDK_CJSCPPUID_HEADER}
       accept-header: "application/vnd.progression.query.courtdocuments+json"
       doc-type-id: "41be14e8-9df5-4b08-80b0-1e670bc80a5b"
       court-docs-path: "/progression-query-api/query/api/rest/progression/courtdocumentsearch"
       material-content-path: "/progression-query-api/query/api/rest/progression/material/{materialId}/content"
       accept-for-court-doc-search: "application/vnd.progression.query.courtdocuments+json"
       accept-for-material-content: "application/vnd.progression.query.material-content+json"
-
-    hearing:
-      base-url: ${CP_CDK_HEARING_BASE_URL:http}
-      cjs-cppuid-header: ${CP_CDK_CJSCPPUID_HEADER}
-      hearing-content-path: "/hearing-query-api/query/api/rest/hearing/hearings"
-      accept-header: "application/vnd.hearing.get.hearings+json"

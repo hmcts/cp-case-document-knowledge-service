@@ -61,9 +61,7 @@ public class UploadAndPersistTasklet implements Tasklet {
     private static CaseDocument buildDoc(UUID docId, UUID caseId, String docName,
                                          String blobUrl,
                                          String contentType, long size) {
-        //TODO  insert the docName which will be used to fetch the status
         final CaseDocument caseDocument = new CaseDocument();
-
         caseDocument.setDocId(docId);
         caseDocument.setCaseId(caseId);
         caseDocument.setDocName(docName);

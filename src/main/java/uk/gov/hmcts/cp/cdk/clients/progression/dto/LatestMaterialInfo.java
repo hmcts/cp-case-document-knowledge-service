@@ -1,5 +1,6 @@
 package uk.gov.hmcts.cp.cdk.clients.progression.dto;
 
+import java.time.ZonedDateTime;
 import java.util.List;
 
 public record LatestMaterialInfo(
@@ -7,6 +8,6 @@ public record LatestMaterialInfo(
         String documentTypeId,
         String documentTypeDescription,
         String materialId,
-        java.time.ZonedDateTime uploadDateTime
+        ZonedDateTime uploadDateTime
 ) {
 }
