@@ -49,7 +49,7 @@ class FilterEligibleCasesTaskletTest {
     }
 
     @Test
-    @DisplayName("FilterEligibleCasesTasklet filters and stores eligible materials and mapping")
+    @DisplayName("FilterEligibleCasesTasklet filters and stores eligible materials and  mapping")
     void filtersAndStoresEligibleCases() throws Exception {
         // Arrange
         UUID case1 = UUID.randomUUID();
