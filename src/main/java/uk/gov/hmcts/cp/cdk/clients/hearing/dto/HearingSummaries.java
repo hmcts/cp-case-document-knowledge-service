@@ -9,6 +9,7 @@ public class HearingSummaries {
     public List<ProsecutionCaseSummaries> getProsecutionCaseSummaries() {
         return prosecutionCaseSummaries;
     }
+
     public void setProsecutionCaseSummaries(List<ProsecutionCaseSummaries> prosecutionCaseSummaries) {
         this.prosecutionCaseSummaries = prosecutionCaseSummaries;
     }

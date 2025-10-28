@@ -5,8 +5,8 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
-import uk.gov.hmcts.cp.cdk.domain.hearing.HearingSummaries;
-import uk.gov.hmcts.cp.cdk.domain.hearing.ProsecutionCaseSummaries;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummaries;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.ProsecutionCaseSummaries;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.CourtDocumentSearchResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 

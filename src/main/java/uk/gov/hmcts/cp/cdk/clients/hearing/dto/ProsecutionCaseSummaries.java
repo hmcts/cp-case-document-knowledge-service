@@ -10,12 +10,15 @@ public class ProsecutionCaseSummaries {
     public List<Defendants> getDefendants() {
         return defendants;
     }
+
     public void setDefendants(List<Defendants> defendants) {
         this.defendants = defendants;
     }
+
     public String getId() {
         return id;
     }
+
     public void setId(String id) {
         this.id = id;
     }

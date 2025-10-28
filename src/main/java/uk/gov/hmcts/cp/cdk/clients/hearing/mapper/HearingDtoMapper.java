@@ -4,8 +4,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
-import uk.gov.hmcts.cp.cdk.domain.hearing.HearingSummaries;
-import uk.gov.hmcts.cp.cdk.domain.hearing.ProsecutionCaseSummaries;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummaries;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.ProsecutionCaseSummaries;
 import uk.gov.hmcts.cp.cdk.query.QueryClientProperties;
 
 import java.net.URI;
@@ -34,6 +34,7 @@ public class HearingDtoMapper {
                 .defaultHeader(HttpHeaders.ACCEPT, this.acceptHeader)
                 .build();
     }
+
     public List<String> getHearingsAndCases(final String courtId, final String roomId, final LocalDate date) {
         final URI uri_hearing = UriComponentsBuilder
                 .fromPath(HEARINGS_PATH)

@@ -5,4 +5,5 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableConfigurationProperties(HearingClientConfig.class)
-public class HearingConfig {}
+public class HearingConfig {
+}

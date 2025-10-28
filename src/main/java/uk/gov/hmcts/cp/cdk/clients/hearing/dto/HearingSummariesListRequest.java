@@ -9,6 +9,7 @@ public class HearingSummariesListRequest {
     public List<HearingSummaries> getHearingSummaries() {
         return hearingSummaries;
     }
+
     public void setHearingSummaries(List<HearingSummaries> hearingSummaries) {
         this.hearingSummaries = hearingSummaries;
     }
