@@ -36,6 +36,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Configuration
+@Deprecated
 public class CaseIngestionJobConfig {
 
     public static final String JOB_NAME = "caseIngestionJob";
