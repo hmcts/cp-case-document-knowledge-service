@@ -23,8 +23,8 @@ public class FetchHearingsCasesTasklet implements Tasklet {
 
     @Override
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) throws Exception {
-        final String courtId = contribution.getStepExecution().getJobParameters().getString("court");
-        final String roomId = contribution.getStepExecution().getJobParameters().getString("room");
+        final String courtId = contribution.getStepExecution().getJobParameters().getString("courtCentreId");
+        final String roomId = contribution.getStepExecution().getJobParameters().getString("roomId");
         final LocalDate date = LocalDate.parse(contribution.getStepExecution().getJobParameters().getString("date"));
         final List<HearingSummariesInfo> summaries = hearingClient.getHearingsAndCases(courtId, roomId, date);
         final List<String> caseIdStrings = new ArrayList<>(summaries.size());

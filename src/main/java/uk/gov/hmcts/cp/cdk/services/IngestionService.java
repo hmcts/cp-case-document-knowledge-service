@@ -70,7 +70,7 @@ public class IngestionService {
         final LocalDate requestedDate = Objects.requireNonNull(request.getDate(), "date must not be null");
 
         final JobParameters params = new JobParametersBuilder()
-                .addString("court", courtCentreId.toString())
+                .addString("courtCentreId", courtCentreId.toString())
                 .addString("roomId", roomId.toString())
                 .addString("date", requestedDate.toString())
                 .addLong("run", System.currentTimeMillis())
