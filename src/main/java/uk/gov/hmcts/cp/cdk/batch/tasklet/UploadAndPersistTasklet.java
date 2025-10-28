@@ -1,14 +1,8 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import org.springframework.batch.core.scope.context.ChunkContext;
-import org.springframework.batch.core.step.StepContribution;
-import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.repeat.RepeatStatus;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.PlatformTransactionManager;
+import static java.time.OffsetDateTime.now;
+import static java.time.format.DateTimeFormatter.ofPattern;
+
 import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
@@ -22,23 +16,31 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static java.time.OffsetDateTime.now;
-import static java.time.format.DateTimeFormatter.ofPattern;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
 
 
 @Component
 @RequiredArgsConstructor
 public class UploadAndPersistTasklet implements Tasklet {
-    private static ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
     private final ProgressionClient progressionClient;
     private final StorageService storageService;
-    private final PlatformTransactionManager txManager;
-    private CaseDocumentRepository caseDocumentRepository;
+    private final PlatformTransactionManager transactionManager;
+    private final CaseDocumentRepository caseDocumentRepository;
 
-    private static Map<String, String> createBlobMetadata(final UUID documentId,
-                                                          final UUID materialId,
-                                                          final String caseId,
-                                                          final String uploadedDate
+    private Map<String, String> createBlobMetadata(
+            final UUID documentId,
+            final UUID materialId,
+            final String caseId,
+            final String uploadedDate
     ) {
         try {
             final Map<String, Object> metadataJson = Map.of(
@@ -127,9 +129,9 @@ public class UploadAndPersistTasklet implements Tasklet {
 
             //save to db
             final CaseDocument caseDocument =
-                    buildDoc(documentId, UUID.fromString(caseIdStr), blobName, blobUrl, contentType, sizeBytes);
+                    buildDoc(documentId, UUID.fromString(caseIdStr),
+                            blobName, blobUrl, contentType, sizeBytes);
             caseDocumentRepository.save(caseDocument);
-
 
         }
         return RepeatStatus.FINISHED;

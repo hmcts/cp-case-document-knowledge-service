@@ -1,5 +1,11 @@
 package uk.gov.hmcts.cp.cdk.storage;
 
+import static java.util.Objects.requireNonNull;
+
+import java.io.InputStream;
+import java.time.Duration;
+import java.util.Map;
+
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
@@ -9,41 +15,37 @@ import com.azure.storage.blob.models.CopyStatusType;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import org.springframework.stereotype.Service;
 
-import java.io.InputStream;
-import java.time.Duration;
-import java.util.Map;
-import java.util.Objects;
-
 @Service
 public class AzureBlobStorageService implements StorageService {
 
     private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
-    private final BlobContainerClient container;
+    private final BlobContainerClient blobContainerClient;
     private final long pollIntervalMs;
     private final long timeoutSeconds;
 
-    public AzureBlobStorageService(final StorageProperties props) {
-        this.container = new BlobContainerClientBuilder()
-                .connectionString(Objects.requireNonNull(props.connectionString(), "storage connectionString is required"))
-                .containerName(Objects.requireNonNull(props.container(), "storage container is required"))
+    public AzureBlobStorageService(final StorageProperties storageProperties) {
+        this.blobContainerClient = new BlobContainerClientBuilder()
+                // Todo change this to managed identity
+                .connectionString(requireNonNull(storageProperties.connectionString(), "storage connectionString is required"))
+                .containerName(requireNonNull(storageProperties.container(), "storage container is required"))
                 .buildClient();
-        this.container.createIfNotExists();
+        this.blobContainerClient.createIfNotExists();
 
         // Poll tuning — defaults if not provided
-        this.pollIntervalMs = props.copyPollIntervalMs() != null ? props.copyPollIntervalMs() : 1_000L;
-        this.timeoutSeconds = props.copyTimeoutSeconds() != null ? props.copyTimeoutSeconds() : 120L;
+        this.pollIntervalMs = storageProperties.copyPollIntervalMs() != null ? storageProperties.copyPollIntervalMs() : 1_000L;
+        this.timeoutSeconds = storageProperties.copyTimeoutSeconds() != null ? storageProperties.copyTimeoutSeconds() : 120L;
     }
 
-    /* default */ AzureBlobStorageService(final BlobContainerClient container) {
-        this.container = Objects.requireNonNull(container);
+    /* default */ AzureBlobStorageService(final BlobContainerClient blobContainerClient) {
+        this.blobContainerClient = requireNonNull(blobContainerClient);
         this.pollIntervalMs = 1_000L;
         this.timeoutSeconds = 120L;
     }
 
     @Override
     public String upload(final String blobPath, final InputStream data, final long size, final String contentType) {
-        final BlobClient blob = container.getBlobClient(blobPath);
+        final BlobClient blob = blobContainerClient.getBlobClient(blobPath);
         blob.upload(data, size, true);
         final String contentTypeToApply =
                 (contentType == null || contentType.isBlank()) ? DEFAULT_CONTENT_TYPE : contentType;
@@ -51,9 +53,11 @@ public class AzureBlobStorageService implements StorageService {
         return blob.getBlobUrl();
     }
 
-    public String copyFromUrl(final String sourceUrl, final String destBlobPath, final String contentType,
+    public String copyFromUrl(final String sourceUrl,
+                              final String destBlobPath,
+                              final String contentType,
                               final Map<String, String> metadata) {
-        final BlobClient blob = container.getBlobClient(destBlobPath);
+        final BlobClient blob = blobContainerClient.getBlobClient(destBlobPath);
         final BlockBlobClient block = blob.getBlockBlobClient();
 
         // Start server-side copy (overwrite if exists)
@@ -103,12 +107,12 @@ public class AzureBlobStorageService implements StorageService {
 
     @Override
     public boolean exists(final String blobPath) {
-        return container.getBlobClient(blobPath).exists();
+        return blobContainerClient.getBlobClient(blobPath).exists();
     }
 
     @Override
     public long getBlobSize(final String blobPath) {
-        final BlobClient blob = container.getBlobClient(blobPath);
+        final BlobClient blob = blobContainerClient.getBlobClient(blobPath);
         final BlobProperties props = blob.getProperties();
         return props.getBlobSize();
     }
