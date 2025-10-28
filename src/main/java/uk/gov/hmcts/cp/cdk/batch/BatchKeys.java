@@ -9,6 +9,7 @@ public final class BatchKeys {
     public static final String CTX_CASE_IDS = "caseIds";
     public static final String CTX_ELIGIBLE_CASE_IDS = "eligibleCaseIds";
     public static final String CTX_DOC_ID = "docId";
+    public static final String CONTEXT_KEY_ELIGIBLE_MATERIAL_IDS = "eligibleMaterialIds";
 
     public static final String BLOB_TEMPLATE = "cases/%s/idpc.pdf";
 
