@@ -1,0 +1,30 @@
+# application-env.yml — centralized environment / defaults (replace with secure values per environment)
+# Developer note: this file provides local defaults for development. Do NOT commit production secrets.
+CP_CDK_DATASOURCE_URL: jdbc:postgresql://localhost:5432/cp_cdk_db
+CP_CDK_DATASOURCE_USERNAME: cp_cdk_user
+CP_CDK_DATASOURCE_PASSWORD: changeme
+CP_CDK_DB_POOL_SIZE: 20
+CP_CDK_DB_MIN_IDLE: 5
+
+CP_CDK_ARTEMIS_URL: tcp://localhost:61616
+
+SERVER_PORT: 8082
+MANAGEMENT_SERVER_PORT: 8082
+
+CLUSTER_NAME: local
+REGION: local
+
+TRACING_SAMPLER_PROBABILITY: 1.0
+OTEL_METRICS_ENABLED: false
+OTEL_TRACES_URL: http://localhost:4318/traces
+OTEL_METRICS_URL: http://localhost:4318/metrics
+
+CP_CDK_AZURE_STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02x...
+CP_CDK_REST_SPECIFICATION: ""
+
+CDK_CLIENT_BASE_URL: http://localhost:8080
+CP_CDK_CJSCPPUID_HEADER: CJSCPPUID
+CP_CDK_PROGRESSION_BASE_URL: ${CDK_CLIENT_BASE_URL}
+CP_CDK_HEARING_BASE_URL: ${CDK_CLIENT_BASE_URL}
+
+VIRTUAL_THREADS: false

@@ -1,0 +1,8 @@
+# Storage configuration (Azure blob)
+cdk:
+  storage:
+    azure:
+      connection-string: ${CP_CDK_AZURE_STORAGE_CONNECTION_STRING}
+      container: idpc
+      copy-poll-interval-ms: 5000
+      copy-timeout-seconds: 300

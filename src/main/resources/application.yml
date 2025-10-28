@@ -1,0 +1,19 @@
+# application.yml — imports environment + focused config files
+spring:
+  application:
+    name: cp-case-document-knowledge-service
+
+  config:
+    import:
+      - optional:classpath:application-env.yml
+      - optional:classpath:application-datasource.yml
+      - optional:classpath:application-artemis-jms.yml
+      - optional:classpath:application-server-management.yml
+      - optional:classpath:application-clients.yml
+      - optional:classpath:application-storage.yml
+      - optional:classpath:application-other.yml
+
+server:
+  port: ${SERVER_PORT:8082}
+
+# Developer note: keep this file minimal; per-environment overrides go into application-env.yml or profile files

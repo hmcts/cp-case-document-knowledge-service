@@ -1,0 +1,31 @@
+# Datasource, JPA and Flyway
+spring:
+  datasource:
+    url: ${CP_CDK_DATASOURCE_URL}
+    username: ${CP_CDK_DATASOURCE_USERNAME}
+    password: ${CP_CDK_DATASOURCE_PASSWORD}
+    hikari:
+      pool-name: cp-hikari
+      maximum-pool-size: ${CP_CDK_DB_POOL_SIZE:20}
+      minimum-idle: ${CP_CDK_DB_MIN_IDLE:5}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      keepalive-time: 300000
+      validation-timeout: 5000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+      hibernate.connection.provider_disables_autocommit: true
+      hibernate.jdbc.batch_size: 50
+      hibernate.order_inserts: true
+      hibernate.order_updates: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
