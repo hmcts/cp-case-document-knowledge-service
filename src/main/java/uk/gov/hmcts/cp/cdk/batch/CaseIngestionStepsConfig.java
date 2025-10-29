@@ -14,6 +14,7 @@ import uk.gov.hmcts.cp.cdk.batch.tasklet.*;
 class CaseIngestionStepsConfig {
 
     private final PlatformTransactionManager txManager;
+    private static final String PMD_METHOD_NAMING = "PMD.MethodNamingConventions";
 
     private final FetchHearingsCasesTasklet step1;
     private final FilterEligibleCasesTasklet step2;
@@ -23,32 +24,36 @@ class CaseIngestionStepsConfig {
     private final GenerateAnswersTasklet step6;
 
     @Bean
-    Step step1FetchHearingsCasesWithSingleDefendant(final JobRepository repo) {
+    public Step step1FetchHearingsCasesWithSingleDefendant(final JobRepository repo) {
         return new StepBuilder("step1_fetch_hearings_cases", repo).tasklet(step1, txManager).build();
     }
 
     @Bean
-    Step step2FilterCaseIdpcForSingleDefendant(final JobRepository repo) {
+    public Step step2FilterCaseIdpcForSingleDefendant(final JobRepository repo) {
         return new StepBuilder("step2_check_single_defendant_idpc", repo).tasklet(step2, txManager).build();
     }
 
+    @SuppressWarnings(PMD_METHOD_NAMING)
     @Bean
-    Step step3_upload_and_persist(final JobRepository repo) {
+    public Step step3_upload_and_persist(final JobRepository repo) {
         return new StepBuilder("step3_upload_and_persist", repo).tasklet(step3, txManager).build();
     }
 
+    @SuppressWarnings(PMD_METHOD_NAMING)
     @Bean
-    Step step4_verifyUpload_perCase(final JobRepository repo) {
+    public Step step4_verifyUpload_perCase(final JobRepository repo) {
         return new StepBuilder("step4_verify_upload_perCase", repo).tasklet(step4, txManager).build();
     }
 
+    @SuppressWarnings(PMD_METHOD_NAMING)
     @Bean
-    Step step5_reserveAnswerVersion_perCase(final JobRepository repo) {
+    public Step step5_reserveAnswerVersion_perCase(final JobRepository repo) {
         return new StepBuilder("step5_reserve_answer_version_perCase", repo).tasklet(step5, txManager).build();
     }
 
+    @SuppressWarnings(PMD_METHOD_NAMING)
     @Bean
-    Step step6_generateAnswers_perCase(final JobRepository repo) {
+    public Step step6_generateAnswers_perCase(final JobRepository repo) {
         return new StepBuilder("step6_generate_answers_perCase", repo).tasklet(step6, txManager).build();
     }
 }

@@ -15,14 +15,18 @@ public class QueryResolver {
     private final QueryRepository queryRepository;
 
     public List<Query> resolve() {
+        final List<Query> result;
         final List<String> labels = questionsProperties.labels();
         if (labels != null && !labels.isEmpty()) {
             final List<Query> out = new ArrayList<>();
             for (final String l : labels) {
                 queryRepository.findByLabelIgnoreCase(l).ifPresent(out::add);
             }
-            return out;
+            result = out;
         }
-        return queryRepository.findAll();
+        else {
+            result = queryRepository.findAll();
+        }
+        return result;
     }
 }
