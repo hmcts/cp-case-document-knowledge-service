@@ -1,11 +1,5 @@
 package uk.gov.hmcts.cp.cdk.storage;
 
-import static java.util.Objects.requireNonNull;
-
-import java.io.InputStream;
-import java.time.Duration;
-import java.util.Map;
-
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
@@ -14,6 +8,12 @@ import com.azure.storage.blob.models.BlobProperties;
 import com.azure.storage.blob.models.CopyStatusType;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import org.springframework.stereotype.Service;
+
+import java.io.InputStream;
+import java.time.Duration;
+import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
 
 @Service
 public class AzureBlobStorageService implements StorageService {

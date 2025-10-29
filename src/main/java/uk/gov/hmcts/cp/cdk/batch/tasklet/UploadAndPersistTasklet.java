@@ -1,22 +1,5 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
-import static java.time.OffsetDateTime.now;
-import static java.time.format.DateTimeFormatter.ofPattern;
-import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
-
-import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
-import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
-import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
-import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
-import uk.gov.hmcts.cp.cdk.storage.StorageService;
-
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -26,7 +9,20 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
-import uk.gov.hmcts.cp.cdk.util.TimeUtils;
+import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
+import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+import uk.gov.hmcts.cp.cdk.storage.StorageService;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import static java.time.format.DateTimeFormatter.ofPattern;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 
 @Component

@@ -2,10 +2,10 @@ package uk.gov.hmcts.cp.cdk.clients.hearing.mapper;
 
 
 import org.springframework.stereotype.Component;
-
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummaries;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.ProsecutionCaseSummaries;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
