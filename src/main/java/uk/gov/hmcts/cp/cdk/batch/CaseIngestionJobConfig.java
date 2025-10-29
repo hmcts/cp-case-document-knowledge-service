@@ -54,6 +54,7 @@ public class CaseIngestionJobConfig {
         return template;
     }
 
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     @Bean
     public Partitioner eligibleCasePartitioner() {
         return gridSize -> {
@@ -79,6 +80,7 @@ public class CaseIngestionJobConfig {
         };
     }
 
+    @SuppressWarnings("PMD.FormalParameterNamingConventions")
     @Bean
     public Step caseWorkerFlowStep(final JobRepository repo,
                                    final Step step3_upload_and_persist,
@@ -95,6 +97,7 @@ public class CaseIngestionJobConfig {
         return new StepBuilder("caseWorkerFlowStep", repo).flow(flow).build();
     }
 
+    @SuppressWarnings("PMD.MethodNamingConventions")
     @Bean
     public Step step3to6_partitioned(final JobRepository repo,
                                      final Partitioner eligibleCasePartitioner,
@@ -108,6 +111,7 @@ public class CaseIngestionJobConfig {
                 .build();
     }
 
+    @SuppressWarnings("PMD.FormalParameterNamingConventions")
     @Bean
     public Job caseIngestionJob(final JobRepository repo,
                                 final Step step1FetchHearingsCasesWithSingleDefendant,
