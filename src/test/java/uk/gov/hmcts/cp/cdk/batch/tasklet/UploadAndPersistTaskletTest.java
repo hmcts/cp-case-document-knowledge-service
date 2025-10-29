@@ -40,6 +40,7 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.transaction.PlatformTransactionManager;
 
+@DisplayName("Upload And Persist Tasklet tests")
 @ExtendWith(MockitoExtension.class)
 class UploadAndPersistTaskletTest {
 

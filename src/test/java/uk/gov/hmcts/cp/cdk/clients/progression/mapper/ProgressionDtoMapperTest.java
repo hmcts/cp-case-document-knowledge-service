@@ -1,6 +1,8 @@
-package uk.gov.hmcts.cp.cdk.clients.progression;
+package uk.gov.hmcts.cp.cdk.clients.progression.mapper;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClientConfig;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.CourtDocumentSearchResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
 
@@ -8,10 +10,12 @@ import java.time.ZonedDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+@DisplayName("Progression Dto Mapper tests")
 
 class ProgressionDtoMapperTest {
 
     @Test
+    @DisplayName("Returns Latest Material When Doc Type Matches")
     void returnsLatestMaterialWhenDocTypeMatches() {
         final var cfg = new ProgressionClientConfig(
                 "application/vnd.progression.query.courtdocuments+json",
@@ -34,6 +38,7 @@ class ProgressionDtoMapperTest {
     }
 
     @Test
+    @DisplayName("Empty When Doc Type Does Not Match")
     void emptyWhenDocTypeDoesNotMatch() {
         final var cfg = new ProgressionClientConfig(
                 "application/vnd.progression.query.courtdocuments+json",
@@ -54,6 +59,7 @@ class ProgressionDtoMapperTest {
 
 
     @Test
+    @DisplayName("Empty When Upload Time Does Not Exists")
     void emptyWhenUploadTimeDoesNotExists() {
         final var cfg = new ProgressionClientConfig(
                 "application/vnd.progression.query.courtdocuments+json",
@@ -76,6 +82,7 @@ class ProgressionDtoMapperTest {
     }
 
     @Test
+    @DisplayName("Empty When Document Not Exists")
     void emptyWhenDocumentNotExists() {
         final var cfg = new ProgressionClientConfig(
                 "application/vnd.progression.query.courtdocuments+json",

@@ -25,6 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
+@DisplayName("Ingestion Controller tests")
 
 class IngestionControllerTest {
 
@@ -38,6 +39,7 @@ class IngestionControllerTest {
                 .build();
     }
     @Test
+    @DisplayName("Get Ingestion Status returns payload")
     void getIngestionStatus_returns_payload() throws Exception {
         final IngestionService service = Mockito.mock(IngestionService.class);
         final IngestionController controller = new IngestionController(service);

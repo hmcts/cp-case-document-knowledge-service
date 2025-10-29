@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
 import org.mockito.Mockito;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -14,12 +15,14 @@ import java.util.UUID;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+@DisplayName("Answers Controller tests")
 
 class AnswersControllerTest {
 
     public final String VND_TYPE_JSON = "application/vnd.casedocumentknowledge-service.answers+json";
 
     @Test
+    @DisplayName("Get Answer By Case And Query latest returns answer")
     void getAnswerByCaseAndQuery_latest_returns_answer() throws Exception {
         final AnswerService service = Mockito.mock(AnswerService.class);
         final AnswersController controller = new AnswersController(service);
@@ -49,6 +52,7 @@ class AnswersControllerTest {
     }
 
     @Test
+    @DisplayName("Get Answer By Case And Query with Version and as Of returns answer")
     void getAnswerByCaseAndQuery_withVersion_and_asOf_returns_answer() throws Exception {
         final AnswerService service = Mockito.mock(AnswerService.class);
         final AnswersController controller = new AnswersController(service);
@@ -82,6 +86,7 @@ class AnswersControllerTest {
     }
 
     @Test
+    @DisplayName("Get Answer With Llm By Case And Query latest returns answer with llm")
     void getAnswerWithLlmByCaseAndQuery_latest_returns_answer_with_llm() throws Exception {
         final AnswerService service = Mockito.mock(AnswerService.class);
         final AnswersController controller = new AnswersController(service);
@@ -112,6 +117,7 @@ class AnswersControllerTest {
     }
 
     @Test
+    @DisplayName("Get Answer With Llm By Case And Query with Version and as Of returns answer with llm")
     void getAnswerWithLlmByCaseAndQuery_withVersion_and_asOf_returns_answer_with_llm() throws Exception {
         final AnswerService service = Mockito.mock(AnswerService.class);
         final AnswersController controller = new AnswersController(service);

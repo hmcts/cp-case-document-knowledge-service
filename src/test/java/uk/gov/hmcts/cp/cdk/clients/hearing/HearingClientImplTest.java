@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.clients.hearing;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -20,6 +21,7 @@ import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+@DisplayName("Hearing Client Impl tests")
 
 class HearingClientImplTest {
 
@@ -40,6 +42,7 @@ class HearingClientImplTest {
     }
 
     @Test
+    @DisplayName("Get Hearings And Cases collects Ids And Maps")
     void getHearingsAndCases_collectsIdsAndMaps() {
         // Arrange
         final var rootProps = new CdkClientProperties(
@@ -83,6 +86,7 @@ class HearingClientImplTest {
     }
 
     @Test
+    @DisplayName("Get Hearings And Cases empty Response Returns Empty List")
     void getHearingsAndCases_emptyResponseReturnsEmptyList() {
         // Arrange
         final var rootProps = new CdkClientProperties(

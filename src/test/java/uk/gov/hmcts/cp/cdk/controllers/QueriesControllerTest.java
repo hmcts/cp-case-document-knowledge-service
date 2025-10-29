@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.controllers;
 
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
 import org.mockito.Mockito;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -18,12 +19,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@DisplayName("Queries Controller tests")
 
 class QueriesControllerTest {
 
     public final String VND_TYPE_JSON = "application/vnd.casedocumentknowledge-service.queries+json";
 
     @Test
+    @DisplayName("List Queries returns case as of")
     void listQueries_returns_case_as_of() throws Exception {
         final QueryService service = Mockito.mock(QueryService.class);
         final QueriesController controller = new QueriesController(service);
@@ -57,6 +60,7 @@ class QueriesControllerTest {
     }
 
     @Test
+    @DisplayName("Upsert Queries returns accepted definition snapshot")
     void upsertQueries_returns_accepted_definition_snapshot() throws Exception {
         final QueryService service = Mockito.mock(QueryService.class);
         final QueriesController controller = new QueriesController(service);
@@ -97,6 +101,7 @@ class QueriesControllerTest {
     }
 
     @Test
+    @DisplayName("Get Query returns single summary")
     void getQuery_returns_single_summary() throws Exception {
         final QueryService service = Mockito.mock(QueryService.class);
         final QueriesController controller = new QueriesController(service);
@@ -124,6 +129,7 @@ class QueriesControllerTest {
     }
 
     @Test
+    @DisplayName("List Query Versions returns wrapped payload")
     void listQueryVersions_returns_wrapped_payload() throws Exception {
         final QueryService service = Mockito.mock(QueryService.class);
         final QueriesController controller = new QueriesController(service);

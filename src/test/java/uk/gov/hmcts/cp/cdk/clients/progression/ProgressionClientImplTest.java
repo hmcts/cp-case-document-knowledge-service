@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.clients.progression;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -16,6 +17,7 @@ import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+@DisplayName("Progression Client Impl tests")
 
 class ProgressionClientImplTest {
 
@@ -36,6 +38,7 @@ class ProgressionClientImplTest {
     }
 
     @Test
+    @DisplayName("Get Material Download Url fetches And Extracts Url")
     void getMaterialDownloadUrl_fetchesAndExtractsUrl() {
         final var rootProps = new CdkClientProperties(
                 "http://localhost:8080",
@@ -67,6 +70,7 @@ class ProgressionClientImplTest {
 
 
     @Test
+    @DisplayName("Get Null Material Download Url fetches And Extracts Url")
     void getNullMaterialDownloadUrl_fetchesAndExtractsUrl() {
         final var rootProps = new CdkClientProperties(
                 "http://localhost:8080",
@@ -96,6 +100,7 @@ class ProgressionClientImplTest {
     }
 
     @Test
+    @DisplayName("Get Court Documents returns Latest Material Info")
     void getCourtDocuments_returnsLatestMaterialInfo() {
         final var rootProps = new CdkClientProperties(
                 "http://localhost:8080",
@@ -144,6 +149,7 @@ class ProgressionClientImplTest {
     }
 
     @Test
+    @DisplayName("Get Court Documents returns Empty Document Latest Material Info")
     void getCourtDocuments_returnsEmptyDocumentLatestMaterialInfo() {
         final var rootProps = new CdkClientProperties(
                 "http://localhost:8080",
@@ -180,6 +186,7 @@ class ProgressionClientImplTest {
     }
 
     @Test
+    @DisplayName("Get Court Documents returns Null Document Latest Material Info")
     void getCourtDocuments_returnsNullDocumentLatestMaterialInfo() {
         final var rootProps = new CdkClientProperties(
                 "http://localhost:8080",
@@ -215,6 +222,7 @@ class ProgressionClientImplTest {
     }
 
     @Test
+    @DisplayName("Get Court Documents returnsno I D P C Latest Material Info")
     void getCourtDocuments_returnsnoIDPCLatestMaterialInfo() {
         final var rootProps = new CdkClientProperties(
                 "http://localhost:8080",
@@ -283,6 +291,7 @@ class ProgressionClientImplTest {
 
 
     @Test
+    @DisplayName("Get Court Documents returnsno Material Latest Material Info")
     void getCourtDocuments_returnsnoMaterialLatestMaterialInfo() {
         final var rootProps = new CdkClientProperties(
                 "http://localhost:8080",
