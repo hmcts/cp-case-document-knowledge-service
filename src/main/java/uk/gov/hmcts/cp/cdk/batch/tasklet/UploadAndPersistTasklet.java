@@ -16,7 +16,6 @@ import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.storage.StorageService;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,6 +32,22 @@ public class UploadAndPersistTasklet implements Tasklet {
     private final StorageService storageService;
     private final PlatformTransactionManager transactionManager;
     private final CaseDocumentRepository caseDocumentRepository;
+
+    private static CaseDocument buildDoc(UUID docId, UUID caseId, String docName,
+                                         String blobUrl,
+                                         String contentType, long size) {
+        final CaseDocument caseDocument = new CaseDocument();
+        caseDocument.setDocId(docId);
+        caseDocument.setCaseId(caseId);
+        caseDocument.setDocName(docName);
+        caseDocument.setBlobUri(blobUrl);
+        caseDocument.setContentType(contentType);
+        caseDocument.setSizeBytes(size);
+        caseDocument.setUploadedAt(utcNow());
+        caseDocument.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
+        caseDocument.setIngestionPhaseAt(utcNow());
+        return caseDocument;
+    }
 
     private Map<String, String> createBlobMetadata(
             final UUID documentId,
@@ -56,22 +71,6 @@ public class UploadAndPersistTasklet implements Tasklet {
         }
     }
 
-    private static CaseDocument buildDoc(UUID docId, UUID caseId, String docName,
-                                         String blobUrl,
-                                         String contentType, long size) {
-        final CaseDocument caseDocument = new CaseDocument();
-        caseDocument.setDocId(docId);
-        caseDocument.setCaseId(caseId);
-        caseDocument.setDocName(docName);
-        caseDocument.setBlobUri(blobUrl);
-        caseDocument.setContentType(contentType);
-        caseDocument.setSizeBytes(size);
-        caseDocument.setUploadedAt(utcNow());
-        caseDocument.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
-        caseDocument.setIngestionPhaseAt(utcNow());
-        return caseDocument;
-    }
-
     @Override
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) throws Exception {
         final ExecutionContext stepCtx = contribution.getStepExecution().getExecutionContext();
@@ -92,14 +91,14 @@ public class UploadAndPersistTasklet implements Tasklet {
             final String caseIdStr = entry.getValue();
 
             if (materialIdStr == null || caseIdStr == null) {
-               continue;
+                continue;
             }
 
             final UUID materialID;
             try {
                 materialID = UUID.fromString(materialIdStr);
             } catch (IllegalArgumentException e) {
-               continue;
+                continue;
             }
 
             final Optional<String> downloadUrl = progressionClient.getMaterialDownloadUrl(materialID);
@@ -109,21 +108,15 @@ public class UploadAndPersistTasklet implements Tasklet {
             }
 
             final UUID documentId = UUID.randomUUID();
-
             final String uploadDate = utcNow().format(ofPattern("yyyyMMdd"));
             final String blobName = String.format("%s_%s.pdf", materialID, uploadDate);
-            // destination path --https://<storage-account><container>/cases/materialid/blobnale
             final String destBlobPath = String.format("cases/%s/%s", uploadDate, blobName);
-
             final String contentType = "application/pdf";
-
             final Map<String, String> metadata = createBlobMetadata(documentId, materialID, caseIdStr, uploadDate);
-
             final String blobUrl = storageService.copyFromUrl(downloadUrl.get(), destBlobPath, contentType, metadata);
-
             final long sizeBytes = storageService.getBlobSize(destBlobPath);
 
-            //save to  db
+
             final CaseDocument caseDocument =
                     buildDoc(documentId, UUID.fromString(caseIdStr),
                             blobName, blobUrl, contentType, sizeBytes);

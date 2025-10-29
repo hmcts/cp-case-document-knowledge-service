@@ -1,7 +1,19 @@
-# CDK clients configuration (progression and hearing)
-cdk:
+rag:
+  client:
+    base-url: ${CP_CDK_RAG_URL}
+    answer-query-path: /answer-user-query
+    connect-timeout-ms: 3000
+    read-timeout-ms: 15000
+    headers:
+      Accept: application/json
+      Content-Type: application/json
+      Ocp-Apim-Subscription-Key: ${CP_CDK_RAG_SUBSCRIPTION_KEY}
+
+cqrs:
   client:
     base-url: ${CP_CDK_BASE_URL:http://localhost:8080}
+    connect-timeout-ms: 3000
+    read-timeout-ms: 15000
     headers:
       cjs-cppuid: ${CP_CDK_CJSCPPUID_HEADER:CJSCPPUID}
     hearing:

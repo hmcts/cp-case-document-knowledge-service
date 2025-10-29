@@ -7,7 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestTemplate;
-import uk.gov.hmcts.cp.cdk.clients.common.CdkClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
 import uk.gov.hmcts.cp.cdk.clients.hearing.mapper.HearingDtoMapper;
 
@@ -21,8 +21,8 @@ import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
-@DisplayName("Hearing Client Impl tests")
 
+@DisplayName("Hearing Client Impl tests")
 class HearingClientImplTest {
 
     private RestClient restClient;
@@ -45,9 +45,10 @@ class HearingClientImplTest {
     @DisplayName("Get Hearings And Cases collects Ids And Maps")
     void getHearingsAndCases_collectsIdsAndMaps() {
         // Arrange
-        final var rootProps = new CdkClientProperties(
+        var rootProps = new CQRSClientProperties(
                 "http://localhost:8080",
-                new CdkClientProperties.Headers("CJSCPPUID")
+                3000, 15000,
+                new CQRSClientProperties.Headers("X-CJSCPPUID")
         );
         final var hearingCfg = new HearingClientConfig(
                 "application/vnd.hearing.get.hearings+json",
@@ -55,6 +56,7 @@ class HearingClientImplTest {
         );
         final var client = new HearingClientImpl(restClient, rootProps, hearingCfg, new HearingDtoMapper());
 
+        final String headerName = rootProps.headers().cjsCppuid(); // <-- use configured name
         final String responseBody = """
             {
               "hearingSummaries": [
@@ -71,7 +73,7 @@ class HearingClientImplTest {
                                 containsString("roomId=R12"),
                                 containsString("date=2025-10-29")
                         )))
-                .andExpect(header("CJSCPPUID", "system"))
+                .andExpect(header(headerName, "system")) // <-- assert configured header
                 .andExpect(header("Accept", "application/vnd.hearing.get.hearings+json"))
                 .andRespond(withSuccess(responseBody, MediaType.APPLICATION_JSON));
 
@@ -89,9 +91,10 @@ class HearingClientImplTest {
     @DisplayName("Get Hearings And Cases empty Response Returns Empty List")
     void getHearingsAndCases_emptyResponseReturnsEmptyList() {
         // Arrange
-        final var rootProps = new CdkClientProperties(
+        var rootProps = new CQRSClientProperties(
                 "http://localhost:8080",
-                new CdkClientProperties.Headers("CJSCPPUID")
+                3000, 15000,
+                new CQRSClientProperties.Headers("X-CJSCPPUID")
         );
         final var hearingCfg = new HearingClientConfig(
                 "application/vnd.hearing.get.hearings+json",
@@ -99,11 +102,13 @@ class HearingClientImplTest {
         );
         final var client = new HearingClientImpl(restClient, rootProps, hearingCfg, new HearingDtoMapper());
 
+        final String headerName = rootProps.headers().cjsCppuid(); // <-- use configured name
+
         // Expect
         server.expect(once(),
                         requestTo("http://localhost:8080/hearing-query-api/query/api/rest/hearing/hearings" +
                                 "?courtCentreId=C001&roomId=R12&date=2025-10-29"))
-                .andExpect(header("CJSCPPUID", "system"))
+                .andExpect(header(headerName, "system")) // <-- assert configured header
                 .andExpect(header("Accept", "application/vnd.hearing.get.hearings+json"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 

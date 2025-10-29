@@ -5,7 +5,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
-import uk.gov.hmcts.cp.cdk.clients.common.CdkClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummaries;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesListRequest;
@@ -29,7 +29,7 @@ public class HearingClientImpl implements HearingClient {
 
 
     public HearingClientImpl(final RestClient restClient,
-                             final CdkClientProperties rootProps,
+                             final CQRSClientProperties rootProps,
                              final HearingClientConfig hearingProps,
                              final HearingDtoMapper mapper) {
         this.restClient = Objects.requireNonNull(restClient, "restClient");

@@ -7,7 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestTemplate;
-import uk.gov.hmcts.cp.cdk.clients.common.CdkClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
 
 import java.util.UUID;
@@ -17,8 +17,8 @@ import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
-@DisplayName("Progression Client Impl tests")
 
+@DisplayName("Progression Client Impl tests")
 class ProgressionClientImplTest {
 
     private RestClient restClient;
@@ -40,10 +40,13 @@ class ProgressionClientImplTest {
     @Test
     @DisplayName("Get Material Download Url fetches And Extracts Url")
     void getMaterialDownloadUrl_fetchesAndExtractsUrl() {
-        final var rootProps = new CdkClientProperties(
+        var rootProps = new CQRSClientProperties(
                 "http://localhost:8080",
-                new CdkClientProperties.Headers("CJSCPPUID")
+                3000, 15000,
+                new CQRSClientProperties.Headers("X-CJSCPPUID")
         );
+        final String headerName = rootProps.headers().cjsCppuid();
+
         final var cfg = new ProgressionClientConfig(
                 "acc",
                 "DOC-41",
@@ -58,7 +61,7 @@ class ProgressionClientImplTest {
 
         server.expect(once(),
                         requestTo("http://localhost:8080/progression-query-api/query/api/rest/progression/material/" + materialId + "/content"))
-                .andExpect(header("CJSCPPUID", "system"))
+                .andExpect(header(headerName, "system"))
                 .andExpect(header("Accept", "application/vnd.progression.query.material-content+json"))
                 .andRespond(withSuccess("{\"url\":\"https://signed.example\"}", MediaType.APPLICATION_JSON));
 
@@ -67,15 +70,16 @@ class ProgressionClientImplTest {
         assertThat(url).contains("https://signed.example");
     }
 
-
-
     @Test
     @DisplayName("Get Null Material Download Url fetches And Extracts Url")
     void getNullMaterialDownloadUrl_fetchesAndExtractsUrl() {
-        final var rootProps = new CdkClientProperties(
+        var rootProps = new CQRSClientProperties(
                 "http://localhost:8080",
-                new CdkClientProperties.Headers("CJSCPPUID")
+                3000, 15000,
+                new CQRSClientProperties.Headers("X-CJSCPPUID")
         );
+        final String headerName = rootProps.headers().cjsCppuid();
+
         final var cfg = new ProgressionClientConfig(
                 "acc",
                 "DOC-41",
@@ -90,7 +94,7 @@ class ProgressionClientImplTest {
 
         server.expect(once(),
                         requestTo("http://localhost:8080/progression-query-api/query/api/rest/progression/material/" + materialId + "/content"))
-                .andExpect(header("CJSCPPUID", "system"))
+                .andExpect(header(headerName, "system"))
                 .andExpect(header("Accept", "application/vnd.progression.query.material-content+json"))
                 .andRespond(withSuccess("{\"url\":\"   \"}", MediaType.APPLICATION_JSON));
 
@@ -102,10 +106,13 @@ class ProgressionClientImplTest {
     @Test
     @DisplayName("Get Court Documents returns Latest Material Info")
     void getCourtDocuments_returnsLatestMaterialInfo() {
-        final var rootProps = new CdkClientProperties(
+        var rootProps = new CQRSClientProperties(
                 "http://localhost:8080",
-                new CdkClientProperties.Headers("CJSCPPUID")
+                3000, 15000,
+                new CQRSClientProperties.Headers("X-CJSCPPUID")
         );
+        final String headerName = rootProps.headers().cjsCppuid();
+
         final var cfg = new ProgressionClientConfig(
                 "acc",
                 "DOC-41",
@@ -137,7 +144,7 @@ class ProgressionClientImplTest {
 
         server.expect(once(),
                         requestTo("http://localhost:8080/progression-query-api/query/api/rest/progression/courtdocumentsearch?caseId=" + caseId))
-                .andExpect(header("CJSCPPUID", "system"))
+                .andExpect(header(headerName, "system"))
                 .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
@@ -151,10 +158,13 @@ class ProgressionClientImplTest {
     @Test
     @DisplayName("Get Court Documents returns Empty Document Latest Material Info")
     void getCourtDocuments_returnsEmptyDocumentLatestMaterialInfo() {
-        final var rootProps = new CdkClientProperties(
+        var rootProps = new CQRSClientProperties(
                 "http://localhost:8080",
-                new CdkClientProperties.Headers("CJSCPPUID")
+                3000, 15000,
+                new CQRSClientProperties.Headers("X-CJSCPPUID")
         );
+        final String headerName = rootProps.headers().cjsCppuid();
+
         final var cfg = new ProgressionClientConfig(
                 "acc",
                 "DOC-41",
@@ -167,31 +177,29 @@ class ProgressionClientImplTest {
 
         final UUID caseId = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
-        final String responseJson =
-                "{\n" +
-                        "  \"documentIndices\": []\n" +
-                        "}";
-
+        final String responseJson = "{ \"documentIndices\": [] }";
 
         server.expect(once(),
                         requestTo("http://localhost:8080/progression-query-api/query/api/rest/progression/courtdocumentsearch?caseId=" + caseId))
-                .andExpect(header("CJSCPPUID", "system"))
+                .andExpect(header(headerName, "system"))
                 .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
         final var latest = client.getCourtDocuments(caseId);
         server.verify();
         assertThat(latest).isEmpty();
-
     }
 
     @Test
     @DisplayName("Get Court Documents returns Null Document Latest Material Info")
     void getCourtDocuments_returnsNullDocumentLatestMaterialInfo() {
-        final var rootProps = new CdkClientProperties(
+        var rootProps = new CQRSClientProperties(
                 "http://localhost:8080",
-                new CdkClientProperties.Headers("CJSCPPUID")
+                3000, 15000,
+                new CQRSClientProperties.Headers("X-CJSCPPUID")
         );
+        final String headerName = rootProps.headers().cjsCppuid();
+
         final var cfg = new ProgressionClientConfig(
                 "acc",
                 "DOC-41",
@@ -204,30 +212,29 @@ class ProgressionClientImplTest {
 
         final UUID caseId = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
-        final String responseJson =
-                "{\n" +
-                        "}";
-
+        final String responseJson = "{ }";
 
         server.expect(once(),
                         requestTo("http://localhost:8080/progression-query-api/query/api/rest/progression/courtdocumentsearch?caseId=" + caseId))
-                .andExpect(header("CJSCPPUID", "system"))
+                .andExpect(header(headerName, "system"))
                 .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
         final var latest = client.getCourtDocuments(caseId);
         server.verify();
         assertThat(latest).isEmpty();
-
     }
 
     @Test
-    @DisplayName("Get Court Documents returnsno I D P C Latest Material Info")
+    @DisplayName("Get Court Documents returns no IDPC Latest Material Info")
     void getCourtDocuments_returnsnoIDPCLatestMaterialInfo() {
-        final var rootProps = new CdkClientProperties(
+        var rootProps = new CQRSClientProperties(
                 "http://localhost:8080",
-                new CdkClientProperties.Headers("CJSCPPUID")
+                3000, 15000,
+                new CQRSClientProperties.Headers("X-CJSCPPUID")
         );
+        final String headerName = rootProps.headers().cjsCppuid();
+
         final var cfg = new ProgressionClientConfig(
                 "acc",
                 "DOC-41",
@@ -244,59 +251,36 @@ class ProgressionClientImplTest {
                 "{\n" +
                         "  \"documentIndices\": [\n" +
                         "    {\n" +
-                        "      \"caseIds\": [\n" +
-                        "        \"f89fa869-1d5b-47e2-a98d-cf022b99c305\"\n" +
-                        "      ],\n" +
-                        "      \"category\": \"Defendant level\",\n" +
-                        "      \"defendantIds\": [\n" +
-                        "        \"3bdcb43e-01d3-4c43-a530-b7aa55b2a3bb\"\n" +
-                        "      ],\n" +
+                        "      \"caseIds\": [\"f89fa869-1d5b-47e2-a98d-cf022b99c305\"],\n" +
                         "      \"document\": {\n" +
-                        "        \"containsFinancialMeans\": false,\n" +
-                        "        \"courtDocumentId\": \"89b05baa-75e0-4a87-b144-9d824ec9e61a\",\n" +
-                        "        \"documentCategory\": {\n" +
-                        "          \"defendantDocument\": {\n" +
-                        "            \"defendants\": [\n" +
-                        "              \"3bdcb43e-01d3-4c43-a530-b7aa55b2a3bb\"\n" +
-                        "            ],\n" +
-                        "            \"prosecutionCaseId\": \"f89fa869-1d5b-47e2-a98d-cf022b99c305\"\n" +
-                        "          }\n" +
-                        "        },\n" +
-                        "        \"documentTypeDescription\": \"IDPC bundle\",\n" +
                         "        \"documentTypeId\": \"41be14e8-9df5-4b08-80b0-1e670bc80a5b\",\n" +
-                        "        \"documentTypeRBAC\": {},\n" +
-                        "        \"materials\": [],\n" +
-                        "        \"mimeType\": \"application/pdf\",\n" +
-                        "        \"name\": \"IDPC - Duncan Elder - CXZCII3W4U\",\n" +
-                        "        \"seqNum\": 150\n" +
-                        "      },\n" +
-                        "      \"hearingIds\": [],\n" +
-                        "      \"type\": \"IDPC bundle\"\n" +
+                        "        \"materials\": []\n" +
+                        "      }\n" +
                         "    }\n" +
                         "  ]\n" +
                         "}";
 
-
         server.expect(once(),
                         requestTo("http://localhost:8080/progression-query-api/query/api/rest/progression/courtdocumentsearch?caseId=" + caseId))
-                .andExpect(header("CJSCPPUID", "system"))
+                .andExpect(header(headerName, "system"))
                 .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
         final var latest = client.getCourtDocuments(caseId);
         server.verify();
         assertThat(latest).isEmpty();
-
     }
 
-
     @Test
-    @DisplayName("Get Court Documents returnsno Material Latest Material Info")
+    @DisplayName("Get Court Documents returns no Material Latest Material Info")
     void getCourtDocuments_returnsnoMaterialLatestMaterialInfo() {
-        final var rootProps = new CdkClientProperties(
+        var rootProps = new CQRSClientProperties(
                 "http://localhost:8080",
-                new CdkClientProperties.Headers("CJSCPPUID")
+                3000, 15000,
+                new CQRSClientProperties.Headers("X-CJSCPPUID")
         );
+        final String headerName = rootProps.headers().cjsCppuid();
+
         final var cfg = new ProgressionClientConfig(
                 "acc",
                 "DOC-41",
@@ -325,15 +309,12 @@ class ProgressionClientImplTest {
 
         server.expect(once(),
                         requestTo("http://localhost:8080/progression-query-api/query/api/rest/progression/courtdocumentsearch?caseId=" + caseId))
+                .andExpect(header(headerName, "system"))
+                .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
         final var latest = client.getCourtDocuments(caseId);
         server.verify();
-        assertThat(latest).isEmpty(); // this ensures the Optional.empty() branch is executed
-
-
-
+        assertThat(latest).isEmpty(); // Optional.empty() branch
     }
-
-
 }

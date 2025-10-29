@@ -4,7 +4,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
-import uk.gov.hmcts.cp.cdk.clients.common.CdkClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.CourtDocumentSearchResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.UrlResponse;
@@ -31,7 +31,7 @@ public class ProgressionClientImpl implements ProgressionClient {
 
 
     public ProgressionClientImpl(final RestClient restClient,
-                                 final CdkClientProperties rootProps,
+                                 final CQRSClientProperties rootProps,
                                  final ProgressionClientConfig props,
                                  final ProgressionDtoMapper mapper) {
         this.restClient = Objects.requireNonNull(restClient, "restClient");
