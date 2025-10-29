@@ -24,7 +24,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@DataJpaTest(
+
+import org.junit.jupiter.api.DisplayName;@DataJpaTest(
         properties = {
                 "spring.jpa.hibernate.ddl-auto=create-drop",
                 "spring.flyway.enabled=false",
@@ -33,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 )
 @Testcontainers
 @AutoConfigureTestDatabase(replace = Replace.NONE)
+@DisplayName("Query Version Repository tests")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class QueryVersionRepositoryTest {
 
@@ -91,7 +93,7 @@ class QueryVersionRepositoryTest {
         repo.saveAndFlush(v2);
     }
 
-    @Test
+    @Test@DisplayName("Snapshot Definitions As Of returns latest not after cutoff")
     void snapshotDefinitionsAsOf_returns_latest_not_after_cutoff() {
         final OffsetDateTime asOf = OffsetDateTime.parse("2025-05-01T11:58:30Z");
         final List<Object[]> rows = repo.snapshotDefinitionsAsOf(asOf);
@@ -105,7 +107,7 @@ class QueryVersionRepositoryTest {
         assertEquals("QP v1", r[3]);
     }
 
-    @Test
+    @Test@DisplayName("Find All Versions returns ascending effective at")
     void findAllVersions_returns_ascending_effective_at() {
         final List<QueryVersion> versions = repo.findAllVersions(qid);
         assertEquals(2, versions.size());

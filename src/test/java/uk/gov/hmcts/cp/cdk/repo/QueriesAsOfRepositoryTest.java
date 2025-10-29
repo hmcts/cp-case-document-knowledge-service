@@ -23,7 +23,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@DataJpaTest(
+
+import org.junit.jupiter.api.DisplayName;@DataJpaTest(
         properties = {
                 "spring.jpa.hibernate.ddl-auto=create-drop",
                 "spring.flyway.enabled=false",
@@ -33,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @Testcontainers
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@DisplayName("Queries As Of Repository tests")
 @Import(QueriesAsOfRepository.class)
 class QueriesAsOfRepositoryTest {
 
@@ -104,7 +106,7 @@ class QueriesAsOfRepositoryTest {
         em.flush();
     }
 
-    @Test
+    @Test@DisplayName("List For Case As Of returns definition and status")
     void listForCaseAsOf_returns_definition_and_status() {
         final OffsetDateTime asOf = OffsetDateTime.parse("2025-05-01T12:00:00Z");
         final List<Object[]> rows = repo.listForCaseAsOf(caseId, asOf);
@@ -120,7 +122,7 @@ class QueriesAsOfRepositoryTest {
         assertEquals("ANSWER_NOT_AVAILABLE", r[6]);
     }
 
-    @Test
+    @Test@DisplayName("Get One For Case As Of retrieves single row")
     void getOneForCaseAsOf_retrieves_single_row() {
         final OffsetDateTime asOf = OffsetDateTime.parse("2025-05-01T12:00:00Z");
         final Object[] r = repo.getOneForCaseAsOf(caseId, qid, asOf);

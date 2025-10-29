@@ -14,8 +14,10 @@ import java.io.ByteArrayInputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
+
 import static org.mockito.Mockito.*;
 
+@DisplayName("Azure Blob Storage Service tests")
 class AzureBlobStorageServiceTest {
 
     private BlobContainerClient container;

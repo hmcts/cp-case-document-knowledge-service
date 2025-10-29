@@ -1,5 +1,8 @@
 package uk.gov.hmcts.cp.controllers;
 
+
+import static org.mockito.Mockito.when;
+
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.TraceContext;
 import io.micrometer.tracing.Tracer;
@@ -12,11 +15,11 @@ import uk.gov.hmcts.cp.openapi.model.cdk.ErrorResponse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
+import org.junit.jupiter.api.DisplayName;@DisplayName("Global Exception Handler tests")
 class GlobalExceptionHandlerTest {
 
-    @Test
+    @Test@DisplayName("Handle Response Status Exception Should Return Error Response With Correct Fields")
     void handleResponseStatusExceptionShouldReturnErrorResponseWithCorrectFields() {
         // Arrange
         Tracer tracer = mock(Tracer.class);

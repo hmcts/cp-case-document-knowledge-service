@@ -25,7 +25,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@DataJpaTest(
+
+import org.junit.jupiter.api.DisplayName;@DataJpaTest(
         properties = {
                 "spring.jpa.hibernate.ddl-auto=create-drop",
                 "spring.flyway.enabled=false",
@@ -35,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Testcontainers
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@DisplayName("Ingestion Status View Repository tests")
 @Import(IngestionStatusViewRepository.class)
 class IngestionStatusViewRepositoryTest {
 
@@ -102,7 +104,7 @@ class IngestionStatusViewRepositoryTest {
     }
 
     @Test
-    @Transactional
+    @Transactional@DisplayName("View returns latest phase per case")
     void view_returns_latest_phase_per_case() {
         final Optional<IngestionStatusViewRepository.Row> row = repo.findByCaseId(caseId);
         assertTrue(row.isPresent());
