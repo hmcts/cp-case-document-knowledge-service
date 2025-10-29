@@ -51,4 +51,45 @@ class ProgressionDtoMapperTest {
 
         assertThat(mapper.mapToLatestMaterialInfo(idx)).isEmpty();
     }
+
+
+    @Test
+    void emptyWhenUploadTimeDoesNotExists() {
+        final var cfg = new ProgressionClientConfig(
+                "application/vnd.progression.query.courtdocuments+json",
+                "41be14e8-9df5-4b08-80b0-1e670bc80a5b",
+                "/x",
+                "/y/{materialId}",
+                "a",
+                "b"
+        );
+        final var mapper = new ProgressionDtoMapper(cfg);
+
+        final var m1 = new CourtDocumentSearchResponse.Material(
+                "m1",
+                null
+        );
+        final var doc = new CourtDocumentSearchResponse.Document("41be14e8-9df5-4b08-80b0-1e670bc80a5b", "Some Doc", List.of(m1));
+        final var idx = new CourtDocumentSearchResponse.DocumentIndex(List.of("CASE-1"), doc);
+
+        assertThat(mapper.mapToLatestMaterialInfo(idx)).isEmpty();
+    }
+
+    @Test
+    void emptyWhenDocumentNotExists() {
+        final var cfg = new ProgressionClientConfig(
+                "application/vnd.progression.query.courtdocuments+json",
+                "DOC-XX",
+                "/x",
+                "/y/{materialId}",
+                "a",
+                "b"
+        );
+        final var mapper = new ProgressionDtoMapper(cfg);
+
+        final var idx = new CourtDocumentSearchResponse.DocumentIndex(List.of("CASE-1"), null);
+
+        assertThat(mapper.mapToLatestMaterialInfo(idx)).isEmpty();
+    }
+
 }

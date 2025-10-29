@@ -7,6 +7,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import uk.gov.hmcts.cp.cdk.clients.common.CdkClientProperties;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.CourtDocumentSearchResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.clients.progression.dto.UrlResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
 
 import java.net.URI;
@@ -27,6 +28,7 @@ public class ProgressionClientImpl implements ProgressionClient {
     private final String materialContentPath;
     private final String acceptForCourtDocSearch;
     private final String acceptForMaterialContent;
+
 
     public ProgressionClientImpl(final RestClient restClient,
                                  final CdkClientProperties rootProps,
@@ -70,9 +72,6 @@ public class ProgressionClientImpl implements ProgressionClient {
     public Optional<String> getMaterialDownloadUrl(final UUID materialId) {
         final String path = materialContentPath.replace("{materialId}", materialId.toString());
         final URI uri = UriComponentsBuilder.fromPath(path).build().toUri();
-
-        record UrlResponse(String url) {
-        }
 
         final UrlResponse response = restClient.get()
                 .uri(uri)
