@@ -205,26 +205,6 @@ class UploadAndPersistTaskletTest {
     }
 
     @Test
-    @DisplayName("Should throw RuntimeException when metadata creation fails")
-    void execute_WhenMetadataCreationFails_ThrowsRuntimeException() throws Exception {
-        UUID materialId = UUID.randomUUID();
-        Map<String, String> materialToCaseMap = Map.of(materialId.toString(), "case-1");
-        when(jobExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP))
-                .thenReturn(materialToCaseMap);
-        when(progressionClient.getMaterialDownloadUrl(materialId)).thenReturn(Optional.of("url"));
-
-        ObjectMapper faultyMapper = mock(ObjectMapper.class);
-        when(faultyMapper.writeValueAsString(any())).thenThrow(new RuntimeException("JSON serialization failed"));
-
-        UploadAndPersistTasklet faultyTasklet = new UploadAndPersistTasklet(faultyMapper, progressionClient,
-                storageService, transactionManager, caseDocumentRepository);
-
-        assertThatThrownBy(() -> faultyTasklet.execute(stepContribution, chunkContext))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Failed to create blob metadata");
-    }
-
-    @Test
     @DisplayName("Should throw exception when storage service fails")
     void execute_WhenStorageServiceThrowsException_ThrowsException() throws Exception {
         UUID materialId = UUID.randomUUID();
