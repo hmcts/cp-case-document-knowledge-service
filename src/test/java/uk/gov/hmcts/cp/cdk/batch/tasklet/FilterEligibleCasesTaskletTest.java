@@ -78,13 +78,11 @@ class FilterEligibleCasesTaskletTest {
         RepeatStatus status = tasklet.execute(contribution, chunkContext);
 
         // Assert
-        @SuppressWarnings("unchecked")
-        List<String> eligibleMaterialIds = (List<String>) ctx.get(BatchKeys.CONTEXT_KEY_ELIGIBLE_MATERIAL_IDS);
+
         @SuppressWarnings("unchecked")
         Map<String, String> materialToCaseMap = (Map<String, String>) ctx.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP);
 
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
-        assertThat(eligibleMaterialIds).containsExactly(material1.toString());
         assertThat(materialToCaseMap).containsEntry(material1.toString(), case1.toString());
 
         verify(progressionClient, times(1)).getCourtDocuments(case1);

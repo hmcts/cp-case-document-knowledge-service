@@ -75,8 +75,6 @@ public class UploadAndPersistTasklet implements Tasklet {
     @Override
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) throws Exception {
         final ExecutionContext stepCtx = contribution.getStepExecution().getExecutionContext();
-        @SuppressWarnings("unchecked") final List<String> materialIds =
-                (List<String>) stepCtx.get(BatchKeys.CONTEXT_KEY_ELIGIBLE_MATERIAL_IDS);
 
         @SuppressWarnings("unchecked") final Map<String, String> materialToCaseMap =
                 (Map<String, String>) contribution.getStepExecution()
@@ -89,25 +87,28 @@ public class UploadAndPersistTasklet implements Tasklet {
             return RepeatStatus.FINISHED;
         }
 
-        for (final String materialIdString : materialIds) {
-            final UUID materialID = UUID.fromString(materialIdString);
+        for (Map.Entry<String, String> entry : materialToCaseMap.entrySet()) {
+            final String materialIdStr = entry.getKey();
+            final String caseIdStr = entry.getValue();
 
-            // Get the actual caseId for this materialId
-            final String caseIdStr = materialToCaseMap.get(materialIdString);
-            if (caseIdStr == null) {
-                System.out.println("No caseId mapping found for materialId: " + materialIdString);//No PMD
-                continue;
+            if (materialIdStr == null || caseIdStr == null) {
+               continue;
             }
-            final Optional<String> downloadUrl = progressionClient.getMaterialDownloadUrl(materialID);
 
+            final UUID materialID;
+            try {
+                materialID = UUID.fromString(materialIdStr);
+            } catch (IllegalArgumentException e) {
+               continue;
+            }
+
+            final Optional<String> downloadUrl = progressionClient.getMaterialDownloadUrl(materialID);
 
             if (downloadUrl.isEmpty()) {
                 continue;
             }
 
-
             final UUID documentId = UUID.randomUUID();
-
 
             final String uploadDate = utcNow().format(ofPattern("yyyyMMdd"));
             final String blobName = String.format("%s_%s.pdf", materialID, uploadDate);

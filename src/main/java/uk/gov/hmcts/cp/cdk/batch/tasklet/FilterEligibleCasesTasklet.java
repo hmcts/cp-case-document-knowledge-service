@@ -24,23 +24,14 @@ public class FilterEligibleCasesTasklet implements Tasklet {
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final ExecutionContext jobCtx = contribution.getStepExecution().getJobExecution().getExecutionContext();
         @SuppressWarnings("unchecked") final List<String> rawCaseIds = (List<String>) jobCtx.get(CTX_CASE_IDS);
-        final List<String> eligibleMaterialIds = new ArrayList<>();
+
         final Map<String, String> materialToCaseMap = new HashMap<>();
 
         for (final String idStr : rawCaseIds) {
             final UUID caseId = UUID.fromString(idStr);
             final Optional<LatestMaterialInfo> courtDocuments = progressionClient.getCourtDocuments(caseId);
-            if (courtDocuments.isPresent()) {
-                LatestMaterialInfo info = courtDocuments.get();
-                eligibleMaterialIds.add(info.materialId());
-                materialToCaseMap.put(info.materialId(), idStr);
-            }
+            courtDocuments.ifPresent(info -> materialToCaseMap.put(info.materialId(), idStr));
         }
-
-        contribution.getStepExecution()
-                .getJobExecution()
-                .getExecutionContext()
-                .put(BatchKeys.CONTEXT_KEY_ELIGIBLE_MATERIAL_IDS, eligibleMaterialIds);
 
         contribution.getStepExecution()
                 .getJobExecution()
