@@ -12,8 +12,11 @@ import uk.gov.hmcts.cp.cdk.repo.*;
 @Configuration
 @EnableJpaRepositories(basePackageClasses = {
         AnswerRepository.class,
+        CaseDocumentRepository.class,
+        CaseQueryStatusRepository.class,
         IngestionStatusViewRepository.class,
         QueriesAsOfRepository.class,
+        QueryDefinitionLatestRepository.class,
         QueryRepository.class,
         QueryVersionRepository.class
 })

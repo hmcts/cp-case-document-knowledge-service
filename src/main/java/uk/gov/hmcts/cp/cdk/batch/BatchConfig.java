@@ -5,6 +5,6 @@ import org.springframework.context.annotation.Configuration;
 import uk.gov.hmcts.cp.cdk.storage.StorageProperties;
 
 @Configuration
-@EnableConfigurationProperties({ StorageProperties.class, QuestionsProperties.class})
+@EnableConfigurationProperties({ StorageProperties.class})
 public class BatchConfig {
 }
