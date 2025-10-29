@@ -33,13 +33,13 @@ public class CaseIngestionJobConfigNew {
 
     @Bean
     public TaskExecutor ingestionTaskExecutor() {
-        final ThreadPoolTaskExecutor ex = new ThreadPoolTaskExecutor();
-        ex.setThreadNamePrefix("ingestion-");
-        ex.setCorePoolSize(8);
-        ex.setMaxPoolSize(16);
-        ex.setQueueCapacity(100);
-        ex.initialize();
-        return ex;
+        final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setThreadNamePrefix("ingestion-");
+        executor.setCorePoolSize(8);
+        executor.setMaxPoolSize(16);
+        executor.setQueueCapacity(100);
+        executor.initialize();
+        return executor;
     }
 
     @Bean
@@ -63,17 +63,17 @@ public class CaseIngestionJobConfigNew {
             List<String> ids = List.of();
             if (sync != null) {
                 final Map<String, Object> jobCtx = sync.getJobExecutionContext();
-                final Object v = (jobCtx != null) ? jobCtx.get(CTX_ELIGIBLE_CASE_IDS) : null;
-                if (v instanceof List<?>) {
-                    @SuppressWarnings("unchecked") final List<String> tmp = (List<String>) v;
+                final Object object = (jobCtx != null) ? jobCtx.get(CTX_ELIGIBLE_CASE_IDS) : null;
+                if (object instanceof List<?>) {
+                    @SuppressWarnings("unchecked") final List<String> tmp = (List<String>) object;
                     ids = tmp;
                 }
             }
-            int i = 0;
+            int partition = 0;
             for (final String id : ids) {
-                final ExecutionContext ec = new ExecutionContext();
-                ec.putString("caseId", id);
-                partitions.put("case-" + (i++), ec);
+                final ExecutionContext executionContext = new ExecutionContext();
+                executionContext.putString("caseId", id);
+                partitions.put("case-" + (partition++), executionContext);
             }
             return partitions;
         };
