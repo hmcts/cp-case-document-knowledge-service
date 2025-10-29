@@ -29,7 +29,7 @@ import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_ELIGIBLE_CASE_IDS;
 import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.JOB_NAME;
 
 @Configuration
-public class CaseIngestionJobConfigNew {
+public class CaseIngestionJobConfig {
 
     @Bean
     public TaskExecutor ingestionTaskExecutor() {
