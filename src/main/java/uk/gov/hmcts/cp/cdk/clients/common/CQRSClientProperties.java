@@ -7,10 +7,6 @@ import org.springframework.validation.annotation.Validated;
 
 import java.time.Duration;
 
-/**
- * Strongly-typed properties for the CQRS/CDK client.
- * Bind from: cqrs.client.*
- */
 @Validated
 @ConfigurationProperties(prefix = "cqrs.client")
 public record CQRSClientProperties(

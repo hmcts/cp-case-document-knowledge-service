@@ -1,62 +1,95 @@
 package uk.gov.hmcts.cp.cdk.clients.rag;
 
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClient;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
+import uk.gov.hmcts.cp.openapi.model.AnswerUserQuery500Response;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
-import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-public class RagAnswerServiceImpl implements RagAnswerService {
+/**
+ * Implements the OpenAPI contract and delegates to the upstream RAG endpoint.
+ * Exposes POST /answer-user-query per {@link DocumentInformationSummarisedApi}.
+ */
+@Slf4j
+@RestController
+@RequiredArgsConstructor
+public class RagAnswerServiceImpl implements DocumentInformationSummarisedApi {
 
-    private final RestClient restClient;
+    private final RestClient ragRestClient;
     private final RagClientProperties props;
 
-    public RagAnswerServiceImpl(final RestClient ragRestClient, final RagClientProperties props) {
-        this.restClient = ragRestClient;
-        this.props = props;
-    }
-
     @Override
-    public UserQueryAnswerReturnedSuccessfully answerUserQuery(final String userQuery,
-                                                               final String queryPrompt,
-                                                               final List<MetadataFilter> metadataFilters) {
+    public ResponseEntity<UserQueryAnswerReturnedSuccessfully> answerUserQuery(
+            @Valid AnswerUserQueryRequest request) {
+
         try {
-            final List<MetadataFilter> filters = (metadataFilters != null) ? metadataFilters : new ArrayList<>();
-
-            final AnswerUserQueryRequest payload = new AnswerUserQueryRequest()
-                    .userQuery(userQuery)
-                    .queryPrompt(queryPrompt)
-                    .metadataFilters(filters);
-
-            return restClient
+            if (request.getMetadataFilters() == null) {
+                request.setMetadataFilters(List.of());
+            }
+            UserQueryAnswerReturnedSuccessfully resp = ragRestClient
                     .post()
                     .uri(props.getAnswerQueryPath())
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
-                    .headers(httpHeaders -> {
+                    .headers(h -> {
                         final Map<String, String> hdrs = props.getHeaders();
-                        if (hdrs != null) {
-                            hdrs.forEach(httpHeaders::add);
-                        }
+                        if (hdrs != null) hdrs.forEach(h::add);
                     })
-                    .body(payload)
+                    .body(request)
                     .retrieve()
                     .body(UserQueryAnswerReturnedSuccessfully.class);
 
+            if (resp == null) {
+                resp = new UserQueryAnswerReturnedSuccessfully();
+            }
+            if (resp.getUserQuery() == null) {
+                resp.setUserQuery(request.getUserQuery());
+            }
+            if (resp.getQueryPrompt() == null) {
+                resp.setQueryPrompt(request.getQueryPrompt());
+            }
+
+            return ResponseEntity.ok(resp);
+
         } catch (HttpStatusCodeException ex) {
-            final String responseBody = ex.getResponseBodyAsString(StandardCharsets.UTF_8);
-            final String message = "RAG API error: %s %s - %s"
-                    .formatted(ex.getStatusCode().value(), ex.getStatusText(), responseBody);
-            throw new RagClientException(message, ex);
+            String body = Optional.ofNullable(ex.getResponseBodyAsString(StandardCharsets.UTF_8)).orElse("");
+            String msg = "RAG API error: %d %s - %s".formatted(ex.getStatusCode().value(), ex.getStatusText(), body);
+            log.warn(msg);
+            throw new RagClientException(msg, ex);
+
         } catch (Exception ex) {
-            throw new RagClientException("Failed to call RAG API", ex);
+            String msg = "Failed to call RAG API";
+            log.error(msg, ex);
+            throw new RagClientException(msg, ex);
         }
+    }
+
+    @ExceptionHandler(RagClientException.class)
+    public ResponseEntity<AnswerUserQuery500Response> onRagClient(RagClientException ex) {
+        AnswerUserQuery500Response body = new AnswerUserQuery500Response();
+        body.setErrorMessage(ex.getMessage());
+        return ResponseEntity.status(500).body(body);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<AnswerUserQuery500Response> onGeneric(Exception ex) {
+        log.error("Unhandled error in /answer-user-query", ex);
+        AnswerUserQuery500Response body = new AnswerUserQuery500Response();
+        body.setErrorMessage("Internal server error");
+        return ResponseEntity.status(500).body(body);
     }
 }

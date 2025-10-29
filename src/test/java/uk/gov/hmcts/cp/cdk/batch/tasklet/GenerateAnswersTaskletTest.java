@@ -11,6 +11,7 @@ import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -20,10 +21,11 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
-import uk.gov.hmcts.cp.cdk.clients.rag.RagAnswerService;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
 import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
+import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
+import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
 
 import java.util.*;
@@ -40,7 +42,7 @@ class GenerateAnswersTaskletTest {
     @Mock private QueryResolver queryResolver;
     @Mock private QueryDefinitionLatestRepository qdlRepo;
     @Mock private NamedParameterJdbcTemplate jdbc;
-    @Mock private RagAnswerService ragAnswerService;
+    @Mock private DocumentInformationSummarisedApi documentInformationSummarisedApi;
 
     private final PlatformTransactionManager txManager = new NoopTxManager();
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -56,8 +58,8 @@ class GenerateAnswersTaskletTest {
     }
 
     private GenerateAnswersTasklet newTasklet() {
-        // NOTE: pass ragAnswerService mock into the tasklet (new dependency)
-        return new GenerateAnswersTasklet(queryResolver, qdlRepo, jdbc, txManager, objectMapper, ragAnswerService);
+        return new GenerateAnswersTasklet(
+                queryResolver, qdlRepo, jdbc, txManager, objectMapper, documentInformationSummarisedApi);
     }
 
     @Test
@@ -80,7 +82,6 @@ class GenerateAnswersTaskletTest {
         when(query2.getQueryId()).thenReturn(q2);
         when(queryResolver.resolve()).thenReturn(Arrays.asList(query1, query2));
 
-        // Latest definitions (provide userQuery + queryPrompt)
         var def1 = mock(QueryDefinitionLatest.class);
         var def2 = mock(QueryDefinitionLatest.class);
         when(def1.getQueryPrompt()).thenReturn("prompt-1");
@@ -90,7 +91,6 @@ class GenerateAnswersTaskletTest {
         when(qdlRepo.findByQueryId(q1)).thenReturn(Optional.of(def1));
         when(qdlRepo.findByQueryId(q2)).thenReturn(Optional.of(def2));
 
-        // Version lookup/creation & mark IN_PROGRESS
         when(jdbc.query(
                 startsWith("SELECT version FROM answer_reservations"),
                 any(SqlParameterSource.class),
@@ -98,11 +98,8 @@ class GenerateAnswersTaskletTest {
         )).thenAnswer(inv -> {
             SqlParameterSource p = inv.getArgument(1);
             UUID queryId = (UUID) p.getValue("query_id");
-            if (q1.equals(queryId)) {
-                return Collections.<Integer>emptyList(); // force create for q1
-            } else if (q2.equals(queryId)) {
-                return Collections.singletonList(7); // existing version for q2
-            }
+            if (q1.equals(queryId)) return Collections.<Integer>emptyList();
+            if (q2.equals(queryId)) return Collections.singletonList(7);
             return Collections.<Integer>emptyList();
         });
 
@@ -117,11 +114,11 @@ class GenerateAnswersTaskletTest {
                 any(SqlParameterSource.class)
         )).thenReturn(1);
 
-        // === RAG responses ===
+        // Upstream responses
         var resp1 = new UserQueryAnswerReturnedSuccessfully()
                 .userQuery("user-query-1")
                 .queryPrompt("prompt-1")
-                .llmResponse("ans-" + q1)  // unique per query to assert mapping if needed
+                .llmResponse("ans-" + q1)
                 .chunkedEntries(List.of(Map.of("id", 1)));
         var resp2 = new UserQueryAnswerReturnedSuccessfully()
                 .userQuery("user-query-2")
@@ -129,12 +126,20 @@ class GenerateAnswersTaskletTest {
                 .llmResponse("ans-" + q2)
                 .chunkedEntries(List.of(Map.of("id", 2)));
 
-        when(ragAnswerService.answerUserQuery(eq("user-query-1"), eq("prompt-1"), anyList()))
-                .thenReturn(resp1);
-        when(ragAnswerService.answerUserQuery(eq("user-query-2"), eq("prompt-2"), anyList()))
-                .thenReturn(resp2);
+        // Mock OpenAPI call – verify we get correct userQuery/prompt in the request
+        when(documentInformationSummarisedApi.answerUserQuery(argThat(req ->
+                req instanceof AnswerUserQueryRequest r &&
+                        "user-query-1".equals(r.getUserQuery()) &&
+                        "prompt-1".equals(r.getQueryPrompt())
+        ))).thenReturn(ResponseEntity.ok(resp1));
 
-        // Capture batched writes
+        when(documentInformationSummarisedApi.answerUserQuery(argThat(req ->
+                req instanceof AnswerUserQueryRequest r &&
+                        "user-query-2".equals(r.getUserQuery()) &&
+                        "prompt-2".equals(r.getQueryPrompt())
+        ))).thenReturn(ResponseEntity.ok(resp2));
+
+        // Capture batches
         ArgumentCaptor<MapSqlParameterSource[]> answersBatchCaptor = ArgumentCaptor.forClass(MapSqlParameterSource[].class);
         when(jdbc.batchUpdate(startsWith("INSERT INTO answers"), answersBatchCaptor.capture()))
                 .thenReturn(new int[]{1,1});
@@ -146,7 +151,6 @@ class GenerateAnswersTaskletTest {
         RepeatStatus status = newTasklet().execute(contribution, chunkContext);
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
 
-        // Verify reservation calls
         verify(jdbc, times(2)).query(
                 startsWith("SELECT version FROM answer_reservations"),
                 any(SqlParameterSource.class),
@@ -162,13 +166,7 @@ class GenerateAnswersTaskletTest {
                 any(SqlParameterSource.class)
         );
 
-        // Verify RAG calls
-        verify(ragAnswerService, times(1))
-                .answerUserQuery(eq("user-query-1"), eq("prompt-1"), anyList());
-        verify(ragAnswerService, times(1))
-                .answerUserQuery(eq("user-query-2"), eq("prompt-2"), anyList());
-
-        // Assert batch UPSERT payloads
+        // Assert payloads
         MapSqlParameterSource[] answersBatch = answersBatchCaptor.getValue();
         MapSqlParameterSource[] doneBatch = doneBatchCaptor.getValue();
         assertThat(answersBatch).hasSize(2);
@@ -182,12 +180,10 @@ class GenerateAnswersTaskletTest {
             assertThat(vals.get("doc_id")).isEqualTo(docId);
             assertThat(vals.get("version")).isInstanceOf(Integer.class);
 
-            // Answer is from RAG response
             String answer = (String) vals.get("answer");
             assertThat(answer).startsWith("ans-");
             seenAnswers.add(answer);
 
-            // llm_input JSON contains prompt & userQuery fields
             String llmInput = (String) vals.get("llm_input");
             assertThat(llmInput).contains("\"queryPrompt\":\"prompt-");
             assertThat(llmInput).contains("\"userQuery\":\"user-query-");
@@ -199,7 +195,6 @@ class GenerateAnswersTaskletTest {
         assertThat(seenQueryIds).containsExactlyInAnyOrder(q1, q2);
         assertThat(seenAnswers).containsExactlyInAnyOrder("ans-" + q1, "ans-" + q2);
 
-        // DONE updates include both queries
         Set<UUID> doneQueryIds = new HashSet<>();
         for (MapSqlParameterSource m : doneBatch) {
             Map<String, Object> vals = m.getValues();
@@ -220,7 +215,7 @@ class GenerateAnswersTaskletTest {
         RepeatStatus status = newTasklet().execute(contribution, chunkContext);
 
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
-        verifyNoInteractions(jdbc, queryResolver, qdlRepo, ragAnswerService);
+        verifyNoInteractions(jdbc, queryResolver, qdlRepo, documentInformationSummarisedApi);
     }
 
     @Test
@@ -239,6 +234,6 @@ class GenerateAnswersTaskletTest {
         RepeatStatus status = newTasklet().execute(contribution, chunkContext);
 
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
-        verifyNoInteractions(jdbc, qdlRepo, ragAnswerService);
+        verifyNoInteractions(jdbc, qdlRepo, documentInformationSummarisedApi);
     }
 }

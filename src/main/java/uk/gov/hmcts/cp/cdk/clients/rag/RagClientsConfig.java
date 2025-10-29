@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
 
 
 @Configuration
@@ -13,7 +14,7 @@ import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
 public class RagClientsConfig {
 
     @Bean
-    public RagAnswerService ragAnswerService(@Qualifier("ragRestClient") RestClient ragRestClient, RagClientProperties props) {
+    public DocumentInformationSummarisedApi ragAnswerService(@Qualifier("ragRestClient") RestClient ragRestClient, RagClientProperties props) {
         return new RagAnswerServiceImpl(ragRestClient, props);
     }
 
