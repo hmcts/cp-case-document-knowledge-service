@@ -123,7 +123,7 @@ public class UploadAndPersistTasklet implements Tasklet {
 
             final long sizeBytes = storageService.getBlobSize(destBlobPath);
 
-            //save to db
+            //save to  db
             final CaseDocument caseDocument =
                     buildDoc(documentId, UUID.fromString(caseIdStr),
                             blobName, blobUrl, contentType, sizeBytes);
