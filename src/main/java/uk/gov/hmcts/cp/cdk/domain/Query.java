@@ -8,6 +8,8 @@ import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+
 @Entity
 @Table(name = "queries")
 public class Query {
@@ -20,7 +22,7 @@ public class Query {
     private String label;
 
     @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private OffsetDateTime createdAt = utcNow();
 
     public UUID getQueryId() {
         return queryId;

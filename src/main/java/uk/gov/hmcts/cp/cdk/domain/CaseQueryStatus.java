@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+
 @Entity
 @Table(
         name = "case_query_status",
@@ -23,7 +25,7 @@ public class CaseQueryStatus {
     private QueryLifecycleStatus status = QueryLifecycleStatus.ANSWER_NOT_AVAILABLE;
 
     @Column(name = "status_at", nullable = false)
-    private OffsetDateTime statusAt = OffsetDateTime.now();
+    private OffsetDateTime statusAt = utcNow();
 
     @Column(name = "doc_id")
     private UUID docId;

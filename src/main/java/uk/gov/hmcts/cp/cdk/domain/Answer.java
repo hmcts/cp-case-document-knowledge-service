@@ -6,6 +6,8 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+
 @Entity
 @Table(
         name = "answers",
@@ -25,7 +27,7 @@ public class Answer {
     private AnswerId answerId;
 
     @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private OffsetDateTime createdAt = utcNow();
 
     @Column(name = "answer", nullable = false, columnDefinition = "TEXT")
     private String answerText;

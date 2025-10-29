@@ -6,6 +6,8 @@ import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+
 final class CaseDocumentFactory {
     private CaseDocumentFactory() {
     }
@@ -21,7 +23,7 @@ final class CaseDocumentFactory {
         d.setBlobUri(blobUrl);
         d.setContentType(contentType);
         d.setSizeBytes(size);
-        final OffsetDateTime now = OffsetDateTime.now();
+        final OffsetDateTime now = utcNow();
         d.setUploadedAt(now);
         d.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
         d.setIngestionPhaseAt(now);

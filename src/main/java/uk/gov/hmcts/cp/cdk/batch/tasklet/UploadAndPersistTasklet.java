@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
 import static java.time.OffsetDateTime.now;
 import static java.time.format.DateTimeFormatter.ofPattern;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
@@ -25,6 +26,7 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
+import uk.gov.hmcts.cp.cdk.util.TimeUtils;
 
 
 @Component
@@ -68,10 +70,9 @@ public class UploadAndPersistTasklet implements Tasklet {
         caseDocument.setBlobUri(blobUrl);
         caseDocument.setContentType(contentType);
         caseDocument.setSizeBytes(size);
-        final OffsetDateTime now = now();
-        caseDocument.setUploadedAt(now);
+        caseDocument.setUploadedAt(utcNow());
         caseDocument.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
-        caseDocument.setIngestionPhaseAt(now);
+        caseDocument.setIngestionPhaseAt(utcNow());
         return caseDocument;
     }
 
@@ -112,7 +113,7 @@ public class UploadAndPersistTasklet implements Tasklet {
             final UUID documentId = UUID.randomUUID();
 
 
-            final String uploadDate = now().format(ofPattern("yyyyMMdd"));
+            final String uploadDate = utcNow().format(ofPattern("yyyyMMdd"));
             final String blobName = String.format("%s_%s.pdf", materialID, uploadDate);
             // destination path --https://<storage-account><container>/cases/materialid/blobnale
             final String destBlobPath = String.format("cases/%s/%s", uploadDate, blobName);

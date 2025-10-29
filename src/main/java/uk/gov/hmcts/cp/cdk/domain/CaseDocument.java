@@ -6,6 +6,8 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+
 @Entity
 @Table(
         name = "case_documents",
@@ -43,14 +45,14 @@ public class CaseDocument {
     private String sha256Hex;
 
     @Column(name = "uploaded_at", nullable = false)
-    private OffsetDateTime uploadedAt = OffsetDateTime.now();
+    private OffsetDateTime uploadedAt = utcNow();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "ingestion_phase", nullable = false)
     private DocumentIngestionPhase ingestionPhase = DocumentIngestionPhase.UPLOADING;
 
     @Column(name = "ingestion_phase_at", nullable = false)
-    private OffsetDateTime ingestionPhaseAt = OffsetDateTime.now();
+    private OffsetDateTime ingestionPhaseAt = utcNow();
 
     public UUID getDocId() {
         return docId;

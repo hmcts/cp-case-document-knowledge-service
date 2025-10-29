@@ -44,8 +44,8 @@ public class GenerateAnswersTasklet implements Tasklet {
         final List<Query> queries = queryResolver.resolve();
         if (queries.isEmpty()) return RepeatStatus.FINISHED;
 
-        for (final Query q : queries) {
-            final UUID queryId = q.getQueryId();
+        for (final Query query : queries) {
+            final UUID queryId = query.getQueryId();
 
             // TX 1: claim reservation and get version
             final TransactionTemplate tt1 = new TransactionTemplate(txManager);

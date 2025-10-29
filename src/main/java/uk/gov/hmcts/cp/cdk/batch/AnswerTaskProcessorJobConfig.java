@@ -32,14 +32,14 @@ public class AnswerTaskProcessorJobConfig {
               LIMIT 50
             )
             UPDATE answer_tasks t
-            SET status='IN_PROGRESS', updated_at=now()
+            SET status='IN_PROGRESS', updated_at=NOW()
             FROM cte
             WHERE t.case_id = cte.case_id AND t.query_id = cte.query_id
             RETURNING t.case_id, t.query_id
             """;
 
     private static final String MARK_DONE_SQL =
-            "UPDATE answer_tasks SET status='DONE', updated_at=now() " +
+            "UPDATE answer_tasks SET status='DONE', updated_at=NOW() " +
                     "WHERE case_id=:case_id AND query_id=:query_id";
 
     @Bean
