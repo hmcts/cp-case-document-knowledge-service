@@ -159,7 +159,7 @@ public class GenerateAnswersTasklet implements Tasklet {
 
             final String llmInputJson;
             try {
-                llmInputJson = buildLlmInputJson(userQuery, queryPrompt, filters, resp, caseId, docId, queryId, version);
+                llmInputJson = buildLlmInputJson(resp);
             } catch (Exception e) {
                 log.warn("Failed to build llm_input JSON for caseId={}, docId={}, queryId={}: {}",
                         caseId, docId, queryId, e.getMessage(), e);
@@ -196,30 +196,11 @@ public class GenerateAnswersTasklet implements Tasklet {
     }
 
     @SuppressWarnings("unchecked")
-    private String buildLlmInputJson(String userQuery,
-                                     String queryPrompt,
-                                     List<MetadataFilter> filters,
-                                     UserQueryAnswerReturnedSuccessfully resp,
-                                     UUID caseId,
-                                     UUID docId,
-                                     UUID queryId,
-                                     Integer version) throws Exception {
+    private String buildLlmInputJson(UserQueryAnswerReturnedSuccessfully resp) throws Exception {
 
         List<Object> chunks = Optional.ofNullable(resp.getChunkedEntries()).orElseGet(List::of);
-        List<Object> compactChunks = chunks.stream().limit(5).collect(Collectors.toList());
-
         final Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("case_id", caseId.toString());
-        payload.put("doc_id", docId.toString());
-        payload.put("query_id", queryId.toString());
-        payload.put("version", version);
-        payload.put("userQuery", userQuery);
-        payload.put("queryPrompt", queryPrompt);
-        payload.put("metadataFilters", filters.stream()
-                .map(f -> Map.of("key", f.getKey(), "value", f.getValue()))
-                .collect(Collectors.toList()));
-        payload.put("ragResponsePrompt", resp.getQueryPrompt()); // echo from service if provided
-        payload.put("provenanceChunksSample", compactChunks);
+        payload.put("provenanceChunksSample", chunks);
 
         return objectMapper.writeValueAsString(payload);
     }

@@ -185,9 +185,6 @@ class GenerateAnswersTaskletTest {
             seenAnswers.add(answer);
 
             String llmInput = (String) vals.get("llm_input");
-            assertThat(llmInput).contains("\"queryPrompt\":\"prompt-");
-            assertThat(llmInput).contains("\"userQuery\":\"user-query-");
-            assertThat(llmInput).contains("\"metadataFilters\"");
             assertThat(llmInput).contains("\"provenanceChunksSample\"");
 
             seenQueryIds.add((UUID) vals.get("query_id"));
