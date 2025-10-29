@@ -12,14 +12,12 @@ public record CourtDocumentSearchResponse(
     ) {
     }
 
-
     public record Document(
             String documentTypeId,
             String documentTypeDescription,
             List<Material> materials
     ) {
     }
-
 
     public record Material(
             String id,
