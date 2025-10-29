@@ -8,6 +8,8 @@ public final class BatchKeys {
     public static final String CTX_ELIGIBLE_CASE_IDS = "eligibleCaseIds";
     public static final String CTX_DOC_ID = "docId";
     public static final String CONTEXT_KEY_MATERIAL_TO_CASE_MAP = "materialToCaseMap";
+    public static final String CTX_UPLOAD_VERIFIED = "uploadVerified";
+    public static final String CTX_DOCUMENT_STATUS_JSON = "documentStatusResponseJson";
     public static final String BLOB_TEMPLATE = "cases/%s/idpc.pdf";
 
     private BatchKeys() {

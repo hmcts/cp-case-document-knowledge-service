@@ -14,3 +14,6 @@ cdk:
       material-content-path: "/progression-query-api/query/api/rest/progression/material/{materialId}/content"
       accept-for-court-doc-search: "application/vnd.progression.query.courtdocuments+json"
       accept-for-material-content: "application/vnd.progression.query.material-content+json"
+    document-status:
+      base-url: ${CP_CDK_DOCUMENT_STATUS_BASE_URL}
+      status-path: "/api/DocumentStatusCheck"

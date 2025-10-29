@@ -15,6 +15,7 @@ import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClientConfig;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClientImpl;
 import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
+import uk.gov.hmcts.cp.cdk.clients.documentstatus.DocumentStatusClientConfig;
 
 import java.util.Objects;
 
@@ -23,7 +24,8 @@ import java.util.Objects;
 @EnableConfigurationProperties({
         CdkClientProperties.class,
         HearingClientConfig.class,
-        ProgressionClientConfig.class
+        ProgressionClientConfig.class,
+        DocumentStatusClientConfig.class
 })
 public class CdkClientsConfig {
 
