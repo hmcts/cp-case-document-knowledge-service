@@ -128,6 +128,9 @@ public class QueryService {
     public QuerySummary getOneForCaseAsOf(final UUID caseId, final UUID queryId, final OffsetDateTime asOfParam) {
         final OffsetDateTime asOf = Optional.ofNullable(asOfParam).orElseGet(TimeUtils::utcNow);
         final Object[] row = queriesAsOfRepository.getOneForCaseAsOf(caseId, queryId, asOf);
+        // findFirstByCaseIdOrderByUploadedAtDesc("");
+        // https://tools.hmcts.net/jira/browse/DD-40778 ToDo
+
         if (row == null) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
