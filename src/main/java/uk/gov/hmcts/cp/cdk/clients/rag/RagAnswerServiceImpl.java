@@ -42,7 +42,7 @@ public class RagAnswerServiceImpl implements DocumentInformationSummarisedApi {
             }
             UserQueryAnswerReturnedSuccessfully resp = ragRestClient
                     .post()
-                    .uri(props.getAnswerQueryPath())
+                    .uri(DocumentInformationSummarisedApi.PATH_ANSWER_USER_QUERY)
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .headers(h -> {

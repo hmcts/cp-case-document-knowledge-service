@@ -15,15 +15,13 @@ import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClientConfig;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClientImpl;
 import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
-import uk.gov.hmcts.cp.cdk.clients.documentstatus.DocumentStatusClientConfig;
 
 
 @Configuration
 @EnableConfigurationProperties({
         CQRSClientProperties.class,
         HearingClientConfig.class,
-        ProgressionClientConfig.class,
-        DocumentStatusClientConfig.class
+        ProgressionClientConfig.class
 })
 public class CdkClientsConfig {
 

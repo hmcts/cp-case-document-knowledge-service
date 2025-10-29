@@ -16,8 +16,6 @@ public class RagClientProperties {
     @NotBlank
     private String baseUrl;
 
-    @NotBlank
-    private String answerQueryPath = "/answer-user-query";
 
     @Positive
     private int connectTimeoutMs = 3000;
@@ -33,14 +31,6 @@ public class RagClientProperties {
 
     public void setBaseUrl(String baseUrl) {
         this.baseUrl = baseUrl;
-    }
-
-    public String getAnswerQueryPath() {
-        return answerQueryPath;
-    }
-
-    public void setAnswerQueryPath(String answerQueryPath) {
-        this.answerQueryPath = answerQueryPath;
     }
 
     public int getConnectTimeoutMs() {

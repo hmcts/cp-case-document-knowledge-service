@@ -9,14 +9,15 @@ import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
-import org.springframework.retry.support.RetryTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
-import uk.gov.hmcts.cp.cdk.clients.documentstatus.DocumentIngestionStatusApi;
-import uk.gov.hmcts.cp.cdk.clients.documentstatus.DocumentStatusResponse;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
+import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
 
-import java.util.Optional;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Slf4j
@@ -27,9 +28,8 @@ public class VerifyUploadTasklet implements Tasklet {
     private static final String CTX_UPLOAD_VERIFIED = BatchKeys.CTX_UPLOAD_VERIFIED;
     private static final String CTX_DOCUMENT_STATUS_JSON = BatchKeys.CTX_DOCUMENT_STATUS_JSON;
 
-    private final DocumentIngestionStatusApi documentIngestionStatusApi;
+    private final DocumentIngestionStatusApi documentIngestionStatusApi; // OpenAPI interface
     private final CaseDocumentRepository caseDocumentRepository;
-    private final RetryTemplate storageCheckRetryTemplate;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -44,7 +44,6 @@ public class VerifyUploadTasklet implements Tasklet {
 
         final UUID caseId = UUID.fromString(caseIdStr);
 
-        // Get the latest document for this case to retrieve the document name
         final String documentName = caseDocumentRepository
                 .findFirstByCaseIdOrderByUploadedAtDesc(caseId)
                 .map(doc -> {
@@ -60,52 +59,66 @@ public class VerifyUploadTasklet implements Tasklet {
             return RepeatStatus.FINISHED;
         }
 
-        // Call the APIM endpoint via DocumentStatusClient with retry
         try {
-            final Optional<DocumentStatusResponse> responseOptional = storageCheckRetryTemplate.execute(context -> {
-                log.debug("Checking document status via APIM for document: {}", documentName);
-                return documentIngestionStatusApi.checkDocumentStatus(documentName);
-            });
+            log.debug("Checking document status via APIM for document: {}", documentName);
+            final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> resp =
+                    documentIngestionStatusApi.documentStatus(documentName);
 
-            if (responseOptional.isPresent()) {
-                final DocumentStatusResponse response = responseOptional.get();
-                
-                // Log the complete response details
+            if (resp == null) {
+                log.warn("Null response from APIM for document: {}", documentName);
+                stepCtx.put(CTX_UPLOAD_VERIFIED, false);
+                contribution.setExitStatus(ExitStatus.NOOP);
+                return RepeatStatus.FINISHED;
+            }
+
+            if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
+                final DocumentIngestionStatusReturnedSuccessfully body = resp.getBody();
+
+                final var statusEnum = body.getStatus();
+                final String status = (statusEnum != null) ? statusEnum.getValue() : null; // "INGESTION_SUCCESS", etc.
+                final String reason = body.getReason();
+                final String docId  = body.getDocumentId();
+                final String docNm  = body.getDocumentName();
+                final OffsetDateTime lastUpdated = body.getLastUpdated();
+
                 log.info("Document status verified successfully for document: {}", documentName);
-                log.info("Document Status Response - documentId: {}, documentName: {}, status: {}, reason: {}, timestamp: {}",
-                        response.documentId(), response.documentName(), response.status(),
-                        response.reason(), response.timestamp());
+                log.info("Document Status Response - documentId: {}, documentName: {}, status: {}, reason: {}, lastUpdated: {}",
+                        docId, docNm, status, reason, lastUpdated);
 
-                // Store response in execution context for next step usage
                 stepCtx.put(CTX_UPLOAD_VERIFIED, true);
-                
-                // Store as JSON string (ExecutionContext requires Serializable objects)
+
                 try {
-                    final String responseJson = objectMapper.writeValueAsString(response);
+                    final String responseJson = objectMapper.writeValueAsString(body);
                     stepCtx.put(CTX_DOCUMENT_STATUS_JSON, responseJson);
                     log.debug("Stored document status response in execution context as JSON");
                 } catch (Exception e) {
                     log.warn("Failed to serialize document status response to JSON: {}", e.getMessage());
                 }
 
-                // Store individual fields for easy access in next steps
-                stepCtx.put("documentStatus", response.status());
-                stepCtx.put("documentStatusTimestamp", response.timestamp());
-                if (response.reason() != null && !response.reason().isBlank()) {
-                    stepCtx.put("documentStatusReason", response.reason());
+                stepCtx.put("documentStatus", status);
+                stepCtx.put("documentStatusTimestamp", lastUpdated);
+                if (reason != null && !reason.isBlank()) {
+                    stepCtx.put("documentStatusReason", reason);
                 }
 
                 contribution.setExitStatus(ExitStatus.COMPLETED);
                 return RepeatStatus.FINISHED;
-            } else {
-                // Document not found in Azure Table Storage
+
+            } else if (resp.getStatusCode() == HttpStatus.NOT_FOUND) {
                 log.warn("Document {} not found in Azure Table Storage (404 response)", documentName);
                 stepCtx.put(CTX_UPLOAD_VERIFIED, false);
                 contribution.setExitStatus(ExitStatus.NOOP);
                 return RepeatStatus.FINISHED;
+
+            } else {
+                log.error("Unexpected response from APIM for {}: {}", documentName, resp.getStatusCode());
+                stepCtx.put(CTX_UPLOAD_VERIFIED, false);
+                stepCtx.put("documentStatusError", "Unexpected status: " + resp.getStatusCode());
+                contribution.setExitStatus(ExitStatus.FAILED);
+                return RepeatStatus.FINISHED;
             }
+
         } catch (Exception e) {
-            // Handle any errors during the status check
             log.error("Error checking document status for document {}: {}", documentName, e.getMessage(), e);
             stepCtx.put(CTX_UPLOAD_VERIFIED, false);
             stepCtx.put("documentStatusError", e.getMessage());

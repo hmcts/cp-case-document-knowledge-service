@@ -1,7 +1,6 @@
 rag:
   client:
     base-url: ${CP_CDK_RAG_URL}
-    answer-query-path: /answer-user-query
     connect-timeout-ms: 3000
     read-timeout-ms: 15000
     headers:
@@ -26,6 +25,3 @@ cqrs:
       material-content-path: "/progression-query-api/query/api/rest/progression/material/{materialId}/content"
       accept-for-court-doc-search: "application/vnd.progression.query.courtdocuments+json"
       accept-for-material-content: "application/vnd.progression.query.material-content+json"
-    document-status:
-      base-url: ${CP_CDK_DOCUMENT_STATUS_BASE_URL}
-      status-path: "/api/DocumentStatusCheck"

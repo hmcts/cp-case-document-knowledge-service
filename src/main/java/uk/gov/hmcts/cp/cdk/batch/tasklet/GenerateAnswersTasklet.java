@@ -16,7 +16,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
-
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
 import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
@@ -26,7 +25,6 @@ import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID;
 

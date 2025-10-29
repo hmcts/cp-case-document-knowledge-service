@@ -1,10 +1,13 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.core.ExitStatus;
@@ -13,43 +16,33 @@ import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
-import org.springframework.retry.support.RetryTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
-import uk.gov.hmcts.cp.cdk.clients.documentstatus.DocumentIngestionStatusApi;
-import uk.gov.hmcts.cp.cdk.clients.documentstatus.DocumentStatusResponse;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
+import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
+import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully.StatusEnum;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-@DisplayName("VerifyUploadTasklet tests")
+@DisplayName("VerifyUploadTasklet tests (no RetryTemplate)")
 @ExtendWith(MockitoExtension.class)
 class VerifyUploadTaskletTest {
 
-    @Mock
-    private DocumentIngestionStatusApi documentIngestionStatusApi;
-
-    @Mock
-    private CaseDocumentRepository caseDocumentRepository;
-
-    @Mock
-    private RetryTemplate retryTemplate;
-
-    @Mock
-    private StepContribution contribution;
-
-    @Mock
-    private ChunkContext chunkContext;
-
-    @Mock
-    private StepExecution stepExecution;
+    @Mock private DocumentIngestionStatusApi documentIngestionStatusApi;
+    @Mock private CaseDocumentRepository caseDocumentRepository;
+    @Mock private StepContribution contribution;
+    @Mock private ChunkContext chunkContext;
+    @Mock private StepExecution stepExecution;
 
     private ObjectMapper objectMapper;
     private VerifyUploadTasklet tasklet;
@@ -57,56 +50,54 @@ class VerifyUploadTaskletTest {
 
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper();
+        objectMapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule());
         tasklet = new VerifyUploadTasklet(
                 documentIngestionStatusApi,
                 caseDocumentRepository,
-                retryTemplate,
                 objectMapper
         );
         stepExecutionContext = new ExecutionContext();
     }
 
     @Test
-    @DisplayName("Sets COMPLETED when document status found in Azure Table Storage")
+    @DisplayName("COMPLETED when document status found (200)")
     void setsCompletedWhenDocumentFound() throws Throwable {
-        // Given
         UUID caseId = UUID.randomUUID();
         String documentName = "materialId_20240115.pdf";
         CaseDocument caseDocument = createCaseDocument(caseId, documentName);
-        DocumentStatusResponse statusResponse = new DocumentStatusResponse(
-                UUID.randomUUID().toString(),
-                documentName,
-                "UPLOADED",
-                "Document uploaded successfully",
-                "2024-01-15T10:30:00Z"
-        );
+
+        var body = new DocumentIngestionStatusReturnedSuccessfully()
+                .documentId(UUID.randomUUID().toString())
+                .documentName(documentName)
+                .status(StatusEnum.INGESTION_SUCCESS)
+                .reason("Document uploaded successfully")
+                .lastUpdated(OffsetDateTime.parse("2024-01-15T10:30:00Z"));
 
         stepExecutionContext.putString("caseId", caseId.toString());
         when(contribution.getStepExecution()).thenReturn(stepExecution);
         when(stepExecution.getExecutionContext()).thenReturn(stepExecutionContext);
         when(caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId))
                 .thenReturn(Optional.of(caseDocument));
-        when(retryTemplate.execute(any())).thenReturn(Optional.of(statusResponse));
+        when(documentIngestionStatusApi.documentStatus(documentName))
+                .thenReturn(ResponseEntity.ok(body));
 
-        // When
         RepeatStatus status = tasklet.execute(contribution, chunkContext);
 
-        // Then
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
         assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED)).isEqualTo(true);
-        assertThat(stepExecutionContext.getString("documentStatus")).isEqualTo("UPLOADED");
-        assertThat(stepExecutionContext.getString("documentStatusTimestamp")).isEqualTo("2024-01-15T10:30:00Z");
-        assertThat(stepExecutionContext.getString("documentStatusReason")).isEqualTo("Document uploaded successfully");
+        assertThat(stepExecutionContext.get("documentStatus")).isEqualTo(StatusEnum.INGESTION_SUCCESS.getValue());
+        assertThat(stepExecutionContext.get("documentStatusTimestamp"))
+                .isEqualTo(OffsetDateTime.parse("2024-01-15T10:30:00Z"));
+        assertThat(stepExecutionContext.get("documentStatusReason")).isEqualTo("Document uploaded successfully");
         assertThat(stepExecutionContext.getString(BatchKeys.CTX_DOCUMENT_STATUS_JSON)).isNotNull();
         verify(contribution, times(1)).setExitStatus(ExitStatus.COMPLETED);
-        verify(retryTemplate, times(1)).execute(any());
+        verify(documentIngestionStatusApi, times(1)).documentStatus(documentName);
     }
 
     @Test
-    @DisplayName("Sets NOOP when document not found in Azure Table Storage (404)")
+    @DisplayName("NOOP when document not found (404)")
     void setsNoopWhenDocumentNotFound() throws Throwable {
-        // Given
         UUID caseId = UUID.randomUUID();
         String documentName = "materialId_20240115.pdf";
         CaseDocument caseDocument = createCaseDocument(caseId, documentName);
@@ -116,40 +107,33 @@ class VerifyUploadTaskletTest {
         when(stepExecution.getExecutionContext()).thenReturn(stepExecutionContext);
         when(caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId))
                 .thenReturn(Optional.of(caseDocument));
-        when(retryTemplate.execute(any())).thenReturn(Optional.empty());
+        when(documentIngestionStatusApi.documentStatus(documentName))
+                .thenReturn(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
 
-        // When
         RepeatStatus status = tasklet.execute(contribution, chunkContext);
 
-        // Then
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
         assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED)).isEqualTo(false);
         verify(contribution, times(1)).setExitStatus(ExitStatus.NOOP);
-        verify(retryTemplate, times(1)).execute(any());
+        verify(documentIngestionStatusApi, times(1)).documentStatus(documentName);
     }
 
     @Test
-    @DisplayName("Finishes immediately when caseId absent in execution context")
+    @DisplayName("Finishes when caseId missing")
     void finishesWhenNoCaseId() throws Throwable {
-        // Given - no caseId in context
         when(contribution.getStepExecution()).thenReturn(stepExecution);
         when(stepExecution.getExecutionContext()).thenReturn(stepExecutionContext);
 
-        // When
         RepeatStatus status = tasklet.execute(contribution, chunkContext);
 
-        // Then
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
-        verifyNoInteractions(caseDocumentRepository);
-        verifyNoInteractions(documentIngestionStatusApi);
-        verifyNoInteractions(retryTemplate);
+        verifyNoInteractions(caseDocumentRepository, documentIngestionStatusApi);
         verify(contribution, never()).setExitStatus(any());
     }
 
     @Test
-    @DisplayName("Sets NOOP when no document found in repository for case")
+    @DisplayName("NOOP when no document for case")
     void setsNoopWhenNoDocumentInRepository() throws Throwable {
-        // Given
         UUID caseId = UUID.randomUUID();
         stepExecutionContext.putString("caseId", caseId.toString());
         when(contribution.getStepExecution()).thenReturn(stepExecution);
@@ -157,37 +141,31 @@ class VerifyUploadTaskletTest {
         when(caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId))
                 .thenReturn(Optional.empty());
 
-        // When
         RepeatStatus status = tasklet.execute(contribution, chunkContext);
 
-        // Then
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
         assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED)).isEqualTo(false);
         verify(contribution, times(1)).setExitStatus(ExitStatus.NOOP);
         verifyNoInteractions(documentIngestionStatusApi);
-        verifyNoInteractions(retryTemplate);
     }
 
     @Test
-    @DisplayName("Sets FAILED when exception occurs during status check")
+    @DisplayName("FAILED when API throws")
     void setsFailedWhenExceptionOccurs() throws Throwable {
-        // Given
         UUID caseId = UUID.randomUUID();
         String documentName = "materialId_20240115.pdf";
         CaseDocument caseDocument = createCaseDocument(caseId, documentName);
-        RuntimeException exception = new RuntimeException("Network error");
 
         stepExecutionContext.putString("caseId", caseId.toString());
         when(contribution.getStepExecution()).thenReturn(stepExecution);
         when(stepExecution.getExecutionContext()).thenReturn(stepExecutionContext);
         when(caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId))
                 .thenReturn(Optional.of(caseDocument));
-        when(retryTemplate.execute(any())).thenThrow(exception);
+        when(documentIngestionStatusApi.documentStatus(documentName))
+                .thenThrow(new RuntimeException("Network error"));
 
-        // When
         RepeatStatus status = tasklet.execute(contribution, chunkContext);
 
-        // Then
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
         assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED)).isEqualTo(false);
         assertThat(stepExecutionContext.getString("documentStatusError")).isEqualTo("Network error");
@@ -195,142 +173,152 @@ class VerifyUploadTaskletTest {
     }
 
     @Test
-    @DisplayName("Stores document status response as JSON in execution context")
+    @DisplayName("Stores response JSON (example: METADATA_VALIDATED)")
     void storesResponseAsJson() throws Throwable {
-        // Given
         UUID caseId = UUID.randomUUID();
         String documentName = "materialId_20240115.pdf";
         CaseDocument caseDocument = createCaseDocument(caseId, documentName);
-        DocumentStatusResponse statusResponse = new DocumentStatusResponse(
-                "doc-123",
-                documentName,
-                "INGESTED",
-                null,
-                "2024-01-15T10:30:00Z"
-        );
+
+        var body = new DocumentIngestionStatusReturnedSuccessfully()
+                .documentId("doc-123")
+                .documentName(documentName)
+                .status(StatusEnum.METADATA_VALIDATED)
+                .lastUpdated(OffsetDateTime.parse("2024-01-15T10:30:00Z"));
 
         stepExecutionContext.putString("caseId", caseId.toString());
         when(contribution.getStepExecution()).thenReturn(stepExecution);
         when(stepExecution.getExecutionContext()).thenReturn(stepExecutionContext);
         when(caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId))
                 .thenReturn(Optional.of(caseDocument));
-        when(retryTemplate.execute(any())).thenReturn(Optional.of(statusResponse));
+        when(documentIngestionStatusApi.documentStatus(documentName))
+                .thenReturn(ResponseEntity.ok(body));
 
-        // When
         tasklet.execute(contribution, chunkContext);
 
-        // Then
         String jsonResponse = stepExecutionContext.getString(BatchKeys.CTX_DOCUMENT_STATUS_JSON);
         assertThat(jsonResponse).isNotNull();
         assertThat(jsonResponse).contains("doc-123");
-        assertThat(jsonResponse).contains("INGESTED");
+        assertThat(jsonResponse).contains(StatusEnum.METADATA_VALIDATED.getValue());
         assertThat(jsonResponse).contains(documentName);
     }
 
     @Test
-    @DisplayName("Stores individual status fields for easy access in next steps")
+    @DisplayName("Stores individual fields (example: INGESTION_SUCCESS)")
     void storesIndividualStatusFields() throws Throwable {
-        // Given
         UUID caseId = UUID.randomUUID();
         String documentName = "materialId_20240115.pdf";
         CaseDocument caseDocument = createCaseDocument(caseId, documentName);
-        DocumentStatusResponse statusResponse = new DocumentStatusResponse(
-                "doc-456",
-                documentName,
-                "UPLOADED",
-                "Status reason text",
-                "2024-01-15T15:45:30Z"
-        );
+
+        var body = new DocumentIngestionStatusReturnedSuccessfully()
+                .documentId("doc-456")
+                .documentName(documentName)
+                .status(StatusEnum.INGESTION_SUCCESS)
+                .reason("Status reason text")
+                .lastUpdated(OffsetDateTime.parse("2024-01-15T15:45:30Z"));
 
         stepExecutionContext.putString("caseId", caseId.toString());
         when(contribution.getStepExecution()).thenReturn(stepExecution);
         when(stepExecution.getExecutionContext()).thenReturn(stepExecutionContext);
         when(caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId))
                 .thenReturn(Optional.of(caseDocument));
-        when(retryTemplate.execute(any())).thenReturn(Optional.of(statusResponse));
+        when(documentIngestionStatusApi.documentStatus(documentName))
+                .thenReturn(ResponseEntity.ok(body));
 
-        // When
         tasklet.execute(contribution, chunkContext);
 
-        // Then
-        assertThat(stepExecutionContext.getString("documentStatus")).isEqualTo("UPLOADED");
-        assertThat(stepExecutionContext.getString("documentStatusTimestamp")).isEqualTo("2024-01-15T15:45:30Z");
-        assertThat(stepExecutionContext.getString("documentStatusReason")).isEqualTo("Status reason text");
+        assertThat(stepExecutionContext.get("documentStatus"))
+                .isEqualTo(StatusEnum.INGESTION_SUCCESS.getValue());
+        assertThat(stepExecutionContext.get("documentStatusTimestamp"))
+                .isEqualTo(OffsetDateTime.parse("2024-01-15T15:45:30Z"));
+        assertThat(stepExecutionContext.get("documentStatusReason"))
+                .isEqualTo("Status reason text");
     }
 
     @Test
-    @DisplayName("Does not store reason field when reason is null or blank")
+    @DisplayName("Does not store reason when null/blank")
     void doesNotStoreReasonWhenNullOrBlank() throws Throwable {
-        // Given
         UUID caseId = UUID.randomUUID();
         String documentName = "materialId_20240115.pdf";
         CaseDocument caseDocument = createCaseDocument(caseId, documentName);
-        DocumentStatusResponse statusResponse = new DocumentStatusResponse(
-                "doc-789",
-                documentName,
-                "UPLOADED",
-                null,
-                "2024-01-15T10:30:00Z"
-        );
+
+        var body = new DocumentIngestionStatusReturnedSuccessfully()
+                .documentId("doc-789")
+                .documentName(documentName)
+                .status(StatusEnum.INGESTION_FAILED)
+                .reason(null)
+                .lastUpdated(OffsetDateTime.parse("2024-01-15T10:30:00Z"));
 
         stepExecutionContext.putString("caseId", caseId.toString());
         when(contribution.getStepExecution()).thenReturn(stepExecution);
         when(stepExecution.getExecutionContext()).thenReturn(stepExecutionContext);
         when(caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId))
                 .thenReturn(Optional.of(caseDocument));
-        when(retryTemplate.execute(any())).thenReturn(Optional.of(statusResponse));
+        when(documentIngestionStatusApi.documentStatus(documentName))
+                .thenReturn(ResponseEntity.ok(body));
 
-        // When
         tasklet.execute(contribution, chunkContext);
 
-        // Then
         assertThat(stepExecutionContext.get("documentStatusReason")).isNull();
     }
 
     @Test
-    @DisplayName("Calls documentIngestionStatusApi with correct document name")
+    @DisplayName("Calls API with correct document name")
     void callsApiWithCorrectDocumentName() throws Throwable {
-        // Given
         UUID caseId = UUID.randomUUID();
         String documentName = "test-doc-123.pdf";
         CaseDocument caseDocument = createCaseDocument(caseId, documentName);
-        DocumentStatusResponse statusResponse = new DocumentStatusResponse(
-                "doc-id",
-                documentName,
-                "UPLOADED",
-                "Success",
-                "2024-01-15T10:30:00Z"
-        );
+
+        var body = new DocumentIngestionStatusReturnedSuccessfully()
+                .documentId("doc-id")
+                .documentName(documentName)
+                .status(StatusEnum.INGESTION_SUCCESS)
+                .reason("Success")
+                .lastUpdated(OffsetDateTime.parse("2024-01-15T10:30:00Z"));
 
         stepExecutionContext.putString("caseId", caseId.toString());
         when(contribution.getStepExecution()).thenReturn(stepExecution);
         when(stepExecution.getExecutionContext()).thenReturn(stepExecutionContext);
         when(caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId))
                 .thenReturn(Optional.of(caseDocument));
+        when(documentIngestionStatusApi.documentStatus(documentName))
+                .thenReturn(ResponseEntity.ok(body));
 
-        // Mock retry template to execute the callback
-        when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-            org.springframework.retry.RetryCallback<?, ?> callback = invocation.getArgument(0);
-            try {
-                return callback.doWithRetry(null);
-            } catch (Throwable t) {
-                throw new RuntimeException(t);
-            }
-        });
-
-        // Mock the API to return response when called
-        when(documentIngestionStatusApi.checkDocumentStatus(documentName))
-                .thenReturn(Optional.of(statusResponse));
-
-        // When
         tasklet.execute(contribution, chunkContext);
 
-        // Then
-        verify(documentIngestionStatusApi, times(1)).checkDocumentStatus(documentName);
-        verify(retryTemplate, times(1)).execute(any());
+        verify(documentIngestionStatusApi, times(1)).documentStatus(documentName);
     }
 
-    // Helper method to create test CaseDocument
+    @ParameterizedTest(name = "Stores status correctly for {0}")
+    @EnumSource(StatusEnum.class)
+    @DisplayName("Completes for all known status enums")
+    void completesForAllStatuses(StatusEnum statusEnum) throws Throwable {
+        UUID caseId = UUID.randomUUID();
+        String documentName = "param-doc.pdf";
+        CaseDocument caseDocument = createCaseDocument(caseId, documentName);
+
+        var body = new DocumentIngestionStatusReturnedSuccessfully()
+                .documentId("doc-param")
+                .documentName(documentName)
+                .status(statusEnum)
+                .lastUpdated(OffsetDateTime.parse("2025-01-01T00:00:00Z"));
+
+        stepExecutionContext.putString("caseId", caseId.toString());
+        when(contribution.getStepExecution()).thenReturn(stepExecution);
+        when(stepExecution.getExecutionContext()).thenReturn(stepExecutionContext);
+        when(caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId))
+                .thenReturn(Optional.of(caseDocument));
+        when(documentIngestionStatusApi.documentStatus(documentName))
+                .thenReturn(ResponseEntity.ok(body));
+
+        RepeatStatus status = tasklet.execute(contribution, chunkContext);
+
+        assertThat(status).isEqualTo(RepeatStatus.FINISHED);
+        assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED)).isEqualTo(true);
+        assertThat(stepExecutionContext.get("documentStatus"))
+                .isEqualTo(statusEnum.getValue());
+        verify(contribution, times(1)).setExitStatus(ExitStatus.COMPLETED);
+    }
+
     private CaseDocument createCaseDocument(UUID caseId, String documentName) {
         CaseDocument doc = new CaseDocument();
         doc.setDocId(UUID.randomUUID());
