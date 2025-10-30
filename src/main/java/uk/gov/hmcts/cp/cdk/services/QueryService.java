@@ -4,9 +4,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueriesAsOfRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryVersionRepository;
@@ -41,22 +43,26 @@ public class QueryService {
     private static final int CASE_COL_PROMPT = 4;
     private static final int CASE_COL_EFFECTIVE_AT = 5;
     private static final int CASE_COL_STATUS_TXT = 6;
+    private static final String IDPC_DOC_NAME = "IDPC";
 
 
     private final QueryRepository queryRepository;
     private final QueryVersionRepository queryVersionRepository;
     private final QueriesAsOfRepository queriesAsOfRepository;
+    private final CaseDocumentRepository caseDocumentRepository;
     private final QueryMapper mapper;
 
     public QueryService(
             final QueryRepository queryRepository,
             final QueryVersionRepository queryVersionRepository,
             final QueriesAsOfRepository queriesAsOfRepository,
+            final CaseDocumentRepository caseDocumentRepository,
             final QueryMapper mapper
     ) {
         this.queryRepository = queryRepository;
         this.queryVersionRepository = queryVersionRepository;
         this.queriesAsOfRepository = queriesAsOfRepository;
+        this.caseDocumentRepository = caseDocumentRepository;
         this.mapper = mapper;
     }
 
@@ -115,9 +121,17 @@ public class QueryService {
             final List<Object[]> rows = queriesAsOfRepository.listForCaseAsOf(caseId, asOf);
             summaries = rows.stream().map(QueryService::mapCaseRowToSummary).toList();
 
+            //Retrieval of casedocument to populate isIdpcAvailable info as part of DD-40778
+            final Optional<CaseDocument> latestDocOpt = caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId);
+            final boolean isIdpcAvailable = latestDocOpt
+                    .map(doc -> IDPC_DOC_NAME.equalsIgnoreCase(doc.getSource()))
+                    .orElse(false);
+
             final Scope scope = new Scope();
             scope.setCaseId(caseId);
+            scope.setIsIdpcAvailable(isIdpcAvailable);
             response.setScope(scope);
+
         }
 
         response.setQueries(summaries);
