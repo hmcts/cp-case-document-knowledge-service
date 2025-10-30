@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.batch;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,7 +28,6 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.retry.backoff.FixedBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
@@ -54,7 +54,6 @@ import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
 
-import javax.sql.DataSource;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Collections;
@@ -65,7 +64,8 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @SpringBatchTest
 @SpringBootTest(
@@ -79,7 +79,6 @@ import static org.mockito.Mockito.*;
         },
         properties = {
                 "spring.main.allow-bean-definition-overriding=true"
-                // For speed you can add: "logging.level.org.springframework=INFO"
         }
 )
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -97,7 +96,8 @@ class CaseIngestionJobE2EPostgresTest {
                     classes = AzureBlobStorageService.class // avoid real Azure bean
             )
     )
-    static class TestApplication { }
+    static class TestApplication {
+    }
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
@@ -107,7 +107,9 @@ class CaseIngestionJobE2EPostgresTest {
                     .withPassword("postgres")
                     .withReuse(true); // enable local reuse if ~/.testcontainers.properties allows it
 
-    static { POSTGRES.start(); }
+    static {
+        POSTGRES.start();
+    }
 
     @DynamicPropertySource
     static void dbProps(final DynamicPropertyRegistry r) {
@@ -127,21 +129,32 @@ class CaseIngestionJobE2EPostgresTest {
     }
 
     // Real repos
-    @Autowired private QueryDefinitionLatestRepository qdlRepo;
-    @Autowired private CaseDocumentRepository caseDocumentRepository;
+    @Autowired
+    private QueryDefinitionLatestRepository qdlRepo;
+    @Autowired
+    private CaseDocumentRepository caseDocumentRepository;
 
     // Mocks (external)
-    @Autowired private HearingClient hearingClient;
-    @Autowired private ProgressionClient progressionClient;
-    @Autowired private DocumentIngestionStatusApi documentIngestionStatusApi;
-    @Autowired private DocumentInformationSummarisedApi documentInformationSummarisedApi;
-    @Autowired private QueryResolver queryResolver;
-    @Autowired private StorageService storageService;
+    @Autowired
+    private HearingClient hearingClient;
+    @Autowired
+    private ProgressionClient progressionClient;
+    @Autowired
+    private DocumentIngestionStatusApi documentIngestionStatusApi;
+    @Autowired
+    private DocumentInformationSummarisedApi documentInformationSummarisedApi;
+    @Autowired
+    private QueryResolver queryResolver;
+    @Autowired
+    private StorageService storageService;
 
     // Infra
-    @Autowired private JobOperatorTestUtils jobOperatorTestUtils;
-    @Autowired private JdbcTemplate jdbc;
-    @PersistenceContext private EntityManager em;
+    @Autowired
+    private JobOperatorTestUtils jobOperatorTestUtils;
+    @Autowired
+    private JdbcTemplate jdbc;
+    @PersistenceContext
+    private EntityManager em;
 
     private UUID caseId1, caseId2, materialId1, materialId2, queryId;
 
@@ -152,63 +165,63 @@ class CaseIngestionJobE2EPostgresTest {
 
         // helper table required by pipeline
         jdbc.execute("""
-            CREATE TABLE IF NOT EXISTS answer_reservations (
-              reservation_id UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-              case_id        UUID        NOT NULL,
-              query_id       UUID        NOT NULL,
-              doc_id         UUID        NOT NULL,
-              version        INTEGER     NOT NULL,
-              status         TEXT        NOT NULL DEFAULT 'NEW',
-              created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-              updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-              CONSTRAINT uq_ans_res UNIQUE (case_id, query_id, doc_id)
-            );
-        """);
+                    CREATE TABLE IF NOT EXISTS answer_reservations (
+                      reservation_id UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+                      case_id        UUID        NOT NULL,
+                      query_id       UUID        NOT NULL,
+                      doc_id         UUID        NOT NULL,
+                      version        INTEGER     NOT NULL,
+                      status         TEXT        NOT NULL DEFAULT 'NEW',
+                      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                      updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                      CONSTRAINT uq_ans_res UNIQUE (case_id, query_id, doc_id)
+                    );
+                """);
         jdbc.execute("CREATE INDEX IF NOT EXISTS idx_ar_status ON answer_reservations (status)");
         jdbc.execute("CREATE INDEX IF NOT EXISTS idx_ar_case_query ON answer_reservations (case_id, query_id)");
 
         // allocator function
         jdbc.execute("""
-            CREATE OR REPLACE FUNCTION get_or_create_answer_version(p_case_id UUID, p_query_id UUID, p_doc_id UUID)
-            RETURNS INTEGER
-            LANGUAGE plpgsql
-            AS $$
-            DECLARE
-              v_res INTEGER;
-              k1 INT;
-              k2 INT;
-            BEGIN
-              SELECT ('x'||substr(md5(p_case_id::text),1,8))::bit(32)::int,
-                     ('x'||substr(md5(p_query_id::text),1,8))::bit(32)::int
-                INTO k1, k2;
-              PERFORM pg_advisory_xact_lock(k1, k2);
-
-              SELECT version INTO v_res
-                FROM answer_reservations
-               WHERE case_id = p_case_id AND query_id = p_query_id AND doc_id = p_doc_id
-               LIMIT 1;
-
-              IF v_res IS NOT NULL THEN
-                UPDATE answer_reservations
-                   SET updated_at = NOW()
-                 WHERE case_id = p_case_id AND query_id = p_query_id AND doc_id = p_doc_id;
-                RETURN v_res;
-              END IF;
-
-              SELECT COALESCE(MAX(a.version), 0) + 1
-                INTO v_res
-                FROM answers a
-               WHERE a.case_id = p_case_id
-                 AND a.query_id = p_query_id;
-
-              INSERT INTO answer_reservations(case_id, query_id, doc_id, version, status)
-              VALUES (p_case_id, p_query_id, p_doc_id, v_res, 'NEW')
-              ON CONFLICT (case_id, query_id, doc_id) DO NOTHING;
-
-              RETURN v_res;
-            END
-            $$;
-        """);
+                    CREATE OR REPLACE FUNCTION get_or_create_answer_version(p_case_id UUID, p_query_id UUID, p_doc_id UUID)
+                    RETURNS INTEGER
+                    LANGUAGE plpgsql
+                    AS $$
+                    DECLARE
+                      v_res INTEGER;
+                      k1 INT;
+                      k2 INT;
+                    BEGIN
+                      SELECT ('x'||substr(md5(p_case_id::text),1,8))::bit(32)::int,
+                             ('x'||substr(md5(p_query_id::text),1,8))::bit(32)::int
+                        INTO k1, k2;
+                      PERFORM pg_advisory_xact_lock(k1, k2);
+                
+                      SELECT version INTO v_res
+                        FROM answer_reservations
+                       WHERE case_id = p_case_id AND query_id = p_query_id AND doc_id = p_doc_id
+                       LIMIT 1;
+                
+                      IF v_res IS NOT NULL THEN
+                        UPDATE answer_reservations
+                           SET updated_at = NOW()
+                         WHERE case_id = p_case_id AND query_id = p_query_id AND doc_id = p_doc_id;
+                        RETURN v_res;
+                      END IF;
+                
+                      SELECT COALESCE(MAX(a.version), 0) + 1
+                        INTO v_res
+                        FROM answers a
+                       WHERE a.case_id = p_case_id
+                         AND a.query_id = p_query_id;
+                
+                      INSERT INTO answer_reservations(case_id, query_id, doc_id, version, status)
+                      VALUES (p_case_id, p_query_id, p_doc_id, v_res, 'NEW')
+                      ON CONFLICT (case_id, query_id, doc_id) DO NOTHING;
+                
+                      RETURN v_res;
+                    END
+                    $$;
+                """);
 
         // view for QueryDefinitionLatest (backed by entity tables)
 /*        jdbc.execute("""
@@ -387,7 +400,11 @@ class CaseIngestionJobE2EPostgresTest {
             t.setBackOffPolicy(b);
             return t;
         }
-
+        @Bean
+        @Primary
+        public PlatformTransactionManager transactionManager(EntityManagerFactory emf) {
+            return new JpaTransactionManager(emf);
+        }
         @Bean(name = "ingestionTaskExecutor")
         @Primary
         public TaskExecutor ingestionTaskExecutor() {
@@ -395,11 +412,40 @@ class CaseIngestionJobE2EPostgresTest {
         }
 
         // external mocks
-        @Bean @Primary public HearingClient hearingClient() { return mock(HearingClient.class); }
-        @Bean @Primary public ProgressionClient progressionClient() { return mock(ProgressionClient.class); }
-        @Bean @Primary public DocumentIngestionStatusApi documentIngestionStatusApi() { return mock(DocumentIngestionStatusApi.class); }
-        @Bean @Primary public DocumentInformationSummarisedApi documentInformationSummarisedApi() { return mock(DocumentInformationSummarisedApi.class); }
-        @Bean @Primary public QueryResolver queryResolver() { return mock(QueryResolver.class); }
-        @Bean @Primary public StorageService storageService() { return mock(StorageService.class); }
+        @Bean
+        @Primary
+        public HearingClient hearingClient() {
+            return mock(HearingClient.class);
+        }
+
+        @Bean
+        @Primary
+        public ProgressionClient progressionClient() {
+            return mock(ProgressionClient.class);
+        }
+
+        @Bean
+        @Primary
+        public DocumentIngestionStatusApi documentIngestionStatusApi() {
+            return mock(DocumentIngestionStatusApi.class);
+        }
+
+        @Bean
+        @Primary
+        public DocumentInformationSummarisedApi documentInformationSummarisedApi() {
+            return mock(DocumentInformationSummarisedApi.class);
+        }
+
+        @Bean
+        @Primary
+        public QueryResolver queryResolver() {
+            return mock(QueryResolver.class);
+        }
+
+        @Bean
+        @Primary
+        public StorageService storageService() {
+            return mock(StorageService.class);
+        }
     }
 }
