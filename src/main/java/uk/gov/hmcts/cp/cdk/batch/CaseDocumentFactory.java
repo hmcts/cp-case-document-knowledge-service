@@ -12,21 +12,21 @@ final class CaseDocumentFactory {
     private CaseDocumentFactory() {
     }
 
-    static CaseDocument build(final UUID caseId,
+    public static CaseDocument build(final UUID caseId,
                               final UUID docId,
                               final String blobUrl,
                               final String contentType,
                               final long size) {
-        final CaseDocument d = new CaseDocument();
-        d.setDocId(docId);
-        d.setCaseId(caseId);
-        d.setBlobUri(blobUrl);
-        d.setContentType(contentType);
-        d.setSizeBytes(size);
+        final CaseDocument caseDocument = new CaseDocument();
+        caseDocument.setDocId(docId);
+        caseDocument.setCaseId(caseId);
+        caseDocument.setBlobUri(blobUrl);
+        caseDocument.setContentType(contentType);
+        caseDocument.setSizeBytes(size);
         final OffsetDateTime now = utcNow();
-        d.setUploadedAt(now);
-        d.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
-        d.setIngestionPhaseAt(now);
-        return d;
+        caseDocument.setUploadedAt(now);
+        caseDocument.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
+        caseDocument.setIngestionPhaseAt(now);
+        return caseDocument;
     }
 }
