@@ -11,12 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import uk.gov.hmcts.cp.cdk.batch.support.RetryingTasklet;
-import uk.gov.hmcts.cp.cdk.batch.tasklet.FetchHearingsCasesTasklet;
-import uk.gov.hmcts.cp.cdk.batch.tasklet.FilterEligibleCasesTasklet;
-import uk.gov.hmcts.cp.cdk.batch.tasklet.UploadAndPersistTasklet;
-import uk.gov.hmcts.cp.cdk.batch.tasklet.VerifyUploadTasklet;
-import uk.gov.hmcts.cp.cdk.batch.tasklet.ReserveAnswerVersionTasklet;
-import uk.gov.hmcts.cp.cdk.batch.tasklet.GenerateAnswersTasklet;
+import uk.gov.hmcts.cp.cdk.batch.tasklet.*;
 
 @Configuration
 @RequiredArgsConstructor
@@ -66,7 +61,6 @@ public class CaseIngestionStepsConfig {
                                             final GenerateAnswersTasklet generateAnswersTasklet) {
         return step("step6_generate_answers_perCase", repo, generateAnswersTasklet);
     }
-
     @Bean
     public ObjectMapper objectMapper() {
         return new ObjectMapper()

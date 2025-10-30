@@ -1,0 +1,14 @@
+spring:
+  config:
+    import:
+      - optional:classpath:application-clients.yml
+      - optional:classpath:application-cdk.yml
+  datasource:
+    hikari:
+      minimum-idle: 0
+      maximum-pool-size: 5
+      connection-timeout: 2000
+      keepalive-time: 0
+      validation-timeout: 1000
+      max-lifetime: 30000
+      idle-timeout: 10000

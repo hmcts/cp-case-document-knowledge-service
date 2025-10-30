@@ -10,11 +10,11 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
-import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
-import uk.gov.hmcts.cp.cdk.storage.StorageService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -75,8 +75,7 @@ public class UploadAndPersistTasklet implements Tasklet {
 
     @Override
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
-        @SuppressWarnings("unchecked")
-        final Map<String, String> materialToCaseMap =
+        @SuppressWarnings("unchecked") final Map<String, String> materialToCaseMap =
                 (Map<String, String>) contribution.getStepExecution()
                         .getJobExecution()
                         .getExecutionContext()

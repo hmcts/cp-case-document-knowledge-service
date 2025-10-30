@@ -6,8 +6,8 @@ import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.stereotype.Component;
-import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
-import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
+import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
+import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
 
 import java.time.LocalDate;
 import java.util.ArrayList;

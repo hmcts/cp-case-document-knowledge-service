@@ -9,6 +9,7 @@ import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -31,6 +32,12 @@ public class VerifyUploadTasklet implements Tasklet {
     private final DocumentIngestionStatusApi documentIngestionStatusApi;
     private final CaseDocumentRepository caseDocumentRepository;
     private final ObjectMapper objectMapper;
+
+    @Value("${cdk.ingestion.verify.poll-interval-ms:2000}")
+    private long pollIntervalMs;
+
+    @Value("${cdk.ingestion.verify.max-wait-ms:60000}")
+    private long maxWaitMs;
 
     @Override
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
@@ -57,61 +64,87 @@ public class VerifyUploadTasklet implements Tasklet {
                 stepCtx.put(CTX_UPLOAD_VERIFIED, false);
                 exitStatus = ExitStatus.NOOP;
             } else {
-                try {
-                    log.debug("Checking document status via APIM for document: {}", documentName);
-                    final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> resp =
-                            documentIngestionStatusApi.documentStatus(documentName);
+                long start = System.currentTimeMillis();
+                boolean success = false;
+                String lastReason = null;
+                OffsetDateTime lastUpdated = null;
+                String lastStatus = null;
+                String lastDocId = null;
+                String lastDocName = null;
 
-                    if (resp == null) {
-                        log.warn("Null response from APIM for document: {}", documentName);
-                        stepCtx.put(CTX_UPLOAD_VERIFIED, false);
-                        exitStatus = ExitStatus.NOOP;
-                    } else if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
-                        final DocumentIngestionStatusReturnedSuccessfully body = resp.getBody();
+                while (System.currentTimeMillis() - start <= maxWaitMs) {
+                    try {
+                        log.debug("Polling document status via APIM for document: {}", documentName);
+                        final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> resp =
+                                documentIngestionStatusApi.documentStatus(documentName);
 
-                        final DocumentIngestionStatusReturnedSuccessfully.StatusEnum statusEnum = body.getStatus();
-                        final String status = (statusEnum != null) ? statusEnum.getValue() : null;
-                        final String reason = body.getReason();
-                        final String docId = body.getDocumentId();
-                        final String docNm = body.getDocumentName();
-                        final OffsetDateTime lastUpdated = body.getLastUpdated();
+                        if (resp == null) {
+                            log.warn("Null response from APIM for document: {}", documentName);
+                        } else if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
+                            final DocumentIngestionStatusReturnedSuccessfully body = resp.getBody();
 
-                        log.info("Document status verified successfully for document: {}", documentName);
-                        log.info("Document Status Response - documentId: {}, documentName: {}, status: {}, reason: {}, lastUpdated: {}",
-                                docId, docNm, status, reason, lastUpdated);
+                            final DocumentIngestionStatusReturnedSuccessfully.StatusEnum statusEnum = body.getStatus();
+                            final String status = (statusEnum != null) ? statusEnum.getValue() : null;
+                            final String reason = body.getReason();
+                            final String docId = body.getDocumentId();
+                            final String docNm = body.getDocumentName();
+                            final OffsetDateTime lu = body.getLastUpdated();
 
-                        stepCtx.put(CTX_UPLOAD_VERIFIED, true);
+                            lastStatus = status;
+                            lastReason = reason;
+                            lastUpdated = lu;
+                            lastDocId = docId;
+                            lastDocName = docNm;
 
-                        try {
-                            final String responseJson = objectMapper.writeValueAsString(body);
-                            stepCtx.put(CTX_DOCUMENT_STATUS_JSON, responseJson);
-                            log.debug("Stored document status response in execution context as JSON");
-                        } catch (Exception e) {
-                            log.warn("Failed to serialize document status response to JSON: {}", e.getMessage());
+                            if ("INGESTION_SUCCESS".equalsIgnoreCase(status)) {
+                                log.info("Document ingestion successful for {}, proceeding.", documentName);
+                                // Persist JSON for downstream steps
+                                try {
+                                    final String responseJson = objectMapper.writeValueAsString(body);
+                                    stepCtx.put(CTX_DOCUMENT_STATUS_JSON, responseJson);
+                                } catch (Exception e) {
+                                    log.warn("Failed to serialize document status response: {}", e.getMessage());
+                                }
+                                stepCtx.put(CTX_UPLOAD_VERIFIED, true);
+                                success = true;
+                                break;
+                            } else if ("INGESTION_FAILED".equalsIgnoreCase(status)) {
+                                log.error("Ingestion FAILED for {} with reason {}", documentName, reason);
+                                break;
+                            } // else keep polling (e.g., PENDING, IN_PROGRESS)
+                        } else if (resp.getStatusCode() == HttpStatus.NOT_FOUND) {
+                            log.warn("Document {} not found (404); retrying until timeout.", documentName);
+                        } else {
+                            log.error("Unexpected response from APIM for {}: {}", documentName, resp.getStatusCode());
+                            break;
                         }
-
-                        stepCtx.put("documentStatus", status);
-                        stepCtx.put("documentStatusTimestamp", lastUpdated);
-                        if (reason != null && !reason.isBlank()) {
-                            stepCtx.put("documentStatusReason", reason);
-                        }
-
-                        exitStatus = ExitStatus.COMPLETED;
-                    } else if (resp.getStatusCode() == HttpStatus.NOT_FOUND) {
-                        log.warn("Document {} not found in Azure Table Storage (404 response)", documentName);
-                        stepCtx.put(CTX_UPLOAD_VERIFIED, false);
-                        exitStatus = ExitStatus.NOOP;
-                    } else {
-                        log.error("Unexpected response from APIM for {}: {}", documentName, resp.getStatusCode());
-                        stepCtx.put(CTX_UPLOAD_VERIFIED, false);
-                        stepCtx.put("documentStatusError", "Unexpected status: " + resp.getStatusCode());
-                        exitStatus = ExitStatus.FAILED;
+                    } catch (Exception e) {
+                        log.warn("Error polling document status for {}: {}", documentName, e.getMessage());
+                        // continue until timeout
                     }
-                } catch (Exception e) {
-                    log.error("Error checking document status for document {}: {}", documentName, e.getMessage(), e);
+
+                    try {
+                        Thread.sleep(pollIntervalMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+
+                if (success) {
+                    // Optionally expose some fields for debugging/traceability
+                    stepCtx.put("documentStatus", lastStatus);
+                    if (lastReason != null && !lastReason.isBlank()) {
+                        stepCtx.put("documentStatusReason", lastReason);
+                    }
+                    stepCtx.put("documentStatusTimestamp", lastUpdated);
+                    exitStatus = ExitStatus.COMPLETED;
+                } else {
                     stepCtx.put(CTX_UPLOAD_VERIFIED, false);
-                    stepCtx.put("documentStatusError", e.getMessage());
-                    exitStatus = ExitStatus.FAILED;
+                    if (lastStatus != null) {
+                        stepCtx.put("documentStatus", lastStatus);
+                    }
+                    exitStatus = ExitStatus.NOOP; // not fatal; upstream RetryTemplate can re-drive if desired
                 }
             }
         }

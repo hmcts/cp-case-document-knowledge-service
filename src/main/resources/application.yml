@@ -10,7 +10,7 @@ spring:
       - optional:classpath:application-artemis-jms.yml
       - optional:classpath:application-server-management.yml
       - optional:classpath:application-clients.yml
-      - optional:classpath:application-storage.yml
+      - optional:classpath:application-cdk.yml
       - optional:classpath:application-other.yml
 
 server:

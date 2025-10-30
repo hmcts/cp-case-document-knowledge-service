@@ -109,11 +109,11 @@ public class GenerateAnswersTasklet implements Tasklet {
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final ExecutionContext stepCtx = contribution.getStepExecution().getExecutionContext();
         final String caseIdStr = stepCtx.getString("caseId", null);
-        final String docIdStr  = stepCtx.getString(CTX_DOC_ID_KEY, null);
+        final String docIdStr = stepCtx.getString(CTX_DOC_ID_KEY, null);
 
         if (caseIdStr != null && docIdStr != null) {
             final UUID caseId = UUID.fromString(caseIdStr);
-            final UUID docId  = UUID.fromString(docIdStr);
+            final UUID docId = UUID.fromString(docIdStr);
 
             final List<Query> queries = queryResolver.resolve();
             if (queries.isEmpty()) {
@@ -124,8 +124,8 @@ public class GenerateAnswersTasklet implements Tasklet {
                 txRequired.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
 
                 final List<MapSqlParameterSource> answersBatch = new ArrayList<>(queries.size());
-                final List<MapSqlParameterSource> doneBatch    = new ArrayList<>(queries.size());
-                final List<MapSqlParameterSource> failedBatch  = new ArrayList<>();
+                final List<MapSqlParameterSource> doneBatch = new ArrayList<>(queries.size());
+                final List<MapSqlParameterSource> failedBatch = new ArrayList<>();
 
                 for (final Query query : queries) {
                     final UUID queryId = query.getQueryId();
@@ -148,11 +148,10 @@ public class GenerateAnswersTasklet implements Tasklet {
                             queryId, k -> qdlRepo.findByQueryId(k).orElse(null)
                     );
 
-                    final String userQuery   = qdl != null ? Optional.ofNullable(qdl.getUserQuery()).orElse("") : "";
+                    final String userQuery = qdl != null ? Optional.ofNullable(qdl.getUserQuery()).orElse("") : "";
                     final String queryPrompt = qdl != null ? Optional.ofNullable(qdl.getQueryPrompt()).orElse("") : "";
                     final List<MetadataFilter> filters = buildMetadataFilters(docId);
 
-                    // Build request outside loop allocation (via helper)
                     final AnswerUserQueryRequest request =
                             buildAnswerUserQueryRequest(userQuery, queryPrompt, filters);
 
@@ -203,7 +202,7 @@ public class GenerateAnswersTasklet implements Tasklet {
                         jdbc.batchUpdate(SQL_UPSERT_ANSWER, answersBatch.toArray(new MapSqlParameterSource[0]));
                     }
                     if (!doneBatch.isEmpty()) {
-                        jdbc.batchUpdate(SQL_MARK_DONE,   doneBatch.toArray(new MapSqlParameterSource[0]));
+                        jdbc.batchUpdate(SQL_MARK_DONE, doneBatch.toArray(new MapSqlParameterSource[0]));
                     }
                     if (!failedBatch.isEmpty()) {
                         jdbc.batchUpdate(SQL_MARK_FAILED, failedBatch.toArray(new MapSqlParameterSource[0]));

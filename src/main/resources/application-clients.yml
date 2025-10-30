@@ -7,7 +7,6 @@ rag:
       Accept: application/json
       Content-Type: application/json
       Ocp-Apim-Subscription-Key: ${CP_CDK_RAG_SUBSCRIPTION_KEY}
-
 cqrs:
   client:
     base-url: ${CP_CDK_BASE_URL:http://localhost:8080}

@@ -1,7 +1,7 @@
 package uk.gov.hmcts.cp.cdk.util;
 
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Constructor;
@@ -13,8 +13,9 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.jupiter.api.DisplayName;@DisplayName("Time Utils tests")
+@DisplayName("Time Utils tests")
 class TimeUtilsTest {
 
     @Test@DisplayName("Utc Now returns Time With Utc Offset")

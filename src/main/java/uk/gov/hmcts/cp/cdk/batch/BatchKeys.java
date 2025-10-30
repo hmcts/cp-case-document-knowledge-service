@@ -1,7 +1,5 @@
 package uk.gov.hmcts.cp.cdk.batch;
 
-import java.util.UUID;
-
 public final class BatchKeys {
     public static final String JOB_NAME = "caseIngestionJob";
     public static final String CTX_CASE_ID_KEY = "caseId";
