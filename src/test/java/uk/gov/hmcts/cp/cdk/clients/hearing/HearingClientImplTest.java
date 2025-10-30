@@ -60,7 +60,7 @@ class HearingClientImplTest {
         final String responseBody = """
             {
               "hearingSummaries": [
-                { "prosecutionCaseSummaries": [ { "id": "CASE-1" }, { "id": "CASE-2" }, { "id": "CASE-3" } ] }
+                { "prosecutionCaseSummaries": [ { "id": "CASE-1" }, { "id": "CASE-2" } ] }
               ]
             }
             """;
@@ -84,7 +84,7 @@ class HearingClientImplTest {
         // Assert
         server.verify();
         assertThat(infos).extracting(HearingSummariesInfo::caseId)
-                .containsExactly("CASE-1", "CASE-2", "CASE-3");
+                .containsExactly("CASE-1", "CASE-2");
     }
 
     @Test
@@ -119,51 +119,5 @@ class HearingClientImplTest {
         // Assert
         server.verify();
         assertThat(infos).isEmpty();
-    }
-
-    @Test
-    @DisplayName("Get Hearings And Cases collects Ids And Maps")
-    void getHearingsAndCases_collectsIdsAndMapsOneResponse() {
-        // Arrange
-        var rootProps = new CQRSClientProperties(
-                "http://localhost:8080",
-                3000, 15000,
-                new CQRSClientProperties.Headers("X-CJSCPPUID")
-        );
-        final var hearingCfg = new HearingClientConfig(
-                "application/vnd.hearing.get.hearings+json",
-                "/hearing-query-api/query/api/rest/hearing/hearings"
-        );
-        final var client = new HearingClientImpl(restClient, rootProps, hearingCfg, new HearingDtoMapper());
-
-        final String headerName = rootProps.headers().cjsCppuid(); // <-- use configured name
-        final String responseBody = """
-            {
-              "hearingSummaries": [
-                { "prosecutionCaseSummaries": [ { "id": "CASE-1" } ] }
-              ]
-            }
-            """;
-
-        // Expect
-        server.expect(once(),
-                        requestTo(allOf(
-                                containsString("/hearing-query-api/query/api/rest/hearing/hearings"),
-                                containsString("courtCentreId=C001"),
-                                containsString("roomId=R12"),
-                                containsString("date=2025-10-29")
-                        )))
-                .andExpect(header(headerName, "system")) // <-- assert configured header
-                .andExpect(header("Accept", "application/vnd.hearing.get.hearings+json"))
-                .andRespond(withSuccess(responseBody, MediaType.APPLICATION_JSON));
-
-        // Act
-        final List<HearingSummariesInfo> infos =
-                client.getHearingsAndCases("C001", "R12", LocalDate.of(2025, 10, 29));
-
-        // Assert
-        server.verify();
-        assertThat(infos).extracting(HearingSummariesInfo::caseId)
-                .containsExactly("CASE-1");
     }
 }

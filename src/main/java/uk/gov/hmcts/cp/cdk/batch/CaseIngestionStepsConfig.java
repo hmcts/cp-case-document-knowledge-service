@@ -4,57 +4,65 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
-import uk.gov.hmcts.cp.cdk.batch.tasklet.*;
+import uk.gov.hmcts.cp.cdk.batch.support.RetryingTasklet;
+import uk.gov.hmcts.cp.cdk.batch.tasklet.FetchHearingsCasesTasklet;
+import uk.gov.hmcts.cp.cdk.batch.tasklet.FilterEligibleCasesTasklet;
+import uk.gov.hmcts.cp.cdk.batch.tasklet.UploadAndPersistTasklet;
+import uk.gov.hmcts.cp.cdk.batch.tasklet.VerifyUploadTasklet;
+import uk.gov.hmcts.cp.cdk.batch.tasklet.ReserveAnswerVersionTasklet;
+import uk.gov.hmcts.cp.cdk.batch.tasklet.GenerateAnswersTasklet;
 
 @Configuration
 @RequiredArgsConstructor
-class CaseIngestionStepsConfig {
+public class CaseIngestionStepsConfig {
 
     private final PlatformTransactionManager txManager;
-    private static final String PMD_METHOD_NAMING = "PMD.MethodNamingConventions";
+    private final RetryTemplate retryTemplate;
 
-    private final FetchHearingsCasesTasklet step1;
-    private final FilterEligibleCasesTasklet step2;
-    private final UploadAndPersistTasklet step3;
-    private final VerifyUploadTasklet step4;
-    private final ReserveAnswerVersionTasklet step5;
-    private final GenerateAnswersTasklet step6;
-
-    @Bean
-    public Step step1FetchHearingsCasesWithSingleDefendant(final JobRepository repo) {
-        return new StepBuilder("step1_fetch_hearings_cases", repo).tasklet(step1, txManager).build();
+    private Step step(final String name, final JobRepository repo, final Tasklet t) {
+        return new StepBuilder(name, repo)
+                .tasklet(new RetryingTasklet(t, retryTemplate), txManager)
+                .build();
     }
 
     @Bean
-    public Step step2FilterCaseIdpcForSingleDefendant(final JobRepository repo) {
-        return new StepBuilder("step2_check_single_defendant_idpc", repo).tasklet(step2, txManager).build();
+    public Step step1FetchHearingsCasesWithSingleDefendant(final JobRepository repo,
+                                                           final FetchHearingsCasesTasklet fetchHearingsCasesTasklet) {
+        return step("step1_fetch_hearings_cases", repo, fetchHearingsCasesTasklet);
     }
 
-    @SuppressWarnings(PMD_METHOD_NAMING)
     @Bean
-    public Step step3_upload_and_persist(final JobRepository repo) {
-        return new StepBuilder("step3_upload_and_persist", repo).tasklet(step3, txManager).build();
+    public Step step2FilterCaseIdpcForSingleDefendant(final JobRepository repo,
+                                                      final FilterEligibleCasesTasklet filterEligibleCasesTasklet) {
+        return step("step2_filter_case_idpc", repo, filterEligibleCasesTasklet);
     }
 
-    @SuppressWarnings(PMD_METHOD_NAMING)
     @Bean
-    public Step step4_verifyUpload_perCase(final JobRepository repo) {
-        return new StepBuilder("step4_verify_upload_perCase", repo).tasklet(step4, txManager).build();
+    public Step step3UploadAndPersist(final JobRepository repo,
+                                      final UploadAndPersistTasklet uploadAndPersistTasklet) {
+        return step("step3_upload_and_persist_perCase", repo, uploadAndPersistTasklet);
     }
 
-    @SuppressWarnings(PMD_METHOD_NAMING)
     @Bean
-    public Step step5_reserveAnswerVersion_perCase(final JobRepository repo) {
-        return new StepBuilder("step5_reserve_answer_version_perCase", repo).tasklet(step5, txManager).build();
+    public Step step4VerifyUploadPerCase(final JobRepository repo,
+                                         final VerifyUploadTasklet verifyUploadTasklet) {
+        return step("step4_verify_upload_perCase", repo, verifyUploadTasklet);
     }
 
-    @SuppressWarnings(PMD_METHOD_NAMING)
     @Bean
-    public Step step6_generateAnswers_perCase(final JobRepository repo) {
-        return new StepBuilder("step6_generate_answers_perCase", repo).tasklet(step6, txManager).build();
+    public Step step5ReserveAnswerVersionPerCase(final JobRepository repo,
+                                                 final ReserveAnswerVersionTasklet reserveAnswerVersionTasklet) {
+        return step("step5_reserve_answer_version_perCase", repo, reserveAnswerVersionTasklet);
+    }
+
+    @Bean
+    public Step step6GenerateAnswersPerCase(final JobRepository repo,
+                                            final GenerateAnswersTasklet generateAnswersTasklet) {
+        return step("step6_generate_answers_perCase", repo, generateAnswersTasklet);
     }
 }
-

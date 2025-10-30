@@ -69,7 +69,7 @@ class FilterEligibleCasesTaskletTest {
 
         StepExecution stepExecution = newStepExecution("filter_eligible_cases", params);
         ExecutionContext ctx = stepExecution.getJobExecution().getExecutionContext();
-        ctx.put(BatchKeys.CTX_CASE_IDS, List.of(case1.toString(), case2.toString()));
+        ctx.put(BatchKeys.CTX_CASE_IDS_KEY, List.of(case1.toString(), case2.toString()));
 
         StepContribution contribution = new StepContribution(stepExecution);
         ChunkContext chunkContext = new ChunkContext(new StepContext(stepExecution));
@@ -80,7 +80,7 @@ class FilterEligibleCasesTaskletTest {
         // Assert
 
         @SuppressWarnings("unchecked")
-        Map<String, String> materialToCaseMap = (Map<String, String>) ctx.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP);
+        Map<String, String> materialToCaseMap = (Map<String, String>) ctx.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY);
 
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
         assertThat(materialToCaseMap).containsEntry(material1.toString(), case1.toString());

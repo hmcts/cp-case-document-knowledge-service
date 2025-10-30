@@ -25,7 +25,7 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
 
 @DisplayName("ReserveAnswerVersionTasklet tests")
 @ExtendWith(MockitoExtension.class)
@@ -57,7 +57,7 @@ class ReserveAnswerVersionTaskletTest {
         final UUID docId  = UUID.randomUUID();
         ExecutionContext stepCtx = new ExecutionContext();
         stepCtx.putString("caseId", caseId.toString());
-        stepCtx.putString(CTX_DOC_ID, docId.toString());
+        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
 
         when(contribution.getStepExecution()).thenReturn(stepExecution);
         when(stepExecution.getExecutionContext()).thenReturn(stepCtx);
@@ -132,7 +132,7 @@ class ReserveAnswerVersionTaskletTest {
         final UUID docId  = UUID.randomUUID();
         ExecutionContext stepCtx = new ExecutionContext();
         stepCtx.putString("caseId", caseId.toString());
-        stepCtx.putString(CTX_DOC_ID, docId.toString());
+        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
 
         when(contribution.getStepExecution()).thenReturn(stepExecution);
         when(stepExecution.getExecutionContext()).thenReturn(stepCtx);

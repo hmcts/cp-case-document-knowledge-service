@@ -10,18 +10,20 @@ import org.springframework.http.client.ClientHttpResponse;
 import java.io.IOException;
 
 public class DebugLoggingInterceptor implements ClientHttpRequestInterceptor {
-    private static final Logger log = LoggerFactory.getLogger(DebugLoggingInterceptor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DebugLoggingInterceptor.class);
 
     @Override
-    public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
+    public ClientHttpResponse intercept(final HttpRequest request,
+                                        final byte[] body,
+                                        final ClientHttpRequestExecution execution)
             throws IOException {
-        if (log.isDebugEnabled()) {
-            log.debug("HTTP {} {}", request.getMethod(), request.getURI());
-            log.debug("Headers: {}", request.getHeaders());
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("HTTP {} {}", request.getMethod(), request.getURI());
+            LOGGER.debug("Headers: {}", request.getHeaders());
         }
-        ClientHttpResponse response = execution.execute(request, body);
-        if (log.isDebugEnabled()) {
-            log.debug("Response: {} {}", response.getStatusCode(), response.getHeaders());
+        final ClientHttpResponse response = execution.execute(request, body);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Response: {} {}", response.getStatusCode(), response.getHeaders());
         }
         return response;
     }

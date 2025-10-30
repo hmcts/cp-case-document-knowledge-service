@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_IDS;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_IDS_KEY;
 
 @Component
 @RequiredArgsConstructor
@@ -34,7 +34,7 @@ public class FetchHearingsCasesTasklet implements Tasklet {
         contribution.getStepExecution()
                 .getJobExecution()
                 .getExecutionContext()
-                .put(CTX_CASE_IDS, caseIdStrings);
+                .put(CTX_CASE_IDS_KEY, caseIdStrings);
 
         return RepeatStatus.FINISHED;
 

@@ -13,7 +13,7 @@ import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 
 import java.util.*;
 
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_IDS;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_IDS_KEY;
 
 @Component
 @RequiredArgsConstructor
@@ -23,7 +23,7 @@ public class FilterEligibleCasesTasklet implements Tasklet {
     @Override
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final ExecutionContext jobCtx = contribution.getStepExecution().getJobExecution().getExecutionContext();
-        @SuppressWarnings("unchecked") final List<String> rawCaseIds = (List<String>) jobCtx.get(CTX_CASE_IDS);
+        @SuppressWarnings("unchecked") final List<String> rawCaseIds = (List<String>) jobCtx.get(CTX_CASE_IDS_KEY);
 
         final Map<String, String> materialToCaseMap = new HashMap<>();
 
@@ -36,7 +36,7 @@ public class FilterEligibleCasesTasklet implements Tasklet {
         contribution.getStepExecution()
                 .getJobExecution()
                 .getExecutionContext()
-                .put(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP, materialToCaseMap);
+                .put(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY, materialToCaseMap);
 
         return RepeatStatus.FINISHED;
 

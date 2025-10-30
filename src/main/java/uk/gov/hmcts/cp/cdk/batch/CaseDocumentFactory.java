@@ -13,20 +13,20 @@ final class CaseDocumentFactory {
     }
 
     public static CaseDocument build(final UUID caseId,
-                              final UUID docId,
-                              final String blobUrl,
-                              final String contentType,
-                              final long size) {
-        final CaseDocument caseDocument = new CaseDocument();
-        caseDocument.setDocId(docId);
-        caseDocument.setCaseId(caseId);
-        caseDocument.setBlobUri(blobUrl);
-        caseDocument.setContentType(contentType);
-        caseDocument.setSizeBytes(size);
+                                     final UUID docId,
+                                     final String blobUrl,
+                                     final String contentType,
+                                     final long size) {
+        final CaseDocument document = new CaseDocument();
+        document.setDocId(docId);
+        document.setCaseId(caseId);
+        document.setBlobUri(blobUrl);
+        document.setContentType(contentType);
+        document.setSizeBytes(size);
         final OffsetDateTime now = utcNow();
-        caseDocument.setUploadedAt(now);
-        caseDocument.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
-        caseDocument.setIngestionPhaseAt(now);
-        return caseDocument;
+        document.setUploadedAt(now);
+        document.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
+        document.setIngestionPhaseAt(now);
+        return document;
     }
 }

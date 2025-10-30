@@ -34,20 +34,23 @@ public class RagAnswerServiceImpl implements DocumentInformationSummarisedApi {
 
     @Override
     public ResponseEntity<UserQueryAnswerReturnedSuccessfully> answerUserQuery(
-            @Valid AnswerUserQueryRequest request) {
+            @Valid final AnswerUserQueryRequest request) {
 
         try {
             if (request.getMetadataFilters() == null) {
                 request.setMetadataFilters(List.of());
             }
+
             UserQueryAnswerReturnedSuccessfully resp = ragRestClient
                     .post()
-                    .uri(DocumentInformationSummarisedApi.PATH_ANSWER_USER_QUERY)
+                    .uri(PATH_ANSWER_USER_QUERY) // Unqualified: inherited from interface
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
-                    .headers(h -> {
+                    .headers(headers -> {
                         final Map<String, String> hdrs = props.getHeaders();
-                        if (hdrs != null) hdrs.forEach(h::add);
+                        if (hdrs != null) {
+                            hdrs.forEach(headers::add);
+                        }
                     })
                     .body(request)
                     .retrieve()
@@ -65,30 +68,34 @@ public class RagAnswerServiceImpl implements DocumentInformationSummarisedApi {
 
             return ResponseEntity.ok(resp);
 
-        } catch (HttpStatusCodeException ex) {
-            String body = Optional.ofNullable(ex.getResponseBodyAsString(StandardCharsets.UTF_8)).orElse("");
-            String msg = "RAG API error: %d %s - %s".formatted(ex.getStatusCode().value(), ex.getStatusText(), body);
-            log.warn(msg);
-            throw new RagClientException(msg, ex);
+        } catch (final HttpStatusCodeException exception) {
+            final String body = Optional.ofNullable(
+                    exception.getResponseBodyAsString(StandardCharsets.UTF_8)
+            ).orElse("");
+            final String message = "RAG API error: %d %s - %s".formatted(
+                    exception.getStatusCode().value(), exception.getStatusText(), body
+            );
+            log.warn(message);
+            throw new RagClientException(message, exception);
 
-        } catch (Exception ex) {
-            String msg = "Failed to call RAG API";
-            log.error(msg, ex);
-            throw new RagClientException(msg, ex);
+        } catch (final Exception exception) {
+            final String message = "Failed to call RAG API";
+            log.error(message, exception);
+            throw new RagClientException(message, exception);
         }
     }
 
     @ExceptionHandler(RagClientException.class)
-    public ResponseEntity<AnswerUserQuery500Response> onRagClient(RagClientException ex) {
-        AnswerUserQuery500Response body = new AnswerUserQuery500Response();
-        body.setErrorMessage(ex.getMessage());
+    public ResponseEntity<AnswerUserQuery500Response> onRagClient(final RagClientException exception) {
+        final AnswerUserQuery500Response body = new AnswerUserQuery500Response();
+        body.setErrorMessage(exception.getMessage());
         return ResponseEntity.status(500).body(body);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<AnswerUserQuery500Response> onGeneric(Exception ex) {
-        log.error("Unhandled error in /answer-user-query", ex);
-        AnswerUserQuery500Response body = new AnswerUserQuery500Response();
+    public ResponseEntity<AnswerUserQuery500Response> onGeneric(final Exception exception) {
+        log.error("Unhandled error in /answer-user-query", exception);
+        final AnswerUserQuery500Response body = new AnswerUserQuery500Response();
         body.setErrorMessage("Internal server error");
         return ResponseEntity.status(500).body(body);
     }

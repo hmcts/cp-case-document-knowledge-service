@@ -11,8 +11,6 @@ public interface StorageService {
 
     boolean exists(String blobPath);
 
-
-    long getBlobSize(final String blobPath);
-
+    long getBlobSize(String blobPath);
 
 }

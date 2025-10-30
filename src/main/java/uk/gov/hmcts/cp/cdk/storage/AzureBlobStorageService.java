@@ -53,6 +53,7 @@ public class AzureBlobStorageService implements StorageService {
         return blob.getBlobUrl();
     }
 
+    @Override
     public String copyFromUrl(final String sourceUrl,
                               final String destBlobPath,
                               final String contentType,

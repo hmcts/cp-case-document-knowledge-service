@@ -1,11 +1,10 @@
 package uk.gov.hmcts.cp.cdk.http;
 
-import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
 import org.apache.hc.core5.util.TimeValue;
-import org.apache.hc.core5.util.Timeout;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.ClientHttpRequestFactory;
@@ -18,49 +17,64 @@ import java.util.Map;
 @Configuration
 public class RestClientFactoryConfig {
 
+    @Bean(destroyMethod = "close")
+    public PoolingHttpClientConnectionManager httpClientConnectionManager() {
+        final PoolingHttpClientConnectionManager connectionManager =
+                PoolingHttpClientConnectionManagerBuilder.create()
+                        .setMaxConnTotal(200)
+                        .setMaxConnPerRoute(50)
+                        .build();
+        return connectionManager;
+    }
+
+    @Bean(destroyMethod = "close")
+    public CloseableHttpClient closeableHttpClient(final PoolingHttpClientConnectionManager connectionManager) {
+        final CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(connectionManager)
+                .evictExpiredConnections()
+                .evictIdleConnections(TimeValue.ofSeconds(30))
+                .disableAutomaticRetries()
+                .build();
+        return httpClient;
+    }
+
     @Bean
-    public RestClientFactory restClientFactory() {
-        return new RestClientFactory();
+    public RestClientFactory restClientFactory(final CloseableHttpClient httpClient) {
+        return new RestClientFactory(httpClient);
     }
 
     public static class RestClientFactory {
 
-        public RestClient build(String baseUrl,
-                                Map<String, String> defaultHeaders,
-                                Duration connectTimeout,
-                                Duration readTimeout,
-                                boolean enableDebugLogging) {
+        private final CloseableHttpClient httpClient;
 
-            var cm = PoolingHttpClientConnectionManagerBuilder.create()
-                    .setMaxConnTotal(200)
-                    .setMaxConnPerRoute(50)
-                    .build();
+        public RestClientFactory(final CloseableHttpClient httpClient) {
+            this.httpClient = httpClient;
+        }
 
-            RequestConfig requestConfig = RequestConfig.custom()
-                    .setConnectTimeout(Timeout.of(connectTimeout))
-                    .setResponseTimeout(Timeout.of(readTimeout))
-                    .build();
+        public RestClient build(final String baseUrl,
+                                final Map<String, String> defaultHeaders,
+                                final Duration connectTimeout,
+                                final Duration readTimeout,
+                                final boolean enableDebugLogging) {
 
-            CloseableHttpClient httpClient = HttpClients.custom()
-                    .setConnectionManager(cm)
-                    .setDefaultRequestConfig(requestConfig)
-                    .evictExpiredConnections()
-                    .evictIdleConnections(TimeValue.ofSeconds(30))
-                    .disableAutomaticRetries()
-                    .build();
+            final HttpComponentsClientHttpRequestFactory requestFactory =
+                    new HttpComponentsClientHttpRequestFactory(this.httpClient);
+            // Per-client timeouts
+            requestFactory.setConnectTimeout(connectTimeout);
+            requestFactory.setReadTimeout(readTimeout);
 
-            ClientHttpRequestFactory rf = new HttpComponentsClientHttpRequestFactory(httpClient);
+            final ClientHttpRequestFactory clientRequestFactory = requestFactory;
 
-            var builder = RestClient.builder()
+            final RestClient.Builder builder = RestClient.builder()
                     .baseUrl(baseUrl)
-                    .requestFactory(rf)
+                    .requestFactory(clientRequestFactory)
                     .requestInterceptor(new CorrelationIdInterceptor());
 
             if (enableDebugLogging) {
                 builder.requestInterceptor(new DebugLoggingInterceptor());
             }
 
-            if (defaultHeaders != null) {
+            if (defaultHeaders != null && !defaultHeaders.isEmpty()) {
                 defaultHeaders.forEach(builder::defaultHeader);
             }
             builder.defaultHeader("Accept-Encoding", "gzip");

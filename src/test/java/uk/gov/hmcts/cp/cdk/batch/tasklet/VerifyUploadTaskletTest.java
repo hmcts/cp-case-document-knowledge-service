@@ -85,12 +85,12 @@ class VerifyUploadTaskletTest {
         RepeatStatus status = tasklet.execute(contribution, chunkContext);
 
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
-        assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED)).isEqualTo(true);
+        assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED_KEY)).isEqualTo(true);
         assertThat(stepExecutionContext.get("documentStatus")).isEqualTo(StatusEnum.INGESTION_SUCCESS.getValue());
         assertThat(stepExecutionContext.get("documentStatusTimestamp"))
                 .isEqualTo(OffsetDateTime.parse("2024-01-15T10:30:00Z"));
         assertThat(stepExecutionContext.get("documentStatusReason")).isEqualTo("Document uploaded successfully");
-        assertThat(stepExecutionContext.getString(BatchKeys.CTX_DOCUMENT_STATUS_JSON)).isNotNull();
+        assertThat(stepExecutionContext.getString(BatchKeys.CTX_DOCUMENT_STATUS_JSON_KEY)).isNotNull();
         verify(contribution, times(1)).setExitStatus(ExitStatus.COMPLETED);
         verify(documentIngestionStatusApi, times(1)).documentStatus(documentName);
     }
@@ -113,7 +113,7 @@ class VerifyUploadTaskletTest {
         RepeatStatus status = tasklet.execute(contribution, chunkContext);
 
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
-        assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED)).isEqualTo(false);
+        assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED_KEY)).isEqualTo(false);
         verify(contribution, times(1)).setExitStatus(ExitStatus.NOOP);
         verify(documentIngestionStatusApi, times(1)).documentStatus(documentName);
     }
@@ -144,7 +144,7 @@ class VerifyUploadTaskletTest {
         RepeatStatus status = tasklet.execute(contribution, chunkContext);
 
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
-        assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED)).isEqualTo(false);
+        assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED_KEY)).isEqualTo(false);
         verify(contribution, times(1)).setExitStatus(ExitStatus.NOOP);
         verifyNoInteractions(documentIngestionStatusApi);
     }
@@ -167,7 +167,7 @@ class VerifyUploadTaskletTest {
         RepeatStatus status = tasklet.execute(contribution, chunkContext);
 
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
-        assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED)).isEqualTo(false);
+        assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED_KEY)).isEqualTo(false);
         assertThat(stepExecutionContext.getString("documentStatusError")).isEqualTo("Network error");
         verify(contribution, times(1)).setExitStatus(ExitStatus.FAILED);
     }
@@ -195,7 +195,7 @@ class VerifyUploadTaskletTest {
 
         tasklet.execute(contribution, chunkContext);
 
-        String jsonResponse = stepExecutionContext.getString(BatchKeys.CTX_DOCUMENT_STATUS_JSON);
+        String jsonResponse = stepExecutionContext.getString(BatchKeys.CTX_DOCUMENT_STATUS_JSON_KEY);
         assertThat(jsonResponse).isNotNull();
         assertThat(jsonResponse).contains("doc-123");
         assertThat(jsonResponse).contains(StatusEnum.METADATA_VALIDATED.getValue());
@@ -313,7 +313,7 @@ class VerifyUploadTaskletTest {
         RepeatStatus status = tasklet.execute(contribution, chunkContext);
 
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
-        assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED)).isEqualTo(true);
+        assertThat(stepExecutionContext.get(BatchKeys.CTX_UPLOAD_VERIFIED_KEY)).isEqualTo(true);
         assertThat(stepExecutionContext.get("documentStatus"))
                 .isEqualTo(statusEnum.getValue());
         verify(contribution, times(1)).setExitStatus(ExitStatus.COMPLETED);
