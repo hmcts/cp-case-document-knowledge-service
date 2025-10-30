@@ -44,7 +44,7 @@ class UploadAndPersistTaskletTest {
     @Mock private StepContribution stepContribution;
     @Mock private ChunkContext chunkContext;
     @Mock private StepExecution stepExecution;
-    @Mock private ExecutionContext stepExecutionContext; // kept (no stubbing)
+    @Mock private ExecutionContext stepExecutionContext;
     @Mock private ExecutionContext jobExecutionContext;
 
     private UploadAndPersistTasklet tasklet;
@@ -59,10 +59,11 @@ class UploadAndPersistTaskletTest {
 
         final JobExecution jobExecution = mock(JobExecution.class);
 
+        // Provide the StepExecution from the contribution
         when(stepContribution.getStepExecution()).thenReturn(stepExecution);
-        // removed unused stub that caused UnnecessaryStubbingException:
-        // when(stepExecution.getExecutionContext()).thenReturn(stepExecutionContext);
 
+        // Null-safe contexts expected by the tasklet (step first, then job)
+        when(stepExecution.getExecutionContext()).thenReturn(stepExecutionContext);
         when(stepExecution.getJobExecution()).thenReturn(jobExecution);
         when(jobExecution.getExecutionContext()).thenReturn(jobExecutionContext);
     }
@@ -70,6 +71,7 @@ class UploadAndPersistTaskletTest {
     @Test
     @DisplayName("Should return FINISHED when material-to-case mapping is null")
     void execute_WhenMaterialToCaseMapIsNull_ReturnsFinished() throws Exception {
+        when(stepExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY)).thenReturn(null);
         when(jobExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY)).thenReturn(null);
 
         final RepeatStatus result = tasklet.execute(stepContribution, chunkContext);
@@ -77,47 +79,50 @@ class UploadAndPersistTaskletTest {
         assertThat(result).isEqualTo(RepeatStatus.FINISHED);
         verify(progressionClient, never()).getMaterialDownloadUrl(any());
         verify(storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
-        verify(caseDocumentRepository, never()).save(any());
+        verify(caseDocumentRepository, never()).saveAndFlush(any());
     }
 
     @Test
     @DisplayName("Should return FINISHED when material-to-case mapping is empty")
     void execute_WhenMaterialToCaseMapIsEmpty_ReturnsFinished() throws Exception {
-        when(jobExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
+        when(stepExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
                 .thenReturn(Collections.emptyMap());
+        when(jobExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY)).thenReturn(null);
 
         final RepeatStatus result = tasklet.execute(stepContribution, chunkContext);
 
         assertThat(result).isEqualTo(RepeatStatus.FINISHED);
         verify(progressionClient, never()).getMaterialDownloadUrl(any());
         verify(storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
-        verify(caseDocumentRepository, never()).save(any());
+        verify(caseDocumentRepository, never()).saveAndFlush(any());
     }
 
     @Test
-    @DisplayName("Should skip material when no caseId mapping found")
+    @DisplayName("Should skip material when no caseId mapping found (invalid UUID)")
     void execute_WhenNoCaseIdMappingFound_SkipsMaterial() throws Exception {
-        // No valid UUID key, will be skipped by tasklet (invalid UUID)
-        final Map<String, String> materialToCaseMap = Map.of("other-material", "case-1");
+        final Map<String, String> materialToCaseMap = Map.of("other-material", "case-1"); // invalid UUID key
 
-        when(jobExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
+        when(stepExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
                 .thenReturn(materialToCaseMap);
+        when(jobExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY)).thenReturn(null);
 
         final RepeatStatus result = tasklet.execute(stepContribution, chunkContext);
 
         assertThat(result).isEqualTo(RepeatStatus.FINISHED);
         verify(progressionClient, never()).getMaterialDownloadUrl(any());
         verify(storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
-        verify(caseDocumentRepository, never()).save(any());
+        verify(caseDocumentRepository, never()).saveAndFlush(any());
     }
 
     @Test
     @DisplayName("Should skip material when download URL is empty")
     void execute_WhenDownloadUrlIsEmpty_SkipsMaterial() throws Exception {
         final UUID materialId = UUID.randomUUID();
-        final String caseId = "case-1";
+        final String caseId = UUID.randomUUID().toString();
         final Map<String, String> materialToCaseMap = Map.of(materialId.toString(), caseId);
 
+        when(stepExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
+                .thenReturn(null); // force fallback to job context
         when(jobExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
                 .thenReturn(materialToCaseMap);
         when(progressionClient.getMaterialDownloadUrl(materialId)).thenReturn(Optional.empty());
@@ -127,7 +132,7 @@ class UploadAndPersistTaskletTest {
         assertThat(result).isEqualTo(RepeatStatus.FINISHED);
         verify(progressionClient).getMaterialDownloadUrl(materialId);
         verify(storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
-        verify(caseDocumentRepository, never()).save(any());
+        verify(caseDocumentRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -141,8 +146,8 @@ class UploadAndPersistTaskletTest {
 
         final Map<String, String> materialToCaseMap = Map.of(materialId.toString(), caseId);
 
-        when(jobExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
-                .thenReturn(materialToCaseMap);
+        when(stepExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY)).thenReturn(materialToCaseMap);
+        when(jobExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY)).thenReturn(null);
         when(progressionClient.getMaterialDownloadUrl(materialId)).thenReturn(Optional.of(downloadUrl));
         when(storageService.copyFromUrl(anyString(), anyString(), anyString(), anyMap())).thenReturn(blobUrl);
         when(storageService.getBlobSize(anyString())).thenReturn(blobSize);
@@ -158,7 +163,8 @@ class UploadAndPersistTaskletTest {
 
         verify(storageService).copyFromUrl(eq(downloadUrl), destBlobPathCaptor.capture(),
                 eq("application/pdf"), metadataCaptor.capture());
-        verify(storageService).getBlobSize(destBlobPathCaptor.getValue());
+        // size is looked up using the returned blobUrl
+        verify(storageService).getBlobSize(blobUrl);
 
         final String blobPath = destBlobPathCaptor.getValue();
         assertThat(blobPath).contains("cases/");
@@ -170,13 +176,13 @@ class UploadAndPersistTaskletTest {
 
         @SuppressWarnings("unchecked")
         final Map<String, Object> metadataMap =
-                objectMapper.readValue(metadata.get("metadata"), Map.class);
+                new ObjectMapper().readValue(metadata.get("metadata"), Map.class);
         assertThat(metadataMap).containsEntry("case_id", caseId);
         assertThat(metadataMap).containsEntry("material_id", materialId.toString());
         assertThat(metadataMap).containsKey("uploaded_at");
 
         final ArgumentCaptor<CaseDocument> documentCaptor = ArgumentCaptor.forClass(CaseDocument.class);
-        verify(caseDocumentRepository).save(documentCaptor.capture());
+        verify(caseDocumentRepository).saveAndFlush(documentCaptor.capture());
 
         final CaseDocument savedDocument = documentCaptor.getValue();
         assertThat(savedDocument.getCaseId().toString()).isEqualTo(caseId);
@@ -193,9 +199,9 @@ class UploadAndPersistTaskletTest {
     @DisplayName("Should throw RuntimeException when metadata creation fails")
     void execute_WhenMetadataCreationFails_ThrowsRuntimeException() throws Exception {
         final UUID materialId = UUID.randomUUID();
-        final Map<String, String> materialToCaseMap = Map.of(materialId.toString(), "case-1");
+        final Map<String, String> materialToCaseMap = Map.of(materialId.toString(), UUID.randomUUID().toString());
 
-        when(jobExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
+        when(stepExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
                 .thenReturn(materialToCaseMap);
         when(progressionClient.getMaterialDownloadUrl(materialId)).thenReturn(Optional.of("url"));
 
@@ -212,14 +218,14 @@ class UploadAndPersistTaskletTest {
     }
 
     @Test
-    @DisplayName("Should throw exception when storage service fails")
+    @DisplayName("Should propagate exception when storage service fails")
     void execute_WhenStorageServiceThrowsException_ThrowsException() throws Exception {
         final UUID materialId = UUID.randomUUID();
         final String caseId = UUID.randomUUID().toString();
         final String downloadUrl = "https://example.com/document.pdf";
         final Map<String, String> materialToCaseMap = Map.of(materialId.toString(), caseId);
 
-        when(jobExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
+        when(stepExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
                 .thenReturn(materialToCaseMap);
         when(progressionClient.getMaterialDownloadUrl(materialId)).thenReturn(Optional.of(downloadUrl));
         when(storageService.copyFromUrl(eq(downloadUrl), anyString(), anyString(), anyMap()))

@@ -7,7 +7,5 @@ import java.util.List;
 
 @SuppressWarnings("PMD.ImplicitFunctionalInterface")
 public interface HearingClient {
-    List<HearingSummariesInfo> getHearingsAndCases(String defendantSurname,
-                                                   String urn,
-                                                   LocalDate hearingDate);
+    List<HearingSummariesInfo> getHearingsAndCases(String courtId, String roomId, LocalDate date);
 }

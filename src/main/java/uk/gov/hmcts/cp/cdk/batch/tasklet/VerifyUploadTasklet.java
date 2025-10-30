@@ -3,10 +3,9 @@ package uk.gov.hmcts.cp.cdk.batch.tasklet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.ExitStatus;
+import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.StepContribution;
-import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +27,8 @@ public class VerifyUploadTasklet implements Tasklet {
 
     private static final String CTX_UPLOAD_VERIFIED = BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
     private static final String CTX_DOCUMENT_STATUS_JSON = BatchKeys.CTX_DOCUMENT_STATUS_JSON_KEY;
+    private static final String CTX_CASE_ID = BatchKeys.CTX_CASE_ID_KEY;
+    private static final String CTX_DOC_ID = BatchKeys.CTX_DOC_ID_KEY;
 
     private final DocumentIngestionStatusApi documentIngestionStatusApi;
     private final CaseDocumentRepository caseDocumentRepository;
@@ -42,115 +43,121 @@ public class VerifyUploadTasklet implements Tasklet {
     @Override
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final ExecutionContext stepCtx = contribution.getStepExecution().getExecutionContext();
-        final String caseIdStr = stepCtx.getString(BatchKeys.CTX_CASE_ID_KEY, null);
 
-        ExitStatus exitStatus = null;
+        final Boolean already = (Boolean) stepCtx.get(CTX_UPLOAD_VERIFIED);
+        if (Boolean.TRUE.equals(already)) {
+            if (!stepCtx.containsKey(CTX_DOCUMENT_STATUS_JSON)) {
+                stepCtx.putString(CTX_DOCUMENT_STATUS_JSON, "{}");
+            }
+            log.info("VerifyUploadTasklet: already verified for this partition; skipping poll.");
+            return RepeatStatus.FINISHED; // keeps step COMPLETED
+        }
 
-        if (caseIdStr == null) {
-            log.warn("VerifyUpload skipped: no caseId in step context.");
-        } else {
-            final UUID caseId = UUID.fromString(caseIdStr);
+        final String caseIdStr = stepCtx.getString(CTX_CASE_ID, null);
+        final String docIdFromCtx = stepCtx.getString(CTX_DOC_ID, null);
 
-            final String documentName = caseDocumentRepository
-                    .findFirstByCaseIdOrderByUploadedAtDesc(caseId)
-                    .map(doc -> {
-                        log.debug("Found document for case {}: {}", caseId, doc.getDocName());
-                        return doc.getDocName();
-                    })
-                    .orElse(null);
-
-            if (documentName == null) {
-                log.warn("No document found for case {}, cannot verify upload status", caseId);
-                stepCtx.put(CTX_UPLOAD_VERIFIED, false);
-                exitStatus = ExitStatus.NOOP;
-            } else {
-                long start = System.currentTimeMillis();
-                boolean success = false;
-                String lastReason = null;
-                OffsetDateTime lastUpdated = null;
-                String lastStatus = null;
-                String lastDocId = null;
-                String lastDocName = null;
-
-                while (System.currentTimeMillis() - start <= maxWaitMs) {
-                    try {
-                        log.debug("Polling document status via APIM for document: {}", documentName);
-                        final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> resp =
-                                documentIngestionStatusApi.documentStatus(documentName);
-
-                        if (resp == null) {
-                            log.warn("Null response from APIM for document: {}", documentName);
-                        } else if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
-                            final DocumentIngestionStatusReturnedSuccessfully body = resp.getBody();
-
-                            final DocumentIngestionStatusReturnedSuccessfully.StatusEnum statusEnum = body.getStatus();
-                            final String status = (statusEnum != null) ? statusEnum.getValue() : null;
-                            final String reason = body.getReason();
-                            final String docId = body.getDocumentId();
-                            final String docNm = body.getDocumentName();
-                            final OffsetDateTime lu = body.getLastUpdated();
-
-                            lastStatus = status;
-                            lastReason = reason;
-                            lastUpdated = lu;
-                            lastDocId = docId;
-                            lastDocName = docNm;
-
-                            if ("INGESTION_SUCCESS".equalsIgnoreCase(status)) {
-                                log.info("Document ingestion successful for {}, proceeding.", documentName);
-                                // Persist JSON for downstream steps
-                                try {
-                                    final String responseJson = objectMapper.writeValueAsString(body);
-                                    stepCtx.put(CTX_DOCUMENT_STATUS_JSON, responseJson);
-                                } catch (Exception e) {
-                                    log.warn("Failed to serialize document status response: {}", e.getMessage());
-                                }
-                                stepCtx.put(CTX_UPLOAD_VERIFIED, true);
-                                success = true;
-                                break;
-                            } else if ("INGESTION_FAILED".equalsIgnoreCase(status)) {
-                                log.error("Ingestion FAILED for {} with reason {}", documentName, reason);
-                                break;
-                            } // else keep polling (e.g., PENDING, IN_PROGRESS)
-                        } else if (resp.getStatusCode() == HttpStatus.NOT_FOUND) {
-                            log.warn("Document {} not found (404); retrying until timeout.", documentName);
-                        } else {
-                            log.error("Unexpected response from APIM for {}: {}", documentName, resp.getStatusCode());
-                            break;
-                        }
-                    } catch (Exception e) {
-                        log.warn("Error polling document status for {}: {}", documentName, e.getMessage());
-                        // continue until timeout
-                    }
-
-                    try {
-                        Thread.sleep(pollIntervalMs);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                }
-
-                if (success) {
-                    // Optionally expose some fields for debugging/traceability
-                    stepCtx.put("documentStatus", lastStatus);
-                    if (lastReason != null && !lastReason.isBlank()) {
-                        stepCtx.put("documentStatusReason", lastReason);
-                    }
-                    stepCtx.put("documentStatusTimestamp", lastUpdated);
-                    exitStatus = ExitStatus.COMPLETED;
-                } else {
-                    stepCtx.put(CTX_UPLOAD_VERIFIED, false);
-                    if (lastStatus != null) {
-                        stepCtx.put("documentStatus", lastStatus);
-                    }
-                    exitStatus = ExitStatus.NOOP; // not fatal; upstream RetryTemplate can re-drive if desired
-                }
+        String documentName = null;
+        if (caseIdStr != null) {
+            try {
+                final UUID caseId = UUID.fromString(caseIdStr);
+                documentName = caseDocumentRepository
+                        .findFirstByCaseIdOrderByUploadedAtDesc(caseId)
+                        .map(doc -> {
+                            log.debug("Found document via repo for case {}: {}", caseId, doc.getDocName());
+                            return doc.getDocName();
+                        })
+                        .orElse(null);
+            } catch (Exception e) {
+                log.warn("Repo lookup failed for caseId={} : {}", caseIdStr, e.getMessage());
             }
         }
 
-        if (exitStatus != null) {
-            contribution.setExitStatus(exitStatus);
+        final String identifierToPoll = documentName != null ? documentName : docIdFromCtx;
+
+        if (identifierToPoll == null) {
+            log.warn("VerifyUpload skipped: neither repo documentName nor context docId available (caseId={})", caseIdStr);
+            stepCtx.put(CTX_UPLOAD_VERIFIED, false);
+            stepCtx.putString(CTX_DOCUMENT_STATUS_JSON, "{}");
+            return RepeatStatus.FINISHED;
+        }
+
+        long start = System.currentTimeMillis();
+        boolean success = false;
+        String lastStatus = null;
+        String lastReason = null;
+        OffsetDateTime lastUpdated = null;
+
+        while (System.currentTimeMillis() - start <= maxWaitMs) {
+            try {
+                log.debug("Polling ingestion status for identifier={} (caseId={})", identifierToPoll, caseIdStr);
+                final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> resp =
+                        documentIngestionStatusApi.documentStatus(identifierToPoll);
+
+                if (resp == null) {
+                    log.warn("Null response while polling identifier={}", identifierToPoll);
+                } else if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
+                    final var body = resp.getBody();
+                    final var statusEnum = body.getStatus();
+                    final String status = statusEnum != null ? statusEnum.getValue() : null;
+
+                    lastStatus  = status;
+                    lastReason  = body.getReason();
+                    lastUpdated = body.getLastUpdated();
+
+                    if ("INGESTION_SUCCESS".equalsIgnoreCase(status)) {
+                        try {
+                            stepCtx.put(CTX_DOCUMENT_STATUS_JSON, objectMapper.writeValueAsString(body));
+                        } catch (Exception e) {
+                            log.warn("Failed to serialize status JSON: {}", e.getMessage());
+                            stepCtx.putString(CTX_DOCUMENT_STATUS_JSON, "{}");
+                        }
+                        stepCtx.put(CTX_UPLOAD_VERIFIED, true);
+                        log.info("Document ingestion successful for identifier={} (caseId={})", identifierToPoll, caseIdStr);
+                        success = true;
+                        break;
+                    } else if ("INGESTION_FAILED".equalsIgnoreCase(status)) {
+                        log.error("Document ingestion FAILED for identifier={} reason={}", identifierToPoll, lastReason);
+                        try {
+                            stepCtx.put(CTX_DOCUMENT_STATUS_JSON, objectMapper.writeValueAsString(body));
+                        } catch (Exception e) {
+                            stepCtx.putString(CTX_DOCUMENT_STATUS_JSON, "{}");
+                        }
+                        break;
+                    }
+                } else if (resp.getStatusCode() == HttpStatus.NOT_FOUND) {
+                    log.debug("identifier={} not found yet (404); will retry until timeout.", identifierToPoll);
+                } else {
+                    log.warn("Unexpected HTTP {} while polling identifier={}", resp.getStatusCode(), identifierToPoll);
+                    break; // don’t fail the worker
+                }
+            } catch (Exception e) {
+                log.warn("Error polling identifier={} : {}", identifierToPoll, e.getMessage());
+            }
+
+            try {
+                Thread.sleep(pollIntervalMs);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+
+        if (!success) {
+            stepCtx.put(CTX_UPLOAD_VERIFIED, false);
+            if (!stepCtx.containsKey(CTX_DOCUMENT_STATUS_JSON)) {
+                stepCtx.putString(CTX_DOCUMENT_STATUS_JSON, "{}");
+            }
+            if (lastStatus != null) {
+                stepCtx.put("documentStatus", lastStatus);
+            }
+            if (lastReason != null && !lastReason.isBlank()) {
+                stepCtx.put("documentStatusReason", lastReason);
+            }
+            if (lastUpdated != null) {
+                stepCtx.put("documentStatusTimestamp", lastUpdated);
+            }
+            log.info("VerifyUploadTasklet finished without success for identifier={} (caseId={}). verified=false; continuing.",
+                    identifierToPoll, caseIdStr);
         }
         return RepeatStatus.FINISHED;
     }

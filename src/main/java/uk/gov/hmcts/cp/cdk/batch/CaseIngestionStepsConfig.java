@@ -8,8 +8,8 @@ import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.retry.support.RetryTemplate;
-import org.springframework.transaction.PlatformTransactionManager;
 import uk.gov.hmcts.cp.cdk.batch.support.RetryingTasklet;
 import uk.gov.hmcts.cp.cdk.batch.tasklet.*;
 
@@ -17,7 +17,7 @@ import uk.gov.hmcts.cp.cdk.batch.tasklet.*;
 @RequiredArgsConstructor
 public class CaseIngestionStepsConfig {
 
-    private final PlatformTransactionManager txManager;
+    private final JpaTransactionManager txManager;
     private final RetryTemplate retryTemplate;
 
     private Step step(final String name, final JobRepository repo, final Tasklet t) {

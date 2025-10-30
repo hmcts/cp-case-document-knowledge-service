@@ -3,9 +3,12 @@ package uk.gov.hmcts.cp.cdk.batch.tasklet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -16,6 +19,7 @@ import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,11 +31,14 @@ import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 @RequiredArgsConstructor
 @Slf4j
 public class UploadAndPersistTasklet implements Tasklet {
+
     private final ObjectMapper objectMapper;
     private final ProgressionClient progressionClient;
     private final StorageService storageService;
+
     @SuppressWarnings("unused")
     private final PlatformTransactionManager transactionManager;
+
     private final CaseDocumentRepository caseDocumentRepository;
 
     private static CaseDocument buildDoc(final UUID docId,
@@ -73,66 +80,97 @@ public class UploadAndPersistTasklet implements Tasklet {
         }
     }
 
-    @Override
-    public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
-        @SuppressWarnings("unchecked") final Map<String, String> materialToCaseMap =
-                (Map<String, String>) contribution.getStepExecution()
-                        .getJobExecution()
-                        .getExecutionContext()
-                        .get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY);
-
-        if (materialToCaseMap == null || materialToCaseMap.isEmpty()) {
-            log.info("No material-to-case mapping found; skipping upload.");
-        } else {
-            for (final Map.Entry<String, String> entry : materialToCaseMap.entrySet()) {
-                final String materialIdStr = entry.getKey();
-                final String caseIdStr = entry.getValue();
-
-                if (materialIdStr == null || caseIdStr == null) {
-                    continue;
-                }
-
-                final UUID materialID;
-                try {
-                    materialID = UUID.fromString(materialIdStr);
-                } catch (final IllegalArgumentException e) {
-                    log.warn("Invalid materialId '{}'; skipping.", materialIdStr);
-                    continue;
-                }
-
-                final Optional<String> downloadUrl = progressionClient.getMaterialDownloadUrl(materialID);
-                if (downloadUrl.isEmpty()) {
-                    log.warn("No download URL for materialId {}; skipping.", materialID);
-                    continue;
-                }
-
-                final UUID documentId = UUID.randomUUID();
-                final String uploadDate = utcNow().format(ofPattern("yyyyMMdd"));
-                final String blobName = String.format("%s_%s.pdf", materialID, uploadDate);
-                final String destBlobPath = String.format("cases/%s/%s", uploadDate, blobName);
-                final String contentType = "application/pdf";
-
-                final Map<String, String> metadata =
-                        createBlobMetadata(documentId, materialID, caseIdStr, uploadDate);
-
-                final String blobUrl =
-                        storageService.copyFromUrl(downloadUrl.get(), destBlobPath, contentType, metadata);
-
-                final long sizeBytes = storageService.getBlobSize(destBlobPath);
-
-                final CaseDocument caseDocument = buildDoc(
-                        documentId,
-                        UUID.fromString(caseIdStr),
-                        blobName,
-                        blobUrl,
-                        contentType,
-                        sizeBytes
-                );
-
-                caseDocumentRepository.save(caseDocument);
-            }
+    @SuppressWarnings("unchecked")
+    private Map<String, String> resolveMaterialToCaseMap(final StepExecution stepExecution) {
+        if (stepExecution == null) {
+            log.info("No StepExecution available; nothing to do.");
+            return Collections.emptyMap();
         }
 
-        return RepeatStatus.FINISHED; // single exit point
+        final ExecutionContext stepCtx =
+                Optional.ofNullable(stepExecution.getExecutionContext()).orElseGet(ExecutionContext::new);
+
+        final JobExecution jobExec = stepExecution.getJobExecution();
+        final ExecutionContext jobCtx =
+                Optional.ofNullable(jobExec).map(JobExecution::getExecutionContext).orElseGet(ExecutionContext::new);
+
+        final Object val = Optional.ofNullable(stepCtx.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
+                .orElse(jobCtx.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY));
+
+        if (val == null) {
+            log.info(
+                    "No material-to-case mapping found; step size={}, job size={}, stepHasKey={}, jobHasKey={}",
+                    stepCtx.size(),
+                    jobCtx.size(),
+                    stepCtx.containsKey(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY),
+                    jobCtx.containsKey(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY)
+            );
+            return Collections.emptyMap();
+        }
+        if (!(val instanceof Map)) {
+            log.warn("Material-to-case mapping present but not a Map: type={}", val.getClass());
+            return Collections.emptyMap();
+        }
+        return (Map<String, String>) val;
+    }
+
+    @Override
+    public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
+        final StepExecution stepExecution = contribution != null ? contribution.getStepExecution() : null;
+        final Map<String, String> materialToCaseMap = resolveMaterialToCaseMap(stepExecution);
+
+        if (materialToCaseMap.isEmpty()) {
+            return RepeatStatus.FINISHED;
+        }
+
+        for (final Map.Entry<String, String> entry : materialToCaseMap.entrySet()) {
+            final String materialIdStr = entry.getKey();
+            final String caseIdStr     = entry.getValue();
+
+            if (materialIdStr == null || caseIdStr == null) {
+                log.warn("Null key/value in materialToCaseMap: key={}, value={}", materialIdStr, caseIdStr);
+                continue;
+            }
+
+            final UUID materialId;
+            final UUID caseId;
+            try {
+                materialId = UUID.fromString(materialIdStr);
+                caseId     = UUID.fromString(caseIdStr);
+            } catch (final IllegalArgumentException e) {
+                log.warn("Invalid UUID(s). materialId='{}', caseId='{}' — skipping", materialIdStr, caseIdStr);
+                continue;
+            }
+
+            final Optional<String> downloadUrl = progressionClient.getMaterialDownloadUrl(materialId);
+            if (downloadUrl.isEmpty()) {
+                log.warn("No download URL for materialId={}; skipping.", materialId);
+                continue;
+            }
+
+            final UUID documentId = UUID.randomUUID();
+            final String uploadDate = utcNow().format(ofPattern("yyyyMMdd"));
+            final String blobName = materialId + "_" + uploadDate + ".pdf";
+            final String destBlobPath = "cases/" + uploadDate + "/" + blobName;
+            final String contentType = "application/pdf";
+
+            final Map<String, String> metadata =
+                    createBlobMetadata(documentId, materialId, caseId.toString(), uploadDate);
+
+            final String blobUrl = storageService.copyFromUrl(
+                    downloadUrl.get(), destBlobPath, contentType, metadata
+            );
+
+            // Use the returned URL/identifier for size lookup (works with most StorageService impls)
+            final long sizeBytes = storageService.getBlobSize(blobUrl);
+
+            final CaseDocument caseDocument = buildDoc(
+                    documentId, caseId, blobName, blobUrl, contentType, sizeBytes
+            );
+
+            caseDocumentRepository.saveAndFlush(caseDocument);
+            log.info("Saved CaseDocument: docId={}, caseId={}, sizeBytes={}", documentId, caseId, sizeBytes);
+        }
+        return RepeatStatus.FINISHED;
     }
 }
