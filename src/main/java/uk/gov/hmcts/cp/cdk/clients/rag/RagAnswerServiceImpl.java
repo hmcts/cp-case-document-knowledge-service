@@ -3,6 +3,7 @@ package uk.gov.hmcts.cp.cdk.clients.rag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -27,6 +28,7 @@ import java.util.Optional;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
+@Primary
 public class RagAnswerServiceImpl implements DocumentInformationSummarisedApi {
 
     private final RestClient ragRestClient;
