@@ -47,6 +47,7 @@ class QueriesControllerTest {
         resp.setAsOf(OffsetDateTime.parse("2025-05-01T12:00:00Z"));
         final Scope scope = new Scope();
         scope.setCaseId(caseId);
+        scope.setIsIdpcAvailable(true);
         resp.setScope(scope);
         resp.setQueries(List.of(qs));
 
@@ -55,6 +56,7 @@ class QueriesControllerTest {
         mvc.perform(get("/queries").param("caseId", caseId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.scope.caseId").value(caseId.toString()))
+                .andExpect(jsonPath("$.scope.isIdpcAvailable").value(true))
                 .andExpect(jsonPath("$.queries[0].label").value("Case Summary"))
                 .andExpect(jsonPath("$.queries[0].status").value("ANSWER_NOT_AVAILABLE"));
     }
