@@ -11,21 +11,11 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class QueryResolver {
-    private final QuestionsProperties questionsProperties;
+
     private final QueryRepository queryRepository;
 
     public List<Query> resolve() {
-        final List<Query> result = new ArrayList<>();
-        final List<String> labels = questionsProperties.labels();
 
-        if (labels != null && !labels.isEmpty()) {
-            for (final String label : labels) {
-                queryRepository.findByLabelIgnoreCase(label).ifPresent(result::add);
-            }
-        } else {
-            result.addAll(queryRepository.findAll());
-        }
-
-        return result;
+        return queryRepository.findAll();
     }
 }

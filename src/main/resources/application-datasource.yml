@@ -17,7 +17,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     properties:
       hibernate.jdbc.time_zone: UTC
       hibernate.connection.provider_disables_autocommit: true

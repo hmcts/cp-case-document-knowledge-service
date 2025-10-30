@@ -84,7 +84,7 @@ dependencies {
 
     //Auth and Audit
     implementation "uk.gov.hmcts.cp:cp-springboot-auth-rules-filter:1.0.1"
-    //implementation "uk.gov.hmcts.cp:cp-springboot-audit-filter:1.0.0"
+    implementation "uk.gov.hmcts.cp:cp-springboot-audit-filter:1.0.1"
 
     // Web / validation/ Batch
     implementation 'org.springframework.boot:spring-boot-starter-web'

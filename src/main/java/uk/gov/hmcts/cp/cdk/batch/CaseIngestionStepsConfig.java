@@ -1,5 +1,6 @@
 package uk.gov.hmcts.cp.cdk.batch;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
@@ -65,4 +66,11 @@ public class CaseIngestionStepsConfig {
                                             final GenerateAnswersTasklet generateAnswersTasklet) {
         return step("step6_generate_answers_perCase", repo, generateAnswersTasklet);
     }
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper()
+                .findAndRegisterModules();
+    }
+
 }
