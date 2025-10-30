@@ -12,7 +12,9 @@ import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import uk.gov.hmcts.cp.cdk.batch.storage.AzureBlobStorageService;
 import uk.gov.hmcts.cp.cdk.batch.storage.StorageProperties;
+import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
 
 @Configuration
 @EnableConfigurationProperties({StorageProperties.class, IngestionProperties.class})
@@ -56,5 +58,10 @@ public class BatchConfig {
         m.registerModule(new JavaTimeModule());
         m.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         return m;
+    }
+
+    @Bean
+    public StorageService storageService(StorageProperties storageProperties) {
+        return new AzureBlobStorageService(storageProperties);
     }
 }

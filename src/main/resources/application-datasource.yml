@@ -12,6 +12,7 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
       keepalive-time: 300000
+      auto-commit: false
       validation-timeout: 5000
 
   jpa:
