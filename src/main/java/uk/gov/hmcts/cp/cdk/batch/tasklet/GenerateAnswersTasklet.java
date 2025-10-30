@@ -64,7 +64,7 @@ public class GenerateAnswersTasklet implements Tasklet {
                     "WHERE case_id=:case_id AND query_id=:query_id AND doc_id=:doc_id";
 
 
-    private static MapSqlParameterSource params(UUID caseId, UUID queryId, UUID docId) {
+    private static MapSqlParameterSource params(final UUID caseId, final UUID queryId, final UUID docId) {
         return new MapSqlParameterSource()
                 .addValue("case_id", caseId)
                 .addValue("query_id", queryId)
@@ -77,6 +77,8 @@ public class GenerateAnswersTasklet implements Tasklet {
         );
     }
 
+
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     @Override
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final ExecutionContext stepCtx = contribution.getStepExecution().getExecutionContext();
@@ -84,7 +86,7 @@ public class GenerateAnswersTasklet implements Tasklet {
         final String docIdStr = stepCtx.getString(CTX_DOC_ID, null);
         if (caseIdStr == null || docIdStr == null) {
             log.debug("No caseId/docId in step context – nothing to do.");
-            return RepeatStatus.FINISHED;
+            return RepeatStatus.FINISHED; // NOPMD AvoidMultipleReturns
         }
 
         final UUID caseId = UUID.fromString(caseIdStr);
@@ -93,7 +95,7 @@ public class GenerateAnswersTasklet implements Tasklet {
         final List<Query> queries = queryResolver.resolve();
         if (queries.isEmpty()) {
             log.debug("No queries resolved – nothing to do.");
-            return RepeatStatus.FINISHED;
+            return RepeatStatus.FINISHED; // NOPMD AvoidMultipleReturns
         }
 
         final Map<UUID, QueryDefinitionLatest> defCache = new HashMap<>();
@@ -115,14 +117,14 @@ public class GenerateAnswersTasklet implements Tasklet {
                         .addValue("doc_id", docId);
 
                 final List<Integer> found = jdbc.query(SQL_FIND_VERSION, params, new SingleColumnRowMapper<>(Integer.class));
-                Integer v = found.isEmpty() ? null : found.get(0);
+                Integer value = found.isEmpty() ? null : found.get(0);
 
-                if (v == null) {
-                    v = jdbc.queryForObject(SQL_CREATE_OR_GET_VERSION, params, Integer.class);
+                if (value == null) {
+                    value = jdbc.queryForObject(SQL_CREATE_OR_GET_VERSION, params, Integer.class);
                 }
 
                 jdbc.update(SQL_MARK_IN_PROGRESS, params);
-                return v;
+                return value;
             });
 
             final QueryDefinitionLatest qdl = defCache.computeIfAbsent(
@@ -140,7 +142,7 @@ public class GenerateAnswersTasklet implements Tasklet {
                         .userQuery(userQuery)
                         .queryPrompt(queryPrompt)
                         .metadataFilters(filters);
-                var responseEntity =documentInformationSummarisedApi.answerUserQuery(answerUserQueryRequest);
+                final var responseEntity =documentInformationSummarisedApi.answerUserQuery(answerUserQueryRequest);
                 resp = (responseEntity != null) ? responseEntity.getBody() : null;
             } catch (Exception e) {
                 log.warn("RAG call failed for caseId={}, docId={}, queryId={}: {}", caseId, docId, queryId, e.getMessage(), e);
@@ -194,9 +196,9 @@ public class GenerateAnswersTasklet implements Tasklet {
     }
 
     @SuppressWarnings("unchecked")
-    private String buildLlmInputJson(UserQueryAnswerReturnedSuccessfully resp) throws Exception {
+    private String buildLlmInputJson(final UserQueryAnswerReturnedSuccessfully resp) throws Exception {
 
-        List<Object> chunks = Optional.ofNullable(resp.getChunkedEntries()).orElseGet(List::of);
+        final List<Object> chunks = Optional.ofNullable(resp.getChunkedEntries()).orElseGet(List::of);
         final Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("provenanceChunksSample", chunks);
 
