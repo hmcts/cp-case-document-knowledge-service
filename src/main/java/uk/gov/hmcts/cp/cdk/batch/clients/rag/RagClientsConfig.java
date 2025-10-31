@@ -15,13 +15,13 @@ import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
 public class RagClientsConfig {
 
     @Bean
-    public DocumentInformationSummarisedApi ragAnswerService(@Qualifier("ragRestClient") RestClient ragRestClient, RagClientProperties props) {
+    public DocumentInformationSummarisedApi ragAnswerService(final @Qualifier("ragRestClient") RestClient ragRestClient, final RagClientProperties props) {
         return new RagAnswerServiceImpl(ragRestClient, props);
     }
 
     @Bean
     public DocumentIngestionStatusApi documentIngestionStatusApi(
-            @Qualifier("ragRestClient") RestClient restClient, RagClientProperties props) {
+            final @Qualifier("ragRestClient") RestClient restClient, final RagClientProperties props) {
         return new ApimDocumentIngestionStatusClient(restClient, props);
     }
 }
