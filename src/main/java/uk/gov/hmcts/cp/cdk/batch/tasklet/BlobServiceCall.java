@@ -30,9 +30,9 @@ public class BlobServiceCall {
         final String connectionString = "";
 
         final StorageProperties storageProperties = new StorageProperties(connectionString, "documents", pollIntervalMs, timeoutSeconds);
-        final StorageService storageService = new AzureBlobStorageService(storageProperties);
+        //final StorageService storageService = new AzureBlobStorageService(storageProperties);
 
-        final String sasurl = generateSas();
+        // final String sasurl = generateSas();
 
         // call azure service and copy the file from one destination to another
         final UUID materialID = UUID.randomUUID();
@@ -43,7 +43,7 @@ public class BlobServiceCall {
         final String contentType = "application/pdf";
 
         final BlobServiceCall blobServiceCall = new BlobServiceCall();
-        final Map<String, String> metadata = blobServiceCall.createBlobMetadata(documentId, materialID, destBlobPath, contentType);
+        // final Map<String, String> metadata = blobServiceCall.createBlobMetadata(documentId, materialID, destBlobPath, contentType);
 
         // final String blobUrl = storageService.copyFromUrl(sasurl, destBlobPath, contentType, metadata);
         // final long sizeBytes = storageService.getBlobSize(destBlobPath);
@@ -77,12 +77,12 @@ public class BlobServiceCall {
 
 
         // SAS // source
-        String connectionString = "";
-        BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
+        final String connectionString = "";
+        final BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                 .connectionString(connectionString)
                 .buildClient();
 
-        BlobContainerClient containerClient = blobServiceClient.getBlobContainerClient("idpc-ai");
+        final BlobContainerClient containerClient = blobServiceClient.getBlobContainerClient("idpc-ai");
         final BlobClient blobClient = containerClient.getBlobClient("hello.pdf");
 
         // Generate SAS URL valid for 15 minutes
