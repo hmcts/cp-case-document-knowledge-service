@@ -49,8 +49,8 @@ public class IngestionStatusHttpLiveTest {
 
         try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass)) {
             try (PreparedStatement ps = c.prepareStatement("""
-                        INSERT INTO case_documents (doc_id, case_id, source, blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
-                        VALUES (?, ?, 'IDPC', 'blob://one', ?, 'INGESTING', ?)
+                        INSERT INTO case_documents (doc_id, case_id, source, doc_name,blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
+                        VALUES (?, ?, 'IDPC', 'doc1','blob://one', ?, 'INGESTING', ?)
                     """)) {
                 ps.setObject(1, randomUUID());
                 ps.setObject(2, caseId);
@@ -59,8 +59,8 @@ public class IngestionStatusHttpLiveTest {
                 ps.executeUpdate();
             }
             try (PreparedStatement ps = c.prepareStatement("""
-                        INSERT INTO case_documents (doc_id, case_id, source, blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
-                        VALUES (?, ?, 'IDPC', 'blob://two', ?, 'INGESTED', ?)
+                        INSERT INTO case_documents (doc_id, case_id, source, doc_name,blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
+                        VALUES (?, ?, 'IDPC','doc2' ,'blob://two', ?, 'INGESTED', ?)
                     """)) {
                 ps.setObject(1, randomUUID());
                 ps.setObject(2, caseId);

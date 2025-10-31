@@ -60,7 +60,7 @@ public class IngestionProcessHttpLiveTest {
 
             // Execute POST /ingestion-process
             ResponseEntity<String> response = http.exchange(
-                    baseUrl + "/ingestion-process",
+                    baseUrl + "/ingestions/start",
                     HttpMethod.POST,
                     entity,
                     String.class
