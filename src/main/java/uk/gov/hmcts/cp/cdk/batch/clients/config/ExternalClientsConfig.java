@@ -17,7 +17,7 @@ public class ExternalClientsConfig {
     private final RestClientFactory factory;
 
     @Bean
-    public RestClient ragRestClient(RagClientProperties props) {
+    public RestClient ragRestClient(final RagClientProperties props) {
         return factory.build(
                 props.getBaseUrl(),
                 props.getHeaders(),
@@ -28,7 +28,7 @@ public class ExternalClientsConfig {
     }
 
     @Bean
-    public RestClient cqrsRestClient(RestClientFactory factory, CQRSClientProperties props) {
+    public RestClient cqrsRestClient(final RestClientFactory factory, final CQRSClientProperties props) {
         return factory.build(
                 props.baseUrl(),
                 null,
