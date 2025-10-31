@@ -9,6 +9,15 @@ public final class BatchKeys {
     public static final String CTX_UPLOAD_VERIFIED_KEY = "uploadVerified";
     public static final String CTX_DOCUMENT_STATUS_JSON_KEY = "documentStatusResponseJson";
 
-    private BatchKeys() {
+    // Centralise JobParameter keys here (no breaking changes to existing constants)
+    public static final class Params {
+        private Params() {}
+        public static final String COURT_CENTRE_ID = "courtCentreId";
+        public static final String ROOM_ID         = "roomId";
+        public static final String DATE            = "date";
+        public static final String CPPUID          = "cppuid";
+        public static final String RUN_ID          = "run";
     }
+
+    private BatchKeys() {}
 }

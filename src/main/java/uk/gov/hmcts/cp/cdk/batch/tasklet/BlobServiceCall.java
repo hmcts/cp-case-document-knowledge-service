@@ -18,6 +18,7 @@ import java.util.UUID;
 import static java.time.format.DateTimeFormatter.ofPattern;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
+@Deprecated
 public class BlobServiceCall {
     ObjectMapper objectMapper = new ObjectMapper();
 
@@ -30,11 +31,9 @@ public class BlobServiceCall {
 
         StorageProperties storageProperties = new StorageProperties(connectionString, "documents", pollIntervalMs, timeoutSeconds);
         final StorageService storageService = new AzureBlobStorageService(storageProperties);
-        //
 
         String sasurl = generateSas();
 
-//
         System.out.println("sasurl "+sasurl);
 
         // call azure service and copy the file from one destination to another

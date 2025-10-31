@@ -3,7 +3,6 @@ package uk.gov.hmcts.cp.cdk.services;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParameters;
-import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.core.job.parameters.JobParametersInvalidException;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.batch.core.launch.NoSuchJobException;
@@ -12,10 +11,11 @@ import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteExcep
 import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import uk.gov.hmcts.cp.cdk.batch.IngestionJobParams;
 import uk.gov.hmcts.cp.cdk.repo.IngestionStatusViewRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.*;
 
-import java.time.LocalDate;
+import java.time.Clock;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -63,17 +63,9 @@ public class IngestionService {
             NoSuchJobException {
 
         Objects.requireNonNull(request, "request must not be null");
-        final UUID courtCentreId = Objects.requireNonNull(request.getCourtCentreId(), "courtCentreId must not be null");
-        final UUID roomId = Objects.requireNonNull(request.getRoomId(), "roomId must not be null");
-        final LocalDate requestedDate = Objects.requireNonNull(request.getDate(), "date must not be null");
 
-        final JobParameters params = new JobParametersBuilder()
-                .addString("courtCentreId", courtCentreId.toString())
-                .addString("roomId", roomId.toString())
-                .addString("date", requestedDate.toString())
-                .addString("cppuid", cppuid)
-                .addLong("run", System.currentTimeMillis())
-                .toJobParameters();
+        final JobParameters params = IngestionJobParams.build(cppuid, request, Clock.systemUTC());
+
         final JobExecution execution = jobOperator.start(caseIngestionJob, params);
 
         final IngestionProcessResponse response = new IngestionProcessResponse();

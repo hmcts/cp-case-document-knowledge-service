@@ -1,16 +1,14 @@
 package uk.gov.hmcts.cp.cdk.http;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.UUID;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
+
+import java.util.List;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * End-to-end tests for ingestion process endpoint:
