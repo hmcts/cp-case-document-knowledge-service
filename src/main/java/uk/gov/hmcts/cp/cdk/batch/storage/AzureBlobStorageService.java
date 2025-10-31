@@ -1,7 +1,11 @@
 package uk.gov.hmcts.cp.cdk.batch.storage;
 
-import com.azure.storage.blob.*;
-import com.azure.storage.blob.models.*;
+import com.azure.storage.blob.BlobClient;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobContainerClientBuilder;
+import com.azure.storage.blob.models.BlobHttpHeaders;
+import com.azure.storage.blob.models.BlobProperties;
+import com.azure.storage.blob.models.CopyStatusType;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -71,7 +75,9 @@ public class AzureBlobStorageService implements StorageService {
                 final String desc = props.getCopyStatusDescription();
                 throw new IllegalStateException("Blob copy failed: " + (desc == null ? status : desc));
             }
-            try { Thread.sleep(pollIntervalMs); } catch (InterruptedException ie) {
+            try {
+                Thread.sleep(pollIntervalMs);
+            } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException("Interrupted while waiting for blob copy to complete", ie);
             }

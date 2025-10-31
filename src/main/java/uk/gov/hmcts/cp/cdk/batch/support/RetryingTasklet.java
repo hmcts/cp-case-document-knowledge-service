@@ -20,7 +20,7 @@ public class RetryingTasklet implements Tasklet {
 
     @Override
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) throws Exception {
-        return retryTemplate.execute((RetryCallback<RepeatStatus, Exception>) context ->
+        return retryTemplate.execute(context ->
                 delegate.execute(contribution, chunkContext)
         );
     }

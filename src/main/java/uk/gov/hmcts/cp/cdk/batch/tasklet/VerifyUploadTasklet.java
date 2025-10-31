@@ -3,9 +3,9 @@ package uk.gov.hmcts.cp.cdk.batch.tasklet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
@@ -100,8 +100,8 @@ public class VerifyUploadTasklet implements Tasklet {
                     final var statusEnum = body.getStatus();
                     final String status = statusEnum != null ? statusEnum.getValue() : null;
 
-                    lastStatus  = status;
-                    lastReason  = body.getReason();
+                    lastStatus = status;
+                    lastReason = body.getReason();
                     lastUpdated = body.getLastUpdated();
 
                     if ("INGESTION_SUCCESS".equalsIgnoreCase(status)) {

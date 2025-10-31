@@ -125,7 +125,7 @@ public class UploadAndPersistTasklet implements Tasklet {
 
         for (final Map.Entry<String, String> entry : materialToCaseMap.entrySet()) {
             final String materialIdStr = entry.getKey();
-            final String caseIdStr     = entry.getValue();
+            final String caseIdStr = entry.getValue();
 
             if (materialIdStr == null || caseIdStr == null) {
                 log.warn("Null key/value in materialToCaseMap: key={}, value={}", materialIdStr, caseIdStr);
@@ -136,7 +136,7 @@ public class UploadAndPersistTasklet implements Tasklet {
             final UUID caseId;
             try {
                 materialId = UUID.fromString(materialIdStr);
-                caseId     = UUID.fromString(caseIdStr);
+                caseId = UUID.fromString(caseIdStr);
             } catch (final IllegalArgumentException e) {
                 log.warn("Invalid UUID(s). materialId='{}', caseId='{}' — skipping", materialIdStr, caseIdStr);
                 continue;

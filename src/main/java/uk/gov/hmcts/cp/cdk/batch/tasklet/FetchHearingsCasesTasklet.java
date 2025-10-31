@@ -32,8 +32,8 @@ public class FetchHearingsCasesTasklet implements Tasklet {
         final Map<String, Object> jobParams = chunkContext.getStepContext().getJobParameters();
 
         final String courtCentreId = str(jobParams, "courtCentreId");
-        final String roomId       = str(jobParams, "roomId");
-        final String dateParam    = str(jobParams, "date");
+        final String roomId = str(jobParams, "roomId");
+        final String dateParam = str(jobParams, "date");
 
         if (isBlank(courtCentreId) || isBlank(roomId) || isBlank(dateParam)) {
             log.warn("Missing required job parameters (courtCentreId/roomId/date). " +
@@ -57,11 +57,13 @@ public class FetchHearingsCasesTasklet implements Tasklet {
         return RepeatStatus.FINISHED;
 
     }
+
     private static String str(Map<String, Object> params, String key) {
         if (params == null) return null;
         Object v = params.get(key);
         return (v instanceof String s) ? s : null;
     }
+
     private static boolean isBlank(String s) {
         return s == null || s.isBlank();
     }

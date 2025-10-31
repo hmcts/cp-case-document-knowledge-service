@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.repo.QueryRepository;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Component
