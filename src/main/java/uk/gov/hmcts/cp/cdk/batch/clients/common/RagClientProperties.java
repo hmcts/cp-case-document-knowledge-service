@@ -29,7 +29,7 @@ public class RagClientProperties {
         return baseUrl;
     }
 
-    public void setBaseUrl(String baseUrl) {
+    public void setBaseUrl(final String baseUrl) {
         this.baseUrl = baseUrl;
     }
 
@@ -37,7 +37,7 @@ public class RagClientProperties {
         return connectTimeoutMs;
     }
 
-    public void setConnectTimeoutMs(int connectTimeoutMs) {
+    public void setConnectTimeoutMs(final int connectTimeoutMs) {
         this.connectTimeoutMs = connectTimeoutMs;
     }
 
@@ -45,7 +45,7 @@ public class RagClientProperties {
         return readTimeoutMs;
     }
 
-    public void setReadTimeoutMs(int readTimeoutMs) {
+    public void setReadTimeoutMs(final int readTimeoutMs) {
         this.readTimeoutMs = readTimeoutMs;
     }
 
@@ -53,7 +53,7 @@ public class RagClientProperties {
         return headers;
     }
 
-    public void setHeaders(Map<String, String> headers) {
+    public void setHeaders(final Map<String, String> headers) {
         this.headers = headers;
     }
 
