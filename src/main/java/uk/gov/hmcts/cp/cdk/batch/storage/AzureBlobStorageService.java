@@ -27,7 +27,7 @@ public class AzureBlobStorageService implements StorageService {
     private final long pollIntervalMs;
     private final long timeoutSeconds;
 
-    @Autowired // <-- disambiguate when there are multiple ctors
+    @Autowired
     public AzureBlobStorageService(final StorageProperties storageProperties) {
         this.blobContainerClient = new BlobContainerClientBuilder()
                 .connectionString(requireNonNull(storageProperties.connectionString(), "storage connectionString is required"))
@@ -39,7 +39,6 @@ public class AzureBlobStorageService implements StorageService {
         this.timeoutSeconds = storageProperties.copyTimeoutSeconds() != null ? storageProperties.copyTimeoutSeconds() : 120L;
     }
 
-    // test-only helper; Spring will ignore it because the other ctor is @Autowired
     /* default */ AzureBlobStorageService(final BlobContainerClient blobContainerClient) {
         this.blobContainerClient = requireNonNull(blobContainerClient);
         this.pollIntervalMs = 1_000L;

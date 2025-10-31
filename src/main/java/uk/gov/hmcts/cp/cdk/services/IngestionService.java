@@ -55,8 +55,6 @@ public class IngestionService {
                 });
     }
 
-
-    //@Transactional
     public IngestionProcessResponse startIngestionProcess(final IngestionProcessRequest request)
             throws JobInstanceAlreadyCompleteException,
             JobExecutionAlreadyRunningException,

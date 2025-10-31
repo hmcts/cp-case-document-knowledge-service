@@ -59,7 +59,6 @@ public class RestClientFactoryConfig {
 
             final HttpComponentsClientHttpRequestFactory requestFactory =
                     new HttpComponentsClientHttpRequestFactory(this.httpClient);
-            // Per-client timeouts
             requestFactory.setConnectTimeout(connectTimeout);
             requestFactory.setReadTimeout(readTimeout);
 
