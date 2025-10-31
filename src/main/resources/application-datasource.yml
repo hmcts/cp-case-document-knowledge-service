@@ -4,6 +4,7 @@ spring:
     url: ${CP_CDK_DATASOURCE_URL}
     username: ${CP_CDK_DATASOURCE_USERNAME}
     password: ${CP_CDK_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
     hikari:
       pool-name: cp-hikari
       maximum-pool-size: ${CP_CDK_DB_POOL_SIZE:20}
@@ -18,7 +19,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate.jdbc.time_zone: UTC
       hibernate.connection.provider_disables_autocommit: true
@@ -28,5 +29,8 @@ spring:
 
   flyway:
     enabled: true
-    locations: classpath:db/migration
-    baseline-on-migrate: false
+    locations:
+      - classpath:db/migration/postgresql
+      - classpath:db/migration
+    baseline-on-migrate: true
+

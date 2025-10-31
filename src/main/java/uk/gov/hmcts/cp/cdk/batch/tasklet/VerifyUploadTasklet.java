@@ -50,7 +50,7 @@ public class VerifyUploadTasklet implements Tasklet {
                 stepCtx.putString(CTX_DOCUMENT_STATUS_JSON, "{}");
             }
             log.info("VerifyUploadTasklet: already verified for this partition; skipping poll.");
-            return RepeatStatus.FINISHED; // keeps step COMPLETED
+            return RepeatStatus.FINISHED;
         }
 
         final String caseIdStr = stepCtx.getString(CTX_CASE_ID, null);
@@ -128,7 +128,7 @@ public class VerifyUploadTasklet implements Tasklet {
                     log.debug("identifier={} not found yet (404); will retry until timeout.", identifierToPoll);
                 } else {
                     log.warn("Unexpected HTTP {} while polling identifier={}", resp.getStatusCode(), identifierToPoll);
-                    break; // don’t fail the worker
+                    break;
                 }
             } catch (Exception e) {
                 log.warn("Error polling identifier={} : {}", identifierToPoll, e.getMessage());

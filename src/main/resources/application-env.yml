@@ -1,7 +1,7 @@
 # application-env.yml — centralized environment / defaults (replace with secure values per environment)
 # Developer note: this file provides local defaults for development. Do NOT commit production secrets.
 
-CP_CDK_DATASOURCE_URL: jdbc:postgresql://db:5432/casedocumentknowledgeDatabase
+CP_CDK_DATASOURCE_URL: jdbc:postgresql://db:55432/casedocumentknowledgeDatabase
 CP_CDK_DATASOURCE_USERNAME: casedocumentknowledge
 CP_CDK_DATASOURCE_PASSWORD: casedocumentknowledge
 SERVER_PORT: 8082
@@ -29,7 +29,7 @@ OTEL_METRICS_ENABLED: false
 OTEL_TRACES_URL: http://localhost:4318/traces
 OTEL_METRICS_URL: http://localhost:4318/metrics
 
-CP_CDK_AZURE_STORAGE_CONNECTION_STRING: test
+CP_CDK_AZURE_STORAGE_CONNECTION_STRING: zzzz
 CP_CDK_AZURE_STORAGE_CONTAINER: documents
 
 CP_CDK_RAG_URL: https://spnl-apim-int-gw.cpp.nonlive/api-cp-ai-rag

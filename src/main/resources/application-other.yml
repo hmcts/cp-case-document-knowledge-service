@@ -29,4 +29,6 @@ spring.threads.virtual.enabled: ${VIRTUAL_THREADS:false}
 spring:
   batch:
     jdbc:
-      initialize-schema: always
+      initialize-schema: never
+    job:
+      enabled: false

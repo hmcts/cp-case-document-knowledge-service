@@ -1,14 +1,6 @@
 -- ============================================================================
--- Case Documents Knowledge – Initial Schema (PostgreSQL 14+)
--- - Case-scoped ingestion pipeline (Azure Blob → ingest → answers)
--- - Canonical queries + versioned query definitions (user text + normalized prompt)
--- - Stable query label for UI (in queries)
--- - Per-(case, query) lifecycle status (ANSWER_NOT_AVAILABLE/ANSWER_AVAILABLE)
--- - Versioned answers with created_at (RFC3339 in API), optional captured llm_input
--- - Optional document lineage per case (supports re-uploads)
+-- Case Documents Knowledge – Initial Schema (PostgreSQL 14+) — No extensions
 -- ============================================================================
-
-BEGIN;
 
 -- ----------------------------------------------------------------------------
 -- Enumerations (align with OpenAPI)
@@ -34,10 +26,8 @@ CREATE TABLE IF NOT EXISTS queries (
   CONSTRAINT queries_label_not_blank CHECK (length(btrim(label)) > 0)
 );
 COMMENT ON TABLE queries IS 'Canonical queries; stable UI label + created_at; definition text/prompt live in query_versions.';
--- Case-insensitive uniqueness for labels (stable names in UI)
 CREATE UNIQUE INDEX IF NOT EXISTS ux_queries_label_ci ON queries (lower(btrim(label)));
 
--- Each new definition of a query is an immutable version chosen by effective_at.
 CREATE TABLE IF NOT EXISTS query_versions (
   query_id     UUID        NOT NULL,
   effective_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -51,7 +41,6 @@ CREATE TABLE IF NOT EXISTS query_versions (
 COMMENT ON TABLE query_versions IS 'Versioned query definitions (user text + normalized prompt).';
 CREATE INDEX IF NOT EXISTS idx_qv_query_eff_desc ON query_versions (query_id, effective_at DESC);
 
--- Convenience view: latest definition per query (joins label for UI)
 CREATE OR REPLACE VIEW v_query_definitions_latest AS
 SELECT DISTINCT ON (q.query_id)
   q.query_id,
@@ -69,11 +58,8 @@ COMMENT ON VIEW v_query_definitions_latest IS
 -- ----------------------------------------------------------------------------
 -- Case Documents (optional lineage per upload; latest per case drives ingestion status)
 -- ----------------------------------------------------------------------------
--- If you need gen_random_uuid() for doc_id default, enable pgcrypto.
--- CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 CREATE TABLE IF NOT EXISTS case_documents (
-  doc_id             UUID        PRIMARY KEY, -- consider DEFAULT gen_random_uuid()
+  doc_id             UUID        PRIMARY KEY, -- supply from app, or add your own DB-side generator if desired
   case_id            UUID        NOT NULL,
   source             TEXT        NOT NULL DEFAULT 'IDPC',
   doc_name           TEXT        NOT NULL,
@@ -94,7 +80,6 @@ CREATE INDEX IF NOT EXISTS idx_cd_case_uploaded_desc ON case_documents (case_id,
 CREATE INDEX IF NOT EXISTS idx_cd_case_phase         ON case_documents (case_id, ingestion_phase);
 CREATE INDEX IF NOT EXISTS idx_cd_phase              ON case_documents (ingestion_phase);
 
--- Latest case-level ingestion snapshot view (used by /ingestions/status)
 CREATE OR REPLACE VIEW v_case_ingestion_status AS
 SELECT DISTINCT ON (case_id)
   case_id,
@@ -149,7 +134,6 @@ CREATE INDEX IF NOT EXISTS idx_ans_case_query_ver_desc  ON answers (case_id, que
 
 -- ----------------------------------------------------------------------------
 -- Helper: allocate next answer version safely per (case, query) using advisory locks
--- Usage: INSERT ... (version) VALUES (next_answer_version(:caseId, :queryId))
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION next_answer_version(p_case_id UUID, p_query_id UUID)
 RETURNS INTEGER
@@ -160,7 +144,6 @@ DECLARE
   k1 INT;
   k2 INT;
 BEGIN
-  -- Build a stable lock on (case_id, query_id)
   SELECT
     ('x' || substr(md5(p_case_id::text), 1, 8))::bit(32)::int,
     ('x' || substr(md5(p_query_id::text), 1, 8))::bit(32)::int
@@ -189,7 +172,6 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  -- Update existing status row
   UPDATE case_query_status
      SET status = 'ANSWER_AVAILABLE',
          status_at = COALESCE(NEW.created_at, NOW()),
@@ -199,7 +181,6 @@ BEGIN
    WHERE case_id = NEW.case_id
      AND query_id = NEW.query_id;
 
-  -- If no row was updated, insert a new status row
   IF NOT FOUND THEN
     INSERT INTO case_query_status (case_id, query_id, status, status_at, doc_id, last_answer_version, last_answer_at)
     VALUES (NEW.case_id, NEW.query_id, 'ANSWER_AVAILABLE', COALESCE(NEW.created_at, NOW()), NEW.doc_id, NEW.version, COALESCE(NEW.created_at, NOW()))
@@ -221,11 +202,49 @@ AFTER INSERT ON answers
 FOR EACH ROW
 EXECUTE FUNCTION trg_answers_after_insert();
 
+-- ----------------------------------------------------------------------------
+-- Utility: RFC 4122 UUID v4 generator (no extensions)
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION uuid_v4()
+RETURNS uuid
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  b BYTEA := decode(md5(random()::text || clock_timestamp()::text), 'hex'); -- 16 bytes
+BEGIN
+  -- set version (4) and variant (10xxxxxx)
+  b := set_byte(b, 6, (get_byte(b, 6) & 15)  | 64);   -- xxxx -> 4xxx
+  b := set_byte(b, 8, (get_byte(b, 8) & 63)  | 128);  -- xx -> 10xxxxxx
+
+  RETURN (
+    lpad(to_hex(get_byte(b,0)),2,'0') ||
+    lpad(to_hex(get_byte(b,1)),2,'0') ||
+    lpad(to_hex(get_byte(b,2)),2,'0') ||
+    lpad(to_hex(get_byte(b,3)),2,'0') || '-' ||
+    lpad(to_hex(get_byte(b,4)),2,'0') ||
+    lpad(to_hex(get_byte(b,5)),2,'0') || '-' ||
+    lpad(to_hex(get_byte(b,6)),2,'0') ||
+    lpad(to_hex(get_byte(b,7)),2,'0') || '-' ||
+    lpad(to_hex(get_byte(b,8)),2,'0') ||
+    lpad(to_hex(get_byte(b,9)),2,'0') || '-' ||
+    lpad(to_hex(get_byte(b,10)),2,'0') ||
+    lpad(to_hex(get_byte(b,11)),2,'0') ||
+    lpad(to_hex(get_byte(b,12)),2,'0') ||
+    lpad(to_hex(get_byte(b,13)),2,'0') ||
+    lpad(to_hex(get_byte(b,14)),2,'0') ||
+    lpad(to_hex(get_byte(b,15)),2,'0')
+  )::uuid;
+END
+$$;
+
+COMMENT ON FUNCTION uuid_v4() IS
+'Generates a random RFC 4122 version-4 UUID using built-in functions only (no extensions).';
+
 -- =======================
 -- Minimal workflow reservation (no answer duplication)
 -- =======================
 CREATE TABLE IF NOT EXISTS answer_reservations (
-  reservation_id UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  reservation_id UUID        PRIMARY KEY DEFAULT uuid_v4(), -- no extensions
   case_id        UUID        NOT NULL,
   query_id       UUID        NOT NULL,
   doc_id         UUID        NOT NULL,
@@ -250,12 +269,10 @@ DECLARE
   v_res INTEGER;
   k1 INT;
   k2 INT;
-  k3 INT;
 BEGIN
   SELECT ('x'||substr(md5(p_case_id::text),1,8))::bit(32)::int,
          ('x'||substr(md5(p_query_id::text),1,8))::bit(32)::int
     INTO k1, k2;
-  SELECT ('x'||substr(md5(p_doc_id::text),1,8))::bit(32)::int INTO k3;
 
   PERFORM pg_advisory_xact_lock(k1, k2);
 
@@ -297,5 +314,3 @@ FROM answers
 ORDER BY case_id, query_id, version DESC;
 
 COMMENT ON VIEW v_latest_answers IS 'Latest answer version per (case, query).';
-
-COMMIT;
