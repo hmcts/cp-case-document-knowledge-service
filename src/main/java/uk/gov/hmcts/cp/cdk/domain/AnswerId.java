@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.domain;
 
 import jakarta.persistence.Embeddable;
+import lombok.Builder;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -8,6 +9,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Embeddable
+@Builder
 public class AnswerId implements Serializable {
 
     @Serial

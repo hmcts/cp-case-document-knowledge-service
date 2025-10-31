@@ -7,6 +7,7 @@ import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import lombok.Builder;
 
 import java.time.OffsetDateTime;
 import java.util.Objects;
@@ -20,6 +21,7 @@ import java.util.UUID;
                 @Index(name = "idx_ans_case_query_ver_desc", columnList = "case_id,query_id,version DESC")
         }
 )
+@Builder
 public class Answer {
 
     @EmbeddedId
@@ -31,6 +33,7 @@ public class Answer {
     private AnswerId answerId;
 
     @Column(name = "created_at", nullable = false)
+    @Builder.Default()
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
     @Column(name = "answer", nullable = false, columnDefinition = "TEXT")
@@ -46,40 +49,20 @@ public class Answer {
         return answerId;
     }
 
-    public void setAnswerId(final AnswerId answerId) {
-        this.answerId = answerId;
-    }
-
     public OffsetDateTime getCreatedAt() {
         return createdAt;
-    }
-
-    public void setCreatedAt(final OffsetDateTime createdAt) {
-        this.createdAt = createdAt;
     }
 
     public String getAnswerText() {
         return answerText;
     }
 
-    public void setAnswerText(final String answerText) {
-        this.answerText = answerText;
-    }
-
     public String getLlmInput() {
         return llmInput;
     }
 
-    public void setLlmInput(final String llmInput) {
-        this.llmInput = llmInput;
-    }
-
     public UUID getDocId() {
         return docId;
-    }
-
-    public void setDocId(final UUID docId) {
-        this.docId = docId;
     }
 
     @Override
