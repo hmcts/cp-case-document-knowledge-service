@@ -30,4 +30,4 @@ applicationinsights-agent-*.jar
 *.log
 
 .DS_Store
-*/.DS_Store
+*/.DS_Storesrc/main/resources/application-env.yml
