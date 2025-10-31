@@ -32,7 +32,7 @@ public class QueryDefinitionLatest {
         return queryId;
     }
 
-    public void setQueryId(UUID queryId) {
+    public void setQueryId(final UUID queryId) {
         this.queryId = queryId;
     }
 
@@ -40,7 +40,7 @@ public class QueryDefinitionLatest {
         return label;
     }
 
-    public void setLabel(String label) {
+    public void setLabel(final String label) {
         this.label = label;
     }
 
@@ -48,7 +48,7 @@ public class QueryDefinitionLatest {
         return effectiveAt;
     }
 
-    public void setEffectiveAt(OffsetDateTime effectiveAt) {
+    public void setEffectiveAt(final OffsetDateTime effectiveAt) {
         this.effectiveAt = effectiveAt;
     }
 
@@ -56,7 +56,7 @@ public class QueryDefinitionLatest {
         return userQuery;
     }
 
-    public void setUserQuery(String userQuery) {
+    public void setUserQuery(final String userQuery) {
         this.userQuery = userQuery;
     }
 
@@ -64,7 +64,7 @@ public class QueryDefinitionLatest {
         return queryPrompt;
     }
 
-    public void setQueryPrompt(String queryPrompt) {
+    public void setQueryPrompt(final String queryPrompt) {
         this.queryPrompt = queryPrompt;
     }
 }
