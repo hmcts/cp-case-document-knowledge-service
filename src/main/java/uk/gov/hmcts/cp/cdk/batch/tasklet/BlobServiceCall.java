@@ -27,14 +27,12 @@ public class BlobServiceCall {
 
         final long pollIntervalMs = 1_000L;
         final long timeoutSeconds = 120L;
-        String connectionString = "";
+        final String connectionString = "";
 
-        StorageProperties storageProperties = new StorageProperties(connectionString, "documents", pollIntervalMs, timeoutSeconds);
+        final StorageProperties storageProperties = new StorageProperties(connectionString, "documents", pollIntervalMs, timeoutSeconds);
         final StorageService storageService = new AzureBlobStorageService(storageProperties);
 
-        String sasurl = generateSas();
-
-        System.out.println("sasurl "+sasurl);
+        final String sasurl = generateSas();
 
         // call azure service and copy the file from one destination to another
         final UUID materialID = UUID.randomUUID();
@@ -44,16 +42,11 @@ public class BlobServiceCall {
         final String destBlobPath = String.format("cases/%s/%s", uploadDate, blobName);
         final String contentType = "application/pdf";
 
-        BlobServiceCall blobServiceCall = new BlobServiceCall();
-        Map<String, String> metadata = blobServiceCall.createBlobMetadata(documentId, materialID, destBlobPath, contentType);
+        final BlobServiceCall blobServiceCall = new BlobServiceCall();
+        final Map<String, String> metadata = blobServiceCall.createBlobMetadata(documentId, materialID, destBlobPath, contentType);
 
         final String blobUrl = storageService.copyFromUrl(sasurl, destBlobPath, contentType, metadata);
         final long sizeBytes = storageService.getBlobSize(destBlobPath);
-
-        System.out.println("bloburl is " + blobUrl);
-        System.out.println("Size of " + destBlobPath + " is " + sizeBytes);
-
-
     }
 
     Map<String, String> createBlobMetadata(
