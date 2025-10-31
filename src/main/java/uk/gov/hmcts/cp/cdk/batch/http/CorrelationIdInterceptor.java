@@ -14,7 +14,7 @@ public class CorrelationIdInterceptor implements ClientHttpRequestInterceptor {
     public static final String MDC_KEY = "correlationId";
 
     @Override
-    public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
+    public ClientHttpResponse intercept(final HttpRequest request, final byte[] body, final ClientHttpRequestExecution execution)
             throws IOException {
         String cid = request.getHeaders().getFirst(HEADER);
         if (cid == null || cid.isBlank()) {
