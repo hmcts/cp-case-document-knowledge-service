@@ -8,7 +8,7 @@ bin/*
 !gradle/wrapper/gradle-wrapper.properties
 *.class
 bin/main/application.yaml
-
+/src/main/resources/application-env.yml
 ### STS ###
 .apt_generated
 .classpath
