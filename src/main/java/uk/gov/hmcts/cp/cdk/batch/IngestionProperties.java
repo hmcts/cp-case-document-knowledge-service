@@ -25,7 +25,7 @@ public class IngestionProperties {
                 return initialMs;
             }
 
-            public void setInitialMs(long initialMs) {
+            public void setInitialMs(final long initialMs) {
                 this.initialMs = initialMs;
             }
 
@@ -33,7 +33,7 @@ public class IngestionProperties {
                 return maxMs;
             }
 
-            public void setMaxMs(long maxMs) {
+            public void setMaxMs(final long maxMs) {
                 this.maxMs = maxMs;
             }
         }
@@ -42,7 +42,7 @@ public class IngestionProperties {
             return maxAttempts;
         }
 
-        public void setMaxAttempts(int maxAttempts) {
+        public void setMaxAttempts(final int maxAttempts) {
             this.maxAttempts = maxAttempts;
         }
 
@@ -55,7 +55,7 @@ public class IngestionProperties {
         return corePoolSize;
     }
 
-    public void setCorePoolSize(int corePoolSize) {
+    public void setCorePoolSize(final int corePoolSize) {
         this.corePoolSize = corePoolSize;
     }
 
@@ -63,7 +63,7 @@ public class IngestionProperties {
         return maxPoolSize;
     }
 
-    public void setMaxPoolSize(int maxPoolSize) {
+    public void setMaxPoolSize(final int maxPoolSize) {
         this.maxPoolSize = maxPoolSize;
     }
 
@@ -71,7 +71,7 @@ public class IngestionProperties {
         return queueCapacity;
     }
 
-    public void setQueueCapacity(int queueCapacity) {
+    public void setQueueCapacity(final int queueCapacity) {
         this.queueCapacity = queueCapacity;
     }
 
