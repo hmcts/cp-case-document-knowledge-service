@@ -67,7 +67,7 @@ public class IngestionProcessHttpLiveTest {
             // Validate HTTP 200 and body fields
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(response.getBody()).contains("\"phase\":\"STARTED\"");
-            assertThat(response.getBody()).contains("\"message\":\"Ingestion process started succesfully");
+            assertThat(response.getBody()).contains("\"message\":\"Ingestion process started successfully");
             assertThat(response.getBody()).contains("\"lastUpdated\"");
             assertThat(response.getBody()).contains("STARTED");
 

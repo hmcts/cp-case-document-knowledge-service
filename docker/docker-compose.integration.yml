@@ -50,6 +50,30 @@ services:
       LOGGING_LEVEL_org.flywaydb: "DEBUG"
       MANAGEMENT_TRACING_ENABLED: "false"     # <— Spring relaxed binding for management.tracing.enabled
       TRACING_ENABLED: "false"                # <— matches the placeholder in application.yml
+
+
+      CP_CDK_DB_POOL_SIZE: 20
+      CP_CDK_DB_MIN_IDLE: 5
+
+
+      MANAGEMENT_SERVER_PORT: 8082
+
+      CLUSTER_NAME: local
+      REGION: local
+
+      TRACING_SAMPLER_PROBABILITY: 1.0
+      OTEL_METRICS_ENABLED: false
+      OTEL_TRACES_URL: http://localhost:4318/traces
+      OTEL_METRICS_URL: http://localhost:4318/metrics
+
+      CP_CDK_AZURE_STORAGE_CONNECTION_STRING: test
+      CP_CDK_AZURE_STORAGE_CONTAINER: documents
+
+      CP_CDK_RAG_URL: https://spnl-apim-int-gw.cpp.nonlive/api-cp-ai-rag
+      CP_CDK_RAG_SUBSCRIPTION_KEY: FOFF
+      CP_CDK_CJSCPPUID_HEADER: CJSCPPUID
+      CP_CDK_BASE_URL: http://wiremock:8080
+
     depends_on:
       db:
         condition: service_healthy
