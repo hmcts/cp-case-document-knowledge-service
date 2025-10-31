@@ -56,7 +56,7 @@ public class IngestionService {
     }
 
 
-    @Transactional
+    //@Transactional
     public IngestionProcessResponse startIngestionProcess(final IngestionProcessRequest request)
             throws JobInstanceAlreadyCompleteException,
             JobExecutionAlreadyRunningException,
@@ -75,7 +75,6 @@ public class IngestionService {
                 .addString("date", requestedDate.toString())
                 .addLong("run", System.currentTimeMillis())
                 .toJobParameters();
-
         final JobExecution execution = jobOperator.start(caseIngestionJob, params);
 
         final IngestionProcessResponse response = new IngestionProcessResponse();
