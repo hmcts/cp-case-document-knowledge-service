@@ -45,8 +45,8 @@ public class BlobServiceCall {
         final BlobServiceCall blobServiceCall = new BlobServiceCall();
         final Map<String, String> metadata = blobServiceCall.createBlobMetadata(documentId, materialID, destBlobPath, contentType);
 
-        final String blobUrl = storageService.copyFromUrl(sasurl, destBlobPath, contentType, metadata);
-        final long sizeBytes = storageService.getBlobSize(destBlobPath);
+        // final String blobUrl = storageService.copyFromUrl(sasurl, destBlobPath, contentType, metadata);
+        // final long sizeBytes = storageService.getBlobSize(destBlobPath);
     }
 
     Map<String, String> createBlobMetadata(
@@ -83,11 +83,11 @@ public class BlobServiceCall {
                 .buildClient();
 
         BlobContainerClient containerClient = blobServiceClient.getBlobContainerClient("idpc-ai");
-        BlobClient blobClient = containerClient.getBlobClient("hello.pdf");
+        final BlobClient blobClient = containerClient.getBlobClient("hello.pdf");
 
         // Generate SAS URL valid for 15 minutes
-        BlobSasPermission permissions = new BlobSasPermission().setReadPermission(true);
-        BlobServiceSasSignatureValues values = new BlobServiceSasSignatureValues(
+        final BlobSasPermission permissions = new BlobSasPermission().setReadPermission(true);
+        final BlobServiceSasSignatureValues values = new BlobServiceSasSignatureValues(
                 OffsetDateTime.now().plusMinutes(15),
                 permissions
         );
