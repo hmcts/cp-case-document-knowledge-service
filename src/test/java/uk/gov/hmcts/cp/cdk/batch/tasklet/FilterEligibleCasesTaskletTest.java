@@ -60,17 +60,18 @@ class FilterEligibleCasesTaskletTest {
         caseIds.add(case1.toString());
         // Only first case has document
         LatestMaterialInfo meta1 = new LatestMaterialInfo(caseIds, "application/pdf", "123L",material1.toString(),null);
-        when(progressionClient.getCourtDocuments(case1)).thenReturn(Optional.of(meta1));
-        when(progressionClient.getCourtDocuments(case2)).thenReturn(Optional.empty());
+        when(progressionClient.getCourtDocuments(case1,"userId")).thenReturn(Optional.of(meta1));
+        when(progressionClient.getCourtDocuments(case2,"userId")).thenReturn(Optional.empty());
 
         JobParameters params = new JobParametersBuilder()
                 .addString("jobName", "filterEligibleCases")
+                .addString("cppuid","userId")
                 .toJobParameters();
 
         StepExecution stepExecution = newStepExecution("filter_eligible_cases", params);
         ExecutionContext ctx = stepExecution.getJobExecution().getExecutionContext();
         ctx.put(BatchKeys.CTX_CASE_IDS_KEY, List.of(case1.toString(), case2.toString()));
-
+        ctx.put(BatchKeys.USERID_FOR_EXTERNAL_CALLS,"userId");
         StepContribution contribution = new StepContribution(stepExecution);
         ChunkContext chunkContext = new ChunkContext(new StepContext(stepExecution));
 
@@ -85,8 +86,8 @@ class FilterEligibleCasesTaskletTest {
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
         assertThat(materialToCaseMap).containsEntry(material1.toString(), case1.toString());
 
-        verify(progressionClient, times(1)).getCourtDocuments(case1);
-        verify(progressionClient, times(1)).getCourtDocuments(case2);
+        verify(progressionClient, times(1)).getCourtDocuments(case1,"userId");
+        verify(progressionClient, times(1)).getCourtDocuments(case2,"userId");
     }
 
 

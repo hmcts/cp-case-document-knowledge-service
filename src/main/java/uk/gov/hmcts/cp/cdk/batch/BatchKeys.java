@@ -8,6 +8,7 @@ public final class BatchKeys {
     public static final String CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY = "materialToCaseMap";
     public static final String CTX_UPLOAD_VERIFIED_KEY = "uploadVerified";
     public static final String CTX_DOCUMENT_STATUS_JSON_KEY = "documentStatusResponseJson";
+    public static final String USERID_FOR_EXTERNAL_CALLS = "userIdForExternalCalls";
 
     // Centralise JobParameter keys here (no breaking changes to existing constants)
     public static final class Params {

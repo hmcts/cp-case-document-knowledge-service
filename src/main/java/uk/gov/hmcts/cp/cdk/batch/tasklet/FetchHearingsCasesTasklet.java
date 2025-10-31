@@ -21,6 +21,7 @@ import java.util.List;
 
 import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_IDS_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.Params.*;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
 
 @Slf4j
 @Component
@@ -38,6 +39,7 @@ public class FetchHearingsCasesTasklet implements Tasklet {
         final String roomId = params.getString(ROOM_ID);
         final String dateParam = params.getString(DATE);
         final String cppuid = params.getString(CPPUID);
+        jobCtx.put(USERID_FOR_EXTERNAL_CALLS, cppuid);
         if (isBlank(courtCentreId) || isBlank(roomId) || isBlank(dateParam)) {
             log.warn("Missing required job parameters (courtCentreId/roomId/date). courtCentreId='{}', roomId='{}', date='{}' → NOOP.",
                     courtCentreId, roomId, dateParam);
@@ -56,7 +58,7 @@ public class FetchHearingsCasesTasklet implements Tasklet {
             return RepeatStatus.FINISHED;
         }
 
-        final List<HearingSummariesInfo> summaries = hearingClient.getHearingsAndCases(courtCentreId, roomId, date);
+        final List<HearingSummariesInfo> summaries = hearingClient.getHearingsAndCases(courtCentreId, roomId, date,cppuid);
         final List<String> caseIds = new ArrayList<>(summaries.size());
         for (HearingSummariesInfo s : summaries) {
             caseIds.add(s.caseId());

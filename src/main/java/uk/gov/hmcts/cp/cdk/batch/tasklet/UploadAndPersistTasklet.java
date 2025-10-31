@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static java.time.format.DateTimeFormatter.ofPattern;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 @Component
@@ -118,6 +119,8 @@ public class UploadAndPersistTasklet implements Tasklet {
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final StepExecution stepExecution = contribution != null ? contribution.getStepExecution() : null;
         final Map<String, String> materialToCaseMap = resolveMaterialToCaseMap(stepExecution);
+        final ExecutionContext jobCtx = stepExecution.getJobExecution().getExecutionContext();
+        final String userId = (String) jobCtx.get(USERID_FOR_EXTERNAL_CALLS);
 
         if (materialToCaseMap.isEmpty()) {
             return RepeatStatus.FINISHED;
@@ -142,7 +145,7 @@ public class UploadAndPersistTasklet implements Tasklet {
                 continue;
             }
 
-            final Optional<String> downloadUrl = progressionClient.getMaterialDownloadUrl(materialId);
+            final Optional<String> downloadUrl = progressionClient.getMaterialDownloadUrl(materialId,userId);
             if (downloadUrl.isEmpty()) {
                 log.warn("No download URL for materialId={}; skipping.", materialId);
                 continue;

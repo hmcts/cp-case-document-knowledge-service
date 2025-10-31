@@ -249,7 +249,7 @@ class CaseIngestionJobE2EPostgresTest {
         HearingSummariesInfo h2 = mock(HearingSummariesInfo.class);
         when(h1.caseId()).thenReturn(caseId1.toString());
         when(h2.caseId()).thenReturn(caseId2.toString());
-        when(hearingClient.getHearingsAndCases(anyString(), anyString(), any(LocalDate.class)))
+        when(hearingClient.getHearingsAndCases(anyString(), anyString(), any(LocalDate.class),anyString()))
                 .thenReturn(List.of(h1, h2));
 
         // step 2
@@ -257,11 +257,11 @@ class CaseIngestionJobE2EPostgresTest {
         LatestMaterialInfo lm2 = mock(LatestMaterialInfo.class);
         when(lm1.materialId()).thenReturn(materialId1.toString());
         when(lm2.materialId()).thenReturn(materialId2.toString());
-        when(progressionClient.getCourtDocuments(eq(caseId1))).thenReturn(Optional.of(lm1));
-        when(progressionClient.getCourtDocuments(eq(caseId2))).thenReturn(Optional.of(lm2));
+        when(progressionClient.getCourtDocuments(eq(caseId1),anyString())).thenReturn(Optional.of(lm1));
+        when(progressionClient.getCourtDocuments(eq(caseId2),anyString())).thenReturn(Optional.of(lm2));
 
         // step 3
-        when(progressionClient.getMaterialDownloadUrl(any(UUID.class)))
+        when(progressionClient.getMaterialDownloadUrl(any(UUID.class),anyString()))
                 .thenReturn(Optional.of("http://example.test/doc.pdf"));
         when(storageService.copyFromUrl(anyString(), anyString(), anyString(), anyMap()))
                 .thenAnswer(inv -> "blob://" + inv.getArgument(1, String.class));
@@ -336,6 +336,7 @@ class CaseIngestionJobE2EPostgresTest {
                         .addLong("ts", System.currentTimeMillis())
                         .addString("courtCentreId", "COURT-1")
                         .addString("roomId", "ROOM-42")
+                        .addString("cppuid","userId")
                         .addString("date", LocalDate.now().toString())
                         .toJobParameters()
         );
@@ -363,7 +364,7 @@ class CaseIngestionJobE2EPostgresTest {
     @Test
     @DisplayName("E2E/Postgres: no eligible cases -> partitioned flow skipped; job COMPLETES")
     void e2e_no_cases_partition_skipped_job_completes() throws Exception {
-        when(progressionClient.getCourtDocuments(any(UUID.class))).thenReturn(Optional.empty());
+        when(progressionClient.getCourtDocuments(any(UUID.class),anyString())).thenReturn(Optional.empty());
 
         JobExecution exec = jobOperatorTestUtils.startJob(
                 new JobParametersBuilder()
@@ -371,6 +372,7 @@ class CaseIngestionJobE2EPostgresTest {
                         .addLong("ts", System.currentTimeMillis())
                         .addString("courtCentreId", "COURT-1")
                         .addString("roomId", "ROOM-42")
+                        .addString("cppuid","userId")
                         .addString("date", LocalDate.now().toString())
                         .toJobParameters()
         );

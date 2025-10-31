@@ -77,7 +77,7 @@ class UploadAndPersistTaskletTest {
         final RepeatStatus result = tasklet.execute(stepContribution, chunkContext);
 
         assertThat(result).isEqualTo(RepeatStatus.FINISHED);
-        verify(progressionClient, never()).getMaterialDownloadUrl(any());
+        verify(progressionClient, never()).getMaterialDownloadUrl(any(),anyString());
         verify(storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
         verify(caseDocumentRepository, never()).saveAndFlush(any());
     }
@@ -92,7 +92,7 @@ class UploadAndPersistTaskletTest {
         final RepeatStatus result = tasklet.execute(stepContribution, chunkContext);
 
         assertThat(result).isEqualTo(RepeatStatus.FINISHED);
-        verify(progressionClient, never()).getMaterialDownloadUrl(any());
+        verify(progressionClient, never()).getMaterialDownloadUrl(any(),anyString());
         verify(storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
         verify(caseDocumentRepository, never()).saveAndFlush(any());
     }
@@ -109,7 +109,7 @@ class UploadAndPersistTaskletTest {
         final RepeatStatus result = tasklet.execute(stepContribution, chunkContext);
 
         assertThat(result).isEqualTo(RepeatStatus.FINISHED);
-        verify(progressionClient, never()).getMaterialDownloadUrl(any());
+        verify(progressionClient, never()).getMaterialDownloadUrl(any(),anyString());
         verify(storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
         verify(caseDocumentRepository, never()).saveAndFlush(any());
     }
@@ -125,12 +125,12 @@ class UploadAndPersistTaskletTest {
                 .thenReturn(null); // force fallback to job context
         when(jobExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
                 .thenReturn(materialToCaseMap);
-        when(progressionClient.getMaterialDownloadUrl(materialId)).thenReturn(Optional.empty());
+        when(progressionClient.getMaterialDownloadUrl(eq(materialId),isNull())).thenReturn(Optional.empty());
 
         final RepeatStatus result = tasklet.execute(stepContribution, chunkContext);
 
         assertThat(result).isEqualTo(RepeatStatus.FINISHED);
-        verify(progressionClient).getMaterialDownloadUrl(materialId);
+        verify(progressionClient).getMaterialDownloadUrl(eq(materialId),isNull());
         verify(storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
         verify(caseDocumentRepository, never()).saveAndFlush(any());
     }
@@ -148,14 +148,14 @@ class UploadAndPersistTaskletTest {
 
         when(stepExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY)).thenReturn(materialToCaseMap);
         when(jobExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY)).thenReturn(null);
-        when(progressionClient.getMaterialDownloadUrl(materialId)).thenReturn(Optional.of(downloadUrl));
+        when(progressionClient.getMaterialDownloadUrl(eq(materialId),isNull())).thenReturn(Optional.of(downloadUrl));
         when(storageService.copyFromUrl(anyString(), anyString(), anyString(), anyMap())).thenReturn(blobUrl);
         when(storageService.getBlobSize(anyString())).thenReturn(blobSize);
 
         final RepeatStatus result = tasklet.execute(stepContribution, chunkContext);
 
         assertThat(result).isEqualTo(RepeatStatus.FINISHED);
-        verify(progressionClient).getMaterialDownloadUrl(materialId);
+        verify(progressionClient).getMaterialDownloadUrl(eq(materialId),isNull());
 
         final ArgumentCaptor<String> destBlobPathCaptor = ArgumentCaptor.forClass(String.class);
         @SuppressWarnings("unchecked")
@@ -203,7 +203,7 @@ class UploadAndPersistTaskletTest {
 
         when(stepExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
                 .thenReturn(materialToCaseMap);
-        when(progressionClient.getMaterialDownloadUrl(materialId)).thenReturn(Optional.of("url"));
+        when(progressionClient.getMaterialDownloadUrl(eq(materialId),isNull())).thenReturn(Optional.of("url"));
 
         final ObjectMapper faultyMapper = mock(ObjectMapper.class);
         when(faultyMapper.writeValueAsString(any())).thenThrow(new RuntimeException("JSON serialization failed"));
@@ -227,7 +227,7 @@ class UploadAndPersistTaskletTest {
 
         when(stepExecutionContext.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY))
                 .thenReturn(materialToCaseMap);
-        when(progressionClient.getMaterialDownloadUrl(materialId)).thenReturn(Optional.of(downloadUrl));
+        when(progressionClient.getMaterialDownloadUrl(eq(materialId), isNull())).thenReturn(Optional.of(downloadUrl));
         when(storageService.copyFromUrl(eq(downloadUrl), anyString(), anyString(), anyMap()))
                 .thenThrow(new RuntimeException("Storage service error"));
 

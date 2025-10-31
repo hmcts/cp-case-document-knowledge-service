@@ -20,7 +20,7 @@ import java.util.UUID;
 @Component
 public class ProgressionClientImpl implements ProgressionClient {
 
-    private static final String SYSTEM_ACTOR = "system";
+
 
     private final RestClient restClient;
     private final String cppuidHeader;
@@ -45,7 +45,7 @@ public class ProgressionClientImpl implements ProgressionClient {
     }
 
     @Override
-    public Optional<LatestMaterialInfo> getCourtDocuments(final UUID caseId) {
+    public Optional<LatestMaterialInfo> getCourtDocuments(final UUID caseId, final String userId) {
         final URI uri = UriComponentsBuilder
                 .fromPath(courtDocsPath)
                 .queryParam("caseId", caseId)
@@ -54,7 +54,7 @@ public class ProgressionClientImpl implements ProgressionClient {
 
         final CourtDocumentSearchResponse response = restClient.get()
                 .uri(uri)
-                .header(cppuidHeader, SYSTEM_ACTOR)
+                .header(cppuidHeader, userId)
                 .header(HttpHeaders.ACCEPT, acceptForCourtDocSearch)
                 .retrieve()
                 .body(CourtDocumentSearchResponse.class);
@@ -70,13 +70,13 @@ public class ProgressionClientImpl implements ProgressionClient {
     }
 
     @Override
-    public Optional<String> getMaterialDownloadUrl(final UUID materialId) {
+    public Optional<String> getMaterialDownloadUrl(final UUID materialId, final String userId) {
         final String path = materialContentPath.replace("{materialId}", materialId.toString());
         final URI uri = UriComponentsBuilder.fromPath(path).build().toUri();
 
         final UrlResponse response = restClient.get()
                 .uri(uri)
-                .header(cppuidHeader, SYSTEM_ACTOR)
+                .header(cppuidHeader, userId)
                 .header(HttpHeaders.ACCEPT, acceptForMaterialContent)
                 .retrieve()
                 .body(UrlResponse.class);

@@ -15,7 +15,7 @@ public interface ProgressionClient {
      * @param caseId The unique case identifier.
      * @return An Optional containing the latest material info, or empty if none found.
      */
-    Optional<LatestMaterialInfo> getCourtDocuments(UUID caseId);
+    Optional<LatestMaterialInfo> getCourtDocuments(UUID caseId,String userId);
 
     /**
      * Retrieves a signed download URL for a given material ID.
@@ -23,5 +23,5 @@ public interface ProgressionClient {
      * @param materialId The unique material identifier.
      * @return An Optional containing the download URL, or empty if not found.
      */
-    Optional<String> getMaterialDownloadUrl(UUID materialId);
+    Optional<String> getMaterialDownloadUrl(UUID materialId, String userId);
 }

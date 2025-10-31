@@ -21,7 +21,7 @@ import java.util.Objects;
 
 @Component
 public class HearingClientImpl implements HearingClient {
-    private static final String SYSTEM_ACTOR = "system";
+
     private final RestClient restClient;
     private final String acceptHeader;
     private final String cppuidHeaderName;
@@ -41,7 +41,7 @@ public class HearingClientImpl implements HearingClient {
     }
 
     @Override
-    public List<HearingSummariesInfo> getHearingsAndCases(final String courtId, final String roomId, final LocalDate date) {
+    public List<HearingSummariesInfo> getHearingsAndCases(final String courtId, final String roomId, final LocalDate date, final String userId) {
         final URI uriHearing = UriComponentsBuilder
                 .fromPath(hearingsPath)
                 .queryParam("courtCentreId", courtId)
@@ -53,7 +53,7 @@ public class HearingClientImpl implements HearingClient {
 
         final HearingSummariesListRequest summariesList = restClient.get()
                 .uri(uriHearing)
-                .header(cppuidHeaderName, SYSTEM_ACTOR)
+                .header(cppuidHeaderName, userId)
                 .header(HttpHeaders.ACCEPT, acceptHeader)
                 .retrieve()
                 .body(HearingSummariesListRequest.class);

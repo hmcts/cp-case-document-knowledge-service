@@ -73,13 +73,13 @@ class HearingClientImplTest {
                                 containsString("roomId=R12"),
                                 containsString("date=2025-10-29")
                         )))
-                .andExpect(header(headerName, "system")) // <-- assert configured header
+                .andExpect(header(headerName, "userId")) // <-- assert configured header
                 .andExpect(header("Accept", "application/vnd.hearing.get.hearings+json"))
                 .andRespond(withSuccess(responseBody, MediaType.APPLICATION_JSON));
 
         // Act
         final List<HearingSummariesInfo> infos =
-                client.getHearingsAndCases("C001", "R12", LocalDate.of(2025, 10, 29));
+                client.getHearingsAndCases("C001", "R12", LocalDate.of(2025, 10, 29),"userId");
 
         // Assert
         server.verify();
@@ -108,13 +108,13 @@ class HearingClientImplTest {
         server.expect(once(),
                         requestTo("http://localhost:8080/hearing-query-api/query/api/rest/hearing/hearings" +
                                 "?courtCentreId=C001&roomId=R12&date=2025-10-29"))
-                .andExpect(header(headerName, "system")) // <-- assert configured header
+                .andExpect(header(headerName, "userId")) // <-- assert configured header
                 .andExpect(header("Accept", "application/vnd.hearing.get.hearings+json"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
         // Act
         final List<HearingSummariesInfo> infos =
-                client.getHearingsAndCases("C001", "R12", LocalDate.of(2025, 10, 29));
+                client.getHearingsAndCases("C001", "R12", LocalDate.of(2025, 10, 29),"userId");
 
         // Assert
         server.verify();

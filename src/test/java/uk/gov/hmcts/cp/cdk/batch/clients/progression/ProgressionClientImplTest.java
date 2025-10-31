@@ -61,11 +61,11 @@ class ProgressionClientImplTest {
 
         server.expect(once(),
                         requestTo("http://localhost:8080/progression-query-api/query/api/rest/progression/material/" + materialId + "/content"))
-                .andExpect(header(headerName, "system"))
+                .andExpect(header(headerName, "userId"))
                 .andExpect(header("Accept", "application/vnd.progression.query.material-content+json"))
                 .andRespond(withSuccess("{\"url\":\"https://signed.example\"}", MediaType.APPLICATION_JSON));
 
-        final var url = client.getMaterialDownloadUrl(materialId);
+        final var url = client.getMaterialDownloadUrl(materialId,"userId");
         server.verify();
         assertThat(url).contains("https://signed.example");
     }
@@ -94,11 +94,11 @@ class ProgressionClientImplTest {
 
         server.expect(once(),
                         requestTo("http://localhost:8080/progression-query-api/query/api/rest/progression/material/" + materialId + "/content"))
-                .andExpect(header(headerName, "system"))
+                .andExpect(header(headerName, "userId"))
                 .andExpect(header("Accept", "application/vnd.progression.query.material-content+json"))
                 .andRespond(withSuccess("{\"url\":\"   \"}", MediaType.APPLICATION_JSON));
 
-        final var url = client.getMaterialDownloadUrl(materialId);
+        final var url = client.getMaterialDownloadUrl(materialId,"userId");
         server.verify();
         assertThat(url).isEmpty();
     }
@@ -144,11 +144,11 @@ class ProgressionClientImplTest {
 
         server.expect(once(),
                         requestTo("http://localhost:8080/progression-query-api/query/api/rest/progression/courtdocumentsearch?caseId=" + caseId))
-                .andExpect(header(headerName, "system"))
+                .andExpect(header(headerName, "userId"))
                 .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
-        final var latest = client.getCourtDocuments(caseId);
+        final var latest = client.getCourtDocuments(caseId,"userId");
         server.verify();
         assertThat(latest).isPresent();
         assertThat(latest.get().materialId()).isEqualTo("m2");
@@ -181,11 +181,11 @@ class ProgressionClientImplTest {
 
         server.expect(once(),
                         requestTo("http://localhost:8080/progression-query-api/query/api/rest/progression/courtdocumentsearch?caseId=" + caseId))
-                .andExpect(header(headerName, "system"))
+                .andExpect(header(headerName, "userId"))
                 .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
-        final var latest = client.getCourtDocuments(caseId);
+        final var latest = client.getCourtDocuments(caseId,"userId");
         server.verify();
         assertThat(latest).isEmpty();
     }
@@ -216,11 +216,11 @@ class ProgressionClientImplTest {
 
         server.expect(once(),
                         requestTo("http://localhost:8080/progression-query-api/query/api/rest/progression/courtdocumentsearch?caseId=" + caseId))
-                .andExpect(header(headerName, "system"))
+                .andExpect(header(headerName, "userId"))
                 .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
-        final var latest = client.getCourtDocuments(caseId);
+        final var latest = client.getCourtDocuments(caseId,"userId");
         server.verify();
         assertThat(latest).isEmpty();
     }
@@ -262,11 +262,11 @@ class ProgressionClientImplTest {
 
         server.expect(once(),
                         requestTo("http://localhost:8080/progression-query-api/query/api/rest/progression/courtdocumentsearch?caseId=" + caseId))
-                .andExpect(header(headerName, "system"))
+                .andExpect(header(headerName, "userId"))
                 .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
-        final var latest = client.getCourtDocuments(caseId);
+        final var latest = client.getCourtDocuments(caseId,"userId");
         server.verify();
         assertThat(latest).isEmpty();
     }
@@ -309,11 +309,11 @@ class ProgressionClientImplTest {
 
         server.expect(once(),
                         requestTo("http://localhost:8080/progression-query-api/query/api/rest/progression/courtdocumentsearch?caseId=" + caseId))
-                .andExpect(header(headerName, "system"))
+                .andExpect(header(headerName, "userId"))
                 .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
-        final var latest = client.getCourtDocuments(caseId);
+        final var latest = client.getCourtDocuments(caseId,"userId");
         server.verify();
         assertThat(latest).isEmpty(); // Optional.empty() branch
     }
