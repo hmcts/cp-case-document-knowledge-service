@@ -20,9 +20,9 @@ public class CaseIngestionStepsConfig {
     private final PlatformTransactionManager txManager;
     private final RetryTemplate retryTemplate;
 
-    private Step step(final String name, final JobRepository repo, final Tasklet t) {
+    private Step step(final String name, final JobRepository repo, final Tasklet tasklet) {
         return new StepBuilder(name, repo)
-                .tasklet(new RetryingTasklet(t, retryTemplate), txManager)
+                .tasklet(new RetryingTasklet(tasklet, retryTemplate), txManager)
                 .build();
     }
 

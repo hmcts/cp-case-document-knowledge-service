@@ -30,8 +30,8 @@ public class CaseIngestionJobConfig {
                             final Step step5ReserveAnswerVersionPerCase,
                             final Step step6GenerateAnswersPerCase) {
 
-        final FlowBuilder<SimpleFlow> fb = new FlowBuilder<>("perCaseFlow");
-        return fb.start(step3UploadAndPersist)
+        final FlowBuilder<SimpleFlow> flowBuilder = new FlowBuilder<>("perCaseFlow");
+        return flowBuilder.start(step3UploadAndPersist)
                 .next(step4VerifyUploadPerCase)
                 .next(step5ReserveAnswerVersionPerCase)
                 .next(step6GenerateAnswersPerCase)
@@ -51,7 +51,7 @@ public class CaseIngestionJobConfig {
     public Partitioner eligibleCasePartitioner(
             @Value("#{jobExecutionContext['" + BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY + "']}") final Map<String, String> materialToCaseMap) {
 
-        Map<String, String> safe = materialToCaseMap == null ? Collections.emptyMap() : materialToCaseMap;
+        final Map<String, String> safe = materialToCaseMap == null ? Collections.emptyMap() : materialToCaseMap;
         return new MaterialToCasePartitioner(safe);
     }
 
