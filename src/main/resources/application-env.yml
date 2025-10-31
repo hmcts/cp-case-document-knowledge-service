@@ -35,7 +35,7 @@ CP_CDK_AZURE_STORAGE_CONTAINER: documents
 CP_CDK_RAG_URL: https://spnl-apim-int-gw.cpp.nonlive/api-cp-ai-rag
 CP_CDK_RAG_SUBSCRIPTION_KEY: FOFF
 CP_CDK_CJSCPPUID_HEADER: CJSCPPUID
-CP_CDK_PROGRESSION_BASE_URL: http://localhost:8080/progression-query-api
-CP_CDK_HEARING_BASE_URL: http://localhost:8080/hearing-query-api
+CP_CDK_PROGRESSION_BASE_URL: http://localhost:8089/progression-query-api
+CP_CDK_HEARING_BASE_URL: http://localhost:8089/hearing-query-api
 
 VIRTUAL_THREADS: false
