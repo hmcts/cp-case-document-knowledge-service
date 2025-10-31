@@ -59,12 +59,14 @@ public class FetchHearingsCasesTasklet implements Tasklet {
     }
 
     private static String str(final Map<String, Object> params, final String key) {
-        if (params == null) return null;
+        if (params == null) {
+            return null;
+        }
         final Object object = params.get(key);
-        return (object instanceof String s) ? s : null;
+        return (object instanceof String string) ? string : null;
     }
 
-    private static boolean isBlank(String s) {
-        return s == null || s.isBlank();
+    private static boolean isBlank(final String string) {
+        return string == null || string.isBlank();
     }
 }
