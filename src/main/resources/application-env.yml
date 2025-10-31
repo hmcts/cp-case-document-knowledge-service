@@ -13,7 +13,7 @@ CP_CDK_REST_SPECIFICATION: case-admin-doc-knowledge-api.openapi.yml
 # Optional: debug
 LOGGING_LEVEL_org.flywaydb: "DEBUG"
 MANAGEMENT_TRACING_ENABLED: "false"     # <— Spring relaxed binding for management.tracing.enabled
-TRACING_ENABLED: "false"                # <— matches the placeholder in application.yml
+TRACING_ENABLED: "false"                # <— matches the placeholder in  application.yml
 
 CP_CDK_DB_POOL_SIZE: 20
 CP_CDK_DB_MIN_IDLE: 5
