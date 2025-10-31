@@ -1,5 +1,6 @@
 package uk.gov.hmcts.cp.cdk.services;
 
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -139,16 +140,29 @@ public class QueryService {
     }
 
     @Transactional(readOnly = true)
-    public QuerySummary getOneForCaseAsOf(final UUID caseId, final UUID queryId, final OffsetDateTime asOfParam) {
+    public QuerySummary getOneForCaseAsOf(final UUID caseId,
+                                          final UUID queryId,
+                                          final OffsetDateTime asOfParam) {
         final OffsetDateTime asOf = Optional.ofNullable(asOfParam).orElseGet(TimeUtils::utcNow);
-        final Object[] row = queriesAsOfRepository.getOneForCaseAsOf(caseId, queryId, asOf);
-        if (row == null) {
+
+        try {
+            final Object[] row = queriesAsOfRepository.getOneForCaseAsOf(caseId, queryId, asOf);
+
+            if (row == null || row.length == 0 || row[0] == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Query not found for case=" + caseId + ", queryId=" + queryId
+                );
+            }
+
+            return mapCaseRowToSummary(row);
+        } catch (IncorrectResultSizeDataAccessException e) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
-                    "Query not found for case=" + caseId + ", queryId=" + queryId
+                    "Query not found for case=" + caseId + ", queryId=" + queryId,
+                    e
             );
         }
-        return mapCaseRowToSummary(row);
     }
 
     /* ---------- upsert definitions ---------- */

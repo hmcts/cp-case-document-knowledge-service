@@ -9,6 +9,7 @@ import org.springframework.batch.core.repository.JobExecutionAlreadyRunningExcep
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.controllers.exception.IngestionExceptionHandler;
 import uk.gov.hmcts.cp.cdk.services.IngestionService;
 import uk.gov.hmcts.cp.openapi.model.cdk.*;
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -25,24 +27,39 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @DisplayName("Ingestion Controller tests")
-
 class IngestionControllerTest {
 
     private static final MediaType VND =
             MediaType.valueOf("application/vnd.casedocumentknowledge-service.ingestion-process+json");
 
+    private static final String HEADER_NAME = "CJSCPPUID";
+    private static final String HEADER_VALUE = "u-123";
+
     private MockMvc mvc(final IngestionService service) {
+        // Use a Mockito deep-stub so headers().cjsCppuid() can be stubbed cleanly
+        final CQRSClientProperties props = mock(CQRSClientProperties.class, Mockito.RETURNS_DEEP_STUBS);
+        when(props.headers().cjsCppuid()).thenReturn(HEADER_NAME);
+
         return MockMvcBuilders
-                .standaloneSetup(new IngestionController(service))
+                .standaloneSetup(new IngestionController(service, props))
                 .setControllerAdvice(new IngestionExceptionHandler())
                 .build();
     }
+
     @Test
     @DisplayName("Get Ingestion Status returns payload")
     void getIngestionStatus_returns_payload() throws Exception {
-        final IngestionService service = Mockito.mock(IngestionService.class);
-        final IngestionController controller = new IngestionController(service);
-        final MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
+        final IngestionService service = mock(IngestionService.class);
+
+        // Build controller with real-like props (same as mvc(service) does)
+        final CQRSClientProperties props = mock(CQRSClientProperties.class, Mockito.RETURNS_DEEP_STUBS);
+        when(props.headers().cjsCppuid()).thenReturn(HEADER_NAME);
+        final IngestionController controller = new IngestionController(service, props);
+
+        final MockMvc mvc = MockMvcBuilders
+                .standaloneSetup(controller)
+                .setControllerAdvice(new IngestionExceptionHandler())
+                .build();
 
         final UUID caseId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
 
@@ -62,8 +79,6 @@ class IngestionControllerTest {
                 .andExpect(jsonPath("$.phase").value("INGESTED"));
     }
 
-
-
     @Test
     @DisplayName("POST /ingestions/start returns 200 with STARTED payload")
     void start_success() throws Exception {
@@ -74,18 +89,21 @@ class IngestionControllerTest {
         response.setPhase(IngestionProcessPhase.STARTED);
         response.setMessage("Ingestion process started successfully (executionId=42)");
 
-        when(service.startIngestionProcess(any(IngestionProcessRequest.class))).thenReturn(response);
+        when(service.startIngestionProcess(anyString(), any(IngestionProcessRequest.class))).thenReturn(response);
 
         String body = """
-                {
-                  "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-                  "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-                  "date": "2025-10-23",
-                  "effectiveAt": "2025-05-01T12:00:00Z"
-                }
-                """;
+            {
+              "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+              "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+              "date": "2025-10-23",
+              "effectiveAt": "2025-05-01T12:00:00Z"
+            }
+            """;
 
-        mvc.perform(post("/ingestions/start").contentType(VND).accept(VND).content(body))
+        mvc.perform(post("/ingestions/start")
+                        .contentType(VND).accept(VND)
+                        .header(HEADER_NAME, HEADER_VALUE)
+                        .content(body))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(VND))
                 .andExpect(jsonPath("$.phase").value("STARTED"))
@@ -98,18 +116,21 @@ class IngestionControllerTest {
         IngestionService service = mock(IngestionService.class);
         MockMvc mvc = mvc(service);
 
-        when(service.startIngestionProcess(any(IngestionProcessRequest.class)))
+        when(service.startIngestionProcess(anyString(), any(IngestionProcessRequest.class)))
                 .thenThrow(new NoSuchJobException("caseIngestionJob"));
 
         String body = """
-                {
-                  "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-                  "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-                  "date": "2025-10-24"
-                }
-                """;
+            {
+              "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+              "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+              "date": "2025-10-24"
+            }
+            """;
 
-        mvc.perform(post("/ingestions/start").contentType(VND).accept(VND).content(body))
+        mvc.perform(post("/ingestions/start")
+                        .contentType(VND).accept(VND)
+                        .header(HEADER_NAME, HEADER_VALUE)
+                        .content(body))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(VND))
                 .andExpect(jsonPath("$.message", containsString("caseIngestionJob")));
@@ -121,18 +142,21 @@ class IngestionControllerTest {
         IngestionService service = mock(IngestionService.class);
         MockMvc mvc = mvc(service);
 
-        when(service.startIngestionProcess(any(IngestionProcessRequest.class)))
+        when(service.startIngestionProcess(anyString(), any(IngestionProcessRequest.class)))
                 .thenThrow(new JobParametersInvalidException("invalid parameters"));
 
         String body = """
-                {
-                  "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-                  "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-                  "date": "not-a-date"
-                }
-                """;
+            {
+              "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+              "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+              "date": "not-a-date"
+            }
+            """;
 
-        mvc.perform(post("/ingestions/start").contentType(VND).accept(VND).content(body))
+        mvc.perform(post("/ingestions/start")
+                        .contentType(VND).accept(VND)
+                        .header(HEADER_NAME, HEADER_VALUE)
+                        .content(body))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(VND))
                 .andExpect(jsonPath("$.message", containsString("invalid parameters")));
@@ -144,21 +168,23 @@ class IngestionControllerTest {
         IngestionService service = mock(IngestionService.class);
         MockMvc mvc = mvc(service);
 
-        when(service.startIngestionProcess(any(IngestionProcessRequest.class)))
+        when(service.startIngestionProcess(anyString(), any(IngestionProcessRequest.class)))
                 .thenThrow(new JobExecutionAlreadyRunningException("already running"));
 
         String body = """
-                {
-                  "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-                  "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-                  "date": "2025-10-23"
-                }
-                """;
+            {
+              "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+              "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+              "date": "2025-10-23"
+            }
+            """;
 
-        mvc.perform(post("/ingestions/start").contentType(VND).accept(VND).content(body))
+        mvc.perform(post("/ingestions/start")
+                        .contentType(VND).accept(VND)
+                        .header(HEADER_NAME, HEADER_VALUE)
+                        .content(body))
                 .andExpect(status().isConflict())
-               .andExpect(content().contentType(VND))
+                .andExpect(content().contentType(VND))
                 .andExpect(jsonPath("$.message", containsString("already running")));
     }
 }
-

@@ -27,18 +27,18 @@ public class CdkClientsConfig {
 
     @Bean
     public HearingClient hearingClient(@Qualifier("cqrsRestClient") final RestClient restClient,
-                                       final CQRSClientProperties rootProps,
+                                       final CQRSClientProperties cqrsClientProperties,
                                        final HearingClientConfig hearingProps,
                                        final HearingDtoMapper mapper) {
-        return new HearingClientImpl(restClient, rootProps, hearingProps, mapper);
+        return new HearingClientImpl(restClient, cqrsClientProperties, hearingProps, mapper);
     }
 
 
     @Bean
     public ProgressionClient progressionClient(@Qualifier("cqrsRestClient") final RestClient restClient,
-                                               final CQRSClientProperties rootProps,
+                                               final CQRSClientProperties cqrsClientProperties,
                                                final ProgressionClientConfig props,
                                                final ProgressionDtoMapper mapper) {
-        return new ProgressionClientImpl(restClient, rootProps, props, mapper);
+        return new ProgressionClientImpl(restClient, cqrsClientProperties, props, mapper);
     }
 }

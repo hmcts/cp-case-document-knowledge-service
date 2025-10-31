@@ -153,5 +153,26 @@ class QueriesControllerTest {
                 .andExpect(jsonPath("$.queryId").value(queryId.toString()))
                 .andExpect(jsonPath("$.versions[0].userQuery").value("UQ1"));
     }
+    @Test
+    @DisplayName("Get Query -> 404 when not found")
+    void getQuery_notFound_404() throws Exception {
+        final QueryService service = Mockito.mock(QueryService.class);
+        final QueriesController controller = new QueriesController(service);
+        final MockMvc mvc = MockMvcBuilders
+                .standaloneSetup(controller)
+                .build();
+
+        final UUID caseId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        final UUID queryId = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+
+        when(service.getOneForCaseAsOf(Mockito.eq(caseId), Mockito.eq(queryId), Mockito.any()))
+                .thenThrow(new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND,
+                        "Query not found for case=" + caseId + ", queryId=" + queryId
+                ));
+
+        mvc.perform(get("/queries/{queryId}", queryId).param("caseId", caseId.toString()))
+                .andExpect(status().isNotFound());
+    }
 }
 

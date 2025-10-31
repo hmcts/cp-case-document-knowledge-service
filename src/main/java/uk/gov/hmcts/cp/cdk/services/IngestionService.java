@@ -55,7 +55,7 @@ public class IngestionService {
                 });
     }
 
-    public IngestionProcessResponse startIngestionProcess(final IngestionProcessRequest request)
+    public IngestionProcessResponse startIngestionProcess(final String cppuid, final IngestionProcessRequest request)
             throws JobInstanceAlreadyCompleteException,
             JobExecutionAlreadyRunningException,
             JobParametersInvalidException,
@@ -71,6 +71,7 @@ public class IngestionService {
                 .addString("courtCentreId", courtCentreId.toString())
                 .addString("roomId", roomId.toString())
                 .addString("date", requestedDate.toString())
+                .addString("cppuid", cppuid)
                 .addLong("run", System.currentTimeMillis())
                 .toJobParameters();
         final JobExecution execution = jobOperator.start(caseIngestionJob, params);
