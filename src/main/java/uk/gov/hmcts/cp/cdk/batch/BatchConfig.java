@@ -54,14 +54,14 @@ public class BatchConfig {
     }
     @Bean
     public ObjectMapper objectMapper() {
-        ObjectMapper m = new ObjectMapper();
-        m.registerModule(new JavaTimeModule());
-        m.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        return m;
+        final ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        return objectMapper;
     }
 
     @Bean
-    public StorageService storageService(StorageProperties storageProperties) {
+    public StorageService storageService(final StorageProperties storageProperties) {
         return new AzureBlobStorageService(storageProperties);
     }
 }
