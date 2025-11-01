@@ -60,15 +60,15 @@ public class FetchHearingsCasesTasklet implements Tasklet {
 
         final List<HearingSummariesInfo> summaries = hearingClient.getHearingsAndCases(courtCentreId, roomId, date,cppuid);
         final List<String> caseIds = new ArrayList<>(summaries.size());
-        for (HearingSummariesInfo s : summaries) {
-            caseIds.add(s.caseId());
+        for (final HearingSummariesInfo hearingSummariesInfo : summaries) {
+            caseIds.add(hearingSummariesInfo.caseId());
         }
 
         jobCtx.put(CTX_CASE_IDS_KEY, caseIds);
         return RepeatStatus.FINISHED;
     }
 
-    private static boolean isBlank(final String s) {
-        return s == null || s.isBlank();
+    private static boolean isBlank(final String string) {
+        return string == null || string.isBlank();
     }
 }
