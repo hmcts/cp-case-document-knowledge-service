@@ -138,7 +138,7 @@ public class CaseDocument {
         return docName;
     }
 
-    public void setDocName(String docName) {
+    public void setDocName(final String docName) {
         this.docName = docName;
     }
 
