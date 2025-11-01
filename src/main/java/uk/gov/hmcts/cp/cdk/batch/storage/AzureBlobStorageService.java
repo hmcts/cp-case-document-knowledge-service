@@ -49,8 +49,8 @@ public class AzureBlobStorageService implements StorageService {
     public String upload(final String blobPath, final InputStream data, final long size, final String contentType) {
         final BlobClient blob = blobContainerClient.getBlobClient(blobPath);
         blob.upload(data, size, true);
-        final String ct = (contentType == null || contentType.isBlank()) ? DEFAULT_CONTENT_TYPE : contentType;
-        blob.setHttpHeaders(new BlobHttpHeaders().setContentType(ct));
+        final String string = (contentType == null || contentType.isBlank()) ? DEFAULT_CONTENT_TYPE : contentType;
+        blob.setHttpHeaders(new BlobHttpHeaders().setContentType(string));
         return blob.getBlobUrl();
     }
 
@@ -86,8 +86,8 @@ public class AzureBlobStorageService implements StorageService {
             throw new IllegalStateException("Timed out after " + timeoutSeconds + "s waiting for blob copy to succeed");
         }
 
-        final String ct = (contentType == null || contentType.isBlank()) ? DEFAULT_CONTENT_TYPE : contentType;
-        blob.setHttpHeaders(new BlobHttpHeaders().setContentType(ct));
+        final String string = (contentType == null || contentType.isBlank()) ? DEFAULT_CONTENT_TYPE : contentType;
+        blob.setHttpHeaders(new BlobHttpHeaders().setContentType(string));
         if (metadata != null && !metadata.isEmpty()) {
             blob.setMetadata(metadata);
         }
