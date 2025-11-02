@@ -20,7 +20,7 @@ public record CourtDocumentSearchResponse(
     }
 
     public record Material(
-            String string,
+            String id,
             ZonedDateTime uploadDateTime
     ) {
     }

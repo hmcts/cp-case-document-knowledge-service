@@ -38,7 +38,7 @@ public class ProgressionDtoMapper {
                 caseIds,
                 documentTypeId,
                 documentTypeDescription,
-                material.string(),
+                material.id(),
                 material.uploadDateTime()
         ));
     }
