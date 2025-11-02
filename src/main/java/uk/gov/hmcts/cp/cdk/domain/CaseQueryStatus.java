@@ -1,6 +1,8 @@
 package uk.gov.hmcts.cp.cdk.domain;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -21,7 +23,12 @@ public class CaseQueryStatus {
     private CaseQueryStatusId caseQueryStatusId = new CaseQueryStatusId();
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(
+            name = "status",
+            nullable = false,
+            columnDefinition = "query_lifecycle_status_enum"
+    )
     private QueryLifecycleStatus status = QueryLifecycleStatus.ANSWER_NOT_AVAILABLE;
 
     @Column(name = "status_at", nullable = false)

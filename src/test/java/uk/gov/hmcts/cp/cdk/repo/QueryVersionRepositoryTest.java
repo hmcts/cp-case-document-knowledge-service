@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @DataJpaTest(
         properties = {
                 "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.flyway.enabled=false",
+                "spring.flyway.enabled=true",
                 "spring.jpa.properties.hibernate.connection.provider_disables_autocommit=false"
         }
 )

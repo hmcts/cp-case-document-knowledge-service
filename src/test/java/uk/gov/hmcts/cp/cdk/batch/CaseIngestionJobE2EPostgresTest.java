@@ -64,8 +64,7 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @SpringBatchTest
 @SpringBootTest(
@@ -83,21 +82,20 @@ import static org.mockito.Mockito.when;
 )
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS) // one context per class (faster)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class CaseIngestionJobE2EPostgresTest {
 
-    @SpringBootApplication
+    @SpringBootApplication(scanBasePackages = "uk.gov.hmcts.cp.cdk")
     @EntityScan(basePackages = "uk.gov.hmcts.cp.cdk.domain")
     @EnableJpaRepositories(basePackages = "uk.gov.hmcts.cp.cdk.repo")
     @ComponentScan(
             basePackages = "uk.gov.hmcts.cp.cdk",
             excludeFilters = @ComponentScan.Filter(
                     type = FilterType.ASSIGNABLE_TYPE,
-                    classes = AzureBlobStorageService.class // avoid real Azure bean
+                    classes = AzureBlobStorageService.class // avoid real Azure bean in tests
             )
     )
-    static class TestApplication {
-    }
+    static class TestApplication { }
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
@@ -105,7 +103,7 @@ class CaseIngestionJobE2EPostgresTest {
                     .withDatabaseName("cdk")
                     .withUsername("postgres")
                     .withPassword("postgres")
-                    .withReuse(true); // enable local reuse if ~/.testcontainers.properties allows it
+                    .withReuse(true);
 
     static {
         POSTGRES.start();
@@ -118,124 +116,37 @@ class CaseIngestionJobE2EPostgresTest {
         r.add("spring.datasource.password", POSTGRES::getPassword);
         r.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
 
-        // Hibernate creates/drops entity tables; for more speed consider "update" or "none" + schema.sql
+        // Let Hibernate generate/drop entity tables for the test lifecycle
         r.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
-        r.add("spring.flyway.enabled", () -> "false");
+        r.add("spring.flyway.enabled", () -> "true");
         r.add("spring.batch.jdbc.initialize-schema", () -> "always");
 
-        // fast polling for VerifyUpload
+        // faster polling for any verify logic
         r.add("cdk.ingestion.verify.poll-interval-ms", () -> "10");
         r.add("cdk.ingestion.verify.max-wait-ms", () -> "2000");
     }
 
     // Real repos
-    @Autowired
-    private QueryDefinitionLatestRepository qdlRepo;
-    @Autowired
-    private CaseDocumentRepository caseDocumentRepository;
+    @Autowired private QueryDefinitionLatestRepository qdlRepo;
+    @Autowired private CaseDocumentRepository caseDocumentRepository;
 
     // Mocks (external)
-    @Autowired
-    private HearingClient hearingClient;
-    @Autowired
-    private ProgressionClient progressionClient;
-    @Autowired
-    private DocumentIngestionStatusApi documentIngestionStatusApi;
-    @Autowired
-    private DocumentInformationSummarisedApi documentInformationSummarisedApi;
-    @Autowired
-    private QueryResolver queryResolver;
-    @Autowired
-    private StorageService storageService;
+    @Autowired private HearingClient hearingClient;
+    @Autowired private ProgressionClient progressionClient;
+    @Autowired private DocumentIngestionStatusApi documentIngestionStatusApi;
+    @Autowired private DocumentInformationSummarisedApi documentInformationSummarisedApi;
+    @Autowired private QueryResolver queryResolver;
+    @Autowired private StorageService storageService;
 
     // Infra
-    @Autowired
-    private JobOperatorTestUtils jobOperatorTestUtils;
-    @Autowired
-    private JdbcTemplate jdbc;
-    @PersistenceContext
-    private EntityManager em;
+    @Autowired private JobOperatorTestUtils jobOperatorTestUtils;
+    @Autowired private JdbcTemplate jdbc;
+    @PersistenceContext private EntityManager em;
 
     private UUID caseId1, caseId2, materialId1, materialId2, queryId;
 
     @BeforeEach
     void setupSchemaAndMocks() {
-        // extension some helpers may need
-        jdbc.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto");
-
-        // helper table required by pipeline
-        jdbc.execute("""
-                    CREATE TABLE IF NOT EXISTS answer_reservations (
-                      reservation_id UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-                      case_id        UUID        NOT NULL,
-                      query_id       UUID        NOT NULL,
-                      doc_id         UUID        NOT NULL,
-                      version        INTEGER     NOT NULL,
-                      status         TEXT        NOT NULL DEFAULT 'NEW',
-                      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                      updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                      CONSTRAINT uq_ans_res UNIQUE (case_id, query_id, doc_id)
-                    );
-                """);
-        jdbc.execute("CREATE INDEX IF NOT EXISTS idx_ar_status ON answer_reservations (status)");
-        jdbc.execute("CREATE INDEX IF NOT EXISTS idx_ar_case_query ON answer_reservations (case_id, query_id)");
-
-        // allocator function
-        jdbc.execute("""
-                    CREATE OR REPLACE FUNCTION get_or_create_answer_version(p_case_id UUID, p_query_id UUID, p_doc_id UUID)
-                    RETURNS INTEGER
-                    LANGUAGE plpgsql
-                    AS $$
-                    DECLARE
-                      v_res INTEGER;
-                      k1 INT;
-                      k2 INT;
-                    BEGIN
-                      SELECT ('x'||substr(md5(p_case_id::text),1,8))::bit(32)::int,
-                             ('x'||substr(md5(p_query_id::text),1,8))::bit(32)::int
-                        INTO k1, k2;
-                      PERFORM pg_advisory_xact_lock(k1, k2);
-                
-                      SELECT version INTO v_res
-                        FROM answer_reservations
-                       WHERE case_id = p_case_id AND query_id = p_query_id AND doc_id = p_doc_id
-                       LIMIT 1;
-                
-                      IF v_res IS NOT NULL THEN
-                        UPDATE answer_reservations
-                           SET updated_at = NOW()
-                         WHERE case_id = p_case_id AND query_id = p_query_id AND doc_id = p_doc_id;
-                        RETURN v_res;
-                      END IF;
-                
-                      SELECT COALESCE(MAX(a.version), 0) + 1
-                        INTO v_res
-                        FROM answers a
-                       WHERE a.case_id = p_case_id
-                         AND a.query_id = p_query_id;
-                
-                      INSERT INTO answer_reservations(case_id, query_id, doc_id, version, status)
-                      VALUES (p_case_id, p_query_id, p_doc_id, v_res, 'NEW')
-                      ON CONFLICT (case_id, query_id, doc_id) DO NOTHING;
-                
-                      RETURN v_res;
-                    END
-                    $$;
-                """);
-
-        // view for QueryDefinitionLatest (backed by entity tables)
-/*        jdbc.execute("""
-            CREATE OR REPLACE VIEW v_query_definitions_latest AS
-            SELECT DISTINCT ON (q.query_id)
-              q.query_id,
-              q.label,
-              qv.effective_at,
-              qv.user_query,
-              qv.query_prompt
-            FROM queries q
-            JOIN query_versions qv ON qv.query_id = q.query_id
-            ORDER BY q.query_id, qv.effective_at DESC;
-        """);*/
 
         // ids for this run
         caseId1 = UUID.randomUUID();
@@ -244,30 +155,30 @@ class CaseIngestionJobE2EPostgresTest {
         materialId2 = UUID.randomUUID();
         queryId = UUID.randomUUID();
 
-        // step 1
+        // step 1 — hearings & cases
         HearingSummariesInfo h1 = mock(HearingSummariesInfo.class);
         HearingSummariesInfo h2 = mock(HearingSummariesInfo.class);
         when(h1.caseId()).thenReturn(caseId1.toString());
         when(h2.caseId()).thenReturn(caseId2.toString());
-        when(hearingClient.getHearingsAndCases(anyString(), anyString(), any(LocalDate.class),anyString()))
+        when(hearingClient.getHearingsAndCases(anyString(), anyString(), any(LocalDate.class), anyString()))
                 .thenReturn(List.of(h1, h2));
 
-        // step 2
+        // step 2 — latest material links
         LatestMaterialInfo lm1 = mock(LatestMaterialInfo.class);
         LatestMaterialInfo lm2 = mock(LatestMaterialInfo.class);
         when(lm1.materialId()).thenReturn(materialId1.toString());
         when(lm2.materialId()).thenReturn(materialId2.toString());
-        when(progressionClient.getCourtDocuments(eq(caseId1),anyString())).thenReturn(Optional.of(lm1));
-        when(progressionClient.getCourtDocuments(eq(caseId2),anyString())).thenReturn(Optional.of(lm2));
+        when(progressionClient.getCourtDocuments(eq(caseId1), anyString())).thenReturn(Optional.of(lm1));
+        when(progressionClient.getCourtDocuments(eq(caseId2), anyString())).thenReturn(Optional.of(lm2));
 
-        // step 3
-        when(progressionClient.getMaterialDownloadUrl(any(UUID.class),anyString()))
+        // step 3 — storage interactions
+        when(progressionClient.getMaterialDownloadUrl(any(UUID.class), anyString()))
                 .thenReturn(Optional.of("http://example.test/doc.pdf"));
         when(storageService.copyFromUrl(anyString(), anyString(), anyString(), anyMap()))
                 .thenAnswer(inv -> "blob://" + inv.getArgument(1, String.class));
         when(storageService.getBlobSize(anyString())).thenReturn(1234L);
 
-        // step 4
+        // step 4 — ingestion status polling
         DocumentIngestionStatusReturnedSuccessfully ok =
                 new DocumentIngestionStatusReturnedSuccessfully()
                         .status(DocumentIngestionStatusReturnedSuccessfully.StatusEnum.INGESTION_SUCCESS)
@@ -277,7 +188,7 @@ class CaseIngestionJobE2EPostgresTest {
         when(documentIngestionStatusApi.documentStatus(anyString()))
                 .thenReturn(ResponseEntity.ok(ok));
 
-        // step 5 — write base rows; your Hibernate DDL made created_at NOT NULL w/o default → set NOW() explicitly
+        // step 5 — seed canonical query rows
         jdbc.update(
                 "INSERT INTO queries(query_id, label, created_at) VALUES (?, ?, NOW()) " +
                         "ON CONFLICT (query_id) DO NOTHING",
@@ -296,13 +207,13 @@ class CaseIngestionJobE2EPostgresTest {
                 }
         );
 
-        // query list for step wiring
+        // step 5 wiring
         when(queryResolver.resolve()).thenReturn(List.of(new uk.gov.hmcts.cp.cdk.domain.Query() {{
             setQueryId(queryId);
             setLabel("E2E Query");
         }}));
 
-        // step 6
+        // step 6 — RAG call
         UserQueryAnswerReturnedSuccessfully rag =
                 new UserQueryAnswerReturnedSuccessfully()
                         .llmResponse("answer text")
@@ -336,7 +247,7 @@ class CaseIngestionJobE2EPostgresTest {
                         .addLong("ts", System.currentTimeMillis())
                         .addString("courtCentreId", "COURT-1")
                         .addString("roomId", "ROOM-42")
-                        .addString("cppuid","userId")
+                        .addString("cppuid", "userId")
                         .addString("date", LocalDate.now().toString())
                         .toJobParameters()
         );
@@ -364,7 +275,7 @@ class CaseIngestionJobE2EPostgresTest {
     @Test
     @DisplayName("E2E/Postgres: no eligible cases -> partitioned flow skipped; job COMPLETES")
     void e2e_no_cases_partition_skipped_job_completes() throws Exception {
-        when(progressionClient.getCourtDocuments(any(UUID.class),anyString())).thenReturn(Optional.empty());
+        when(progressionClient.getCourtDocuments(any(UUID.class), anyString())).thenReturn(Optional.empty());
 
         JobExecution exec = jobOperatorTestUtils.startJob(
                 new JobParametersBuilder()
@@ -372,7 +283,7 @@ class CaseIngestionJobE2EPostgresTest {
                         .addLong("ts", System.currentTimeMillis())
                         .addString("courtCentreId", "COURT-1")
                         .addString("roomId", "ROOM-42")
-                        .addString("cppuid","userId")
+                        .addString("cppuid", "userId")
                         .addString("date", LocalDate.now().toString())
                         .toJobParameters()
         );
@@ -397,16 +308,18 @@ class CaseIngestionJobE2EPostgresTest {
             RetryTemplate t = new RetryTemplate();
             SimpleRetryPolicy p = new SimpleRetryPolicy(1); // try once, no retries
             FixedBackOffPolicy b = new FixedBackOffPolicy();
-            b.setBackOffPeriod(50); // 50ms just in case
+            b.setBackOffPeriod(50); // short backoff
             t.setRetryPolicy(p);
             t.setBackOffPolicy(b);
             return t;
         }
+
         @Bean
         @Primary
         public PlatformTransactionManager transactionManager(EntityManagerFactory emf) {
             return new JpaTransactionManager(emf);
         }
+
         @Bean(name = "ingestionTaskExecutor")
         @Primary
         public TaskExecutor ingestionTaskExecutor() {
@@ -414,40 +327,11 @@ class CaseIngestionJobE2EPostgresTest {
         }
 
         // external mocks
-        @Bean
-        @Primary
-        public HearingClient hearingClient() {
-            return mock(HearingClient.class);
-        }
-
-        @Bean
-        @Primary
-        public ProgressionClient progressionClient() {
-            return mock(ProgressionClient.class);
-        }
-
-        @Bean
-        @Primary
-        public DocumentIngestionStatusApi documentIngestionStatusApi() {
-            return mock(DocumentIngestionStatusApi.class);
-        }
-
-        @Bean
-        @Primary
-        public DocumentInformationSummarisedApi documentInformationSummarisedApi() {
-            return mock(DocumentInformationSummarisedApi.class);
-        }
-
-        @Bean
-        @Primary
-        public QueryResolver queryResolver() {
-            return mock(QueryResolver.class);
-        }
-
-        @Bean
-        @Primary
-        public StorageService storageService() {
-            return mock(StorageService.class);
-        }
+        @Bean @Primary public HearingClient hearingClient() { return mock(HearingClient.class); }
+        @Bean @Primary public ProgressionClient progressionClient() { return mock(ProgressionClient.class); }
+        @Bean @Primary public DocumentIngestionStatusApi documentIngestionStatusApi() { return mock(DocumentIngestionStatusApi.class); }
+        @Bean @Primary public DocumentInformationSummarisedApi documentInformationSummarisedApi() { return mock(DocumentInformationSummarisedApi.class); }
+        @Bean @Primary public QueryResolver queryResolver() { return mock(QueryResolver.class); }
+        @Bean @Primary public StorageService storageService() { return mock(StorageService.class); }
     }
 }

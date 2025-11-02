@@ -66,11 +66,11 @@ services:
       OTEL_TRACES_URL: http://localhost:4318/traces
       OTEL_METRICS_URL: http://localhost:4318/metrics
 
-      CP_CDK_AZURE_STORAGE_CONNECTION_STRING: test
+      CP_CDK_AZURE_STORAGE_CONNECTION_STRING: foo
       CP_CDK_AZURE_STORAGE_CONTAINER: documents
 
       CP_CDK_RAG_URL: https://spnl-apim-int-gw.cpp.nonlive/api-cp-ai-rag
-      CP_CDK_RAG_SUBSCRIPTION_KEY: FOFF
+      CP_CDK_RAG_SUBSCRIPTION_KEY: gggg
       CP_CDK_CJSCPPUID_HEADER: CJSCPPUID
       CP_CDK_BASE_URL: http://wiremock:8080
 
@@ -89,8 +89,8 @@ services:
     ports:
       - "8089:8080"
     volumes:
-      - ../wiremock/mappings:/home/wiremock/mappings
-      - ../wiremock/__files:/home/wiremock/__files
+      - ../src/integrationTest/wiremock/mappings:/home/wiremock/mappings
+      - ../src/integrationTest/wiremock/__files:/home/wiremock/__files
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8080/__admin/health || exit 1" ]
       interval: 5s

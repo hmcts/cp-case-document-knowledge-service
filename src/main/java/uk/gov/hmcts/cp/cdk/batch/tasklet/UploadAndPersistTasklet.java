@@ -164,7 +164,7 @@ public class UploadAndPersistTasklet implements Tasklet {
                     downloadUrl.get(), destBlobPath, contentType, metadata
             );
 
-            final long sizeBytes = storageService.getBlobSize(blobUrl);
+            final long sizeBytes = storageService.getBlobSize(destBlobPath);
 
             final CaseDocument caseDocument = buildDoc(
                     documentId, caseId, blobName, blobUrl, contentType, sizeBytes

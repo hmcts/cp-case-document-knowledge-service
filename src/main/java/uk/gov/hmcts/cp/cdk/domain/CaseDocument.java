@@ -1,6 +1,8 @@
 package uk.gov.hmcts.cp.cdk.domain;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.Objects;
@@ -48,7 +50,12 @@ public class CaseDocument {
     private OffsetDateTime uploadedAt = utcNow();
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "ingestion_phase", nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(
+            name = "ingestion_phase",
+            nullable = false,
+            columnDefinition = "document_ingestion_phase_enum"
+    )
     private DocumentIngestionPhase ingestionPhase = DocumentIngestionPhase.UPLOADING;
 
     @Column(name = "ingestion_phase_at", nullable = false)
