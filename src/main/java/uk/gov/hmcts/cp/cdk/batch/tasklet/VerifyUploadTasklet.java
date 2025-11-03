@@ -29,6 +29,10 @@ public class VerifyUploadTasklet implements Tasklet {
     private static final String CTX_DOCUMENT_STATUS_JSON = BatchKeys.CTX_DOCUMENT_STATUS_JSON_KEY;
     private static final String CTX_CASE_ID = BatchKeys.CTX_CASE_ID_KEY;
     private static final String CTX_DOC_ID = BatchKeys.CTX_DOC_ID_KEY;
+    private static final String INGESTION_SUCCESS = "INGESTION_SUCCESS";
+    private static final String INGESTION_FAILED = "INGESTION_FAILED";
+
+
 
     private final DocumentIngestionStatusApi documentIngestionStatusApi;
     private final CaseDocumentRepository caseDocumentRepository;
@@ -82,7 +86,7 @@ public class VerifyUploadTasklet implements Tasklet {
             return RepeatStatus.FINISHED;
         }
 
-        long start = System.currentTimeMillis();
+        final long start = System.currentTimeMillis();
         boolean success = false;
         String lastStatus = null;
         String lastReason = null;
@@ -105,7 +109,8 @@ public class VerifyUploadTasklet implements Tasklet {
                     lastReason = body.getReason();
                     lastUpdated = body.getLastUpdated();
 
-                    if ("INGESTION_SUCCESS".equalsIgnoreCase(status)) {
+
+                    if (INGESTION_SUCCESS.equalsIgnoreCase(status)) {
                         try {
                             stepCtx.put(CTX_DOCUMENT_STATUS_JSON, objectMapper.writeValueAsString(body));
                         } catch (Exception e) {
@@ -116,7 +121,7 @@ public class VerifyUploadTasklet implements Tasklet {
                         log.info("Document ingestion successful for identifier={} (caseId={})", identifierToPoll, caseIdStr);
                         success = true;
                         break;
-                    } else if ("INGESTION_FAILED".equalsIgnoreCase(status)) {
+                    } else if (INGESTION_FAILED.equalsIgnoreCase(status)) {
                         log.error("Document ingestion FAILED for identifier={} reason={}", identifierToPoll, lastReason);
                         try {
                             stepCtx.put(CTX_DOCUMENT_STATUS_JSON, objectMapper.writeValueAsString(body));
