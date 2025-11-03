@@ -17,6 +17,7 @@ public class ProgressionDtoMapper {
         this.docTypeId = config.docTypeId();
     }
 
+    @SuppressWarnings({"PMD.OnlyOneReturn","PMD.UseExplicitTypes"})
     public Optional<LatestMaterialInfo> mapToLatestMaterialInfo(final CourtDocumentSearchResponse.DocumentIndex index) {
         final var caseIds = index.caseIds();
         final var document = index.document();
