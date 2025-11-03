@@ -21,10 +21,10 @@ public class MaterialToCasePartitioner implements Partitioner {
     public Map<String, ExecutionContext> partition(final int gridSize) {
         final Map<String, ExecutionContext> partitions = new LinkedHashMap<>();
         int index = 0;
-        for (Map.Entry<String, String> e : materialToCaseMap.entrySet()) {
-            final ExecutionContext ctx = new ExecutionContext();
-            ctx.putString(CTX_DOC_ID_KEY, e.getKey());
-            ctx.putString(CTX_CASE_ID_KEY, e.getValue());
+        for (final Map.Entry<String, String> entry : materialToCaseMap.entrySet()) {
+            final ExecutionContext ctx = new ExecutionContext();// NOPMD: AvoidInstantiatingObjectsInLoops
+            ctx.putString(CTX_DOC_ID_KEY, entry.getKey());
+            ctx.putString(CTX_CASE_ID_KEY, entry.getValue());
             partitions.put("case-" + (index++), ctx);
         }
         return partitions;
