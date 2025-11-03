@@ -81,7 +81,7 @@ public class UploadAndPersistTasklet implements Tasklet {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "PMD.OnlyOneReturn" })
     private Map<String, String> resolveMaterialToCaseMap(final StepExecution stepExecution) {
         if (stepExecution == null) {
             log.info("No StepExecution available; nothing to do.");
@@ -116,6 +116,7 @@ public class UploadAndPersistTasklet implements Tasklet {
     }
 
     @Override
+    @SuppressWarnings("PMD.OnlyOneReturn" )
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final StepExecution stepExecution = contribution != null ? contribution.getStepExecution() : null;
         final Map<String, String> materialToCaseMap = resolveMaterialToCaseMap(stepExecution);
