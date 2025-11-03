@@ -14,6 +14,7 @@ import java.util.Objects;
 @Component
 public class HearingDtoMapper {
 
+    @SuppressWarnings({"PMD.OnlyOneReturn","PMD.UseExplicitTypes"})
     public List<String> collectProsecutionCaseIds(final HearingSummaries summaries) {
         if (summaries == null || summaries.prosecutionCaseSummaries() == null) {
             return List.of();
@@ -24,6 +25,7 @@ public class HearingDtoMapper {
                 .toList();
     }
 
+    @SuppressWarnings({"PMD.OnlyOneReturn","PMD.UseExplicitTypes"})
     public List<HearingSummariesInfo> toHearingSummariesInfo(final List<String> prosecutionCaseIds) {
         if (prosecutionCaseIds == null || prosecutionCaseIds.isEmpty()) {
             return Collections.emptyList();

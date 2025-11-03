@@ -41,6 +41,7 @@ public class HearingClientImpl implements HearingClient {
     }
 
     @Override
+    @SuppressWarnings({"PMD.OnlyOneReturn","PMD.UseExplicitTypes"})
     public List<HearingSummariesInfo> getHearingsAndCases(final String courtId, final String roomId, final LocalDate date, final String userId) {
         final URI uriHearing = UriComponentsBuilder
                 .fromPath(hearingsPath)

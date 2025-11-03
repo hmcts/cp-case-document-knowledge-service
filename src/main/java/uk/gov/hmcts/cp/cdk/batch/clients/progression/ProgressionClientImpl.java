@@ -45,6 +45,7 @@ public class ProgressionClientImpl implements ProgressionClient {
     }
 
     @Override
+    @SuppressWarnings({"PMD.OnlyOneReturn","PMD.UseExplicitTypes"})
     public Optional<LatestMaterialInfo> getCourtDocuments(final UUID caseId, final String userId) {
         final URI uri = UriComponentsBuilder
                 .fromPath(courtDocsPath)

@@ -3,6 +3,7 @@ package uk.gov.hmcts.cp.cdk.batch.clients.progression.dto;
 import java.time.ZonedDateTime;
 import java.util.List;
 
+@SuppressWarnings("PMD.ShortVariable")
 public record CourtDocumentSearchResponse(
         List<DocumentIndex> documentIndices
 ) {
