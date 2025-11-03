@@ -41,6 +41,7 @@ public class VerifyUploadTasklet implements Tasklet {
     private long maxWaitMs;
 
     @Override
+    @SuppressWarnings("PMD.OnlyOneReturn")
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final ExecutionContext stepCtx = contribution.getStepExecution().getExecutionContext();
 
