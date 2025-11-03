@@ -27,18 +27,21 @@ public class ApimDocumentIngestionStatusClient implements DocumentIngestionStatu
     private final RagClientProperties props;
 
     @Override
-    public ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> documentStatus(String documentName) {
+    @SuppressWarnings("PMD.OnlyOneReturn" )
+    public ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> documentStatus(final String documentName) {
         try {
             return restClient
                     .get()
                     .uri(uriBuilder -> uriBuilder
-                            .path(DocumentIngestionStatusApi.PATH_DOCUMENT_STATUS)
+                            .path(PATH_DOCUMENT_STATUS)
                             .queryParam("document-name", documentName)
                             .build())
                     .accept(MediaType.APPLICATION_JSON)
                     .headers(h -> {
                         final Map<String, String> hdrs = props.getHeaders();
-                        if (hdrs != null) hdrs.forEach(h::add);
+                        if (hdrs != null) {
+                            hdrs.forEach(h::add);
+                        }
                     })
                     .retrieve()
                     .toEntity(DocumentIngestionStatusReturnedSuccessfully.class);
@@ -50,7 +53,7 @@ public class ApimDocumentIngestionStatusClient implements DocumentIngestionStatu
                         documentName, ex.getResponseBodyAsString(StandardCharsets.UTF_8));
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
-            String body = ex.getResponseBodyAsString(StandardCharsets.UTF_8);
+            final String body = ex.getResponseBodyAsString(StandardCharsets.UTF_8);
             log.warn("APIM error on document-status: {} {} - {}", ex.getStatusCode(), ex.getStatusText(), body, ex);
             throw ex;
         }
