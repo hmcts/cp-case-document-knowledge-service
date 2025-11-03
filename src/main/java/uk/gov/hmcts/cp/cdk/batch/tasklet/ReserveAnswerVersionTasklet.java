@@ -47,7 +47,7 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
                         .filter(Objects::nonNull)
                         .collect(Collectors.toCollection(LinkedHashSet::new));
 
-                if (!queryIds.isEmpty()) {
+                if (!queryIds.isEmpty()) { // NOPMD: AvoidUsingIfElseWithNegation
                     final List<UUID> ids = new ArrayList<>(queryIds);
                     final StringJoiner joiner = new StringJoiner(", ");
                     final MapSqlParameterSource params = new MapSqlParameterSource()
