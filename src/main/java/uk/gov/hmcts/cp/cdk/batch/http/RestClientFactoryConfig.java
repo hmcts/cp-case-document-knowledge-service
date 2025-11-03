@@ -19,23 +19,20 @@ public class RestClientFactoryConfig {
 
     @Bean(destroyMethod = "close")
     public PoolingHttpClientConnectionManager httpClientConnectionManager() {
-        final PoolingHttpClientConnectionManager connectionManager =
-                PoolingHttpClientConnectionManagerBuilder.create()
-                        .setMaxConnTotal(200)
-                        .setMaxConnPerRoute(50)
-                        .build();
-        return connectionManager;
+        return PoolingHttpClientConnectionManagerBuilder.create()
+                .setMaxConnTotal(200)
+                .setMaxConnPerRoute(50)
+                .build();
     }
 
     @Bean(destroyMethod = "close")
     public CloseableHttpClient closeableHttpClient(final PoolingHttpClientConnectionManager connectionManager) {
-        final CloseableHttpClient httpClient = HttpClients.custom()
+        return HttpClients.custom()
                 .setConnectionManager(connectionManager)
                 .evictExpiredConnections()
                 .evictIdleConnections(TimeValue.ofSeconds(30))
                 .disableAutomaticRetries()
                 .build();
-        return httpClient;
     }
 
     @Bean
