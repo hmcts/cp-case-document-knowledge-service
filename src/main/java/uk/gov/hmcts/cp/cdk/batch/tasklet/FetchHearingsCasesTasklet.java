@@ -31,6 +31,7 @@ public class FetchHearingsCasesTasklet implements Tasklet {
     private final HearingClient hearingClient;
 
     @Override
+    @SuppressWarnings("PMD.OnlyOneReturn" )
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) throws Exception {
         final JobParameters params = contribution.getStepExecution().getJobParameters();
         final ExecutionContext jobCtx = contribution.getStepExecution().getJobExecution().getExecutionContext();
