@@ -64,17 +64,21 @@ public class AzureBlobStorageService implements StorageService {
     @Override
     public String upload(final String blobPath, final InputStream data, final long size, final String contentType) {
         final String blobName = normalizeToBlobName(blobPath);
-        if (data == null) throw new IllegalArgumentException("data must not be null");
-        if (size < 0) throw new IllegalArgumentException("size must be >= 0");
+        if (data == null) {
+            throw new IllegalArgumentException("data must not be null");
+        }
+        if (size < 0) {
+            throw new IllegalArgumentException("size must be >= 0");
+        }
 
         final BlobClient blob = blobContainerClient.getBlobClient(blobName);
         blob.upload(data, size, true);
 
-        final String ct = (contentType == null || contentType.isBlank()) ? DEFAULT_CONTENT_TYPE : contentType;
+        final String ctype = (contentType == null || contentType.isBlank()) ? DEFAULT_CONTENT_TYPE : contentType;
         try {
-            blob.setHttpHeaders(new BlobHttpHeaders().setContentType(ct));
+            blob.setHttpHeaders(new BlobHttpHeaders().setContentType(ctype));
         } catch (RuntimeException ex) {
-            log.warn("Failed to set content-type on upload (continuing). name={}, type={}", blobName, ct, ex);
+            log.warn("Failed to set content-type on upload (continuing). name={}, type={}", blobName, ctype, ex);
         }
         return blob.getBlobUrl();
     }
@@ -106,7 +110,7 @@ public class AzureBlobStorageService implements StorageService {
 
         final long deadlineNanos = System.nanoTime() + Duration.ofSeconds(timeoutSeconds).toNanos();
         CopyStatusType status = null;
-        String statusDesc = null;
+        String statusDesc;
 
         sleepQuiet(Math.min(pollIntervalMs, 250));
 
@@ -115,7 +119,9 @@ public class AzureBlobStorageService implements StorageService {
             status = props.getCopyStatus();
             statusDesc = props.getCopyStatusDescription();
 
-            if (status == CopyStatusType.SUCCESS) break;
+            if (status == CopyStatusType.SUCCESS) {
+                break;
+            }
             if (status == CopyStatusType.ABORTED || status == CopyStatusType.FAILED) {
                 throw new IllegalStateException("Blob copy failed: " + (statusDesc == null ? status : statusDesc));
             }
@@ -125,15 +131,17 @@ public class AzureBlobStorageService implements StorageService {
         if (status != CopyStatusType.SUCCESS) {
             try {
                 blob.abortCopyFromUrl(copyId);
-            } catch (Exception ignore) { /* ignore */ }
+            } catch (Exception ignore) {
+                log.warn("Failed to abort blob copy from URL copyId= ", copyId, ignore.getMessage());
+            }
             throw new IllegalStateException("Timed out after " + timeoutSeconds + "s waiting for blob copy to succeed");
         }
 
-        final String ct = (contentType == null || contentType.isBlank()) ? DEFAULT_CONTENT_TYPE : contentType;
+        final String ctype = (contentType == null || contentType.isBlank()) ? DEFAULT_CONTENT_TYPE : contentType;
         try {
-            blob.setHttpHeaders(new BlobHttpHeaders().setContentType(ct));
+            blob.setHttpHeaders(new BlobHttpHeaders().setContentType(ctype));
         } catch (RuntimeException ex) {
-            log.warn("Failed to set content-type on copied blob (continuing). name={}, type={}", blobName, ct, ex);
+            log.warn("Failed to set content-type on copied blob (continuing). name={}, type={}", blobName, ctype, ex);
         }
 
         if (metadata != null && !metadata.isEmpty()) {
@@ -164,7 +172,7 @@ public class AzureBlobStorageService implements StorageService {
     }
 
     /* -------------------- helpers -------------------- */
-
+    @SuppressWarnings("PMD.OnlyOneReturn" )
     private String normalizeToBlobName(final String pathOrUrl) {
         if (pathOrUrl == null || pathOrUrl.isBlank()) {
             throw new IllegalArgumentException("blob path/url must not be blank");
@@ -185,20 +193,20 @@ public class AzureBlobStorageService implements StorageService {
         return pathOrUrl.replaceFirst("^/", "");
     }
 
-    private static boolean isHttpUrl(String s) {
-        return s.startsWith("http://") || s.startsWith("https://");
+    private static boolean isHttpUrl(final String url) {
+        return url.startsWith("http://") || url.startsWith("https://");
     }
 
-    private static Map<String, String> normalizeMetadataKeys(Map<String, String> metadata) {
+    private static Map<String, String> normalizeMetadataKeys(final Map<String, String> metadata) {
         final Map<String, String> normalized = new HashMap<>();
-        for (Map.Entry<String, String> e : metadata.entrySet()) {
-            final String k = (e.getKey() == null) ? "" : e.getKey().trim().toLowerCase(Locale.ROOT);
-            normalized.put(k, e.getValue());
+        for (final Map.Entry<String, String> entry : metadata.entrySet()) {
+            final String key = (entry.getKey() == null) ? "" : entry.getKey().trim().toLowerCase(Locale.ROOT);
+            normalized.put(key, entry.getValue());
         }
         return normalized;
     }
 
-    private void sleepQuiet(long millis) {
+    private void sleepQuiet( final long millis) {
         try {
             Thread.sleep(Math.max(1L, millis));
         } catch (InterruptedException ie) {
