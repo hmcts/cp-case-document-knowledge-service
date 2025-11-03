@@ -20,7 +20,7 @@ public record CQRSClientProperties(
             connectTimeoutMs = 3000;
         }
         if (readTimeoutMs <= 0) {
-            readTimeoutMs = 15000;
+            readTimeoutMs = 15_000;
         }
         if (headers == null) {
             headers = new Headers(null);

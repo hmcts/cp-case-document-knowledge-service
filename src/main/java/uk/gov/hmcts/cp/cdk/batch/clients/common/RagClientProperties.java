@@ -21,7 +21,7 @@ public class RagClientProperties {
     private int connectTimeoutMs = 3000;
 
     @Positive
-    private int readTimeoutMs = 15000;
+    private int readTimeoutMs = 15_000;
 
     private Map<String, String> headers = new HashMap<>();
 

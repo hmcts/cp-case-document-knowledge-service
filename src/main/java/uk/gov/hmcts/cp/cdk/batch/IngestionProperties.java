@@ -19,7 +19,7 @@ public class IngestionProperties {
 
         public static class Backoff {
             private long initialMs = 1000;
-            private long maxMs = 15000;
+            private long maxMs = 15_000;
 
             public long getInitialMs() {
                 return initialMs;
