@@ -8,7 +8,7 @@ ARG JAR_FILENAME
 ARG JAR_FILE_PATH
 ARG CP_BACKEND_URL
 ARG CJSCPPUID
-ARG CERT_DIR
+ARG CERTS_DIR
 
 ENV JAR_FILENAME=${JAR_FILENAME:-app.jar}
 ENV JAR_FILE_PATH=${JAR_FILE_PATH:-build/libs}
@@ -26,7 +26,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 #---Certs---
-COPY ${CERT_DIR}/ /etc/pki/ca-trust/source/anchors/
+COPY ${CERTS_DIR}/ /etc/pki/ca-trust/source/anchors/
 
 RUN update-ca-certificates
 
