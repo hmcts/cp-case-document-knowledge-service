@@ -8,6 +8,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.StepExecution;
@@ -35,7 +36,9 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
 
 @DisplayName("GenerateAnswersTasklet tests")
 @ExtendWith(MockitoExtension.class)
@@ -70,11 +73,15 @@ class GenerateAnswersTaskletTest {
         final UUID caseId = UUID.randomUUID();
         final UUID docId  = UUID.randomUUID();
         ExecutionContext stepCtx = new ExecutionContext();
-        stepCtx.putString("caseId", caseId.toString());
+        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
         stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
 
         when(contribution.getStepExecution()).thenReturn(stepExecution);
         when(stepExecution.getExecutionContext()).thenReturn(stepCtx);
+        when(stepExecution.getJobExecution()).thenReturn(mock(JobExecution.class));
+        ExecutionContext jobCtx = new ExecutionContext();
+        when(stepExecution.getJobExecution().getExecutionContext()).thenReturn(jobCtx);
+        jobCtx.put(CTX_UPLOAD_VERIFIED_KEY + ":" + docId, true);
 
         UUID q1 = UUID.randomUUID();
         UUID q2 = UUID.randomUUID();
@@ -116,7 +123,6 @@ class GenerateAnswersTaskletTest {
                 any(SqlParameterSource.class)
         )).thenReturn(1);
 
-        // Upstream responses
         var resp1 = new UserQueryAnswerReturnedSuccessfully()
                 .userQuery("user-query-1")
                 .queryPrompt("prompt-1")
@@ -128,7 +134,6 @@ class GenerateAnswersTaskletTest {
                 .llmResponse("ans-" + q2)
                 .chunkedEntries(List.of(Map.of("id", 2)));
 
-        // Mock OpenAPI call – verify we get correct userQuery/prompt in the request
         when(documentInformationSummarisedApi.answerUserQuery(argThat(req ->
                 req instanceof AnswerUserQueryRequest r &&
                         "user-query-1".equals(r.getUserQuery()) &&
@@ -141,7 +146,6 @@ class GenerateAnswersTaskletTest {
                         "prompt-2".equals(r.getQueryPrompt())
         ))).thenReturn(ResponseEntity.ok(resp2));
 
-        // Capture batches
         ArgumentCaptor<MapSqlParameterSource[]> answersBatchCaptor = ArgumentCaptor.forClass(MapSqlParameterSource[].class);
         when(jdbc.batchUpdate(startsWith("INSERT INTO answers"), answersBatchCaptor.capture()))
                 .thenReturn(new int[]{1,1});
@@ -168,7 +172,6 @@ class GenerateAnswersTaskletTest {
                 any(SqlParameterSource.class)
         );
 
-        // Assert payloads
         MapSqlParameterSource[] answersBatch = answersBatchCaptor.getValue();
         MapSqlParameterSource[] doneBatch = doneBatchCaptor.getValue();
         assertThat(answersBatch).hasSize(2);
@@ -210,6 +213,9 @@ class GenerateAnswersTaskletTest {
         ExecutionContext stepCtx = new ExecutionContext();
         when(contribution.getStepExecution()).thenReturn(stepExecution);
         when(stepExecution.getExecutionContext()).thenReturn(stepCtx);
+        when(stepExecution.getJobExecution()).thenReturn(mock(JobExecution.class));
+        ExecutionContext jobCtx = new ExecutionContext();
+        when(stepExecution.getJobExecution().getExecutionContext()).thenReturn(jobCtx);
 
         RepeatStatus status = newTasklet().execute(contribution, chunkContext);
 
@@ -223,11 +229,16 @@ class GenerateAnswersTaskletTest {
         final UUID caseId = UUID.randomUUID();
         final UUID docId  = UUID.randomUUID();
         ExecutionContext stepCtx = new ExecutionContext();
-        stepCtx.putString("caseId", caseId.toString());
+        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
         stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
 
         when(contribution.getStepExecution()).thenReturn(stepExecution);
         when(stepExecution.getExecutionContext()).thenReturn(stepCtx);
+        when(stepExecution.getJobExecution()).thenReturn(mock(JobExecution.class));
+        ExecutionContext jobCtx = new ExecutionContext();
+        when(stepExecution.getJobExecution().getExecutionContext()).thenReturn(jobCtx);
+        jobCtx.put(CTX_UPLOAD_VERIFIED_KEY + ":" + docId, true);
+
         when(queryResolver.resolve()).thenReturn(Collections.emptyList());
 
         RepeatStatus status = newTasklet().execute(contribution, chunkContext);

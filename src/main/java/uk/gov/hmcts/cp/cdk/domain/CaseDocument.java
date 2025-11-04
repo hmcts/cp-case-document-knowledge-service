@@ -28,6 +28,9 @@ public class CaseDocument {
     @Column(name = "case_id", nullable = false)
     private UUID caseId;
 
+    @Column(name = "material_id", nullable = false)
+    private UUID materialId;
+
     @Column(name = "source", nullable = false)
     private String source = "IDPC";
 
@@ -75,6 +78,14 @@ public class CaseDocument {
 
     public void setCaseId(final UUID caseId) {
         this.caseId = caseId;
+    }
+
+    public UUID getMaterialId() {
+        return materialId;
+    }
+
+    public void setMaterialId(final UUID materialId) {
+        this.materialId = materialId;
     }
 
     public String getSource() {

@@ -112,21 +112,23 @@ class IngestionStatusViewRepositoryTest {
         caseId = UUID.randomUUID();
 
         jdbc.update("""
-            INSERT INTO case_documents (doc_id, case_id, source, doc_name, blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
-            VALUES (?, ?, 'IDPC', 'material_id_1', 'blob://uri', ?, 'INGESTING', ?)
+            INSERT INTO case_documents (doc_id, case_id,material_id, source, doc_name, blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
+            VALUES (?, ?, ?,'IDPC', 'material_id_1', 'blob://uri', ?, 'INGESTING', ?)
         """,
                 UUID.randomUUID(),
                 caseId,
+                UUID.randomUUID(),
                 OffsetDateTime.parse("2025-05-01T12:00:00Z"),
                 OffsetDateTime.parse("2025-05-01T12:00:00Z")
         );
 
         jdbc.update("""
-            INSERT INTO case_documents (doc_id, case_id, source, doc_name, blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
-            VALUES (?, ?, 'IDPC', 'material_id_2', 'blob://uri2', ?, 'INGESTED', ?)
+            INSERT INTO case_documents (doc_id, case_id,material_id, source, doc_name, blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
+            VALUES (?, ?,?, 'IDPC', 'material_id_2', 'blob://uri2', ?, 'INGESTED', ?)
         """,
                 UUID.randomUUID(),
                 caseId,
+                UUID.randomUUID(),
                 OffsetDateTime.parse("2025-05-01T12:05:00Z"),
                 OffsetDateTime.parse("2025-05-01T12:05:00Z")
         );

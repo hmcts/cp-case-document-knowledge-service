@@ -3,6 +3,7 @@ package uk.gov.hmcts.cp.cdk.batch.tasklet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.tasklet.Tasklet;
@@ -27,7 +28,9 @@ import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
 
 import java.util.*;
 
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
 
 @Slf4j
 @Component
@@ -105,16 +108,25 @@ public class GenerateAnswersTasklet implements Tasklet {
     }
 
     @Override
-    @SuppressWarnings({"PMD.CyclomaticComplexity"})
+    @SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.OnlyOneReturn"})
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final ExecutionContext stepCtx = contribution.getStepExecution().getExecutionContext();
-        final String caseIdStr = stepCtx.getString("caseId", null);
+        final JobExecution jobExecution = contribution.getStepExecution().getJobExecution();
+        final ExecutionContext jobCtx = jobExecution != null ? jobExecution.getExecutionContext() : new ExecutionContext();
+
         final String docIdStr = stepCtx.getString(CTX_DOC_ID_KEY, null);
+        final String verifiedKey = CTX_UPLOAD_VERIFIED_KEY + ":" + docIdStr;
+        final Boolean jobVerified  = (Boolean) jobCtx.get(verifiedKey);
+        if (!Boolean.TRUE.equals(jobVerified)) {
+            log.info("GenerateAnswersTasklet: ingestion not verified as SUCCESS; skipping.");
+            return RepeatStatus.FINISHED;
+        }
+        final String caseIdStr = stepCtx.getString(CTX_CASE_ID_KEY, null);
+
 
         if (caseIdStr != null && docIdStr != null) {
             final UUID caseId = UUID.fromString(caseIdStr);
             final UUID docId = UUID.fromString(docIdStr);
-
             final List<Query> queries = queryResolver.resolve();
             if (queries.isEmpty()) {
                 log.debug("No queries resolved – nothing to do.");

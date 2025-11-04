@@ -14,7 +14,7 @@ public final class AzureSasUtil {
     public static void main(String[] args) {
         System.out.println(sasUrlFromEnv( "idpc-ai",     // container
                 "hello.pdf",   // blob
-                30  ));
+                120  ));
     }
     private AzureSasUtil() {}
 

@@ -61,6 +61,7 @@ COMMENT ON VIEW v_query_definitions_latest IS
 CREATE TABLE IF NOT EXISTS case_documents (
   doc_id             UUID        PRIMARY KEY, -- supply from app, or add your own DB-side generator if desired
   case_id            UUID        NOT NULL,
+  material_id        UUID        NOT NULL,
   source             TEXT        NOT NULL DEFAULT 'IDPC',
   doc_name           TEXT        NOT NULL,
   blob_uri           TEXT        NOT NULL,

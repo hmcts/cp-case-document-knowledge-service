@@ -47,7 +47,6 @@ public class ApimDocumentIngestionStatusClient implements DocumentIngestionStatu
                     .toEntity(DocumentIngestionStatusReturnedSuccessfully.class);
 
         } catch (HttpStatusCodeException ex) {
-            // Gracefully map 404 to the OpenAPI's 404 response (empty body is fine for the tasklet).
             if (ex.getStatusCode() == HttpStatus.NOT_FOUND) {
                 log.info("Document not found in APIM for name='{}' (404). Body={}",
                         documentName, ex.getResponseBodyAsString(StandardCharsets.UTF_8));

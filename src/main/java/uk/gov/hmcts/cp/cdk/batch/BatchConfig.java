@@ -15,9 +15,10 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import uk.gov.hmcts.cp.cdk.batch.storage.AzureBlobStorageService;
 import uk.gov.hmcts.cp.cdk.batch.storage.StorageProperties;
 import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
+import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
 
 @Configuration
-@EnableConfigurationProperties({StorageProperties.class, IngestionProperties.class})
+@EnableConfigurationProperties({StorageProperties.class, UploadProperties.class, IngestionProperties.class})
 public class BatchConfig {
 
     private final IngestionProperties props;

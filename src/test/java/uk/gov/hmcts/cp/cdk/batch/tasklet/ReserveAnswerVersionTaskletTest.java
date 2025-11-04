@@ -1,11 +1,12 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.StepExecution;
@@ -13,136 +14,203 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.SimpleTransactionStatus;
 import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
 
-@DisplayName("ReserveAnswerVersionTasklet tests")
 @ExtendWith(MockitoExtension.class)
 class ReserveAnswerVersionTaskletTest {
 
-    @Mock private QueryResolver queryResolver;
-    @Mock private NamedParameterJdbcTemplate jdbc;
+    private QueryResolver queryResolver;
+    private NamedParameterJdbcTemplate jdbc;
+    private PlatformTransactionManager txManager;
 
-    private final PlatformTransactionManager txManager = new NoopTxManager();
+    private StepContribution stepContribution;
+    private ChunkContext chunkContext;
+    private StepExecution stepExecution;
+    private JobExecution jobExecution;
 
-    @Mock private StepContribution contribution;
-    @Mock private ChunkContext chunkContext;
-    @Mock private StepExecution stepExecution;
+    private ExecutionContext stepCtx;
+    private ExecutionContext jobCtx;
 
-    static class NoopTxManager implements PlatformTransactionManager {
-        @Override public TransactionStatus getTransaction(TransactionDefinition definition) { return new SimpleTransactionStatus(); }
-        @Override public void commit(TransactionStatus status) { }
-        @Override public void rollback(TransactionStatus status) { }
-    }
+    private ReserveAnswerVersionTasklet tasklet;
 
-    private ReserveAnswerVersionTasklet newTasklet() {
-        return new ReserveAnswerVersionTasklet(queryResolver, jdbc, txManager);
+    @BeforeEach
+    void setUp() {
+        queryResolver = mock(QueryResolver.class);
+        jdbc = mock(NamedParameterJdbcTemplate.class);
+        txManager = mock(PlatformTransactionManager.class);
+
+        stepContribution = mock(StepContribution.class);
+        chunkContext = mock(ChunkContext.class);
+        stepExecution = mock(StepExecution.class);
+        jobExecution = mock(JobExecution.class);
+
+        stepCtx = new ExecutionContext();
+        jobCtx = new ExecutionContext();
+
+        tasklet = new ReserveAnswerVersionTasklet(queryResolver, jdbc, txManager);
+
+        lenient().when(stepContribution.getStepExecution()).thenReturn(stepExecution);
+        lenient().when(stepExecution.getExecutionContext()).thenReturn(stepCtx);
+        lenient().when(stepExecution.getJobExecution()).thenReturn(jobExecution);
+        lenient().when(jobExecution.getExecutionContext()).thenReturn(jobCtx);
+
+        lenient().when(txManager.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
+        lenient().doNothing().when(txManager).commit(any());
+        lenient().doNothing().when(txManager).rollback(any());
     }
 
     @Test
-    @DisplayName("Reserves versions for multiple queries in one SQL and batch-updates reservations")
-    void reservesVersionsInBatch() throws Exception {
-        final UUID caseId = UUID.randomUUID();
-        final UUID docId  = UUID.randomUUID();
-        ExecutionContext stepCtx = new ExecutionContext();
-        stepCtx.putString("caseId", caseId.toString());
-        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
+    @DisplayName("Finishes when StepExecution is null")
+    void finishesWhenStepExecutionNull() throws Exception {
+        when(stepContribution.getStepExecution()).thenReturn(null);
 
-        when(contribution.getStepExecution()).thenReturn(stepExecution);
-        when(stepExecution.getExecutionContext()).thenReturn(stepCtx);
+        RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
+
+        assertThat(status).isEqualTo(RepeatStatus.FINISHED);
+        verifyNoInteractions(queryResolver, jdbc);
+    }
+
+    @Test
+    @DisplayName("Skips when case/doc ids missing")
+    void skipsWhenIdsMissing() throws Exception {
+        RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
+
+        assertThat(status).isEqualTo(RepeatStatus.FINISHED);
+        verifyNoInteractions(queryResolver, jdbc);
+    }
+
+    @Test
+    @DisplayName("Skips when UUIDs invalid")
+    void skipsWhenInvalidUuids() throws Exception {
+        stepCtx.putString(CTX_CASE_ID_KEY, "not-a-uuid");
+        stepCtx.putString(CTX_DOC_ID_KEY, "also-not-a-uuid");
+
+        RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
+
+        assertThat(status).isEqualTo(RepeatStatus.FINISHED);
+        verifyNoInteractions(queryResolver, jdbc);
+    }
+
+    @Test
+    @DisplayName("Skips when case_documents entry does not exist")
+    void skipsWhenDocMissing() throws Exception {
+        UUID caseId = UUID.randomUUID();
+        UUID docId = UUID.randomUUID();
+
+        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
+        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
+        jobCtx.put(CTX_UPLOAD_VERIFIED_KEY + ":" + docId, true);
+
+        when(jdbc.queryForObject(
+                eq("SELECT EXISTS (SELECT 1 FROM case_documents WHERE case_id=:case_id AND doc_id=:doc_id)"),
+                any(MapSqlParameterSource.class),
+                eq(Boolean.class)
+        )).thenReturn(Boolean.FALSE);
+
+        RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
+
+        assertThat(status).isEqualTo(RepeatStatus.FINISHED);
+        verify(jdbc).queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Boolean.class));
+        verifyNoMoreInteractions(jdbc);
+        verifyNoInteractions(queryResolver);
+    }
+
+
+    @Test
+    @DisplayName("Happy path: reserves versions for unique query ids and touches updated_at")
+    void happyPathReservesVersions() throws Exception {
+        UUID caseId = UUID.randomUUID();
+        UUID docId = UUID.randomUUID();
+        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
+        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
+        jobCtx.put(CTX_UPLOAD_VERIFIED_KEY + ":" + docId, true);
+
+        when(jdbc.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Boolean.class)))
+                .thenReturn(Boolean.TRUE);
 
         UUID q1 = UUID.randomUUID();
         UUID q2 = UUID.randomUUID();
-        Query query1 = mock(Query.class);
-        Query query2 = mock(Query.class);
-        Query query2Dup = mock(Query.class);
-        when(query1.getQueryId()).thenReturn(q1);
-        when(query2.getQueryId()).thenReturn(q2);
-        when(query2Dup.getQueryId()).thenReturn(q2);
-        when(queryResolver.resolve()).thenReturn(Arrays.asList(query1, query2, query2Dup));
 
-        List<Map<String, Object>> rows = new ArrayList<>();
-        rows.add(new HashMap<String, Object>() {{
-            put("query_id", q1);
-            put("version", 3);
-        }});
-        rows.add(new HashMap<String, Object>() {{
-            put("query_id", q2);
-            put("version", 7);
-        }});
+        Query a = mock(Query.class); when(a.getQueryId()).thenReturn(q1);
+        Query b = mock(Query.class); when(b.getQueryId()).thenReturn(q2);
+        Query c = mock(Query.class); when(c.getQueryId()).thenReturn(q1);
 
-        when(jdbc.queryForList(
-                startsWith("WITH q(id) AS (VALUES"),
-                any(SqlParameterSource.class))
-        ).thenReturn(rows);
+        when(queryResolver.resolve()).thenReturn(List.of(a, b, c));
 
-        ArgumentCaptor<MapSqlParameterSource[]> batchCaptor = ArgumentCaptor.forClass(MapSqlParameterSource[].class);
-        when(jdbc.batchUpdate(startsWith("UPDATE answer_reservations SET updated_at = NOW()"), batchCaptor.capture()))
-                .thenReturn(new int[]{1,1});
+        Map<String, Object> r1 = new HashMap<>();
+        r1.put("query_id", q1);
+        r1.put("version", 3);
+        Map<String, Object> r2 = new HashMap<>();
+        r2.put("query_id", q2);
+        r2.put("version", 1);
 
-        RepeatStatus result = newTasklet().execute(contribution, chunkContext);
+        when(jdbc.queryForList(anyString(), any(MapSqlParameterSource.class)))
+                .thenReturn(List.of(r1, r2));
 
-        assertThat(result).isEqualTo(RepeatStatus.FINISHED);
+        RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
+        assertThat(status).isEqualTo(RepeatStatus.FINISHED);
 
-        verify(jdbc, times(1)).queryForList(startsWith("WITH q(id) AS (VALUES"), any(SqlParameterSource.class));
-        verify(jdbc, times(1)).batchUpdate(startsWith("UPDATE answer_reservations SET updated_at = NOW()"), any(MapSqlParameterSource[].class));
-
-        MapSqlParameterSource[] batch = batchCaptor.getValue();
+        ArgumentCaptor<MapSqlParameterSource[]> captor = ArgumentCaptor.forClass(MapSqlParameterSource[].class);
+        verify(jdbc).batchUpdate(
+                startsWith("UPDATE answer_reservations"),
+                captor.capture()
+        );
+        MapSqlParameterSource[] batch = captor.getValue();
         assertThat(batch).hasSize(2);
 
-        Set<UUID> seenQueryIds = new HashSet<>();
-        for (MapSqlParameterSource m : batch) {
-            Map<String, Object> vals = m.getValues();
-            assertThat(vals.get("case_id")).isEqualTo(caseId);
-            assertThat(vals.get("doc_id")).isEqualTo(docId);
-            assertThat(vals.get("version")).isInstanceOf(Integer.class);
-            seenQueryIds.add((UUID) vals.get("query_id"));
+        Set<UUID> seen = new HashSet<>();
+        for (MapSqlParameterSource s : batch) {
+            UUID bid = (UUID) s.getValues().get("case_id");
+            UUID qid = (UUID) s.getValues().get("query_id");
+            UUID did = (UUID) s.getValues().get("doc_id");
+            Integer ver = (Integer) s.getValues().get("version");
+
+            assertThat(bid).isEqualTo(caseId);
+            assertThat(did).isEqualTo(docId);
+            assertThat(qid).isIn(q1, q2);
+            assertThat(ver).isIn(3, 1);
+            seen.add(qid);
         }
-        assertThat(seenQueryIds).containsExactlyInAnyOrder(q1, q2);
+        assertThat(seen).containsExactlyInAnyOrder(q1, q2);
     }
 
     @Test
-    @DisplayName("Does nothing when caseId/docId missing")
-    void noContext() throws Exception {
-        ExecutionContext stepCtx = new ExecutionContext();
-        when(contribution.getStepExecution()).thenReturn(stepExecution);
-        when(stepExecution.getExecutionContext()).thenReturn(stepCtx);
-
-        RepeatStatus result = newTasklet().execute(contribution, chunkContext);
-
-        assertThat(result).isEqualTo(RepeatStatus.FINISHED);
-        verifyNoInteractions(jdbc, queryResolver);
-    }
-
-    @Test
-    @DisplayName("Does nothing when no queries")
-    void noQueries() throws Exception {
-        final UUID caseId = UUID.randomUUID();
-        final UUID docId  = UUID.randomUUID();
-        ExecutionContext stepCtx = new ExecutionContext();
-        stepCtx.putString("caseId", caseId.toString());
+    @DisplayName("Skips when resolver returns no queries or all null IDs")
+    void skipsWhenNoQueries() throws Exception {
+        UUID caseId = UUID.randomUUID();
+        UUID docId = UUID.randomUUID();
+        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
         stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
+        jobCtx.put(CTX_UPLOAD_VERIFIED_KEY + ":" + docId, true);
 
-        when(contribution.getStepExecution()).thenReturn(stepExecution);
-        when(stepExecution.getExecutionContext()).thenReturn(stepCtx);
-        when(queryResolver.resolve()).thenReturn(Collections.emptyList());
+        when(jdbc.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Boolean.class)))
+                .thenReturn(Boolean.TRUE);
 
-        RepeatStatus result = newTasklet().execute(contribution, chunkContext);
+        when(queryResolver.resolve()).thenReturn(List.of());
 
-        assertThat(result).isEqualTo(RepeatStatus.FINISHED);
-        verifyNoInteractions(jdbc);
+        RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
+        assertThat(status).isEqualTo(RepeatStatus.FINISHED);
+        verify(jdbc, never()).queryForList(anyString(), any(MapSqlParameterSource.class));
+
+        Query q1 = mock(Query.class); when(q1.getQueryId()).thenReturn(null);
+        Query q2 = mock(Query.class); when(q2.getQueryId()).thenReturn(null);
+        when(queryResolver.resolve()).thenReturn(List.of(q1, q2));
+
+        status = tasklet.execute(stepContribution, chunkContext);
+        assertThat(status).isEqualTo(RepeatStatus.FINISHED);
+        verify(jdbc, never()).queryForList(anyString(), any(MapSqlParameterSource.class));
     }
 }
