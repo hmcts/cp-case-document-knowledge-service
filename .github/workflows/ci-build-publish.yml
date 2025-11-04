@@ -17,23 +17,23 @@ on:
         type: boolean
         default: false
       is_publish:
-        required: true
+        required: false
         type: boolean
       trigger_docker:
-        required: true
+        required: false
         type: boolean
       trigger_deploy:
         required: true
         type: boolean
       pacticipant:
-        required: true
+        required: false
         type: string
       pact_ignore:
-        required: true
+        required: false
         type: boolean
         default: false
       pact_env:
-        required: true
+        required: false
         type: string
 
 jobs:
