@@ -67,7 +67,7 @@ services:
       OTEL_TRACES_URL: http://localhost:4318/traces
       OTEL_METRICS_URL: http://localhost:4318/metrics
 
-      CP_CDK_AZURE_STORAGE_CONNECTION_STRING: foo
+      CP_CDK_AZURE_STORAGE_CONNECTION_STRING: NOT_SET_FOR_INT_TESTING
       CP_CDK_AZURE_STORAGE_CONTAINER: documents
 
       CP_CDK_RAG_URL: https://spnl-apim-int-gw.cpp.nonlive/api-cp-ai-rag
