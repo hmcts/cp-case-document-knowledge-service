@@ -2,10 +2,10 @@
 FROM eclipse-temurin:21-jdk
 
 
-COPY ../certificates/cp-cjs-hmcts-net-ca.pem /etc/pki/ca-trust/source/anchors/
-COPY ../certificates/cpp-nonlive-ca.pem /etc/pki/ca-trust/source/anchors/
-COPY ../certificates/cjscp-lv-root.pem /etc/pki/ca-trust/source/anchors/
-COPY ../certificates/cjscp-nl-root.pem /etc/pki/ca-trust/source/anchors/
+#COPY ../certificates/cp-cjs-hmcts-net-ca.pem /etc/pki/ca-trust/source/anchors/
+#COPY ../certificates/cpp-nonlive-ca.pem /etc/pki/ca-trust/source/anchors/
+#COPY ../certificates/cjscp-lv-root.pem /etc/pki/ca-trust/source/anchors/
+#COPY ../certificates/cjscp-nl-root.pem /etc/pki/ca-trust/source/anchors/
 
 # Install minimal runtime tooling for healthcheck
 RUN apt-get update \
@@ -13,21 +13,23 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Import custom CA certificates into Java truststore
-RUN keytool -importcert -trustcacerts -cacerts \
-    -file /etc/pki/ca-trust/source/anchors/cp-cjs-hmcts-net-ca.pem \
-    -alias cpp-hmctsnet -storepass changeit -noprompt && \
-    keytool -importcert -trustcacerts -cacerts \
-    -file /etc/pki/ca-trust/source/anchors/cpp-nonlive-ca.pem \
-    -alias cpp-nonlive -storepass changeit -noprompt && \
-    keytool -importcert -trustcacerts -cacerts \
-    -file /etc/pki/ca-trust/source/anchors/cjscp-lv-root.pem \
-    -alias cjscp-live -storepass changeit -noprompt && \
-    keytool -importcert -trustcacerts -cacerts \
-    -file /etc/pki/ca-trust/source/anchors/cjscp-nl-root.pem \
-    -alias cjscp-nonlive -storepass changeit -noprompt
+
+#RUN keytool -importcert -trustcacerts -cacerts \
+ #   -file /etc/pki/ca-trust/source/anchors/cp-cjs-hmcts-net-ca.pem \
+  #  -alias cpp-hmctsnet -storepass changeit -noprompt && \
+  #  keytool -importcert -trustcacerts -cacerts \
+   # -file /etc/pki/ca-trust/source/anchors/cpp-nonlive-ca.pem \
+  #  -alias cpp-nonlive -storepass changeit -noprompt && \
+  #  keytool -importcert -trustcacerts -cacerts \
+   # -file /etc/pki/ca-trust/source/anchors/cjscp-lv-root.pem \
+   # -alias cjscp-live -storepass changeit -noprompt && \
+  #  keytool -importcert -trustcacerts -cacerts \
+   # -file /etc/pki/ca-trust/source/anchors/cjscp-nl-root.pem \
+   # -alias cjscp-nonlive -storepass changeit -noprompt
 
 # Update system trust store (for curl, etc.)
-RUN update-ca-certificates || update-ca-trust
+#RUN update-ca-certificates || update-ca-trust
+
 
 # Create non-root user and app directory
 RUN groupadd --system app \
