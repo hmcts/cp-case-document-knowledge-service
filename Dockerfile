@@ -8,6 +8,7 @@ ARG JAR_FILENAME
 ARG JAR_FILE_PATH
 ARG CP_BACKEND_URL
 ARG CJSCPPUID
+ARG CERT_DIR
 
 ENV JAR_FILENAME=${JAR_FILENAME:-app.jar}
 ENV JAR_FILE_PATH=${JAR_FILE_PATH:-build/libs}
@@ -23,6 +24,16 @@ ENV SERVER_PORT=${SERVER_PORT:-4550}
 RUN apt-get update \
     && apt-get install -y curl \
     && rm -rf /var/lib/apt/lists/*
+
+#---Certs---
+COPY ${CERTS_DIR}/ /etc/pki/ca-trust/source/anchors/
+
+RUN update-ca-certificates
+
+RUN keytool -importcert -trustcacerts -cacerts -file /etc/pki/ca-trust/source/anchors/cpp-nonlive-ca.pem -alias cpp-nonlive -storepass changeit -noprompt
+RUN keytool -importcert -trustcacerts -cacerts -file /etc/pki/ca-trust/source/anchors/cp-cjs-hmcts-net-ca.pem -alias cpp-live -storepass changeit -noprompt
+RUN keytool -importcert -trustcacerts -cacerts -file /etc/pki/ca-trust/source/anchors/cjscp-nl-root.pem -alias cjscp-nonlive -storepass changeit -noprompt
+RUN keytool -importcert -trustcacerts -cacerts -file /etc/pki/ca-trust/source/anchors/cjscp-lv-root.pem -alias cjscp-live -storepass changeit -noprompt
 
 # ---- Application files ----
 COPY $JAR_FULL_PATH /opt/app/app.jar
