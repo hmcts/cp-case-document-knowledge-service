@@ -26,7 +26,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 #---Certs---
-COPY ${CERTS_DIR}/ /etc/pki/ca-trust/source/anchors/
+COPY ${CERT_DIR}/ /etc/pki/ca-trust/source/anchors/
 
 RUN update-ca-certificates
 
