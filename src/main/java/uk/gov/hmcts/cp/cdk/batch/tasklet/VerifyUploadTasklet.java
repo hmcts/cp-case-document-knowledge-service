@@ -226,7 +226,7 @@ public class VerifyUploadTasklet implements Tasklet {
             ctx.put(CTX_DOCUMENT_STATUS_TS, lastUpdated);
         }
     }
-
+    @SuppressWarnings({ "PMD.OnlyOneReturn"})
     private boolean sleepSafely(final long millis) {
         try {
             Thread.sleep(millis);

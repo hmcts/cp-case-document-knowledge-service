@@ -42,7 +42,7 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
     private final PlatformTransactionManager txManager;
 
     @Override
-    @SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.OnlyOneReturn"})
+    @SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.OnlyOneReturn","ignoreElseIf"})
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final RepeatStatus status = RepeatStatus.FINISHED;
         boolean proceed = true;
@@ -160,7 +160,7 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
 
             transactionTemplate.execute(txStatus -> {
                 final List<Map<String, Object>> rows = jdbc.queryForList(finalSql, finalParams);
-                if (!rows.isEmpty()) {
+                if (!rows.isEmpty()) {// NOPMD - needed to handle empty rows
                     final MapSqlParameterSource[] batch = new MapSqlParameterSource[rows.size()];
                     int index = 0;
                     for (final Map<String, Object> row : rows) {
@@ -189,6 +189,7 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
         return status;
     }
 
+    @SuppressWarnings({"PMD.OnlyOneReturn","ignoreElseIf"})
     private static String getOrNull(final ExecutionContext ctx, final String key) {
         if (ctx == null || key == null) {
             return null;

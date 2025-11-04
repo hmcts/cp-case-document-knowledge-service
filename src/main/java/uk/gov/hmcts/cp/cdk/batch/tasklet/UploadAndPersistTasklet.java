@@ -58,7 +58,7 @@ public class UploadAndPersistTasklet implements Tasklet {
             proceed = false;
         }
 
-        ExecutionContext jobCtx;
+        final ExecutionContext jobCtx;
         ExecutionContext stepCtx = null;
         String userId = null;
 
@@ -83,7 +83,7 @@ public class UploadAndPersistTasklet implements Tasklet {
             final boolean hasMaterialId = stepCtx.containsKey(CTX_MATERIAL_ID_KEY);
             final boolean hasCaseId = stepCtx.containsKey(CTX_CASE_ID_KEY);
 
-            if (!hasMaterialId || !hasCaseId) {
+            if (!hasMaterialId || !hasCaseId) {// NOPMD - needed to handle no rows in map
                 log.warn("Partition context missing required keys: {} present?={}, {} present?={}",
                         CTX_MATERIAL_ID_KEY, hasMaterialId, CTX_CASE_ID_KEY, hasCaseId);
                 proceed = false;
