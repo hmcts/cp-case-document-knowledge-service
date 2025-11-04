@@ -28,7 +28,14 @@ repositories {
 
 // ---- Java toolchain ----
 java {
-    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+    toolchain {
+        // Default to Java 21, but allow override via system property or environment variable
+        def defaultVersion = 21
+        def providedVersion = System.getProperty("JAVA_VERSION") ?: System.getenv("JAVA_VERSION")
+        def versionToUse = providedVersion ? Integer.parseInt(providedVersion) : defaultVersion
+
+        languageVersion = JavaLanguageVersion.of(versionToUse)
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
