@@ -45,6 +45,7 @@ services:
       SPRING_APPLICATION_NAME: cp-case-document-knowledge-service
       CP_CDK_ARTEMIS_URL: tcp://artemis:61616
       CP_CDK_REST_SPECIFICATION: case-admin-doc-knowledge-api.openapi.yml
+      CDK_INGEST_VERIFY_MAX_WAIT_MS: 10000
 
       # Optional: debug
       LOGGING_LEVEL_org.flywaydb: "DEBUG"

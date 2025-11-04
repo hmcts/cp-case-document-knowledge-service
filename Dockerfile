@@ -1,6 +1,6 @@
 # ---- Base image (default fallback) ----
 ARG BASE_IMAGE
-FROM ${BASE_IMAGE:-openjdk:21-jdk-slim}
+FROM ${BASE_IMAGE:-eclipse-temurin:21-jdk}
 
 # ---- Runtime arguments ----
 ARG SERVER_PORT
