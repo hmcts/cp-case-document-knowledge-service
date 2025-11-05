@@ -8,7 +8,7 @@ bin/*
 !gradle/wrapper/gradle-wrapper.properties
 *.class
 bin/main/application.yaml
-
+/src/main/resources/application-env.yml
 ### STS ###
 .apt_generated
 .classpath
@@ -30,4 +30,5 @@ applicationinsights-agent-*.jar
 *.log
 
 .DS_Store
-*/.DS_Store
+*/.DS_Storesrc/main/resources/application-env.yml
+/certificates/

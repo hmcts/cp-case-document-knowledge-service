@@ -1,4 +1,10 @@
 services:
+  azurite:
+    container_name: cdks_azure_storage
+    image: mcr.microsoft.com/azure-storage/azurite:3.33.0
+    command: azurite-blob --loose --blobHost 0.0.0.0 --blobPort 10000
+    ports:
+      - "10000:10000"
 
   artemis:
     container_name: cdks_artemis
@@ -7,10 +13,10 @@ services:
       args:
         - ARTEMIS_BASE_IMAGE
     ports:
-      - 61616:61616
-      - 8161:8161
+      - "61616:61616"
+      - "8161:8161"
     environment:
-      ACTIVEMQ_ENABLED_AUTH: 'false'
+      ACTIVEMQ_ENABLED_AUTH: "false"
 
   db:
     image: postgres:16-alpine
@@ -22,39 +28,87 @@ services:
     ports:
       - "55432:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U casedocumentknowledge -d casedocumentknowledgeDatabase" ]
+      test: ["CMD-SHELL", "pg_isready -U casedocumentknowledge -d casedocumentknowledgeDatabase"]
       interval: 5s
       timeout: 3s
       retries: 30
 
+  wiremock:
+    image: wiremock/wiremock:3.9.1
+    container_name: cdks_wiremock
+    ports:
+      - "8089:8080"
+    volumes:
+      - ../src/integrationTest/wiremock/mappings:/home/wiremock/mappings
+      - ../src/integrationTest/wiremock/__files:/home/wiremock/__files
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/__admin/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   app:
     container_name: cdks_application
     build:
-      context: ..                 # project root
+      context: ..        # project root
       dockerfile: docker/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+      artemis:
+        condition: service_started
+      wiremock:
+        condition: service_started
+      azurite:
+        condition: service_started
     ports:
       - "8082:8082"
       - "5005:5005"
     environment:
       JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+
       CP_CDK_DATASOURCE_URL: jdbc:postgresql://db:5432/casedocumentknowledgeDatabase
       CP_CDK_DATASOURCE_USERNAME: casedocumentknowledge
       CP_CDK_DATASOURCE_PASSWORD: casedocumentknowledge
+
       SERVER_PORT: 8082
       SERVER_SERVLET_CONTEXT_PATH: /casedocumentknowledge-service
       SPRING_APPLICATION_NAME: cp-case-document-knowledge-service
+
       CP_CDK_ARTEMIS_URL: tcp://artemis:61616
       CP_CDK_REST_SPECIFICATION: case-admin-doc-knowledge-api.openapi.yml
+      CDK_INGEST_VERIFY_MAX_WAIT_MS: 10000
 
-      # Optional: debug
       LOGGING_LEVEL_org.flywaydb: "DEBUG"
-      MANAGEMENT_TRACING_ENABLED: "false"     # <— Spring relaxed binding for management.tracing.enabled
-      TRACING_ENABLED: "false"                # <— matches the placeholder in application.yml
-    depends_on:
-      db:
-        condition: service_healthy
+      MANAGEMENT_TRACING_ENABLED: "false"
+      TRACING_ENABLED: "false"
+
+      CP_CDK_DB_POOL_SIZE: 20
+      CP_CDK_DB_MIN_IDLE: 5
+      MANAGEMENT_SERVER_PORT: 8082
+
+      CLUSTER_NAME: local
+      REGION: local
+
+      TRACING_SAMPLER_PROBABILITY: 1.0
+      OTEL_METRICS_ENABLED: "false"
+      OTEL_TRACES_URL: http://localhost:4318/traces
+      OTEL_METRICS_URL: http://localhost:4318/metrics
+
+      # Use Azurite locally with your existing config keys
+      CP_CDK_AZURE_STORAGE_CONNECTION_STRING: >
+        DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;
+        AccountKey=Eby8vdM02xNOcqFeqCnf2w==;
+        BlobEndpoint=http://azurite:10000/devstoreaccount1;
+      CP_CDK_AZURE_STORAGE_CONTAINER: documents
+
+      CP_CDK_RAG_URL: http://wiremock:8080
+      CP_CDK_RAG_SUBSCRIPTION_KEY: dummy-key
+      CP_CDK_CJSCPPUID_HEADER: CJSCPPUID
+      CP_CDK_BASE_URL: http://wiremock:8080
+
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fsS http://localhost:8082/casedocumentknowledge-service/actuator/health || exit 1" ]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/casedocumentknowledge-service/actuator/health || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 12

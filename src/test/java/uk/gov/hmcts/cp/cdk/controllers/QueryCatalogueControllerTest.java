@@ -1,27 +1,31 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.List;
-import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import uk.gov.hmcts.cp.cdk.services.QueryCatalogueService;
 import uk.gov.hmcts.cp.openapi.model.cdk.LabelUpdateRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.QueryCatalogueItem;
 
+import java.util.List;
+import java.util.UUID;
+
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@DisplayName("Query Catalogue Controller tests")
 
 class QueryCatalogueControllerTest {
 
     public final String VND_TYPE_JSON = "application/vnd.casedocumentknowledge-service.query-catalogue+json";
+
     @Test
+    @DisplayName("List Query Catalogue returns items")
     void listQueryCatalogue_returns_items() throws Exception {
         final QueryCatalogueService service = Mockito.mock(QueryCatalogueService.class);
         final QueryCatalogueController controller = new QueryCatalogueController(service);
@@ -43,6 +47,7 @@ class QueryCatalogueControllerTest {
     }
 
     @Test
+    @DisplayName("Get Query Catalogue Item returns single item")
     void getQueryCatalogueItem_returns_single_item() throws Exception {
         final QueryCatalogueService service = Mockito.mock(QueryCatalogueService.class);
         final QueryCatalogueController controller = new QueryCatalogueController(service);
@@ -62,6 +67,7 @@ class QueryCatalogueControllerTest {
     }
 
     @Test
+    @DisplayName("Set Query Catalogue Label updates label")
     void setQueryCatalogueLabel_updates_label() throws Exception {
         final QueryCatalogueService service = Mockito.mock(QueryCatalogueService.class);
         final QueryCatalogueController controller = new QueryCatalogueController(service);

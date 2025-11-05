@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: cp-case-document-knowledge-service
+  config:
+    import:
+      - optional:classpath:application-clients.yml
+      - optional:classpath:application-cdk.yml
+      - optional:classpath:application-other.yml
+  datasource:
+    hikari:
+      minimum-idle: 0
+      maximum-pool-size: 5
+      connection-timeout: 2000
+      keepalive-time: 0
+      validation-timeout: 1000
+      max-lifetime: 30000
+      idle-timeout: 10000
+  main:
+    banner-mode: "off"
+
+logging:
+  level:
+    root: INFO
+    org.springframework.batch: INFO
+    org.springframework.jdbc.core: WARN
+    uk.gov.hmcts.cp: DEBUG         # your code
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"

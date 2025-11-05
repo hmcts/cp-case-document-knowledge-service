@@ -1,0 +1,24 @@
+# Storage configuration (Azure blob)
+cdk:
+  storage:
+    azure:
+      connection-string: ${CP_CDK_AZURE_STORAGE_CONNECTION_STRING:NO_CONNECTION_STRING_DEFINED}
+      container: ${CP_CDK_AZURE_STORAGE_CONTAINER}
+      copy-poll-interval-ms: 5000
+      copy-timeout-seconds: 300
+  ingestion:
+    core-pool-size: 8
+    max-pool-size: 16
+    queue-capacity: 64
+    verify:
+      max-wait-ms: ${CDK_INGEST_VERIFY_MAX_WAIT_MS:300000}
+    retry:
+      max-attempts: 10
+      backoff:
+        initial-ms: 1000
+        max-ms: 15000
+    upload:
+      blob-prefix: ${CDK_UPLOAD_BLOB_PREFIX:cases}
+      date-pattern: ${CDK_UPLOAD_DATE_PATTERN:yyyyMMdd}
+      file-extension: ${CDK_UPLOAD_FILE_EXTENSION:.pdf}
+      content-type: ${CDK_UPLOAD_CONTENT_TYPE:application/pdf}

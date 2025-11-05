@@ -10,7 +10,10 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -80,6 +83,11 @@ public class QueriesHttpLiveTest {
 
     @AfterEach
     void cleanup() throws Exception {
+        try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass);
+             PreparedStatement delqv = c.prepareStatement("DELETE FROM query_versions WHERE query_id = ?")) {
+            delqv.setObject(1, queryId);
+            delqv.executeUpdate();
+        }
         try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass);
              PreparedStatement del = c.prepareStatement("DELETE FROM queries WHERE query_id = ?")) {
             del.setObject(1, queryId);

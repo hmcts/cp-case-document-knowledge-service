@@ -1,16 +1,17 @@
 # Dockerfile
-FROM openjdk:21-jdk-slim
+FROM eclipse-temurin:21-jdk
 
-# minimal runtime tooling for healthcheck
+# Install minimal runtime tooling for healthcheck
 RUN apt-get update \
-   && apt-get install -y --no-install-recommends curl \
-   && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# run as non-root
+# Create non-root user and app directory
 RUN groupadd --system app \
     && useradd --system --gid app --home /app --shell /usr/sbin/nologin app \
     && mkdir -p /app \
     && chown -R app:app /app
+
 WORKDIR /app
 
 # copy all jars (bootJar + plain). We'll run the non-plain jar.

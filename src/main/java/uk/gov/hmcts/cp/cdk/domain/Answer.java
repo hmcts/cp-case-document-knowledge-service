@@ -1,16 +1,12 @@
 package uk.gov.hmcts.cp.cdk.domain;
 
-import jakarta.persistence.AttributeOverride;
-import jakarta.persistence.AttributeOverrides;
-import jakarta.persistence.Column;
-import jakarta.persistence.EmbeddedId;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
+
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 @Entity
 @Table(
@@ -31,7 +27,7 @@ public class Answer {
     private AnswerId answerId;
 
     @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private OffsetDateTime createdAt = utcNow();
 
     @Column(name = "answer", nullable = false, columnDefinition = "TEXT")
     private String answerText;

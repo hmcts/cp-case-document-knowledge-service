@@ -1,15 +1,13 @@
 package uk.gov.hmcts.cp.cdk.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.EmbeddedId;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Index;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
+
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 @Entity
 @Table(
@@ -25,11 +23,16 @@ public class CaseQueryStatus {
     private CaseQueryStatusId caseQueryStatusId = new CaseQueryStatusId();
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(
+            name = "status",
+            nullable = false,
+            columnDefinition = "query_lifecycle_status_enum"
+    )
     private QueryLifecycleStatus status = QueryLifecycleStatus.ANSWER_NOT_AVAILABLE;
 
     @Column(name = "status_at", nullable = false)
-    private OffsetDateTime statusAt = OffsetDateTime.now();
+    private OffsetDateTime statusAt = utcNow();
 
     @Column(name = "doc_id")
     private UUID docId;

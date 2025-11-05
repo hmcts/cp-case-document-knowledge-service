@@ -1,0 +1,10 @@
+# Artemis (ActiveMQ Artemis) and JMS configuration
+spring:
+  artemis:
+    mode: native
+    broker-url: ${CP_CDK_ARTEMIS_URL}
+
+  jms:
+    pub-sub-domain: true
+    cache:
+      session-cache-size: 5

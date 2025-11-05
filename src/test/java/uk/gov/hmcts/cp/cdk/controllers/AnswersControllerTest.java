@@ -1,31 +1,28 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.isNull;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.time.OffsetDateTime;
-import java.util.UUID;
-
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
 import uk.gov.hmcts.cp.cdk.services.AnswerService;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerResponse;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerWithLlmResponse;
 
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+@DisplayName("Answers Controller tests")
+
 class AnswersControllerTest {
 
     public final String VND_TYPE_JSON = "application/vnd.casedocumentknowledge-service.answers+json";
+
     @Test
+    @DisplayName("Get Answer By Case And Query latest returns answer")
     void getAnswerByCaseAndQuery_latest_returns_answer() throws Exception {
         final AnswerService service = Mockito.mock(AnswerService.class);
         final AnswersController controller = new AnswersController(service);
@@ -55,6 +52,7 @@ class AnswersControllerTest {
     }
 
     @Test
+    @DisplayName("Get Answer By Case And Query with Version and as Of returns answer")
     void getAnswerByCaseAndQuery_withVersion_and_asOf_returns_answer() throws Exception {
         final AnswerService service = Mockito.mock(AnswerService.class);
         final AnswersController controller = new AnswersController(service);
@@ -88,6 +86,7 @@ class AnswersControllerTest {
     }
 
     @Test
+    @DisplayName("Get Answer With Llm By Case And Query latest returns answer with llm")
     void getAnswerWithLlmByCaseAndQuery_latest_returns_answer_with_llm() throws Exception {
         final AnswerService service = Mockito.mock(AnswerService.class);
         final AnswersController controller = new AnswersController(service);
@@ -118,6 +117,7 @@ class AnswersControllerTest {
     }
 
     @Test
+    @DisplayName("Get Answer With Llm By Case And Query with Version and as Of returns answer with llm")
     void getAnswerWithLlmByCaseAndQuery_withVersion_and_asOf_returns_answer_with_llm() throws Exception {
         final AnswerService service = Mockito.mock(AnswerService.class);
         final AnswersController controller = new AnswersController(service);

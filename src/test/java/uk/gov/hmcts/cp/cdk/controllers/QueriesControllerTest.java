@@ -1,28 +1,32 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
 
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import uk.gov.hmcts.cp.cdk.services.QueryService;
+import uk.gov.hmcts.cp.openapi.model.cdk.*;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.UUID;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import uk.gov.hmcts.cp.cdk.services.QueryService;
-import uk.gov.hmcts.cp.openapi.model.cdk.*;
-
+@DisplayName("Queries Controller tests")
 
 class QueriesControllerTest {
 
     public final String VND_TYPE_JSON = "application/vnd.casedocumentknowledge-service.queries+json";
+
     @Test
+    @DisplayName("List Queries returns case as of")
     void listQueries_returns_case_as_of() throws Exception {
         final QueryService service = Mockito.mock(QueryService.class);
         final QueriesController controller = new QueriesController(service);
@@ -43,6 +47,7 @@ class QueriesControllerTest {
         resp.setAsOf(OffsetDateTime.parse("2025-05-01T12:00:00Z"));
         final Scope scope = new Scope();
         scope.setCaseId(caseId);
+        scope.setIsIdpcAvailable(true);
         resp.setScope(scope);
         resp.setQueries(List.of(qs));
 
@@ -51,11 +56,13 @@ class QueriesControllerTest {
         mvc.perform(get("/queries").param("caseId", caseId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.scope.caseId").value(caseId.toString()))
+                .andExpect(jsonPath("$.scope.isIdpcAvailable").value(true))
                 .andExpect(jsonPath("$.queries[0].label").value("Case Summary"))
                 .andExpect(jsonPath("$.queries[0].status").value("ANSWER_NOT_AVAILABLE"));
     }
 
     @Test
+    @DisplayName("Upsert Queries returns accepted definition snapshot")
     void upsertQueries_returns_accepted_definition_snapshot() throws Exception {
         final QueryService service = Mockito.mock(QueryService.class);
         final QueriesController controller = new QueriesController(service);
@@ -78,17 +85,17 @@ class QueriesControllerTest {
                         post("/queries")
                                 .contentType(VND_TYPE_JSON)
                                 .content("""
-                        {
-                          "effectiveAt":"2025-05-01T12:00:00Z",
-                          "queries":[
-                            {
-                              "queryId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-                              "userQuery":"UQ",
-                              "queryPrompt":"QP"
-                            }
-                          ]
-                        }
-                        """)
+                                        {
+                                          "effectiveAt":"2025-05-01T12:00:00Z",
+                                          "queries":[
+                                            {
+                                              "queryId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                              "userQuery":"UQ",
+                                              "queryPrompt":"QP"
+                                            }
+                                          ]
+                                        }
+                                        """)
                 )
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.queries[0].label").value("Case Summary"))
@@ -96,6 +103,7 @@ class QueriesControllerTest {
     }
 
     @Test
+    @DisplayName("Get Query returns single summary")
     void getQuery_returns_single_summary() throws Exception {
         final QueryService service = Mockito.mock(QueryService.class);
         final QueriesController controller = new QueriesController(service);
@@ -123,6 +131,7 @@ class QueriesControllerTest {
     }
 
     @Test
+    @DisplayName("List Query Versions returns wrapped payload")
     void listQueryVersions_returns_wrapped_payload() throws Exception {
         final QueryService service = Mockito.mock(QueryService.class);
         final QueriesController controller = new QueriesController(service);
@@ -143,6 +152,27 @@ class QueriesControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.queryId").value(queryId.toString()))
                 .andExpect(jsonPath("$.versions[0].userQuery").value("UQ1"));
+    }
+    @Test
+    @DisplayName("Get Query -> 404 when not found")
+    void getQuery_notFound_404() throws Exception {
+        final QueryService service = Mockito.mock(QueryService.class);
+        final QueriesController controller = new QueriesController(service);
+        final MockMvc mvc = MockMvcBuilders
+                .standaloneSetup(controller)
+                .build();
+
+        final UUID caseId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        final UUID queryId = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+
+        when(service.getOneForCaseAsOf(Mockito.eq(caseId), Mockito.eq(queryId), Mockito.any()))
+                .thenThrow(new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND,
+                        "Query not found for case=" + caseId + ", queryId=" + queryId
+                ));
+
+        mvc.perform(get("/queries/{queryId}", queryId).param("caseId", caseId.toString()))
+                .andExpect(status().isNotFound());
     }
 }
 

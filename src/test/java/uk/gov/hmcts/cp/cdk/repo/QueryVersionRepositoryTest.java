@@ -1,14 +1,9 @@
 package uk.gov.hmcts.cp.cdk.repo;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -23,15 +18,23 @@ import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
 
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 @DataJpaTest(
         properties = {
                 "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.flyway.enabled=false",
+                "spring.flyway.enabled=true",
                 "spring.jpa.properties.hibernate.connection.provider_disables_autocommit=false"
         }
 )
 @Testcontainers
 @AutoConfigureTestDatabase(replace = Replace.NONE)
+@DisplayName("Query Version Repository tests")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class QueryVersionRepositoryTest {
 
@@ -47,6 +50,14 @@ class QueryVersionRepositoryTest {
         POSTGRES.start();
     }
 
+    @jakarta.annotation.Resource
+    private QueryVersionRepository repo;
+    @jakarta.annotation.Resource
+    private QueryRepository queryRepo;
+    @PersistenceContext
+    private EntityManager em;
+    private UUID qid;
+
     @DynamicPropertySource
     static void dbProps(final DynamicPropertyRegistry r) {
         r.add("spring.datasource.url", POSTGRES::getJdbcUrl);
@@ -55,17 +66,6 @@ class QueryVersionRepositoryTest {
         r.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
         r.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
     }
-
-    @jakarta.annotation.Resource
-    private QueryVersionRepository repo;
-
-    @jakarta.annotation.Resource
-    private QueryRepository queryRepo;
-
-    @PersistenceContext
-    private EntityManager em;
-
-    private UUID qid;
 
     @BeforeEach
     void seed() {
@@ -93,7 +93,7 @@ class QueryVersionRepositoryTest {
         repo.saveAndFlush(v2);
     }
 
-    @Test
+    @Test@DisplayName("Snapshot Definitions As Of returns latest not after cutoff")
     void snapshotDefinitionsAsOf_returns_latest_not_after_cutoff() {
         final OffsetDateTime asOf = OffsetDateTime.parse("2025-05-01T11:58:30Z");
         final List<Object[]> rows = repo.snapshotDefinitionsAsOf(asOf);
@@ -107,7 +107,7 @@ class QueryVersionRepositoryTest {
         assertEquals("QP v1", r[3]);
     }
 
-    @Test
+    @Test@DisplayName("Find All Versions returns ascending effective at")
     void findAllVersions_returns_ascending_effective_at() {
         final List<QueryVersion> versions = repo.findAllVersions(qid);
         assertEquals(2, versions.size());

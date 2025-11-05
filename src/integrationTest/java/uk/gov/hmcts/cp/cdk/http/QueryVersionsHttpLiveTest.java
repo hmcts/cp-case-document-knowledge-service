@@ -9,7 +9,12 @@ import org.springframework.web.client.RestTemplate;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.util.*;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,8 +43,9 @@ public class QueryVersionsHttpLiveTest {
 
         // Seed catalogue row first
         try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass);
-             PreparedStatement ins = c.prepareStatement("INSERT INTO queries (query_id, label) VALUES (?, 'Versions Test Query')")) {
+             PreparedStatement ins = c.prepareStatement("INSERT INTO queries (query_id, label,created_at) VALUES (?, 'Versions Test Query',?)")) {
             ins.setObject(1, queryId);
+            ins.setObject(2, OffsetDateTime.now(ZoneOffset.UTC));
             ins.executeUpdate();
         }
 

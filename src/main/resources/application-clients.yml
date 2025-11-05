@@ -1,0 +1,26 @@
+rag:
+  client:
+    base-url: ${CP_CDK_RAG_URL}
+    connect-timeout-ms: 3000
+    read-timeout-ms: 15000
+    headers:
+      Accept: application/json
+      Content-Type: application/json
+      Ocp-Apim-Subscription-Key: ${CP_CDK_RAG_SUBSCRIPTION_KEY}
+cqrs:
+  client:
+    base-url: ${CP_CDK_BASE_URL:http://localhost:8080}
+    connect-timeout-ms: 3000
+    read-timeout-ms: 15000
+    headers:
+      cjs-cppuid: ${CP_CDK_CJSCPPUID_HEADER:CJSCPPUID}
+    hearing:
+      accept-header: "application/vnd.hearing.get.hearings+json"
+      hearings-path: "/hearing-query-api/query/api/rest/hearing/hearings"
+    progression:
+      accept-header: "application/vnd.progression.query.courtdocuments+json"
+      doc-type-id: "41be14e8-9df5-4b08-80b0-1e670bc80a5b"
+      court-docs-path: "/progression-query-api/query/api/rest/progression/courtdocumentsearch"
+      material-content-path: "/progression-query-api/query/api/rest/progression/material/{materialId}/content"
+      accept-for-court-doc-search: "application/vnd.progression.query.courtdocuments+json"
+      accept-for-material-content: "application/vnd.progression.query.material-content+json"

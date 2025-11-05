@@ -1,24 +1,21 @@
 package uk.gov.hmcts.cp.cdk.services;
 
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueriesAsOfRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryVersionRepository;
 import uk.gov.hmcts.cp.cdk.services.mapper.QueryMapper;
 import uk.gov.hmcts.cp.cdk.util.TimeUtils;
-import uk.gov.hmcts.cp.openapi.model.cdk.QueryDefinitionsResponse;
-import uk.gov.hmcts.cp.openapi.model.cdk.QueryLifecycleStatus;
-import uk.gov.hmcts.cp.openapi.model.cdk.QueryStatusResponse;
-import uk.gov.hmcts.cp.openapi.model.cdk.QuerySummary;
-import uk.gov.hmcts.cp.openapi.model.cdk.QueryUpsertRequest;
-import uk.gov.hmcts.cp.openapi.model.cdk.QueryVersionSummary;
-import uk.gov.hmcts.cp.openapi.model.cdk.Scope;
+import uk.gov.hmcts.cp.openapi.model.cdk.*;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -26,41 +23,47 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Query read/write operations with as-of semantics and versioned definitions. */
+/**
+ * Query read/write operations with as-of semantics and versioned definitions.
+ */
 @Service
 public class QueryService {
 
     // ---------- Definition snapshot (no case) ----------
-    private static final int DEF_COL_QUERY_ID     = 0;
-    private static final int DEF_COL_LABEL        = 1;
-    private static final int DEF_COL_USER_QUERY   = 2;
-    private static final int DEF_COL_PROMPT       = 3;
+    private static final int DEF_COL_QUERY_ID = 0;
+    private static final int DEF_COL_LABEL = 1;
+    private static final int DEF_COL_USER_QUERY = 2;
+    private static final int DEF_COL_PROMPT = 3;
     private static final int DEF_COL_EFFECTIVE_AT = 4;
 
     // ---------- Case-scoped (has extra case_id at index 1) ----------
-    private static final int CASE_COL_QUERY_ID     = 0;
-    private static final int CASE_COL_CASE_ID      = 1;
-    private static final int CASE_COL_LABEL        = 2;
-    private static final int CASE_COL_USER_QUERY   = 3;
-    private static final int CASE_COL_PROMPT       = 4;
+    private static final int CASE_COL_QUERY_ID = 0;
+    private static final int CASE_COL_CASE_ID = 1;
+    private static final int CASE_COL_LABEL = 2;
+    private static final int CASE_COL_USER_QUERY = 3;
+    private static final int CASE_COL_PROMPT = 4;
     private static final int CASE_COL_EFFECTIVE_AT = 5;
-    private static final int CASE_COL_STATUS_TXT   = 6;
+    private static final int CASE_COL_STATUS_TXT = 6;
+    private static final String IDPC_DOC_NAME = "IDPC";
 
 
     private final QueryRepository queryRepository;
     private final QueryVersionRepository queryVersionRepository;
     private final QueriesAsOfRepository queriesAsOfRepository;
+    private final CaseDocumentRepository caseDocumentRepository;
     private final QueryMapper mapper;
 
     public QueryService(
             final QueryRepository queryRepository,
             final QueryVersionRepository queryVersionRepository,
             final QueriesAsOfRepository queriesAsOfRepository,
+            final CaseDocumentRepository caseDocumentRepository,
             final QueryMapper mapper
     ) {
         this.queryRepository = queryRepository;
         this.queryVersionRepository = queryVersionRepository;
         this.queriesAsOfRepository = queriesAsOfRepository;
+        this.caseDocumentRepository = caseDocumentRepository;
         this.mapper = mapper;
     }
 
@@ -119,9 +122,17 @@ public class QueryService {
             final List<Object[]> rows = queriesAsOfRepository.listForCaseAsOf(caseId, asOf);
             summaries = rows.stream().map(QueryService::mapCaseRowToSummary).toList();
 
+            //Retrieval of casedocument to populate isIdpcAvailable info as part of DD-40778
+            final Optional<CaseDocument> latestDocOpt = caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId);
+            final boolean isIdpcAvailable = latestDocOpt
+                    .map(doc -> IDPC_DOC_NAME.equalsIgnoreCase(doc.getSource()))
+                    .orElse(false);
+
             final Scope scope = new Scope();
             scope.setCaseId(caseId);
+            scope.setIsIdpcAvailable(isIdpcAvailable);
             response.setScope(scope);
+
         }
 
         response.setQueries(summaries);
@@ -129,16 +140,29 @@ public class QueryService {
     }
 
     @Transactional(readOnly = true)
-    public QuerySummary getOneForCaseAsOf(final UUID caseId, final UUID queryId, final OffsetDateTime asOfParam) {
+    public QuerySummary getOneForCaseAsOf(final UUID caseId,
+                                          final UUID queryId,
+                                          final OffsetDateTime asOfParam) {
         final OffsetDateTime asOf = Optional.ofNullable(asOfParam).orElseGet(TimeUtils::utcNow);
-        final Object[] row = queriesAsOfRepository.getOneForCaseAsOf(caseId, queryId, asOf);
-        if (row == null) {
+
+        try {
+            final Object[] row = queriesAsOfRepository.getOneForCaseAsOf(caseId, queryId, asOf);
+
+            if (row == null || row.length == 0 || row[0] == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Query not found for case=" + caseId + ", queryId=" + queryId
+                );
+            }
+
+            return mapCaseRowToSummary(row);
+        } catch (IncorrectResultSizeDataAccessException e) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
-                    "Query not found for case=" + caseId + ", queryId=" + queryId
+                    "Query not found for case=" + caseId + ", queryId=" + queryId,
+                    e
             );
         }
-        return mapCaseRowToSummary(row);
     }
 
     /* ---------- upsert definitions ---------- */

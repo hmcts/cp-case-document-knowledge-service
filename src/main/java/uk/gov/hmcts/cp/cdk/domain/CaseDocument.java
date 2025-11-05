@@ -1,16 +1,14 @@
 package uk.gov.hmcts.cp.cdk.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
+
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 @Entity
 @Table(
@@ -30,8 +28,14 @@ public class CaseDocument {
     @Column(name = "case_id", nullable = false)
     private UUID caseId;
 
+    @Column(name = "material_id", nullable = false)
+    private UUID materialId;
+
     @Column(name = "source", nullable = false)
     private String source = "IDPC";
+
+    @Column(name = "doc_name", nullable = false)
+    private String docName;
 
     @Column(name = "blob_uri", nullable = false)
     private String blobUri;
@@ -46,14 +50,19 @@ public class CaseDocument {
     private String sha256Hex;
 
     @Column(name = "uploaded_at", nullable = false)
-    private OffsetDateTime uploadedAt = OffsetDateTime.now();
+    private OffsetDateTime uploadedAt = utcNow();
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "ingestion_phase", nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(
+            name = "ingestion_phase",
+            nullable = false,
+            columnDefinition = "document_ingestion_phase_enum"
+    )
     private DocumentIngestionPhase ingestionPhase = DocumentIngestionPhase.UPLOADING;
 
     @Column(name = "ingestion_phase_at", nullable = false)
-    private OffsetDateTime ingestionPhaseAt = OffsetDateTime.now();
+    private OffsetDateTime ingestionPhaseAt = utcNow();
 
     public UUID getDocId() {
         return docId;
@@ -69,6 +78,14 @@ public class CaseDocument {
 
     public void setCaseId(final UUID caseId) {
         this.caseId = caseId;
+    }
+
+    public UUID getMaterialId() {
+        return materialId;
+    }
+
+    public void setMaterialId(final UUID materialId) {
+        this.materialId = materialId;
     }
 
     public String getSource() {
@@ -133,6 +150,14 @@ public class CaseDocument {
 
     public void setIngestionPhaseAt(final OffsetDateTime ingestionPhaseAt) {
         this.ingestionPhaseAt = ingestionPhaseAt;
+    }
+
+    public String getDocName() {
+        return docName;
+    }
+
+    public void setDocName(final String docName) {
+        this.docName = docName;
     }
 
     @Override

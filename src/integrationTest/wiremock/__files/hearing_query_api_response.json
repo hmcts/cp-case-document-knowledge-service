@@ -1,0 +1,186 @@
+{
+  "hearingSummaries": [
+    {
+      "courtApplicationSummaries": [],
+      "courtCentre": {
+        "id": "1a359d44-6b52-3919-b052-065413e4a801",
+        "name": "Bristol Magistrates' Court",
+        "roomId": "c99ccd3e-3402-30d9-af14-21e6ca3a2c02",
+        "roomName": "Courtroom 02"
+      },
+      "hasSharedResults": false,
+      "hearingDays": [
+        {
+          "courtCentreId": "1a359d44-6b52-3919-b052-065413e4a801",
+          "courtRoomId": "c99ccd3e-3402-30d9-af14-21e6ca3a2c02",
+          "isCancelled": false,
+          "listedDurationMinutes": 20,
+          "listingSequence": 0,
+          "sittingDay": "2025-10-24T09:00:00.000Z"
+        }
+      ],
+      "hearingLanguage": "ENGLISH",
+      "id": "b0f981d5-a8b7-4ba4-aa0b-419a58bfeb32",
+      "isGroupProceedings": false,
+      "jurisdictionType": "MAGISTRATES",
+      "prosecutionCaseSummaries": [
+        {
+          "defendants": [
+            {
+              "courtProceedingsInitiated": "2025-10-24T13:13:08.750Z",
+              "firstName": "DUNCAN",
+              "id": "3bdcb43e-01d3-4c43-a530-b7aa55b2a3bb",
+              "lastName": "ELDER",
+              "masterDefendantId": "3bdcb43e-01d3-4c43-a530-b7aa55b2a3bb",
+              "offences": [
+                {
+                  "id": "e3582ea0-7e9b-4ac3-9baf-58ddacd303be",
+                  "offenceTitle": "Commit an act / series of acts with intent to pervert the course of public justice",
+                  "offenceTitleWelsh": "Cyflawni gweithred / cyfres o weithredoedd gan fwriadu gwyrdroi cwrs cyfiawnder cyhoeddus",
+                  "reportingRestrictions": [],
+                  "wording": "Between 04 Dec 2024 and 12 Jan 2025 at Gloucester, with intent to pervert the course of public justice, did an act, namely you provided false details naming yourself as the driver of a vehicle at the time of a collision when this was untrue, you further admitted fault when interviewed for being the driver at the time of collision when this was untrue, , which had a tendency to pervert the course of public justice."
+                }
+              ],
+              "synonym": "is this from aliases ?"
+            }
+          ],
+          "id": "f89fa869-1d5b-47e2-a98d-cf022b99c305",
+          "prosecutionCaseIdentifier": {
+            "prosecutionAuthorityCode": "AVSPF",
+            "prosecutionAuthorityId": "bccf3481-a538-34a7-b351-e9649b82f2b6",
+            "caseURN": "CXZCII3W4U"
+          }
+        }
+      ],
+      "type": {
+        "description": "First hearing",
+        "id": "4a0e892d-c0c5-3c51-95b8-704d8c781776"
+      }
+    },
+    {
+      "courtApplicationSummaries": [],
+      "courtCentre": {
+        "id": "1a359d44-6b52-3919-b052-065413e4a801",
+        "name": "Bristol Magistrates' Court",
+        "roomId": "c99ccd3e-3402-30d9-af14-21e6ca3a2c02",
+        "roomName": "Courtroom 02"
+      },
+      "hasSharedResults": false,
+      "hearingDays": [
+        {
+          "courtCentreId": "1a359d44-6b52-3919-b052-065413e4a801",
+          "courtRoomId": "c99ccd3e-3402-30d9-af14-21e6ca3a2c02",
+          "isCancelled": false,
+          "listedDurationMinutes": 20,
+          "listingSequence": 0,
+          "sittingDay": "2025-10-24T09:00:00.000Z"
+        }
+      ],
+      "hearingLanguage": "ENGLISH",
+      "id": "a3c220f5-8516-453a-a93a-1b75105bb840",
+      "isGroupProceedings": false,
+      "jurisdictionType": "MAGISTRATES",
+      "prosecutionCaseSummaries": [
+        {
+          "defendants": [
+            {
+              "courtProceedingsInitiated": "2025-10-24T13:08:15.250Z",
+              "firstName": "Robert",
+              "id": "6a673158-9da9-45a6-b343-d0848046b9a4",
+              "lastName": "SMITH",
+              "masterDefendantId": "6a673158-9da9-45a6-b343-d0848046b9a4",
+              "middleName": "Paul ",
+              "offences": [
+                {
+                  "id": "9160c424-2096-4fda-9a25-8fe0a4beb707",
+                  "offenceTitle": "Burglary dwelling and theft - no violence",
+                  "offenceTitleWelsh": "Bwrglera mewn ty preswyl a dwyn – dim trais",
+                  "reportingRestrictions": [],
+                  "wording": "On or in 17 Apr 2025 at Bristol having entered as a trespasser a dwelling, namely ENDMAR, PARRY ROAD, BEACON HILL, BRISTOL, BS30 5PS, stole therein TV to the value of £1500 ."
+                }
+              ],
+              "synonym": "is this from aliases ?"
+            }
+          ],
+          "id": "2204cd6b-5759-473c-b0f7-178b3aa0c9b3",
+          "prosecutionCaseIdentifier": {
+            "prosecutionAuthorityCode": "AVSPF",
+            "prosecutionAuthorityId": "bccf3481-a538-34a7-b351-e9649b82f2b6",
+            "caseURN": "CHKRZLAMGA"
+          }
+        }
+      ],
+      "type": {
+        "description": "First hearing",
+        "id": "4a0e892d-c0c5-3c51-95b8-704d8c781776"
+      }
+    },
+    {
+      "courtApplicationSummaries": [
+        {
+          "applicant": {
+            "firstName": "Harry",
+            "id": "0f434e6e-aa1a-4ecc-afc1-deb8f984696a",
+            "lastName": "Parry"
+          },
+          "applicationReference": "CTN93XNKXJ",
+          "caseSummaries": [
+            {
+              "id": "a38718c7-f1cd-4ed4-b883-378019351d8d",
+              "prosecutionCaseIdentifier": {
+                "prosecutionAuthorityCode": "AVSPF",
+                "prosecutionAuthorityId": "bccf3481-a538-34a7-b351-e9649b82f2b6",
+                "caseURN": "CTN93XNKXJ"
+              }
+            }
+          ],
+          "id": "6ab6a4e3-ef13-4de7-bd25-c713199c6cd8",
+          "respondents": [
+            {
+              "id": "039ae4f4-6cd9-44e7-b871-365616dbe2d6",
+              "organisationCode": "AVSPF",
+              "organisationName": "Avon and Somerset Police"
+            }
+          ],
+          "subject": {
+            "firstName": "Harry",
+            "id": "0f434e6e-aa1a-4ecc-afc1-deb8f984696a",
+            "lastName": "Parry",
+            "masterDefendantId": "77933cad-11ab-4d00-baa6-7304306eeb9a"
+          },
+          "type": {
+            "legislation": "In accordance with section 14 of the Magistrates' Courts Act 1980.",
+            "type": "Appearance to make statutory declaration (other than SJP)",
+            "typeWelsh": "Ymddangosiad i wneud datganiad statudol"
+          }
+        }
+      ],
+      "courtCentre": {
+        "id": "1a359d44-6b52-3919-b052-065413e4a801",
+        "name": "Bristol Magistrates' Court",
+        "roomId": "c99ccd3e-3402-30d9-af14-21e6ca3a2c02",
+        "roomName": "Courtroom 02"
+      },
+      "hasSharedResults": true,
+      "hearingDays": [
+        {
+          "courtCentreId": "1a359d44-6b52-3919-b052-065413e4a801",
+          "courtRoomId": "c99ccd3e-3402-30d9-af14-21e6ca3a2c02",
+          "hasSharedResults": true,
+          "isCancelled": false,
+          "listedDurationMinutes": 20,
+          "listingSequence": 0,
+          "sittingDay": "2025-10-24T09:00:00.000Z"
+        }
+      ],
+      "hearingLanguage": "ENGLISH",
+      "id": "4a59d69f-3498-4ea8-861e-2fbe3f01a3b4",
+      "jurisdictionType": "MAGISTRATES",
+      "prosecutionCaseSummaries": [],
+      "type": {
+        "description": "Plea",
+        "id": "511fe0a3-1391-4954-8158-6b10eed0dad9"
+      }
+    }
+  ]
+}
