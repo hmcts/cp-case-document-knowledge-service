@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.SingleColumnRowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.retry.RetryContext;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -28,9 +30,7 @@ import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
 
 import java.util.*;
 
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.*;
 
 @Slf4j
 @Component
@@ -43,6 +43,7 @@ public class GenerateAnswersTasklet implements Tasklet {
     private final PlatformTransactionManager txManager;
     private final ObjectMapper objectMapper;
     private final DocumentInformationSummarisedApi documentInformationSummarisedApi;
+    private final RetryTemplate retryTemplate;
 
     private static final String SQL_FIND_VERSION =
             "SELECT version FROM answer_reservations " +
@@ -123,7 +124,6 @@ public class GenerateAnswersTasklet implements Tasklet {
         }
         final String caseIdStr = stepCtx.getString(CTX_CASE_ID_KEY, null);
 
-
         if (caseIdStr != null && docIdStr != null) {
             final UUID caseId = UUID.fromString(caseIdStr);
             final UUID docId = UUID.fromString(docIdStr);
@@ -167,31 +167,37 @@ public class GenerateAnswersTasklet implements Tasklet {
                     final AnswerUserQueryRequest request =
                             buildAnswerUserQueryRequest(userQuery, queryPrompt, filters);
 
-                    final Optional<UserQueryAnswerReturnedSuccessfully> respOpt;
-                    try {
-                        final ResponseEntity<UserQueryAnswerReturnedSuccessfully> responseEntity =
-                                documentInformationSummarisedApi.answerUserQuery(request);
-                        respOpt = Optional.ofNullable(responseEntity).map(ResponseEntity::getBody);
-                    } catch (final Exception e) {
-                        log.warn("RAG call failed for caseId={}, docId={}, queryId={}: {}",
-                                caseId, docId, queryId, e.getMessage(), e);
-                        failedBatch.add(reservationParams(caseId, queryId, docId));
-                        continue;
-                    }
+                    // ==== APIM call with retry ====
+                    final UserQueryAnswerReturnedSuccessfully resp =
+                            retryTemplate.execute((RetryContext context) -> {
+                                if (context.getRetryCount() > 0) {
+                                    log.warn("Retrying APIM call (attempt #{}) caseId={}, docId={}, queryId={}",
+                                            context.getRetryCount() + 1, caseId, docId, queryId);
+                                }
 
-                    if (!respOpt.isPresent()) {
-                        log.warn("Empty response entity/body for caseId={}, docId={}, queryId={} – marking FAILED",
-                                caseId, docId, queryId);
-                        failedBatch.add(reservationParams(caseId, queryId, docId));
-                        continue;
-                    }
+                                final ResponseEntity<UserQueryAnswerReturnedSuccessfully> responseEntity =
+                                        documentInformationSummarisedApi.answerUserQuery(request);
 
-                    final UserQueryAnswerReturnedSuccessfully resp = respOpt.get();
-                    final String llmResponse = resp.getLlmResponse();
-                    if (llmResponse == null || llmResponse.isBlank()) {
-                        log.warn("Empty llmResponse for caseId={}, docId={}, queryId={} – marking FAILED",
-                                caseId, docId, queryId);
-                        failedBatch.add(reservationParams(caseId, queryId, docId));
+                                if (responseEntity == null || responseEntity.getBody() == null) {
+                                    throw new IllegalStateException("Empty response body from APIM");
+                                }
+
+                                final UserQueryAnswerReturnedSuccessfully body = responseEntity.getBody();
+                                final String llmResponse = body.getLlmResponse();
+                                if (llmResponse == null || llmResponse.isBlank()) {
+                                    throw new IllegalStateException("Empty llmResponse from APIM");
+                                }
+
+                                return body;
+                            }, (RetryContext context) -> {
+                                log.warn("APIM call permanently failed after {} attempts for caseId={}, docId={}, queryId={}",
+                                        context.getRetryCount(), caseId, docId, queryId, context.getLastThrowable());
+                                failedBatch.add(reservationParams(caseId, queryId, docId));
+                                return null;
+                            });
+
+                    if (resp == null) {
+                        // Recovery executed (all attempts exhausted) — skip to next query
                         continue;
                     }
 
@@ -205,7 +211,7 @@ public class GenerateAnswersTasklet implements Tasklet {
                         continue;
                     }
 
-                    answersBatch.add(answerParamsRow(caseId, queryId, version, llmResponse, llmInputJson, docId));
+                    answersBatch.add(answerParamsRow(caseId, queryId, version, resp.getLlmResponse(), llmInputJson, docId));
                     doneBatch.add(reservationParams(caseId, queryId, docId));
                 }
 

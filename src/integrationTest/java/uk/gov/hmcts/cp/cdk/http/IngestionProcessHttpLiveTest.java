@@ -148,12 +148,10 @@ public class IngestionProcessHttpLiveTest {
                     entity,
                     String.class
             );
-
             // Validate HTTP 200 and body fields
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
             assertThat(response.getBody()).contains("\"phase\":\"STARTED\"");
-            assertThat(response.getBody()).contains("\"message\":\"Ingestion process started successfully");
-            assertThat(response.getBody()).contains("\"lastUpdated\"");
+            assertThat(response.getBody()).contains("\"message\":\"Ingestion request accepted");
             assertThat(response.getBody()).contains("STARTED");
 
             // Validate audit message published (if applicable)

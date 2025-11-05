@@ -7,6 +7,7 @@ import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.launch.JobOperator;
+import org.springframework.core.task.SyncTaskExecutor;
 import uk.gov.hmcts.cp.cdk.repo.IngestionStatusViewRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
@@ -19,12 +20,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-@DisplayName("Ingestion Service tests")
+@DisplayName("Ingestion Service tests (asynchronous start)")
 class IngestionServiceTest {
 
     @Test
-    @DisplayName("uses JobOperator.start(Job, JobParameters) and returns STARTED")
-    void launchesWithJobOperator() throws Exception {
+    @DisplayName("submits job asynchronously and returns STARTED with requestId")
+    void launchesAsyncAndReturnsStarted() throws Exception {
         // given
         final String cppuid = "u-123";
 
@@ -38,7 +39,10 @@ class IngestionServiceTest {
         when(operator.start(eq(job), paramsCaptor.capture())).thenReturn(mockedExecution);
 
         IngestionStatusViewRepository repo = mock(IngestionStatusViewRepository.class);
-        IngestionService svc = new IngestionService(repo, operator, job);
+
+        // Use a synchronous executor so the async Runnable executes immediately in the test thread
+        var syncExecutor = new SyncTaskExecutor();
+        IngestionService svc = new IngestionService(repo, operator, job, syncExecutor);
 
         IngestionProcessRequest req = new IngestionProcessRequest();
         req.setCourtCentreId(UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
@@ -48,17 +52,19 @@ class IngestionServiceTest {
         // when
         IngestionProcessResponse resp = svc.startIngestionProcess(cppuid, req);
 
-        // then
+        // then (params used for the async start)
+        verify(operator, times(1)).start(eq(job), any(JobParameters.class));
         JobParameters p = paramsCaptor.getValue();
+
         assertThat(p.getString("courtCentreId")).isEqualTo("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         assertThat(p.getString("roomId")).isEqualTo("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         assertThat(p.getString("date")).isEqualTo("2025-10-01");
         assertThat(p.getString("cppuid")).isEqualTo("u-123");
         assertThat(p.getLong("run")).isNotNull();
+        assertThat(p.getString("requestId")).isNotBlank();
 
+        // response is immediate and contains a requestId (not executionId)
         assertThat(resp.getPhase().getValue()).isEqualTo("STARTED");
-        assertThat(resp.getMessage()).contains("executionId=321");
-
-        verify(operator, times(1)).start(eq(job), any(JobParameters.class));
+        assertThat(resp.getMessage()).contains("requestId=");
     }
 }
