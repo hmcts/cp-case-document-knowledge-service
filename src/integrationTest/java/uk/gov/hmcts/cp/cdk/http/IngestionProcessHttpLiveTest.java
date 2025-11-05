@@ -148,7 +148,6 @@ public class IngestionProcessHttpLiveTest {
                     entity,
                     String.class
             );
-            Thread.sleep(300000);
             // Validate HTTP 200 and body fields
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
             assertThat(response.getBody()).contains("\"phase\":\"STARTED\"");
