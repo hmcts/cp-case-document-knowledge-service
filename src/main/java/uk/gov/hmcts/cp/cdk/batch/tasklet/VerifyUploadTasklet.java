@@ -152,6 +152,14 @@ public class VerifyUploadTasklet implements Tasklet {
 
                         break;
                     }
+                    if (StatusEnum.INVALID_METADATA.name().equalsIgnoreCase(status)) {
+                        putStatusJson(stepCtx, body);
+                        updateIngestionPhase(docId, DocumentIngestionPhase.FAILED);
+                        log.error("VerifyUploadTasklet: ingestion FAILED for identifier='{}' reason='{}' (caseId={}).",
+                                documentName, lastReason, caseIdStr);
+
+                        break;
+                    }
 
                 } else if (resp.getStatusCode() == HttpStatus.NOT_FOUND) {
                     log.debug("VerifyUploadTasklet: identifier='{}' not found yet (404); will retry.", documentName);
