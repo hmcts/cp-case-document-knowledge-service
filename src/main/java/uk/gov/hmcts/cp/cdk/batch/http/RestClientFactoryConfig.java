@@ -1,10 +1,12 @@
 package uk.gov.hmcts.cp.cdk.batch.http;
 
+import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
 import org.apache.hc.core5.util.TimeValue;
+import org.apache.hc.core5.util.Timeout;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.ClientHttpRequestFactory;
@@ -17,6 +19,8 @@ import java.util.Map;
 @Configuration
 public class RestClientFactoryConfig {
 
+    private static final Duration THREE_MIN = Duration.ofMinutes(3);
+
     @Bean(destroyMethod = "close")
     public PoolingHttpClientConnectionManager httpClientConnectionManager() {
         return PoolingHttpClientConnectionManagerBuilder.create()
@@ -27,10 +31,17 @@ public class RestClientFactoryConfig {
 
     @Bean(destroyMethod = "close")
     public CloseableHttpClient closeableHttpClient(final PoolingHttpClientConnectionManager connectionManager) {
+        final RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(Timeout.of(THREE_MIN))
+                .setConnectionRequestTimeout(Timeout.of(THREE_MIN))
+                .setResponseTimeout(Timeout.of(THREE_MIN))
+                .build();
+
         return HttpClients.custom()
                 .setConnectionManager(connectionManager)
+                .setDefaultRequestConfig(requestConfig)
                 .evictExpiredConnections()
-                .evictIdleConnections(TimeValue.ofSeconds(30))
+                .evictIdleConnections(TimeValue.ofMinutes(3))
                 .disableAutomaticRetries()
                 .build();
     }
@@ -56,8 +67,9 @@ public class RestClientFactoryConfig {
 
             final HttpComponentsClientHttpRequestFactory requestFactory =
                     new HttpComponentsClientHttpRequestFactory(this.httpClient);
-            requestFactory.setConnectTimeout(connectTimeout);
-            requestFactory.setReadTimeout(readTimeout);
+            requestFactory.setConnectTimeout(connectTimeout != null ? connectTimeout : THREE_MIN);
+            requestFactory.setReadTimeout(readTimeout != null ? readTimeout : THREE_MIN);
+            requestFactory.setConnectionRequestTimeout(THREE_MIN);
 
             final ClientHttpRequestFactory clientRequestFactory = requestFactory;
 
