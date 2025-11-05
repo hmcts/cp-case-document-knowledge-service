@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +20,9 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
+import org.springframework.retry.backoff.NoBackOffPolicy;
+import org.springframework.retry.policy.SimpleRetryPolicy;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
@@ -56,6 +60,8 @@ class GenerateAnswersTaskletTest {
     @Mock private ChunkContext chunkContext;
     @Mock private StepExecution stepExecution;
 
+    private RetryTemplate retryTemplate;
+
     static class NoopTxManager implements PlatformTransactionManager {
         @Override public TransactionStatus getTransaction(TransactionDefinition definition) { return new SimpleTransactionStatus(); }
         @Override public void commit(TransactionStatus status) { }
@@ -64,7 +70,14 @@ class GenerateAnswersTaskletTest {
 
     private GenerateAnswersTasklet newTasklet() {
         return new GenerateAnswersTasklet(
-                queryResolver, qdlRepo, jdbc, txManager, objectMapper, documentInformationSummarisedApi);
+                queryResolver, qdlRepo, jdbc, txManager, objectMapper, documentInformationSummarisedApi, retryTemplate);
+    }
+
+    @BeforeEach
+    void setUpRetry() {
+        retryTemplate = new RetryTemplate();
+        retryTemplate.setRetryPolicy(new SimpleRetryPolicy(1)); // one attempt
+        retryTemplate.setBackOffPolicy(new NoBackOffPolicy());
     }
 
     @Test

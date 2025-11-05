@@ -1,14 +1,16 @@
 package uk.gov.hmcts.cp.cdk.services;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
-import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.core.job.parameters.JobParametersInvalidException;
 import org.springframework.batch.core.launch.JobOperator;
-import org.springframework.batch.core.launch.NoSuchJobException;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
 import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uk.gov.hmcts.cp.cdk.batch.IngestionJobParams;
@@ -21,17 +23,14 @@ import java.util.UUID;
 
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class IngestionService {
 
     private final IngestionStatusViewRepository repo;
     private final JobOperator jobOperator;
     private final Job caseIngestionJob;
-
-    public IngestionService(final IngestionStatusViewRepository repo, final JobOperator jobOperator, final Job caseIngestionJob) {
-        this.repo = repo;
-        this.jobOperator = Objects.requireNonNull(jobOperator);
-        this.caseIngestionJob = Objects.requireNonNull(caseIngestionJob);
-    }
+    private final TaskExecutor ingestionStarterExecutor; // injected executor
 
     @Transactional(readOnly = true)
     public IngestionStatusResponse getStatus(final UUID caseId) {
@@ -55,22 +54,36 @@ public class IngestionService {
                 });
     }
 
-    public IngestionProcessResponse startIngestionProcess(final String cppuid, final IngestionProcessRequest request)
-            throws JobInstanceAlreadyCompleteException,
-            JobExecutionAlreadyRunningException,
-            JobParametersInvalidException,
-            JobRestartException,
-            NoSuchJobException {
-
+    public IngestionProcessResponse startIngestionProcess(final String cppuid,
+                                                          final IngestionProcessRequest request) {
         Objects.requireNonNull(request, "request must not be null");
 
-        final JobParameters params = IngestionJobParams.build(cppuid, request, Clock.systemUTC());
+        final JobParameters baseParams = IngestionJobParams.build(cppuid, request, Clock.systemUTC());
+        final String requestId = UUID.randomUUID().toString();
 
-        final JobExecution execution = jobOperator.start(caseIngestionJob, params);
+        final JobParameters params = new JobParametersBuilder(baseParams)
+                .addString("requestId", requestId, true)
+                .toJobParameters();
+
+        ingestionStarterExecutor.execute(() -> {
+            try {
+                jobOperator.start(caseIngestionJob, params);
+                log.info("Ingestion job submitted asynchronously. requestId={}, cppuid={}", requestId, cppuid);
+            } catch (JobExecutionAlreadyRunningException
+                     | JobRestartException
+                     | JobInstanceAlreadyCompleteException
+                     | JobParametersInvalidException e) {
+                log.error("Failed to start ingestion job asynchronously. requestId={}, cppuid={}, error={}",
+                        requestId, cppuid, e.getMessage(), e);
+            } catch (Exception e) {
+                log.error("Unexpected error while starting ingestion job asynchronously. requestId={}, cppuid={}",
+                        requestId, cppuid, e);
+            }
+        });
 
         final IngestionProcessResponse response = new IngestionProcessResponse();
         response.setPhase(IngestionProcessPhase.STARTED);
-        response.setMessage("Ingestion process started successfully (executionId=%d)".formatted(execution.getId()));
+        response.setMessage("Ingestion request accepted; job will start asynchronously (requestId=%s)".formatted(requestId));
         return response;
     }
 }

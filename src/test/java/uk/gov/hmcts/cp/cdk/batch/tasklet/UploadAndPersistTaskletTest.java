@@ -13,6 +13,9 @@ import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.retry.backoff.NoBackOffPolicy;
+import org.springframework.retry.policy.SimpleRetryPolicy;
+import org.springframework.retry.support.RetryTemplate;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
 import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
@@ -65,14 +68,18 @@ class UploadAndPersistTaskletTest {
 
         objectMapper = new ObjectMapper();
         uploadProperties = new UploadProperties(
-                "cases",         // blobPrefix (not used in current code path)
+                "cases",         // blobPrefix (not used in current path)
                 "yyyyMMdd",      // datePattern
                 ".pdf",          // fileExtension
                 "application/pdf"
         );
 
+        RetryTemplate retryTemplate = new RetryTemplate();
+        retryTemplate.setRetryPolicy(new SimpleRetryPolicy(1)); // single attempt
+        retryTemplate.setBackOffPolicy(new NoBackOffPolicy());
+
         tasklet = new UploadAndPersistTasklet(
-                objectMapper, progressionClient, storageService, caseDocumentRepository, uploadProperties
+                objectMapper, progressionClient, storageService, caseDocumentRepository, uploadProperties, retryTemplate
         );
 
         // lenient stubs to avoid UnnecessaryStubbingException in tests that override
@@ -147,11 +154,10 @@ class UploadAndPersistTaskletTest {
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
         verify(progressionClient).getMaterialDownloadUrl(eq(materialId), eq("la-user-1"));
         verifyNoInteractions(storageService, caseDocumentRepository);
-
     }
 
     @Test
-    @DisplayName("Happy path: copies blob with blobName only, persists CaseDocument, sets CTX_DOC_ID_KEY in step and job contexts")
+    @DisplayName("Happy path: copies blob with blobName only, persists CaseDocument")
     void happyPathPersistsAndSetsContext() throws Exception {
         UUID materialId = UUID.randomUUID();
         UUID caseId = UUID.randomUUID();
@@ -210,13 +216,13 @@ class UploadAndPersistTaskletTest {
         assertThat(saved.getUploadedAt()).isNotNull();
         assertThat(saved.getIngestionPhaseAt()).isNotNull();
 
-        // verify CTX_DOC_ID_KEY set in both step + job contexts and equals persisted entity id
+        // step context still contains pre-set values
         assertThat(stepCtx.getString(CTX_DOC_ID_KEY)).isEqualTo(saved.getDocId().toString());
         assertThat(stepCtx.getString(CTX_CASE_ID_KEY)).isEqualTo(caseId.toString());
     }
 
     @Test
-    @DisplayName("Skips and does not persist if copyFromUrl throws; CTX_DOC_ID_KEY not set")
+    @DisplayName("Skips and does not persist if copyFromUrl throws")
     void skipsIfCopyThrows() throws Exception {
         UUID materialId = UUID.randomUUID();
         UUID caseId = UUID.randomUUID();
@@ -236,7 +242,6 @@ class UploadAndPersistTaskletTest {
 
         verify(storageService, never()).getBlobSize(anyString());
         verify(caseDocumentRepository, never()).saveAndFlush(any());
-
     }
 
     @Test

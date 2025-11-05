@@ -2,11 +2,6 @@ package uk.gov.hmcts.cp.cdk.controllers;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.batch.core.job.parameters.JobParametersInvalidException;
-import org.springframework.batch.core.launch.NoSuchJobException;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
-import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
-import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -70,19 +65,13 @@ public class IngestionController implements IngestionApi {
             final IngestionProcessResponse resp =
                     service.startIngestionProcess(cppuid, ingestionProcessRequest);
 
-            return ResponseEntity.ok().contentType(VND_INGESTION).body(resp);
+            return ResponseEntity.status(HttpStatus.ACCEPTED).contentType(VND_INGESTION).body(resp);
 
-        } catch (NoSuchJobException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
-        } catch (JobParametersInvalidException | IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
-        } catch (JobExecutionAlreadyRunningException | JobInstanceAlreadyCompleteException | JobRestartException e) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage(), e);
         } catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
             throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error starting ingestion process.", e);
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error accepting ingestion request.", e);
         }
     }
 }

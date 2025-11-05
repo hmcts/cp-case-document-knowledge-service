@@ -18,19 +18,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.StringJoiner;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.*;
 
 @Slf4j
 @Component
