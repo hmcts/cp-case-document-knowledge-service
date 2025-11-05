@@ -133,7 +133,7 @@ dependencies {
 
     //Azure
     implementation 'com.azure:azure-storage-blob:12.27.0'
-
+    implementation "org.testcontainers:testcontainers"
     // Lombok for handwritten code
     compileOnly "org.projectlombok:lombok:$lombokVersion"
     annotationProcessor "org.projectlombok:lombok:$lombokVersion"
@@ -265,7 +265,7 @@ tasks.named('composeBuild') { dependsOn tasks.named('bootJar') }
 
 dockerCompose {
     useComposeFiles = ['docker/docker-compose.integration.yml']
-    startedServices = ['db', 'app', 'artemis','wiremock']
+    startedServices = ['db', 'app', 'artemis','wiremock', 'azurite']
     buildBeforeUp = true
     waitForTcpPorts = true
     upAdditionalArgs = ['--wait', '--wait-timeout', '120']

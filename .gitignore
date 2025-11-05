@@ -31,3 +31,4 @@ applicationinsights-agent-*.jar
 
 .DS_Store
 */.DS_Storesrc/main/resources/application-env.yml
+/certificates/
