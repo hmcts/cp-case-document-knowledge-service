@@ -194,7 +194,7 @@ class UploadAndPersistTaskletTest {
 
         // verify metadata
         Map<String, String> meta = metadataCaptor.getValue();
-        assertThat(meta).containsKeys("documentId", "metadata");
+        assertThat(meta).containsKeys("document_id", "metadata");
 
         // verify persistence
         ArgumentCaptor<CaseDocument> docCaptor = ArgumentCaptor.forClass(CaseDocument.class);
