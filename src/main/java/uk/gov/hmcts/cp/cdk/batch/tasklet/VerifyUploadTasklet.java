@@ -194,8 +194,8 @@ public class VerifyUploadTasklet implements Tasklet {
             caseDocumentRepository.findById(docId).ifPresent(doc -> {
                 doc.setIngestionPhase(phase);
                 doc.setIngestionPhaseAt(nowUtc());
-                caseDocumentRepository.save(doc);
-                log.debug("VerifyUploadTasklet: persisted ingestion phase {} for docId={}.", phase, docId);
+                caseDocumentRepository.saveAndFlush(doc);
+                log.info("VerifyUploadTasklet: persisted ingestion phase {} for docId={}.", phase, docId);
             });
         } catch (Exception ex) {
             log.warn("VerifyUploadTasklet: failed to persist ingestion phase {} for docId={}: {}",
