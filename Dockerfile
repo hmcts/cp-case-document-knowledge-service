@@ -26,10 +26,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 #---Certs---
-COPY ${CERTS_DIR}/cpp-nonlive-ca.pem /etc/pki/ca-trust/source/anchors/cpp-nonlive-ca.crt
-COPY ${CERTS_DIR}/cp-cjs-hmcts-net-ca.pem /etc/pki/ca-trust/source/anchors/cp-cjs-hmcts-net-ca.crt
-COPY ${CERTS_DIR}/cjscp-nl-root.pem /etc/pki/ca-trust/source/anchors/cjscp-nl-root.crt
-COPY ${CERTS_DIR}/cjscp-lv-root.pem /etc/pki/ca-trust/source/anchors/cjscp-lv-root.crt
+COPY ${CERTS_DIR}/cpp-nonlive-ca.pem /usr/local/share/ca-certificates/cpp-nonlive-ca.crt
+COPY ${CERTS_DIR}/cp-cjs-hmcts-net-ca.pem /usr/local/share/ca-certificates/cp-cjs-hmcts-net-ca.crt
+COPY ${CERTS_DIR}/cjscp-nl-root.pem /usr/local/share/ca-certificates/cjscp-nl-root.crt
+COPY ${CERTS_DIR}/cjscp-lv-root.pem /usr/local/share/ca-certificates/cjscp-lv-root.crt
 
 RUN update-ca-certificates
 
