@@ -34,10 +34,10 @@ import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 @Slf4j
 public class UploadAndPersistTasklet implements Tasklet {
 
-    private static final String META_CASE_ID = "caseId";
-    private static final String META_MATERIAL_ID = "materialId";
-    private static final String META_UPLOADED_AT = "uploadedAt";
-    private static final String META_DOCUMENT_ID = "documentId";
+    private static final String META_CASE_ID = "case_id";
+    private static final String META_MATERIAL_ID = "material_id";
+    private static final String META_UPLOADED_AT = "uploaded_at";
+    private static final String META_DOCUMENT_ID = "document_id";
     private static final String META_METADATA = "metadata";
 
     private final ObjectMapper objectMapper;
