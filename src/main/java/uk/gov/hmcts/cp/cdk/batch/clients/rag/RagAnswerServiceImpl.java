@@ -39,13 +39,13 @@ public class RagAnswerServiceImpl implements DocumentInformationSummarisedApi {
             @Valid final AnswerUserQueryRequest request) {
 
         try {
-            if (request.getMetadataFilters() == null) {
-                request.setMetadataFilters(List.of());
+            if (request.getMetadataFilter() == null) {
+                request.setMetadataFilter(List.of());
             }
 
             UserQueryAnswerReturnedSuccessfully resp = ragRestClient
                     .post()
-                    .uri(PATH_ANSWER_USER_QUERY) // Unqualified: inherited from interface
+                    .uri(PATH_ANSWER_USER_QUERY)
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .headers(headers -> {
