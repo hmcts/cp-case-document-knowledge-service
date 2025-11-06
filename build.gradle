@@ -2,7 +2,7 @@ plugins {
     id 'application'
     id 'java'
 
-    id 'org.springframework.boot' version '4.0.0-M3'
+    id 'org.springframework.boot' version '4.0.0-RC1'
     id 'io.spring.dependency-management' version '1.1.7'
 
     id 'jacoco'
@@ -73,7 +73,7 @@ configurations {
 ext {
     lombokVersion = "1.18.42"
     apiSpecVersion = "0.4.2"
-    testcontainersBom = "1.20.4"
+    testcontainersBom = "2.0.1"
     cdk = "0.0.5-5343edf"
     aiRag = "0.0.1"
     mapstruct = "1.6.3"
