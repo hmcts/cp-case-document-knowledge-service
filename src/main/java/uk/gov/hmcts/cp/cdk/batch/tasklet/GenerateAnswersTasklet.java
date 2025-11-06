@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.tasklet.Tasklet;
@@ -29,6 +30,7 @@ import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.*;
 
@@ -127,110 +129,129 @@ public class GenerateAnswersTasklet implements Tasklet {
         if (caseIdStr != null && docIdStr != null) {
             final UUID caseId = UUID.fromString(caseIdStr);
             final UUID docId = UUID.fromString(docIdStr);
-            final List<Query> queries = queryResolver.resolve();
+            List<Query> queries = queryResolver.resolve();
+
+            final JobParameters params = jobExecution != null ? jobExecution.getJobParameters() : null;
+            final String singleQueryFromStep = stepCtx.getString("CTX_SINGLE_QUERY_ID", null);
+            final String singleQueryFromParams = params != null ? params.getString("CTX_SINGLE_QUERY_ID", null) : null;
+            final String singleQueryIdStr = singleQueryFromStep != null ? singleQueryFromStep : singleQueryFromParams;
+
+            if (singleQueryIdStr != null && !singleQueryIdStr.isBlank()) {
+                try {
+                    final UUID only = UUID.fromString(singleQueryIdStr);
+                    queries = queries.stream().filter(q -> only.equals(q.getQueryId())).collect(Collectors.toList());
+                    log.info("Single-query mode: running only queryId={}", singleQueryIdStr);
+                } catch (IllegalArgumentException ex) {
+                    log.warn("Invalid CTX_SINGLE_QUERY_ID='{}' — ignoring single-query filter.", singleQueryIdStr);
+                }
+            }
+
             if (queries.isEmpty()) {
                 log.debug("No queries resolved – nothing to do.");
-            } else {
-                final Map<UUID, QueryDefinitionLatest> defCache = new HashMap<>();
-                final TransactionTemplate txRequired = new TransactionTemplate(txManager);
-                txRequired.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+                return RepeatStatus.FINISHED;
+            }
 
-                final List<MapSqlParameterSource> answersBatch = new ArrayList<>(queries.size());
-                final List<MapSqlParameterSource> doneBatch = new ArrayList<>(queries.size());
-                final List<MapSqlParameterSource> failedBatch = new ArrayList<>();
+            final Map<UUID, QueryDefinitionLatest> defCache = new HashMap<>();
+            final TransactionTemplate txRequired = new TransactionTemplate(txManager);
+            txRequired.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
 
-                for (final Query query : queries) {
-                    final UUID queryId = query.getQueryId();
+            final List<MapSqlParameterSource> answersBatch = new ArrayList<>(queries.size());
+            final List<MapSqlParameterSource> doneBatch = new ArrayList<>(queries.size());
+            final List<MapSqlParameterSource> failedBatch = new ArrayList<>();
 
-                    final Integer version = txRequired.execute(status -> {
-                        final MapSqlParameterSource params = reservationParams(caseId, queryId, docId);
+            for (final Query query : queries) {
+                final UUID queryId = query.getQueryId();
 
-                        final List<Integer> found = jdbc.query(SQL_FIND_VERSION, params, INT_ROW_MAPPER);
-                        Integer foundVersion = found.isEmpty() ? null : found.get(0);
+                final Integer version = txRequired.execute(status -> {
+                    final MapSqlParameterSource params2 = reservationParams(caseId, queryId, docId);
 
-                        if (foundVersion == null) {
-                            foundVersion = jdbc.queryForObject(SQL_CREATE_OR_GET_VERSION, params, Integer.class);
-                        }
+                    final List<Integer> found = jdbc.query(SQL_FIND_VERSION, params2, INT_ROW_MAPPER);
+                    Integer foundVersion = found.isEmpty() ? null : found.get(0);
 
-                        jdbc.update(SQL_MARK_IN_PROGRESS, params);
-                        return foundVersion;
-                    });
-
-                    final QueryDefinitionLatest qdl = defCache.computeIfAbsent(
-                            queryId, k -> qdlRepo.findByQueryId(k).orElse(null)
-                    );
-
-                    final String userQuery = qdl != null ? Optional.ofNullable(qdl.getUserQuery()).orElse("") : "";
-                    final String queryPrompt = qdl != null ? Optional.ofNullable(qdl.getQueryPrompt()).orElse("") : "";
-                    final List<MetadataFilter> filters = buildMetadataFilters(docId);
-
-                    final AnswerUserQueryRequest request =
-                            buildAnswerUserQueryRequest(userQuery, queryPrompt, filters);
-
-                    // ==== APIM call with retry ====
-                    final UserQueryAnswerReturnedSuccessfully resp =
-                            retryTemplate.execute((RetryContext context) -> {
-                                if (context.getRetryCount() > 0) {
-                                    log.warn("Retrying APIM call (attempt #{}) caseId={}, docId={}, queryId={}",
-                                            context.getRetryCount() + 1, caseId, docId, queryId);
-                                }
-
-                                final ResponseEntity<UserQueryAnswerReturnedSuccessfully> responseEntity =
-                                        documentInformationSummarisedApi.answerUserQuery(request);
-
-                                if (responseEntity == null || responseEntity.getBody() == null) {
-                                    throw new IllegalStateException("Empty response body from APIM");
-                                }
-
-                                final UserQueryAnswerReturnedSuccessfully body = responseEntity.getBody();
-                                final String llmResponse = body.getLlmResponse();
-                                if (llmResponse == null || llmResponse.isBlank()) {
-                                    throw new IllegalStateException("Empty llmResponse from APIM");
-                                }
-
-                                return body;
-                            }, (RetryContext context) -> {
-                                log.warn("APIM call permanently failed after {} attempts for caseId={}, docId={}, queryId={}",
-                                        context.getRetryCount(), caseId, docId, queryId, context.getLastThrowable());
-                                failedBatch.add(reservationParams(caseId, queryId, docId));
-                                return null;
-                            });
-
-                    if (resp == null) {
-                        // Recovery executed (all attempts exhausted) — skip to next query
-                        continue;
+                    if (foundVersion == null) {
+                        foundVersion = jdbc.queryForObject(SQL_CREATE_OR_GET_VERSION, params2, Integer.class);
                     }
 
-                    final String llmInputJson;
-                    try {
-                        llmInputJson = buildLlmInputJson(resp);
-                    } catch (final Exception e) {
-                        log.warn("Failed to build llm_input JSON for caseId={}, docId={}, queryId={}: {}",
-                                caseId, docId, queryId, e.getMessage(), e);
-                        failedBatch.add(reservationParams(caseId, queryId, docId));
-                        continue;
-                    }
-
-                    answersBatch.add(answerParamsRow(caseId, queryId, version, resp.getLlmResponse(), llmInputJson, docId));
-                    doneBatch.add(reservationParams(caseId, queryId, docId));
-                }
-
-                txRequired.execute(status -> {
-                    if (!answersBatch.isEmpty()) {
-                        jdbc.batchUpdate(SQL_UPSERT_ANSWER, answersBatch.toArray(new MapSqlParameterSource[0]));
-                    }
-                    if (!doneBatch.isEmpty()) {
-                        jdbc.batchUpdate(SQL_MARK_DONE, doneBatch.toArray(new MapSqlParameterSource[0]));
-                    }
-                    if (!failedBatch.isEmpty()) {
-                        jdbc.batchUpdate(SQL_MARK_FAILED, failedBatch.toArray(new MapSqlParameterSource[0]));
-                    }
-                    return null;
+                    jdbc.update(SQL_MARK_IN_PROGRESS, params2);
+                    return foundVersion;
                 });
 
-                log.info("GenerateAnswersTasklet finished: {} done, {} failed",
-                        doneBatch.size(), failedBatch.size());
+                final QueryDefinitionLatest qdl = defCache.computeIfAbsent(
+                        queryId, k -> qdlRepo.findByQueryId(k).orElse(null)
+                );
+
+                final String userQuery = qdl != null ? Optional.ofNullable(qdl.getUserQuery()).orElse("") : "";
+                final String queryPrompt = qdl != null ? Optional.ofNullable(qdl.getQueryPrompt()).orElse("") : "";
+                final List<MetadataFilter> filters = buildMetadataFilters(docId);
+
+                final AnswerUserQueryRequest request =
+                        buildAnswerUserQueryRequest(userQuery, queryPrompt, filters);
+
+                // ==== APIM call with retry ====
+                final long currentTimeMillis = System.currentTimeMillis();
+                final UserQueryAnswerReturnedSuccessfully resp =
+                        retryTemplate.execute((RetryContext context) -> {
+                            if (context.getRetryCount() > 0) {
+                                log.warn("Retrying APIM call (attempt #{}) caseId={}, docId={}, queryId={}",
+                                        context.getRetryCount() + 1, caseId, docId, queryId);
+                            }
+
+                            final ResponseEntity<UserQueryAnswerReturnedSuccessfully> responseEntity =
+                                    documentInformationSummarisedApi.answerUserQuery(request);
+
+                            if (responseEntity == null || responseEntity.getBody() == null) {
+                                throw new IllegalStateException("Empty response body from APIM");
+                            }
+
+                            final UserQueryAnswerReturnedSuccessfully body = responseEntity.getBody();
+                            final String llmResponse = body.getLlmResponse();
+                            if (llmResponse == null || llmResponse.isBlank()) {
+                                throw new IllegalStateException("Empty llmResponse from APIM");
+                            }
+
+                            return body;
+                        }, (RetryContext context) -> {
+                            log.warn("APIM call permanently failed after {} attempts for caseId={}, docId={}, queryId={}",
+                                    context.getRetryCount(), caseId, docId, queryId, context.getLastThrowable());
+                            failedBatch.add(reservationParams(caseId, queryId, docId));
+                            return null;
+                        });
+                log.info("RAG call duration for queryId={}: {} ms", queryId, System.currentTimeMillis() - currentTimeMillis);
+
+                if (resp == null) {
+                    // Recovery executed (all attempts exhausted) — skip to next query
+                    continue;
+                }
+
+                final String llmInputJson;
+                try {
+                    llmInputJson = buildLlmInputJson(resp);
+                } catch (final Exception e) {
+                    log.warn("Failed to build llm_input JSON for caseId={}, docId={}, queryId={}: {}",
+                            caseId, docId, queryId, e.getMessage(), e);
+                    failedBatch.add(reservationParams(caseId, queryId, docId));
+                    continue;
+                }
+
+                answersBatch.add(answerParamsRow(caseId, queryId, version, resp.getLlmResponse(), llmInputJson, docId));
+                doneBatch.add(reservationParams(caseId, queryId, docId));
             }
+
+            txRequired.execute(status -> {
+                if (!answersBatch.isEmpty()) {
+                    jdbc.batchUpdate(SQL_UPSERT_ANSWER, answersBatch.toArray(new MapSqlParameterSource[0]));
+                }
+                if (!doneBatch.isEmpty()) {
+                    jdbc.batchUpdate(SQL_MARK_DONE, doneBatch.toArray(new MapSqlParameterSource[0]));
+                }
+                if (!failedBatch.isEmpty()) {
+                    jdbc.batchUpdate(SQL_MARK_FAILED, failedBatch.toArray(new MapSqlParameterSource[0]));
+                }
+                return null;
+            });
+
+            log.info("GenerateAnswersTasklet finished: {} done, {} failed",
+                    doneBatch.size(), failedBatch.size());
         } else {
             log.debug("No caseId/docId in step context – nothing to do.");
         }
