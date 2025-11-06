@@ -1,6 +1,5 @@
 package uk.gov.hmcts.cp.cdk.batch;
 
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
@@ -56,11 +55,18 @@ public class CaseIngestionStepsConfig {
         return step("step5_reserve_answer_version_perCase", repo, reserveAnswerVersionTasklet);
     }
 
+    // Old (kept but unused in flow): step6_generate_answers_perCase
     @Bean
     public Step step6GenerateAnswersPerCase(final JobRepository repo,
                                             final GenerateAnswersTasklet generateAnswersTasklet) {
         return step("step6_generate_answers_perCase", repo, generateAnswersTasklet);
     }
 
-
+    @Bean
+    public Step step6GenerateAnswerSingleQuery(final JobRepository repo,
+                                               final GenerateAnswersTasklet generateAnswersTasklet) {
+        return new StepBuilder("step6_generate_answer_single_query", repo)
+                .tasklet(new RetryingTasklet(generateAnswersTasklet, retryTemplate))
+                .build();
+    }
 }
