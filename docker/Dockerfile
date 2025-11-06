@@ -1,5 +1,5 @@
 # Dockerfile
-FROM eclipse-temurin:21-jdk
+FROM mcr.microsoft.com/openjdk/jdk:21-ubuntu
 
 # Install minimal runtime tooling for healthcheck
 RUN apt-get update \

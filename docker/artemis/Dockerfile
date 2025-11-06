@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk
+FROM mcr.microsoft.com/openjdk/jdk:21-ubuntu
 
 SHELL ["/bin/sh", "-c"]
 WORKDIR /opt
