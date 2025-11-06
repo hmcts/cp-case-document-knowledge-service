@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.MaterialMetaData;
 
 import java.util.*;
 
@@ -22,16 +23,23 @@ public class FilterEligibleCasesTasklet implements Tasklet {
     private final ProgressionClient progressionClient;
 
     @Override
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final ExecutionContext jobCtx = contribution.getStepExecution().getJobExecution().getExecutionContext();
         @SuppressWarnings("unchecked") final List<String> rawCaseIds = (List<String>) jobCtx.get(CTX_CASE_IDS_KEY);
         final String userId = (String) jobCtx.get(USERID_FOR_EXTERNAL_CALLS);
-        final Map<String, String> materialToCaseMap = new HashMap<>();
+            final Map<String, MaterialMetaData> materialToCaseMap = new HashMap<>();
 
         for (final String idStr : rawCaseIds) {
             final UUID caseId = UUID.fromString(idStr);
             final Optional<LatestMaterialInfo> courtDocuments = progressionClient.getCourtDocuments(caseId,userId);
-            courtDocuments.ifPresent(info -> materialToCaseMap.put(info.materialId(), idStr));
+            courtDocuments.ifPresent(info -> {
+                final MaterialMetaData meta = new MaterialMetaData(
+                        info.materialId(),   // id
+                        info.materialName()          // name
+                );
+                materialToCaseMap.put(idStr, meta);
+            });
         }
 
         contribution.getStepExecution()

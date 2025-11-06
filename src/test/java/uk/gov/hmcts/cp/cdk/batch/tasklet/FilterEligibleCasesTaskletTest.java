@@ -17,6 +17,7 @@ import org.springframework.batch.repeat.RepeatStatus;
 import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.MaterialMetaData;
 
 import java.util.*;
 
@@ -59,7 +60,7 @@ class FilterEligibleCasesTaskletTest {
         List<String> caseIds = new ArrayList<String>();
         caseIds.add(case1.toString());
         // Only first case has document
-        LatestMaterialInfo meta1 = new LatestMaterialInfo(caseIds, "application/pdf", "123L",material1.toString(),null);
+        LatestMaterialInfo meta1 = new LatestMaterialInfo(caseIds, "application/pdf", "123L",material1.toString(),"IDPC",null);
         when(progressionClient.getCourtDocuments(case1,"userId")).thenReturn(Optional.of(meta1));
         when(progressionClient.getCourtDocuments(case2,"userId")).thenReturn(Optional.empty());
 
@@ -81,10 +82,10 @@ class FilterEligibleCasesTaskletTest {
         // Assert
 
         @SuppressWarnings("unchecked")
-        Map<String, String> materialToCaseMap = (Map<String, String>) ctx.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY);
+        Map<String, MaterialMetaData> materialToCaseMap = (Map<String, MaterialMetaData>) ctx.get(BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY);
 
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
-        assertThat(materialToCaseMap).containsEntry(material1.toString(), case1.toString());
+        assertThat(materialToCaseMap).containsKey(case1.toString());
 
         verify(progressionClient, times(1)).getCourtDocuments(case1,"userId");
         verify(progressionClient, times(1)).getCourtDocuments(case2,"userId");

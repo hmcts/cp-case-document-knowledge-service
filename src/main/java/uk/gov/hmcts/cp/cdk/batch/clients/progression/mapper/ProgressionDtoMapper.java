@@ -40,6 +40,7 @@ public class ProgressionDtoMapper {
                 documentTypeId,
                 documentTypeDescription,
                 material.id(),
+                material.name(),
                 material.uploadDateTime()
         ));
     }

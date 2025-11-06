@@ -166,6 +166,8 @@ class CaseIngestionJobTest {
         // step 2 — latest material links
         LatestMaterialInfo lm1 = mock(LatestMaterialInfo.class);
         LatestMaterialInfo lm2 = mock(LatestMaterialInfo.class);
+        when(lm1.materialName()).thenReturn("IDPC");
+        when(lm2.materialName()).thenReturn("IDPC");
         when(lm1.materialId()).thenReturn(materialId1.toString());
         when(lm2.materialId()).thenReturn(materialId2.toString());
         when(progressionClient.getCourtDocuments(eq(caseId1), anyString())).thenReturn(Optional.of(lm1));
