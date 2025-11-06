@@ -9,10 +9,10 @@ plugins {
     id 'pmd'
     id 'maven-publish'
     id 'com.github.ben-manes.versions' version '0.53.0'
-    id 'org.cyclonedx.bom' version '2.4.1'
+    id 'org.cyclonedx.bom' version '3.0.1'
     id 'au.com.dius.pact' version '4.6.17'
     id 'com.gorylenko.gradle-git-properties' version '2.5.3'
-    id 'com.avast.gradle.docker-compose' version '0.17.12'
+    id 'com.avast.gradle.docker-compose' version '0.17.19'
 }
 
 group = 'uk.gov.hmcts.cp'
@@ -73,10 +73,10 @@ configurations {
 ext {
     lombokVersion = "1.18.42"
     apiSpecVersion = "0.4.2"
-    testcontainersBom = "1.20.1"
+    testcontainersBom = "1.20.4"
     cdk = "0.0.5-5343edf"
     aiRag = "0.0.1"
-    mapstruct = "1.5.5.Final"
+    mapstruct = "1.6.3"
 }
 
 // ---- Dependencies ----
@@ -84,7 +84,7 @@ dependencies {
     // Domain API contract (generated interfaces/models)
     implementation "uk.gov.hmcts.cp:api-cp-crime-caseadmin-case-document-knowledge:$cdk"
     implementation "uk.gov.hmcts.cp:api-cp-ai-rag:$aiRag"
-    implementation 'org.apache.httpcomponents.client5:httpclient5:5.3.1'
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.5.1'
     // MapStruct
     implementation "org.mapstruct:mapstruct:$mapstruct"
     annotationProcessor "org.mapstruct:mapstruct-processor:$mapstruct"
@@ -106,7 +106,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
 
     // OpenAPI UI (Boot 4 compatible)
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.0-M1'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.0-RC1'
     // Align with Boot 4 (Jackson 3). Let Boot BOM manage versions:
     implementation 'tools.jackson.module:jackson-module-kotlin'
 
@@ -120,7 +120,7 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
 
     // Logging / utils
-    implementation 'net.logstash.logback:logstash-logback-encoder:8.1'
+    implementation 'net.logstash.logback:logstash-logback-encoder:9.0'
     implementation 'org.apache.logging.log4j:log4j-to-slf4j'
     implementation 'org.apache.commons:commons-text:1.14.0'
 
@@ -129,10 +129,10 @@ dependencies {
 
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
 
-    implementation 'io.swagger.parser.v3:swagger-parser:2.1.20' // Use the latest version
+    implementation 'io.swagger.parser.v3:swagger-parser:2.1.35'
 
     //Azure
-    implementation 'com.azure:azure-storage-blob:12.27.0'
+    implementation 'com.azure:azure-storage-blob:12.32.0'
     implementation "org.testcontainers:testcontainers"
     // Lombok for handwritten code
     compileOnly "org.projectlombok:lombok:$lombokVersion"
@@ -145,8 +145,8 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-test'
     testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
     testImplementation 'org.springframework.batch:spring-batch-test'
-    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
-    testImplementation 'org.assertj:assertj-core:3.26.0'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:5.3.0'
+    testImplementation 'org.assertj:assertj-core:3.27.6'
 
     // Testcontainers (BOM-managed)
     testImplementation platform("org.testcontainers:testcontainers-bom:$testcontainersBom")
@@ -180,23 +180,11 @@ tasks.named("pmdMain").configure { onlyIf { gradle.startParameter.taskNames.cont
 tasks.named("pmdTest").configure { enabled = false }
 tasks.named("pmdIntegrationTest").configure { enabled = false }
 
-// ---- Versions check policy ----
-tasks.named("dependencyUpdates").configure {
-    def isNonStable = { String v ->
-        def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { q -> v.toUpperCase().contains(q) }
-        def regex = /^[0-9,.v-]+$/
-        !stableKeyword && !(v ==~ regex)
-    }
-    rejectVersionIf { isNonStable(candidate.version) && !isNonStable(currentVersion) }
-}
-
 // ---- SBOM ----
-cyclonedxBom {
+tasks.cyclonedxDirectBom {
     includeConfigs = ["runtimeClasspath"]
     skipConfigs = ["compileClasspath", "testImplementation", "testCompileClasspath", "testRuntimeClasspath"]
-    schemaVersion = "1.6"
     componentVersion = providers.provider { project.version.toString() }
-    destination = layout.buildDirectory.dir("reports").get().asFile
 }
 
 // ---- Reproducible archives ----
