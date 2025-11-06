@@ -5,6 +5,7 @@ import org.springframework.batch.core.partition.Partitioner;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.MaterialMetaData;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -20,20 +21,21 @@ public class MaterialToCasePartitioner implements Partitioner {
     @Value("#{jobExecutionContext['" +
             CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY +
             "']}")
-    private Map<String, String> materialToCaseMap;
+    private Map<String, MaterialMetaData> materialToCaseMap;
 
     @Override
     public Map<String, ExecutionContext> partition(final int gridSize) {
-        final Map<String, String> safe =
+        final Map<String, MaterialMetaData> safe =
                 (materialToCaseMap == null) ? Collections.emptyMap() : materialToCaseMap;
 
         final Map<String, ExecutionContext> partitions = new LinkedHashMap<>();
-        for (final Map.Entry<String, String> entry : safe.entrySet()) {
+        for (final Map.Entry<String, MaterialMetaData> entry : safe.entrySet()) {
             final ExecutionContext ctx = new ExecutionContext(); // NOPMD: loop allocation is fine here
-            ctx.putString(CTX_MATERIAL_ID_KEY, entry.getKey());
-            ctx.putString(CTX_CASE_ID_KEY, entry.getValue());
+            ctx.putString(CTX_MATERIAL_ID_KEY, entry.getValue().materialId());
+            ctx.putString(CTX_CASE_ID_KEY, entry.getKey());
             ctx.putString(CTX_DOC_ID_KEY, UUID.randomUUID().toString());
-            partitions.put("case-" + entry.getValue(), ctx);
+            ctx.putString(CTX_MATERIAL_NAME, entry.getValue().materialName());
+            partitions.put("case-" + entry.getKey(), ctx);
         }
         return partitions;
     }

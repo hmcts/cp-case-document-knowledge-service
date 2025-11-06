@@ -69,12 +69,12 @@ import static org.mockito.Mockito.*;
 @SpringBatchTest
 @SpringBootTest(
         classes = {
-                CaseIngestionJobE2EPostgresTest.TestApplication.class,
+                CaseIngestionJobTest.TestApplication.class,
                 BatchConfig.class,
                 CdkClientsConfig.class,
                 CaseIngestionJobConfig.class,
                 CaseIngestionStepsConfig.class,
-                CaseIngestionJobE2EPostgresTest.TestOverrides.class
+                CaseIngestionJobTest.TestOverrides.class
         },
         properties = {
                 "spring.main.allow-bean-definition-overriding=true"
@@ -83,7 +83,7 @@ import static org.mockito.Mockito.*;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-class CaseIngestionJobE2EPostgresTest {
+class CaseIngestionJobTest {
 
     @SpringBootApplication(scanBasePackages = "uk.gov.hmcts.cp.cdk")
     @EntityScan(basePackages = "uk.gov.hmcts.cp.cdk.domain")
@@ -166,6 +166,8 @@ class CaseIngestionJobE2EPostgresTest {
         // step 2 — latest material links
         LatestMaterialInfo lm1 = mock(LatestMaterialInfo.class);
         LatestMaterialInfo lm2 = mock(LatestMaterialInfo.class);
+        when(lm1.materialName()).thenReturn("IDPC");
+        when(lm2.materialName()).thenReturn("IDPC");
         when(lm1.materialId()).thenReturn(materialId1.toString());
         when(lm2.materialId()).thenReturn(materialId2.toString());
         when(progressionClient.getCourtDocuments(eq(caseId1), anyString())).thenReturn(Optional.of(lm1));

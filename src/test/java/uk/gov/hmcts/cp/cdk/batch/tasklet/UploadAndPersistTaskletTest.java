@@ -130,6 +130,7 @@ class UploadAndPersistTaskletTest {
         stepCtx.putString(CTX_MATERIAL_ID_KEY, "not-a-uuid");
         stepCtx.putString(CTX_CASE_ID_KEY, "also-not-a-uuid");
         stepCtx.putString(CTX_DOC_ID_KEY, "also-not-a-uuid");
+        stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
 
         RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
 
@@ -145,6 +146,7 @@ class UploadAndPersistTaskletTest {
         stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
         stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
         stepCtx.putString(CTX_DOC_ID_KEY, materialId.toString());
+        stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
 
         when(progressionClient.getMaterialDownloadUrl(eq(materialId), eq("la-user-1")))
                 .thenReturn(Optional.empty());
@@ -168,6 +170,7 @@ class UploadAndPersistTaskletTest {
         stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
         stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
         stepCtx.putString(CTX_DOC_ID_KEY, materialId.toString());
+        stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
 
         when(progressionClient.getMaterialDownloadUrl(eq(materialId), eq("la-user-1")))
                 .thenReturn(Optional.of(downloadUrl));
@@ -178,7 +181,7 @@ class UploadAndPersistTaskletTest {
         RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
 
-        // capture arguments to copyFromUrl
+        // capture arguments to  copyFromUrl
         ArgumentCaptor<String> destPathCaptor = ArgumentCaptor.forClass(String.class);
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Map<String, String>> metadataCaptor = ArgumentCaptor.forClass(Map.class);
@@ -231,6 +234,7 @@ class UploadAndPersistTaskletTest {
         stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
         stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
         stepCtx.putString(CTX_DOC_ID_KEY, materialId.toString());
+        stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
 
         when(progressionClient.getMaterialDownloadUrl(eq(materialId), eq("la-user-1")))
                 .thenReturn(Optional.of(downloadUrl));
@@ -255,6 +259,7 @@ class UploadAndPersistTaskletTest {
         stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
         stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
         stepCtx.putString(CTX_DOC_ID_KEY, materialId.toString());
+        stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
 
         when(progressionClient.getMaterialDownloadUrl(eq(materialId), eq("la-user-1")))
                 .thenReturn(Optional.of(downloadUrl));

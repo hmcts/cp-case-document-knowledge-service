@@ -8,6 +8,7 @@ public record LatestMaterialInfo(
         String documentTypeId,
         String documentTypeDescription,
         String materialId,
+        String materialName,
         ZonedDateTime uploadDateTime
 ) {
 }
