@@ -246,7 +246,7 @@ public class GenerateAnswersTasklet implements Tasklet {
         return new AnswerUserQueryRequest()
                 .userQuery(userQuery)
                 .queryPrompt(queryPrompt)
-                .metadataFilters(filters);
+                .metadataFilter(filters);
     }
 
     private String buildLlmInputJson(final UserQueryAnswerReturnedSuccessfully resp) throws Exception {
