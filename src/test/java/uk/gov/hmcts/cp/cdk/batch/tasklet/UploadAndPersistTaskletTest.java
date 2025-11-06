@@ -181,7 +181,7 @@ class UploadAndPersistTaskletTest {
         RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
 
-        // capture arguments to copyFromUrl
+        // capture arguments to  copyFromUrl
         ArgumentCaptor<String> destPathCaptor = ArgumentCaptor.forClass(String.class);
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Map<String, String>> metadataCaptor = ArgumentCaptor.forClass(Map.class);
