@@ -26,9 +26,9 @@ class ProgressionDtoMapperTest {
         );
         final var mapper = new ProgressionDtoMapper(cfg);
 
-        final var m1 = new CourtDocumentSearchResponse.Material("m1","IDPC" ,ZonedDateTime.parse("2024-01-01T10:15:30Z"));
-        final var m2 = new CourtDocumentSearchResponse.Material("m2", "IDPC",ZonedDateTime.parse("2024-03-01T10:15:30Z"));
-        final var doc = new CourtDocumentSearchResponse.Document("DOC-41", "Some Doc", List.of(m1, m2));
+        final var m1 = new CourtDocumentSearchResponse.Material("m1",ZonedDateTime.parse("2024-01-01T10:15:30Z"));
+        final var m2 = new CourtDocumentSearchResponse.Material("m2",ZonedDateTime.parse("2024-03-01T10:15:30Z"));
+        final var doc = new CourtDocumentSearchResponse.Document("DOC-41", "Some Doc", "IDPC",List.of(m1, m2));
         final var idx = new CourtDocumentSearchResponse.DocumentIndex(List.of("CASE-1"), doc);
 
         final var latest = mapper.mapToLatestMaterialInfo(idx);
@@ -49,8 +49,8 @@ class ProgressionDtoMapperTest {
         );
         final var mapper = new ProgressionDtoMapper(cfg);
 
-        final var m1 = new CourtDocumentSearchResponse.Material("m1", "IDPC",ZonedDateTime.parse("2024-01-01T10:15:30Z"));
-        final var doc = new CourtDocumentSearchResponse.Document("DOC-41", "Some Doc", List.of(m1));
+        final var m1 = new CourtDocumentSearchResponse.Material("m1",ZonedDateTime.parse("2024-01-01T10:15:30Z"));
+        final var doc = new CourtDocumentSearchResponse.Document("DOC-41", "Some Doc", "IDPC",List.of(m1));
         final var idx = new CourtDocumentSearchResponse.DocumentIndex(List.of("CASE-1"), doc);
 
         assertThat(mapper.mapToLatestMaterialInfo(idx)).isEmpty();
@@ -72,11 +72,9 @@ class ProgressionDtoMapperTest {
 
         final var m1 = new CourtDocumentSearchResponse.Material(
                 "m1",
-                "IDPC"
-                ,
                 null
         );
-        final var doc = new CourtDocumentSearchResponse.Document("41be14e8-9df5-4b08-80b0-1e670bc80a5b", "Some Doc", List.of(m1));
+        final var doc = new CourtDocumentSearchResponse.Document("41be14e8-9df5-4b08-80b0-1e670bc80a5b", "Some Doc", null,List.of(m1));
         final var idx = new CourtDocumentSearchResponse.DocumentIndex(List.of("CASE-1"), doc);
 
         assertThat(mapper.mapToLatestMaterialInfo(idx)).isEmpty();

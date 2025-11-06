@@ -16,13 +16,13 @@ public record CourtDocumentSearchResponse(
     public record Document(
             String documentTypeId,
             String documentTypeDescription,
+            String name,
             List<Material> materials
     ) {
     }
 
     public record Material(
             String id,
-            String name,
             ZonedDateTime uploadDateTime
     ) {
     }

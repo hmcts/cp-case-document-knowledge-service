@@ -12,7 +12,7 @@ import java.util.Optional;
 @Component
 public class ProgressionDtoMapper {
     private final String docTypeId;
-
+    private final static String DOC_NAME_DEFAULT ="IDPC";
     public ProgressionDtoMapper(final ProgressionClientConfig config) {
         this.docTypeId = config.docTypeId();
     }
@@ -26,6 +26,9 @@ public class ProgressionDtoMapper {
         }
         final var documentTypeId = document.documentTypeId();
         final var documentTypeDescription = document.documentTypeDescription();
+        final var docName = (document.name() == null || document.name().isBlank())
+                ? DOC_NAME_DEFAULT
+                : document.name();
 
 
         final var latestMaterial = document.materials() == null
@@ -40,7 +43,7 @@ public class ProgressionDtoMapper {
                 documentTypeId,
                 documentTypeDescription,
                 material.id(),
-                material.name(),
+                docName,
                 material.uploadDateTime()
         ));
     }
