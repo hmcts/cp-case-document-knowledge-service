@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.tasklet.Tasklet;
@@ -12,7 +13,15 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.retry.backoff.FixedBackOffPolicy;
+import org.springframework.retry.policy.AlwaysRetryPolicy;
+import org.springframework.retry.policy.CompositeRetryPolicy;
+import org.springframework.retry.policy.TimeoutRetryPolicy;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
@@ -24,6 +33,7 @@ import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Component
@@ -42,6 +52,7 @@ public class VerifyUploadTasklet implements Tasklet {
     private final DocumentIngestionStatusApi documentIngestionStatusApi;
     private final CaseDocumentRepository caseDocumentRepository;
     private final ObjectMapper objectMapper;
+    private final PlatformTransactionManager txManager; // NEW: short, explicit DB tx
 
     @Value("${cdk.ingestion.verify.poll-interval-ms:2000}")
     private long pollIntervalMs;
@@ -50,14 +61,11 @@ public class VerifyUploadTasklet implements Tasklet {
     private long maxWaitMs;
 
     @Override
-    @SuppressWarnings({
-            "PMD.OnlyOneReturn",
-            "PMD.UseExplicitTypes",
-            "PMD.CyclomaticComplexity"
-    })
+    @SuppressWarnings({ "PMD.OnlyOneReturn", "PMD.CyclomaticComplexity" })
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
 
         final ExecutionContext stepCtx = contribution.getStepExecution().getExecutionContext();
+        final JobExecution jobExecution = contribution.getStepExecution().getJobExecution();
 
         final Boolean alreadyVerified = (Boolean) stepCtx.get(CTX_UPLOAD_VERIFIED);
         if (Boolean.TRUE.equals(alreadyVerified)) {
@@ -68,7 +76,6 @@ public class VerifyUploadTasklet implements Tasklet {
 
         final String caseIdStr = stepCtx.getString(CTX_CASE_ID, null);
         final String docIdRaw = stepCtx.getString(CTX_DOC_ID, null);
-
         if (docIdRaw == null) {
             log.warn("VerifyUploadTasklet: CTX_DOC_ID missing; cannot poll ingestion status (caseId={}).", caseIdStr);
             markUnverified(stepCtx, null, null, null);
@@ -99,89 +106,76 @@ public class VerifyUploadTasklet implements Tasklet {
 
         final String documentName = documentNameOpt.get();
 
-        final long startMillis = System.currentTimeMillis();
-        boolean succeeded = false;
+        final RetryTemplate pollTemplate = buildPollTemplate(pollIntervalMs, maxWaitMs);
+        final AtomicReference<String> lastStatusRef = new AtomicReference<>(null);
+        final AtomicReference<String> lastReasonRef = new AtomicReference<>(null);
+        final AtomicReference<OffsetDateTime> lastUpdatedRef = new AtomicReference<>(null);
 
-        String lastStatus = null;
-        String lastReason = null;
-        OffsetDateTime lastUpdated = null;
+        final Boolean finished = pollTemplate.execute(context -> {
+            log.debug("VerifyUploadTasklet: polling ingestion status for identifier='{}' (caseId={}).",
+                    documentName, caseIdStr);
 
-        while (System.currentTimeMillis() - startMillis <= maxWaitMs) {
-            try {
-                log.debug("VerifyUploadTasklet: polling ingestion status for identifier='{}' (caseId={}).",
-                        documentName, caseIdStr);
+            final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> resp =
+                    documentIngestionStatusApi.documentStatus(documentName);
 
-                final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> resp =
-                        documentIngestionStatusApi.documentStatus(documentName);
+            if (resp == null) {
+                throw new IllegalStateException("Null HTTP response");
+            }
 
-                if (resp == null) {
-                    log.warn("VerifyUploadTasklet: null HTTP response for identifier='{}'.", documentName);
-                } else if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
-                    final DocumentIngestionStatusReturnedSuccessfully body = resp.getBody();
-                    final String status = body.getStatus() != null ? body.getStatus().getValue() : null;
-                    lastStatus = status;
-                    lastReason = body.getReason();
-                    lastUpdated = body.getLastUpdated();
+            if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
+                final DocumentIngestionStatusReturnedSuccessfully body = resp.getBody();
+                final String status = body.getStatus() != null ? body.getStatus().getValue() : null;
+                lastStatusRef.set(status);
+                lastReasonRef.set(body.getReason());
+                lastUpdatedRef.set(body.getLastUpdated());
 
-                    if (status != null
-                            && !StatusEnum.INGESTION_SUCCESS.name().equalsIgnoreCase(status)
-                            && !StatusEnum.INGESTION_FAILED.name().equalsIgnoreCase(status)) {
-                        updateIngestionPhase(docId, DocumentIngestionPhase.INGESTING);
-                    }
-
-                    if (StatusEnum.INGESTION_SUCCESS.name().equalsIgnoreCase(status)) {
-                        putStatusJson(stepCtx, body);
-                        updateIngestionPhase(docId, DocumentIngestionPhase.INGESTED);
-                        final String docIdForNs = docId.toString();
-                        final String verifiedKey = CTX_UPLOAD_VERIFIED + ":" + docIdForNs;
-                        contribution.getStepExecution()
-                                .getJobExecution()
-                                .getExecutionContext()
-                                .put(verifiedKey, true);
-                        log.info("VerifyUploadTasklet: ingestion SUCCESS for identifier='{}' (caseId={}).",
-                                documentName, caseIdStr);
-                        succeeded = true;
-                        break;
-                    }
-
-                    if (StatusEnum.INGESTION_FAILED.name().equalsIgnoreCase(status)) {
-                        putStatusJson(stepCtx, body);
-                        updateIngestionPhase(docId, DocumentIngestionPhase.FAILED);
-                        log.error("VerifyUploadTasklet: ingestion FAILED for identifier='{}' reason='{}' (caseId={}).",
-                                documentName, lastReason, caseIdStr);
-
-                        break;
-                    }
-                    if (StatusEnum.INVALID_METADATA.name().equalsIgnoreCase(status)) {
-                        putStatusJson(stepCtx, body);
-                        updateIngestionPhase(docId, DocumentIngestionPhase.FAILED);
-                        log.error("VerifyUploadTasklet: ingestion FAILED for identifier='{}' reason='{}' (caseId={}).",
-                                documentName, lastReason, caseIdStr);
-
-                        break;
-                    }
-
-                } else if (resp.getStatusCode() == HttpStatus.NOT_FOUND) {
-                    log.debug("VerifyUploadTasklet: identifier='{}' not found yet (404); will retry.", documentName);
-                } else {
-                    log.warn("VerifyUploadTasklet: unexpected HTTP status {} for identifier='{}'. Stopping.",
-                            resp.getStatusCode(), documentName);
-                    break;
+                if (status != null
+                        && !StatusEnum.INGESTION_SUCCESS.name().equalsIgnoreCase(status)
+                        && !StatusEnum.INGESTION_FAILED.name().equalsIgnoreCase(status)
+                        && !StatusEnum.INVALID_METADATA.name().equalsIgnoreCase(status)) {
+                    updateIngestionPhaseTx(docId, DocumentIngestionPhase.INGESTING);
                 }
 
-            } catch (Exception ex) {
-                log.warn("VerifyUploadTasklet: error while polling identifier='{}': {}", documentName, ex.getMessage());
+                if (StatusEnum.INGESTION_SUCCESS.name().equalsIgnoreCase(status)) {
+                    putStatusJson(stepCtx, body);
+                    updateIngestionPhaseTx(docId, DocumentIngestionPhase.INGESTED);
+                    final String verifiedKey = CTX_UPLOAD_VERIFIED + ":" + docId;
+                    if (jobExecution != null) {
+                        jobExecution.getExecutionContext().put(verifiedKey, true);
+                    }
+                    stepCtx.put(CTX_UPLOAD_VERIFIED, true);
+                    log.info("VerifyUploadTasklet: ingestion SUCCESS for identifier='{}' (caseId={}).",
+                            documentName, caseIdStr);
+                    return Boolean.TRUE; // stop retry loop (success)
+                }
+
+                if (StatusEnum.INGESTION_FAILED.name().equalsIgnoreCase(status)
+                        || StatusEnum.INVALID_METADATA.name().equalsIgnoreCase(status)) {
+                    putStatusJson(stepCtx, body);
+                    updateIngestionPhaseTx(docId, DocumentIngestionPhase.FAILED);
+                    log.error("VerifyUploadTasklet: ingestion FAILED for identifier='{}' reason='{}' (caseId={}).",
+                            documentName, lastReasonRef.get(), caseIdStr);
+                    return Boolean.TRUE; // stop retry loop (terminal)
+                }
+
+                throw new IllegalStateException("Not ready: status=" + status);
             }
 
-            if (!sleepSafely(pollIntervalMs)) {
-                Thread.currentThread().interrupt();
-                log.warn("VerifyUploadTasklet: interrupted while sleeping; stopping poll for identifier='{}'.", documentName);
-                break;
+            if (resp.getStatusCode() == HttpStatus.NOT_FOUND) {
+                log.debug("VerifyUploadTasklet: identifier='{}' not found yet (404); will retry.", documentName);
+                throw new IllegalStateException("404 Not Found, will retry");
             }
-        }
 
-        if (!succeeded) {
-            markUnverified(stepCtx, lastStatus, lastReason, lastUpdated);
+            log.warn("VerifyUploadTasklet: unexpected HTTP status {} for identifier='{}'. Stopping.",
+                    resp.getStatusCode(), documentName);
+            return Boolean.TRUE;
+
+        }, context -> {
+            return Boolean.FALSE;
+        });
+
+        if (!Boolean.TRUE.equals(finished)) {
+            markUnverified(stepCtx, lastStatusRef.get(), lastReasonRef.get(), lastUpdatedRef.get());
             log.info("VerifyUploadTasklet: finished without success for identifier='{}' (caseId={}). verified=false; continuing.",
                     documentName, caseIdStr);
         }
@@ -189,13 +183,38 @@ public class VerifyUploadTasklet implements Tasklet {
         return RepeatStatus.FINISHED;
     }
 
-    private void updateIngestionPhase(final UUID docId, final DocumentIngestionPhase phase) {
+    private RetryTemplate buildPollTemplate(final long intervalMs, final long timeoutMs) {
+        final TimeoutRetryPolicy timeout = new TimeoutRetryPolicy();
+        timeout.setTimeout(timeoutMs);
+
+        final AlwaysRetryPolicy always = new AlwaysRetryPolicy();
+
+        final CompositeRetryPolicy composite = new CompositeRetryPolicy();
+        composite.setPolicies(new org.springframework.retry.RetryPolicy[]{ timeout, always });
+
+        final FixedBackOffPolicy backoff = new FixedBackOffPolicy();
+        backoff.setBackOffPeriod(intervalMs);
+
+        final RetryTemplate template = new RetryTemplate();
+        template.setRetryPolicy(composite);
+        template.setBackOffPolicy(backoff);
+        return template;
+    }
+
+    private void updateIngestionPhaseTx(final UUID docId, final DocumentIngestionPhase phase) {
+
+        final TransactionTemplate transactionTemplate = new TransactionTemplate(txManager);
+        transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        transactionTemplate.setTimeout(5); // seconds
         try {
-            caseDocumentRepository.findById(docId).ifPresent(doc -> {
-                doc.setIngestionPhase(phase);
-                doc.setIngestionPhaseAt(nowUtc());
-                caseDocumentRepository.saveAndFlush(doc);
-                log.info("VerifyUploadTasklet: persisted ingestion phase {} for docId={}.", phase, docId);
+            transactionTemplate.execute(status -> {
+                caseDocumentRepository.findById(docId).ifPresent(doc -> {
+                    doc.setIngestionPhase(phase);
+                    doc.setIngestionPhaseAt(nowUtc());
+                    caseDocumentRepository.saveAndFlush(doc);
+                    log.info("VerifyUploadTasklet: persisted ingestion phase {} for docId={}.", phase, docId);
+                });
+                return null;
             });
         } catch (Exception ex) {
             log.warn("VerifyUploadTasklet: failed to persist ingestion phase {} for docId={}: {}",
@@ -234,16 +253,6 @@ public class VerifyUploadTasklet implements Tasklet {
             ctx.put(CTX_DOCUMENT_STATUS_TS, lastUpdated);
         }
     }
-    @SuppressWarnings({ "PMD.OnlyOneReturn"})
-    private boolean sleepSafely(final long millis) {
-        try {
-            Thread.sleep(millis);
-            return true;
-        } catch (InterruptedException ie) {
-            return false;
-        }
-    }
-
     private OffsetDateTime nowUtc() {
         return TimeUtils.utcNow();
     }

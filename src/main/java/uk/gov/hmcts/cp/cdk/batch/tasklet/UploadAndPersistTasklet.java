@@ -35,6 +35,7 @@ public class UploadAndPersistTasklet implements Tasklet {
 
     private static final String META_CASE_ID = "case_id";
     private static final String META_MATERIAL_ID = "material_id";
+    private static final String META_MATERIAL_NAME = "material_name";
     private static final String META_UPLOADED_AT = "uploaded_at";
     private static final String META_DOCUMENT_ID = "document_id";
     private static final String META_METADATA = "metadata";
@@ -84,8 +85,10 @@ public class UploadAndPersistTasklet implements Tasklet {
         final UUID materialId;
         final UUID caseId;
         final UUID persistedDocId;
+        final String materialNameStr;
         try {
             final String materialIdStr = stepCtx.getString(CTX_MATERIAL_ID_KEY);
+            materialNameStr = stepCtx.getString(CTX_MATERIAL_NAME);
             final String caseIdStr = stepCtx.getString(CTX_CASE_ID_KEY);
             final String persistedDocIdStr = stepCtx.getString(CTX_DOC_ID_KEY);
             materialId = UUID.fromString(materialIdStr);
@@ -129,7 +132,7 @@ public class UploadAndPersistTasklet implements Tasklet {
         final String contentType = uploadProperties.contentType();
 
         final Map<String, String> metadata =
-                createBlobMetadata(persistedDocId, materialId, caseId.toString(), today);
+                createBlobMetadata(persistedDocId, materialId, caseId.toString(), today,materialNameStr);
 
         final String fDestBlobPath = destBlobPath;
         final String fContentType = contentType;
@@ -186,11 +189,13 @@ public class UploadAndPersistTasklet implements Tasklet {
     private Map<String, String> createBlobMetadata(final UUID newDocumentId,
                                                    final UUID materialId,
                                                    final String caseId,
-                                                   final String uploadedDate) {
+                                                   final String uploadedDate,
+                                                   final String materialName) {
         try {
             final Map<String, Object> metadataJson = Map.of(
                     META_CASE_ID, caseId,
                     META_MATERIAL_ID, materialId.toString(),
+                    META_MATERIAL_NAME, materialName,
                     META_UPLOADED_AT, uploadedDate
             );
 

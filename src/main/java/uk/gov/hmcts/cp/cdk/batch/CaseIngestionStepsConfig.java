@@ -45,9 +45,13 @@ public class CaseIngestionStepsConfig {
 
     @Bean
     public Step step4VerifyUploadPerCase(final JobRepository repo,
-                                         final VerifyUploadTasklet verifyUploadTasklet) {
-        return step("step4_verify_upload_perCase", repo, verifyUploadTasklet);
+                                         final VerifyUploadTasklet verifyUploadTasklet,
+                                         final RetryTemplate retryTemplate) {
+        return new StepBuilder("step4_verify_upload_perCase", repo)
+                .tasklet(new RetryingTasklet(verifyUploadTasklet, retryTemplate)) // note: no txManager arg here
+                .build();
     }
+
 
     @Bean
     public Step step5ReserveAnswerVersionPerCase(final JobRepository repo,

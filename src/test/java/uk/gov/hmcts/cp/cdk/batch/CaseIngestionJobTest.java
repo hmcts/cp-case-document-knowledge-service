@@ -69,12 +69,12 @@ import static org.mockito.Mockito.*;
 @SpringBatchTest
 @SpringBootTest(
         classes = {
-                CaseIngestionJobE2EPostgresTest.TestApplication.class,
+                CaseIngestionJobTest.TestApplication.class,
                 BatchConfig.class,
                 CdkClientsConfig.class,
                 CaseIngestionJobConfig.class,
                 CaseIngestionStepsConfig.class,
-                CaseIngestionJobE2EPostgresTest.TestOverrides.class
+                CaseIngestionJobTest.TestOverrides.class
         },
         properties = {
                 "spring.main.allow-bean-definition-overriding=true"
@@ -83,7 +83,7 @@ import static org.mockito.Mockito.*;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-class CaseIngestionJobE2EPostgresTest {
+class CaseIngestionJobTest {
 
     @SpringBootApplication(scanBasePackages = "uk.gov.hmcts.cp.cdk")
     @EntityScan(basePackages = "uk.gov.hmcts.cp.cdk.domain")

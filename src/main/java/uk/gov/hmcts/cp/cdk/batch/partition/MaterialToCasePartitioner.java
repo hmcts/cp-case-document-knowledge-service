@@ -33,6 +33,7 @@ public class MaterialToCasePartitioner implements Partitioner {
             ctx.putString(CTX_MATERIAL_ID_KEY, entry.getKey());
             ctx.putString(CTX_CASE_ID_KEY, entry.getValue());
             ctx.putString(CTX_DOC_ID_KEY, UUID.randomUUID().toString());
+            ctx.putString(CTX_MATERIAL_NAME, "TODO");
             partitions.put("case-" + entry.getValue(), ctx);
         }
         return partitions;
