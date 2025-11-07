@@ -40,6 +40,8 @@ public class AnswersHttpLiveTest {
     private final String jdbcPass = System.getProperty("it.db.pass", "casedocumentknowledge");
 
     private final RestTemplate http = new RestTemplate();
+    private static final String HEADER_NAME = "CJSCPPUID";
+    private static final String HEADER_VALUE = "u-123";
 
     private UUID caseId;
     private UUID queryId;
@@ -240,7 +242,7 @@ public class AnswersHttpLiveTest {
     void list_queries_as_of_for_case_returns_latest_definition_and_status() {
         final HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(VND_TYPE_JSON_QUERIES));
-
+        headers.set(HEADER_NAME, HEADER_VALUE);
         // Choose an as-of after v2 to ensure v2 definition is selected
         final String asOf = "2025-06-03T00:00:00Z";
 
