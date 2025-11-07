@@ -19,6 +19,8 @@ import uk.gov.hmcts.cp.cdk.services.mapper.QueryMapper;
 import uk.gov.hmcts.cp.cdk.util.TimeUtils;
 import uk.gov.hmcts.cp.openapi.model.cdk.*;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -230,5 +232,29 @@ public class QueryService {
                 .stream()
                 .map(version -> mapper.toVersionSummary(query, version))
                 .toList();
+    }
+
+
+    @Transactional(readOnly = true)
+    public URI getMaterialContentUrl(final UUID docId, final String userId) {
+
+
+        final UUID materialId = caseDocumentRepository.findById(docId)
+                .map(CaseDocument::getMaterialId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No materialId found for document ID: " + docId));
+
+        final Optional<String> optUrl = progressionClient.getMaterialDownloadUrl(materialId, userId);
+
+        final String url = optUrl.orElseThrow(() -> new  ResponseStatusException(HttpStatus.NOT_FOUND,
+                "No download URL returned for materialId: " + materialId));
+
+        try {
+            return new URI(url);
+        } catch (URISyntaxException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Invalid URI returned for materialId: " + materialId + " -> " + url, e);
+        }
     }
 }

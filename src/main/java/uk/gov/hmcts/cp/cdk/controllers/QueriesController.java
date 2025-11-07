@@ -14,6 +14,7 @@ import uk.gov.hmcts.cp.cdk.services.QueryService;
 import uk.gov.hmcts.cp.openapi.api.cdk.QueriesApi;
 import uk.gov.hmcts.cp.openapi.model.cdk.*;
 
+import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -100,4 +101,39 @@ public class QueriesController implements QueriesApi {
         payload.setVersions(versions);
         return ResponseEntity.ok(payload);
     }
+    @Override
+    public ResponseEntity<GetMaterialContentUrl200Response> getMaterialContentUrl(final UUID docId) {
+
+        try {
+            final String headerName = cqrsClientProperties.headers().cjsCppuid();
+
+            final ServletRequestAttributes attrs =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+
+            if (attrs == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR, "No request context available with cppuid");
+            }
+
+            final HttpServletRequest req = attrs.getRequest();
+            final String cppuid = req.getHeader(headerName);
+
+            if (cppuid == null || cppuid.isBlank()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Missing required header: " + headerName);
+            }
+            final URI responseUrl = service.getMaterialContentUrl(docId, cppuid);
+
+            final GetMaterialContentUrl200Response payload = new GetMaterialContentUrl200Response();
+            payload.setUrl(responseUrl);
+            return ResponseEntity.ok(payload);
+        }
+        catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error while getting download url", e);
+        }
+    }
+
 }

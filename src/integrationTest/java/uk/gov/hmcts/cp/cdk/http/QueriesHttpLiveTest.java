@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class QueriesHttpLiveTest {
 
     public final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
+    public final MediaType VND_TYPE_MATERIAL = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries-material-content+json");
+
     private final String baseUrl = System.getProperty(
             "app.baseUrl",
             "http://localhost:8082/casedocumentknowledge-service"
@@ -143,4 +145,51 @@ public class QueriesHttpLiveTest {
         assertThat(res.getBody()).contains("Q1 @ t1");
         assertThat(res.getBody()).contains("\"queryPrompt\":\"Prompt for Q1 @ t1\"");
     }
+
+    @Test
+    void getMaterialContentUrl_returns_expected_url() throws Exception {
+
+        UUID docId = UUID.randomUUID();
+        UUID materialId = UUID.randomUUID();
+
+        try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass);
+             PreparedStatement ps = c.prepareStatement(
+                     "INSERT INTO case_documents (doc_id, case_id, material_id, source,doc_name ,blob_uri,uploaded_at) " +
+                             "VALUES (?, ?, ?, ?, ?,?,?)"
+             )) {
+            ps.setObject(1, docId);
+            ps.setObject(2, UUID.randomUUID());
+            ps.setObject(3, materialId);
+            ps.setString(4, "IDPC");
+            ps.setString(5, "docnmae");
+            ps.setString(6, "IDPC");
+            ps.setObject(7, OffsetDateTime.now());
+            ps.executeUpdate();
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(VND_TYPE_MATERIAL);
+        headers.set(HEADER_NAME, HEADER_VALUE); // add required header
+
+        // --- Act: perform GET request to the endpoint ---
+        ResponseEntity<String> res = http.exchange(
+                baseUrl + "/queries/" + docId + "/content",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class
+        );
+
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).contains("\"url\"");
+        assertThat(res.getBody()).contains("http"); // the URL should look like a URI
+
+
+        try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass);
+             PreparedStatement del = c.prepareStatement("DELETE FROM case_documents WHERE doc_id = ?")) {
+            del.setObject(1, docId);
+            del.executeUpdate();
+        }
+    }
+
 }

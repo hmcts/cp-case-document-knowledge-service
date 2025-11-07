@@ -19,6 +19,7 @@ import uk.gov.hmcts.cp.cdk.repo.QueryVersionRepository;
 import uk.gov.hmcts.cp.cdk.services.mapper.QueryMapper;
 import uk.gov.hmcts.cp.openapi.model.cdk.*;
 
+import java.net.URI;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -434,4 +435,94 @@ class QueryServiceTest {
                 () -> service.listVersions(UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")));
         assertThat(ex.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
     }
+
+
+    @Test
+    @DisplayName("getMaterialContentUrl returns valid URI when materialId and URL exist")
+    void getMaterialContentUrl_success() {
+
+        QueryRepository qRepo = mock(QueryRepository.class);
+        QueryVersionRepository qvRepo = mock(QueryVersionRepository.class);
+        QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
+        CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
+        QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
+
+        UUID docId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        UUID materialId = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        String userId = "u-123";
+        String urlStr = "https://example.com/download/" + materialId;
+
+        CaseDocument doc = new CaseDocument();
+        doc.setMaterialId(materialId);
+        when(docRepo.findById(docId)).thenReturn(Optional.of(doc));
+        when(progressionClient.getMaterialDownloadUrl(materialId, userId))
+                .thenReturn(Optional.of(urlStr));
+
+        QueryService service = new QueryService(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
+
+        URI result = service.getMaterialContentUrl(docId, userId);
+
+
+        assertThat(result.toString()).isEqualTo(urlStr);
+        verify(docRepo).findById(docId);
+        verify(progressionClient).getMaterialDownloadUrl(materialId, userId);
+    }
+
+    @Test
+    @DisplayName("getMaterialContentUrl throws 404 when materialId not found")
+    void getMaterialContentUrl_no_materialId_404() {
+
+        QueryRepository qRepo = mock(QueryRepository.class);
+        QueryVersionRepository qvRepo = mock(QueryVersionRepository.class);
+        QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
+        CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
+        QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
+
+        UUID docId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        String userId = "u-123";
+
+        when(docRepo.findById(docId)).thenReturn(Optional.empty());
+
+        QueryService service = new QueryService(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
+
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.getMaterialContentUrl(docId, userId));
+        assertThat(ex.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+        assertThat(ex.getReason()).contains("No materialId found for document ID");
+    }
+
+    @Test
+    @DisplayName("getMaterialContentUrl throws 404 when returned URL is invalid")
+    void getMaterialContentUrl_invalid_uri_404() {
+
+        QueryRepository qRepo = mock(QueryRepository.class);
+        QueryVersionRepository qvRepo = mock(QueryVersionRepository.class);
+        QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
+        CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
+        QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
+
+        UUID docId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        UUID materialId = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        String userId = "u-123";
+        String invalidUrl = "ht!tp://bad-url"; // malformed URL
+
+        CaseDocument doc = new CaseDocument();
+        doc.setMaterialId(materialId);
+        when(docRepo.findById(docId)).thenReturn(Optional.of(doc));
+        when(progressionClient.getMaterialDownloadUrl(materialId, userId))
+                .thenReturn(Optional.of(invalidUrl));
+
+        QueryService service = new QueryService(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
+
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.getMaterialContentUrl(docId, userId));
+        assertThat(ex.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+        assertThat(ex.getReason()).contains("Invalid URI returned for materialId");
+    }
+
 }

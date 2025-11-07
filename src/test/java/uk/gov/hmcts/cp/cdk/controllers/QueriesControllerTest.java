@@ -10,6 +10,7 @@ import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.services.QueryService;
 import uk.gov.hmcts.cp.openapi.model.cdk.*;
 
+import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -194,5 +195,33 @@ class QueriesControllerTest {
                         .param("caseId", caseId.toString()))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    @DisplayName("Get Material Content URL returns 200 with valid response")
+    void getMaterialContentUrl_returns_200_with_url() throws Exception {
+
+        final QueryService service = Mockito.mock(QueryService.class);
+        final CQRSClientProperties props = mock(CQRSClientProperties.class, Mockito.RETURNS_DEEP_STUBS);
+        when(props.headers().cjsCppuid()).thenReturn(HEADER_NAME);
+
+        final QueriesController controller = new QueriesController(service, props);
+        final MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        final UUID docId = UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        final URI expectedUri = URI.create("https://example.com/materials/" + docId);
+
+
+        when(service.getMaterialContentUrl(docId, HEADER_VALUE)).thenReturn(expectedUri);
+
+
+        mvc.perform(get("/queries/{docId}/content", docId)
+                        .header(HEADER_NAME, HEADER_VALUE))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.url").value(expectedUri.toString()));
+    }
+
+
+
+
 }
 
