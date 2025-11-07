@@ -1,5 +1,6 @@
 package uk.gov.hmcts.cp.cdk.services;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ import java.util.UUID;
  * Query read/write operations with as-of semantics and versioned definitions.
  */
 @Service
+@Slf4j
 public class QueryService {
 
     // ---------- Definition snapshot (no case) ----------
@@ -131,7 +133,8 @@ public class QueryService {
 
             //Retrieval of casedocument to populate isIdpcAvailable info as part of DD-40778
             final Optional<LatestMaterialInfo> courtDocuments = progressionClient.getCourtDocuments(caseId,userId);
-
+            log.info("courtDocuments retrieved  for : . caseId={} ",
+                    caseId);
             final boolean isIdpcAvailable = courtDocuments
                     .map(LatestMaterialInfo::caseIds)
                     .map(ids -> ids.stream().anyMatch(id -> id.equals(caseId.toString())))
