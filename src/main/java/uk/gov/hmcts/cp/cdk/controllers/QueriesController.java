@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,7 @@ import java.util.UUID;
  * - Adds a convenience GET /queries handler for when the "caseId" query param is absent.
  */
 @RestController
+@Slf4j
 public class QueriesController implements QueriesApi {
 
     private final QueryService service;
@@ -48,7 +50,7 @@ public class QueriesController implements QueriesApi {
             final UUID caseId,
             final OffsetDateTime asOf
     ) {
-
+         String cppuid=null;
         try {
             final String headerName = cqrsClientProperties.headers().cjsCppuid();
 
@@ -61,7 +63,7 @@ public class QueriesController implements QueriesApi {
             }
 
             final HttpServletRequest req = attrs.getRequest();
-            final String cppuid = req.getHeader(headerName);
+             cppuid = req.getHeader(headerName);
 
             if (cppuid == null || cppuid.isBlank()) {
                 throw new ResponseStatusException(
@@ -72,7 +74,9 @@ public class QueriesController implements QueriesApi {
         } catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
-            throw new ResponseStatusException(
+                log.error("Exception occurred in listQueries endpoint: . caseId={}, error={}",
+                    caseId, e.getMessage(), e);
+              throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error accepting ingestion request.", e);
         }
     }
@@ -100,40 +104,6 @@ public class QueriesController implements QueriesApi {
         payload.setQueryId(queryId);
         payload.setVersions(versions);
         return ResponseEntity.ok(payload);
-    }
-    @Override
-    public ResponseEntity<GetMaterialContentUrl200Response> getMaterialContentUrl(final UUID docId) {
-
-        try {
-            final String headerName = cqrsClientProperties.headers().cjsCppuid();
-
-            final ServletRequestAttributes attrs =
-                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-
-            if (attrs == null) {
-                throw new ResponseStatusException(
-                        HttpStatus.INTERNAL_SERVER_ERROR, "No request context available with cppuid");
-            }
-
-            final HttpServletRequest req = attrs.getRequest();
-            final String cppuid = req.getHeader(headerName);
-
-            if (cppuid == null || cppuid.isBlank()) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Missing required header: " + headerName);
-            }
-            final URI responseUrl = service.getMaterialContentUrl(docId, cppuid);
-
-            final GetMaterialContentUrl200Response payload = new GetMaterialContentUrl200Response();
-            payload.setUrl(responseUrl);
-            return ResponseEntity.ok(payload);
-        }
-        catch (ResponseStatusException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error while getting download url", e);
-        }
     }
 
 }

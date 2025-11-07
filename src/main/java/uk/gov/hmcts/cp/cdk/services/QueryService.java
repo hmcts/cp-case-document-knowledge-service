@@ -1,5 +1,6 @@
 package uk.gov.hmcts.cp.cdk.services;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ import java.util.UUID;
  * Query read/write operations with as-of semantics and versioned definitions.
  */
 @Service
+@Slf4j
 public class QueryService {
 
     // ---------- Definition snapshot (no case) ----------
@@ -131,7 +133,8 @@ public class QueryService {
 
             //Retrieval of casedocument to populate isIdpcAvailable info as part of DD-40778
             final Optional<LatestMaterialInfo> courtDocuments = progressionClient.getCourtDocuments(caseId,userId);
-
+            log.info("courtDocuments retrieved  for : . caseId={} ",
+                    caseId);
             final boolean isIdpcAvailable = courtDocuments
                     .map(LatestMaterialInfo::caseIds)
                     .map(ids -> ids.stream().anyMatch(id -> id.equals(caseId.toString())))
@@ -235,26 +238,5 @@ public class QueryService {
     }
 
 
-    @Transactional(readOnly = true)
-    public URI getMaterialContentUrl(final UUID docId, final String userId) {
 
-
-        final UUID materialId = caseDocumentRepository.findById(docId)
-                .map(CaseDocument::getMaterialId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "No materialId found for document ID: " + docId));
-
-        final Optional<String> optUrl = progressionClient.getMaterialDownloadUrl(materialId, userId);
-
-        final String url = optUrl.orElseThrow(() -> new  ResponseStatusException(HttpStatus.NOT_FOUND,
-                "No download URL returned for materialId: " + materialId));
-
-        try {
-            return new URI(url);
-        } catch (URISyntaxException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Invalid URI returned for materialId: " + materialId + " -> " + url, e);
-        }
-    }
 }
