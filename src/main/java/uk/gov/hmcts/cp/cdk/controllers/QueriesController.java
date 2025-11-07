@@ -74,8 +74,8 @@ public class QueriesController implements QueriesApi {
         } catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Exception occurred in listQueries endpoint: . caseId={}, cppuid={}, error={}",
-                    caseId, cppuid, e.getMessage(), e);
+                log.error("Exception occurred in listQueries endpoint: . caseId={}, error={}",
+                    caseId, e.getMessage(), e);
               throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error accepting ingestion request.", e);
         }
@@ -135,8 +135,8 @@ public class QueriesController implements QueriesApi {
         catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Exception occurred in listQueries endpoint: . caseId={}, cppuid={}, error={}",
-                    docId, cppuid, e.getMessage(), e);
+            log.error("Exception occurred in listQueries endpoint: . caseId={}, error={}",
+                    docId, e.getMessage(), e);
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error while getting download url", e);
         }
