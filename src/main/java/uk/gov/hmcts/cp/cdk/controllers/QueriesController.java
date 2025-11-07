@@ -1,9 +1,15 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.server.ResponseStatusException;
+import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.services.QueryService;
 import uk.gov.hmcts.cp.openapi.api.cdk.QueriesApi;
 import uk.gov.hmcts.cp.openapi.model.cdk.*;
@@ -21,9 +27,11 @@ import java.util.UUID;
 public class QueriesController implements QueriesApi {
 
     private final QueryService service;
+    private final CQRSClientProperties cqrsClientProperties;
 
-    public QueriesController(final QueryService service) {
-        this.service = service;
+    public QueriesController(final QueryService service,final CQRSClientProperties cqrsClientProperties) {
+                this.service = service;
+                this.cqrsClientProperties =cqrsClientProperties;
     }
 
     public ResponseEntity<QueryStatusResponse> listQueriesNoCase(
@@ -39,8 +47,33 @@ public class QueriesController implements QueriesApi {
             final UUID caseId,
             final OffsetDateTime asOf
     ) {
-        final QueryStatusResponse body = service.listForCaseAsOf(caseId, asOf);
+
+        try {
+            final String headerName = cqrsClientProperties.headers().cjsCppuid();
+
+            final ServletRequestAttributes attrs =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+
+            if (attrs == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR, "No request context available with cppuid");
+            }
+
+            final HttpServletRequest req = attrs.getRequest();
+            final String cppuid = req.getHeader(headerName);
+
+            if (cppuid == null || cppuid.isBlank()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Missing required header: " + headerName);
+            }
+        final QueryStatusResponse body = service.listForCaseAsOf(caseId, asOf,cppuid);
         return ResponseEntity.ok(body);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error accepting ingestion request.", e);
+        }
     }
 
     @Override

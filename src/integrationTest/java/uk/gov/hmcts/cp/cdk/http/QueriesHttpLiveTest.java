@@ -31,6 +31,8 @@ public class QueriesHttpLiveTest {
 
     private final RestTemplate http = new RestTemplate();
     private UUID queryId;
+    private static final String HEADER_NAME = "CJSCPPUID";
+    private static final String HEADER_VALUE = "u-123";
 
     @BeforeEach
     void insertData() throws Exception {
@@ -49,6 +51,8 @@ public class QueriesHttpLiveTest {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(VND_TYPE_JSON);
+        // Add your custom header
+        headers.set(HEADER_NAME, HEADER_VALUE);
 
         // ---------- Snapshot t1 ----------
         Map<String, Object> body1 = new HashMap<>();
@@ -99,6 +103,8 @@ public class QueriesHttpLiveTest {
     void queries_without_at_returns_latest_version() {
         HttpHeaders h = new HttpHeaders();
         h.setAccept(List.of(VND_TYPE_JSON));
+        // Add your custom header
+        h.set(HEADER_NAME, HEADER_VALUE);
 
         ResponseEntity<String> res = http.exchange(
                 baseUrl + "/queries?caseId=e9987338-ebae-480c-825e-aad78da3ef4f",
@@ -117,8 +123,12 @@ public class QueriesHttpLiveTest {
     void queries_with_at_returns_as_of_version() {
         String at = "2025-05-15T00:00:00Z";
 
+
+
         HttpHeaders h = new HttpHeaders();
         h.setAccept(List.of(VND_TYPE_JSON));
+        // Add your custom header
+        h.set(HEADER_NAME, HEADER_VALUE);
 
         ResponseEntity<String> res = http.exchange(
                 baseUrl + "/queries?caseId=e9987338-ebae-480c-825e-aad78da3ef4f&at=" + at,

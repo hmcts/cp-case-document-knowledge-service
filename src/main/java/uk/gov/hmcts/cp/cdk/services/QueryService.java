@@ -5,6 +5,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
@@ -52,19 +54,22 @@ public class QueryService {
     private final QueriesAsOfRepository queriesAsOfRepository;
     private final CaseDocumentRepository caseDocumentRepository;
     private final QueryMapper mapper;
+    private final ProgressionClient progressionClient;
 
     public QueryService(
             final QueryRepository queryRepository,
             final QueryVersionRepository queryVersionRepository,
             final QueriesAsOfRepository queriesAsOfRepository,
             final CaseDocumentRepository caseDocumentRepository,
-            final QueryMapper mapper
+            final QueryMapper mapper,
+            final ProgressionClient progressionClient
     ) {
         this.queryRepository = queryRepository;
         this.queryVersionRepository = queryVersionRepository;
         this.queriesAsOfRepository = queriesAsOfRepository;
         this.caseDocumentRepository = caseDocumentRepository;
         this.mapper = mapper;
+        this.progressionClient =progressionClient;
     }
 
     /* ---------- helpers (use util) ---------- */
@@ -110,7 +115,7 @@ public class QueryService {
     /* ---------- list (with or without case) ---------- */
 
     @Transactional(readOnly = true)
-    public QueryStatusResponse listForCaseAsOf(final UUID caseId, final OffsetDateTime asOfParam) {
+    public QueryStatusResponse listForCaseAsOf(final UUID caseId, final OffsetDateTime asOfParam, final String userId) {
         final OffsetDateTime asOf = Optional.ofNullable(asOfParam).orElseGet(TimeUtils::utcNow);
         final QueryStatusResponse response = new QueryStatusResponse().asOf(asOf);
 
@@ -123,9 +128,11 @@ public class QueryService {
             summaries = rows.stream().map(QueryService::mapCaseRowToSummary).toList();
 
             //Retrieval of casedocument to populate isIdpcAvailable info as part of DD-40778
-            final Optional<CaseDocument> latestDocOpt = caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId);
-            final boolean isIdpcAvailable = latestDocOpt
-                    .map(doc -> IDPC_DOC_NAME.equalsIgnoreCase(doc.getSource()))
+            final Optional<LatestMaterialInfo> courtDocuments = progressionClient.getCourtDocuments(caseId,userId);
+
+            final boolean isIdpcAvailable = courtDocuments
+                    .map(LatestMaterialInfo::caseIds)
+                    .map(ids -> ids.stream().anyMatch(id -> id.equals(caseId.toString())))
                     .orElse(false);
 
             final Scope scope = new Scope();

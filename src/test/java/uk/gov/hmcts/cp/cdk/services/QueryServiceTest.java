@@ -6,6 +6,8 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
@@ -18,6 +20,7 @@ import uk.gov.hmcts.cp.cdk.services.mapper.QueryMapper;
 import uk.gov.hmcts.cp.openapi.model.cdk.*;
 
 import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,8 +38,9 @@ class QueryServiceTest {
                              final QueryVersionRepository qvRepo,
                              final QueriesAsOfRepository asOfRepo,
                              final CaseDocumentRepository docRepo,
-                             final QueryMapper mapper) {
-        return new QueryService(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+                             final QueryMapper mapper,
+                             final ProgressionClient progressionClient) {
+        return new QueryService(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
     }
 
     @Test
@@ -47,15 +51,15 @@ class QueryServiceTest {
         QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
         CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
         QueryMapper mapper = mock(QueryMapper.class);
-
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
         OffsetDateTime asOf = OffsetDateTime.parse("2025-05-01T12:00:00Z");
         UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         Object[] row = new Object[]{qid, "L", "UQ", "QP", asOf};
         when(qvRepo.snapshotDefinitionsAsOf(asOf)).thenReturn(List.<Object[]>of(row));
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
 
-        QueryStatusResponse resp = service.listForCaseAsOf(null, asOf);
+        QueryStatusResponse resp = service.listForCaseAsOf(null, asOf,"u-123");
 
         assertThat(resp.getAsOf()).isEqualTo(asOf);
         assertThat(resp.getScope()).isNull();
@@ -76,6 +80,7 @@ class QueryServiceTest {
         QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
         CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
         QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
 
         UUID caseId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
@@ -88,9 +93,20 @@ class QueryServiceTest {
         doc.setSource("IDPC");
         when(docRepo.findFirstByCaseIdOrderByUploadedAtDesc(caseId)).thenReturn(Optional.of(doc));
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+        LatestMaterialInfo info = new LatestMaterialInfo(
+                List.of(caseId.toString()),
+                "DOC_TYPE_1",
+                "Some Document",
+                "MAT001",
+                "Material Name",
+                ZonedDateTime.now()
+        );
+        when(progressionClient.getCourtDocuments(any(), anyString()))
+                .thenReturn(Optional.of(info));
 
-        QueryStatusResponse resp = service.listForCaseAsOf(caseId, eff);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+
+        QueryStatusResponse resp = service.listForCaseAsOf(caseId, eff,"u-123");
 
         assertThat(resp.getScope().getCaseId()).isEqualTo(caseId);
         assertThat(resp.getScope().getIsIdpcAvailable()).isTrue();
@@ -106,6 +122,7 @@ class QueryServiceTest {
         QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
         CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
         QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
 
         UUID caseId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
@@ -115,9 +132,9 @@ class QueryServiceTest {
         when(asOfRepo.listForCaseAsOf(eq(caseId), any())).thenReturn(List.<Object[]>of(row));
         when(docRepo.findFirstByCaseIdOrderByUploadedAtDesc(caseId)).thenReturn(Optional.empty());
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
 
-        QueryStatusResponse resp = service.listForCaseAsOf(caseId, eff);
+        QueryStatusResponse resp = service.listForCaseAsOf(caseId, eff,"u-123");
 
         assertThat(resp.getScope().getIsIdpcAvailable()).isFalse();
         assertThat(resp.getQueries().get(0).getStatus()).isEqualTo(QueryLifecycleStatus.ANSWER_NOT_AVAILABLE);
@@ -131,6 +148,7 @@ class QueryServiceTest {
         QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
         CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
         QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
 
         UUID caseId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
@@ -139,7 +157,7 @@ class QueryServiceTest {
         Object[] row = new Object[]{qid, caseId, "L", "UQ", "QP", eff, "ANSWER_AVAILABLE"};
         when(asOfRepo.getOneForCaseAsOf(caseId, qid, eff)).thenReturn(row);
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
 
         QuerySummary s = service.getOneForCaseAsOf(caseId, qid, eff);
 
@@ -157,6 +175,7 @@ class QueryServiceTest {
         QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
         CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
         QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
 
         UUID caseId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
@@ -164,7 +183,7 @@ class QueryServiceTest {
 
         when(asOfRepo.getOneForCaseAsOf(caseId, qid, eff)).thenReturn(null);
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> service.getOneForCaseAsOf(caseId, qid, eff));
@@ -179,7 +198,7 @@ class QueryServiceTest {
         QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
         CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
         QueryMapper mapper = mock(QueryMapper.class);
-
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
         UUID caseId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         OffsetDateTime eff = OffsetDateTime.parse("2025-05-01T12:00:00Z");
@@ -187,7 +206,7 @@ class QueryServiceTest {
         when(asOfRepo.getOneForCaseAsOf(caseId, qid, eff))
                 .thenThrow(new IncorrectResultSizeDataAccessException(1));
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> service.getOneForCaseAsOf(caseId, qid, eff));
@@ -202,6 +221,7 @@ class QueryServiceTest {
         QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
         CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
         QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
 
         UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         Query q = new Query();
@@ -211,7 +231,7 @@ class QueryServiceTest {
         Object[] row = new Object[]{qid, "L", "UQ", "QP", eff};
         when(qvRepo.snapshotDefinitionsAsOf(eff)).thenReturn(List.<Object[]>of(row));
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
 
         QueryUpsertRequest req = new QueryUpsertRequest();
         QueryUpsertRequestQueriesInner item = new QueryUpsertRequestQueriesInner();
@@ -244,11 +264,12 @@ class QueryServiceTest {
         QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
         CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
         QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
 
         UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         when(qRepo.findById(qid)).thenReturn(Optional.of(new Query()));
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
 
         QueryUpsertRequest req = new QueryUpsertRequest();
         QueryUpsertRequestQueriesInner item = new QueryUpsertRequestQueriesInner();
@@ -272,8 +293,9 @@ class QueryServiceTest {
         QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
         CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
         QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> service.upsertDefinitions(new QueryUpsertRequest()));
@@ -288,10 +310,11 @@ class QueryServiceTest {
         QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
         CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
         QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
 
         when(qRepo.findById(any())).thenReturn(Optional.empty());
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
 
         QueryUpsertRequest req = new QueryUpsertRequest();
         QueryUpsertRequestQueriesInner item = new QueryUpsertRequestQueriesInner();
@@ -313,11 +336,12 @@ class QueryServiceTest {
         QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
         CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
         QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
 
         UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         when(qRepo.findById(qid)).thenReturn(Optional.of(new Query()));
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
 
         QueryUpsertRequest req = new QueryUpsertRequest();
         QueryUpsertRequestQueriesInner item = new QueryUpsertRequestQueriesInner();
@@ -339,11 +363,12 @@ class QueryServiceTest {
         QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
         CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
         QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
 
         UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         when(qRepo.findById(qid)).thenReturn(Optional.of(new Query()));
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
 
         QueryUpsertRequest req = new QueryUpsertRequest();
         QueryUpsertRequestQueriesInner item = new QueryUpsertRequestQueriesInner();
@@ -365,6 +390,7 @@ class QueryServiceTest {
         QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
         CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
         QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
 
         UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         Query query = new Query();
@@ -381,7 +407,7 @@ class QueryServiceTest {
         vs.setEffectiveAt(OffsetDateTime.parse("2025-05-01T12:00:00Z"));
         when(mapper.toVersionSummary(query, v)).thenReturn(vs);
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
 
         List<QueryVersionSummary> out = service.listVersions(qid);
 
@@ -398,10 +424,11 @@ class QueryServiceTest {
         QueriesAsOfRepository asOfRepo = mock(QueriesAsOfRepository.class);
         CaseDocumentRepository docRepo = mock(CaseDocumentRepository.class);
         QueryMapper mapper = mock(QueryMapper.class);
+        ProgressionClient progressionClient = mock(ProgressionClient.class);
 
         when(qRepo.findById(any())).thenReturn(Optional.empty());
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> service.listVersions(UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")));
