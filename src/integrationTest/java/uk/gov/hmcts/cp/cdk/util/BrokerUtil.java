@@ -51,7 +51,6 @@ public class BrokerUtil implements AutoCloseable {
         while (System.currentTimeMillis() < end) {
             String message = receivedMessages.poll(end - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
             if (message == null) break;
-            System.out.println(message);
             try {
                 JsonNode json = OBJECT_MAPPER.readTree(message);
                 if (matcher.test(json)) {
