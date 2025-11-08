@@ -21,14 +21,16 @@ public class DocumentIdResolver {
 
     private final NamedParameterJdbcTemplate jdbc;
 
-    private static final String SQL_FIND_EXISTING_DOC =
-            "SELECT doc_id " +
-                    "  FROM case_documents " +
-                    " WHERE case_id = :case_id " +
-                    "   AND material_id = :material_id " +
-                    "   AND ingestion_phase IN ('UPLOADED','INGESTED','INGESTING') " +
-                    " ORDER BY ingestion_phase_at DESC " +
-                    " LIMIT 1";
+    private static final String SQL_FIND_EXISTING_DOC = """
+            SELECT doc_id
+              FROM case_documents
+             WHERE case_id = :case_id
+               AND material_id = :material_id
+               AND ingestion_phase IN ('UPLOADED','INGESTED','INGESTING')
+             ORDER BY ingestion_phase_at DESC
+             LIMIT 1
+            """;
+
 
     /**
      * Attempts to resolve an existing document id for the given case and material.
