@@ -1,5 +1,33 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_MATERIAL_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
+
+import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
+import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,16 +44,6 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
-import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
-import uk.gov.hmcts.cp.cdk.domain.Query;
-import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
-
-import java.util.*;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.*;
 
 @ExtendWith(MockitoExtension.class)
 class ReserveAnswerVersionTaskletTest {
@@ -143,9 +161,12 @@ class ReserveAnswerVersionTaskletTest {
         UUID q1 = UUID.randomUUID();
         UUID q2 = UUID.randomUUID();
 
-        Query a = mock(Query.class); when(a.getQueryId()).thenReturn(q1);
-        Query b = mock(Query.class); when(b.getQueryId()).thenReturn(q2);
-        Query c = mock(Query.class); when(c.getQueryId()).thenReturn(q1);
+        Query a = mock(Query.class);
+        when(a.getQueryId()).thenReturn(q1);
+        Query b = mock(Query.class);
+        when(b.getQueryId()).thenReturn(q2);
+        Query c = mock(Query.class);
+        when(c.getQueryId()).thenReturn(q1);
 
         when(queryResolver.resolve()).thenReturn(List.of(a, b, c));
 
@@ -206,7 +227,8 @@ class ReserveAnswerVersionTaskletTest {
                 .thenReturn(Boolean.TRUE);
 
         UUID q1 = UUID.randomUUID();
-        Query a = mock(Query.class); when(a.getQueryId()).thenReturn(q1);
+        Query a = mock(Query.class);
+        when(a.getQueryId()).thenReturn(q1);
         when(queryResolver.resolve()).thenReturn(List.of(a));
 
         Map<String, Object> r1 = new HashMap<>();

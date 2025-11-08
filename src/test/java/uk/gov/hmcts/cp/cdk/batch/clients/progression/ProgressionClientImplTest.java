@@ -1,5 +1,16 @@
 package uk.gov.hmcts.cp.cdk.batch.clients.progression;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.client.ExpectedCount.once;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+
+import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.mapper.ProgressionDtoMapper;
+
+import java.util.UUID;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -7,16 +18,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestTemplate;
-import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.mapper.ProgressionDtoMapper;
-
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.client.ExpectedCount.once;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 @DisplayName("Progression Client Impl tests")
 class ProgressionClientImplTest {
@@ -65,7 +66,7 @@ class ProgressionClientImplTest {
                 .andExpect(header("Accept", "application/vnd.progression.query.material-content+json"))
                 .andRespond(withSuccess("{\"url\":\"https://signed.example\"}", MediaType.APPLICATION_JSON));
 
-        final var url = client.getMaterialDownloadUrl(materialId,"userId");
+        final var url = client.getMaterialDownloadUrl(materialId, "userId");
         server.verify();
         assertThat(url).contains("https://signed.example");
     }
@@ -98,7 +99,7 @@ class ProgressionClientImplTest {
                 .andExpect(header("Accept", "application/vnd.progression.query.material-content+json"))
                 .andRespond(withSuccess("{\"url\":\"   \"}", MediaType.APPLICATION_JSON));
 
-        final var url = client.getMaterialDownloadUrl(materialId,"userId");
+        final var url = client.getMaterialDownloadUrl(materialId, "userId");
         server.verify();
         assertThat(url).isEmpty();
     }
@@ -148,7 +149,7 @@ class ProgressionClientImplTest {
                 .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
-        final var latest = client.getCourtDocuments(caseId,"userId");
+        final var latest = client.getCourtDocuments(caseId, "userId");
         server.verify();
         assertThat(latest).isPresent();
         assertThat(latest.get().materialId()).isEqualTo("m2");
@@ -185,7 +186,7 @@ class ProgressionClientImplTest {
                 .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
-        final var latest = client.getCourtDocuments(caseId,"userId");
+        final var latest = client.getCourtDocuments(caseId, "userId");
         server.verify();
         assertThat(latest).isEmpty();
     }
@@ -220,7 +221,7 @@ class ProgressionClientImplTest {
                 .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
-        final var latest = client.getCourtDocuments(caseId,"userId");
+        final var latest = client.getCourtDocuments(caseId, "userId");
         server.verify();
         assertThat(latest).isEmpty();
     }
@@ -266,7 +267,7 @@ class ProgressionClientImplTest {
                 .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
-        final var latest = client.getCourtDocuments(caseId,"userId");
+        final var latest = client.getCourtDocuments(caseId, "userId");
         server.verify();
         assertThat(latest).isEmpty();
     }
@@ -313,7 +314,7 @@ class ProgressionClientImplTest {
                 .andExpect(header("Accept", "application/vnd.progression.query.courtdocuments+json"))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
-        final var latest = client.getCourtDocuments(caseId,"userId");
+        final var latest = client.getCourtDocuments(caseId, "userId");
         server.verify();
         assertThat(latest).isEmpty(); // Optional.empty() branch
     }

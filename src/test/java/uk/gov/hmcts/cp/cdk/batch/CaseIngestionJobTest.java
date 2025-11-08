@@ -1,5 +1,36 @@
 package uk.gov.hmcts.cp.cdk.batch;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import uk.gov.hmcts.cp.cdk.batch.clients.config.CdkClientsConfig;
+import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
+import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.batch.storage.AzureBlobStorageService;
+import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
+import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
+import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
+import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
+import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
+import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
+
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.PersistenceContext;
@@ -39,33 +70,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import uk.gov.hmcts.cp.cdk.batch.clients.config.CdkClientsConfig;
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
-import uk.gov.hmcts.cp.cdk.batch.storage.AzureBlobStorageService;
-import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
-import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
-import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
-import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
-import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
-import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
-import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
-import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
-
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @SpringBatchTest
 @SpringBootTest(
@@ -96,7 +100,8 @@ class CaseIngestionJobTest {
                     classes = AzureBlobStorageService.class // avoid real Azure bean in tests
             )
     )
-    static class TestApplication { }
+    static class TestApplication {
+    }
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
@@ -131,21 +136,32 @@ class CaseIngestionJobTest {
     }
 
     // Real repos
-    @Autowired private QueryDefinitionLatestRepository qdlRepo;
-    @Autowired private CaseDocumentRepository caseDocumentRepository;
+    @Autowired
+    private QueryDefinitionLatestRepository qdlRepo;
+    @Autowired
+    private CaseDocumentRepository caseDocumentRepository;
 
     // Mocks (external)
-    @Autowired private HearingClient hearingClient;
-    @Autowired private ProgressionClient progressionClient;
-    @Autowired private DocumentIngestionStatusApi documentIngestionStatusApi;
-    @Autowired private DocumentInformationSummarisedApi documentInformationSummarisedApi;
-    @Autowired private QueryResolver queryResolver;
-    @Autowired private StorageService storageService;
+    @Autowired
+    private HearingClient hearingClient;
+    @Autowired
+    private ProgressionClient progressionClient;
+    @Autowired
+    private DocumentIngestionStatusApi documentIngestionStatusApi;
+    @Autowired
+    private DocumentInformationSummarisedApi documentInformationSummarisedApi;
+    @Autowired
+    private QueryResolver queryResolver;
+    @Autowired
+    private StorageService storageService;
 
     // Infra
-    @Autowired private JobOperatorTestUtils jobOperatorTestUtils;
-    @Autowired private JdbcTemplate jdbc;
-    @PersistenceContext private EntityManager em;
+    @Autowired
+    private JobOperatorTestUtils jobOperatorTestUtils;
+    @Autowired
+    private JdbcTemplate jdbc;
+    @PersistenceContext
+    private EntityManager em;
 
     private UUID caseId1, caseId2, materialId1, materialId2, queryId;
 
@@ -333,11 +349,40 @@ class CaseIngestionJobTest {
         }
 
         // external mocks
-        @Bean @Primary public HearingClient hearingClient() { return mock(HearingClient.class); }
-        @Bean @Primary public ProgressionClient progressionClient() { return mock(ProgressionClient.class); }
-        @Bean @Primary public DocumentIngestionStatusApi documentIngestionStatusApi() { return mock(DocumentIngestionStatusApi.class); }
-        @Bean @Primary public DocumentInformationSummarisedApi documentInformationSummarisedApi() { return mock(DocumentInformationSummarisedApi.class); }
-        @Bean @Primary public QueryResolver queryResolver() { return mock(QueryResolver.class); }
-        @Bean @Primary public StorageService storageService() { return mock(StorageService.class); }
+        @Bean
+        @Primary
+        public HearingClient hearingClient() {
+            return mock(HearingClient.class);
+        }
+
+        @Bean
+        @Primary
+        public ProgressionClient progressionClient() {
+            return mock(ProgressionClient.class);
+        }
+
+        @Bean
+        @Primary
+        public DocumentIngestionStatusApi documentIngestionStatusApi() {
+            return mock(DocumentIngestionStatusApi.class);
+        }
+
+        @Bean
+        @Primary
+        public DocumentInformationSummarisedApi documentInformationSummarisedApi() {
+            return mock(DocumentInformationSummarisedApi.class);
+        }
+
+        @Bean
+        @Primary
+        public QueryResolver queryResolver() {
+            return mock(QueryResolver.class);
+        }
+
+        @Bean
+        @Primary
+        public StorageService storageService() {
+            return mock(StorageService.class);
+        }
     }
 }

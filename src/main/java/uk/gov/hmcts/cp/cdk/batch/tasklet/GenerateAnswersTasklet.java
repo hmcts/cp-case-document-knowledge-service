@@ -1,5 +1,29 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_MATERIAL_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
+
+import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
+import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
+import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
+import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
+import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
+import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
+import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
+import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,19 +44,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
-import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
-import uk.gov.hmcts.cp.cdk.domain.Query;
-import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
-import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
-import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
-import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
-import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
-import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
-import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
-
-import java.util.*;
-
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.*;
 
 @Slf4j
 @Component
@@ -49,68 +60,68 @@ public class GenerateAnswersTasklet implements Tasklet {
     private final DocumentIdResolver documentIdResolver;
 
     private static final String SQL_FIND_VERSION =
-        "SELECT version FROM answer_reservations " +
-        "WHERE case_id=:case_id AND query_id=:query_id AND doc_id=:doc_id";
+            "SELECT version FROM answer_reservations " +
+                    "WHERE case_id=:case_id AND query_id=:query_id AND doc_id=:doc_id";
 
     private static final String SQL_CREATE_OR_GET_VERSION =
-        "SELECT get_or_create_answer_version(:case_id,:query_id,:doc_id)";
+            "SELECT get_or_create_answer_version(:case_id,:query_id,:doc_id)";
 
     private static final String SQL_MARK_IN_PROGRESS =
-        "UPDATE answer_reservations " +
-        "SET status='IN_PROGRESS', updated_at=NOW() " +
-        "WHERE case_id=:case_id AND query_id=:query_id AND doc_id=:doc_id " +
-        "AND status IN ('NEW','FAILED')";
+            "UPDATE answer_reservations " +
+                    "SET status='IN_PROGRESS', updated_at=NOW() " +
+                    "WHERE case_id=:case_id AND query_id=:query_id AND doc_id=:doc_id " +
+                    "AND status IN ('NEW','FAILED')";
 
     private static final String SQL_UPSERT_ANSWER =
-        "INSERT INTO answers(case_id, query_id, version, created_at, answer, llm_input, doc_id) " +
-        "VALUES (:case_id, :query_id, :version, NOW(), :answer, :llm_input, :doc_id) " +
-        "ON CONFLICT (case_id, query_id, version) DO UPDATE SET " +
-        "answer = EXCLUDED.answer, llm_input = EXCLUDED.llm_input, doc_id = EXCLUDED.doc_id, " +
-        "created_at = EXCLUDED.created_at";
+            "INSERT INTO answers(case_id, query_id, version, created_at, answer, llm_input, doc_id) " +
+                    "VALUES (:case_id, :query_id, :version, NOW(), :answer, :llm_input, :doc_id) " +
+                    "ON CONFLICT (case_id, query_id, version) DO UPDATE SET " +
+                    "answer = EXCLUDED.answer, llm_input = EXCLUDED.llm_input, doc_id = EXCLUDED.doc_id, " +
+                    "created_at = EXCLUDED.created_at";
 
     private static final String SQL_MARK_DONE =
-        "UPDATE answer_reservations SET status='DONE', updated_at=NOW() " +
-        "WHERE case_id=:case_id AND query_id=:query_id AND doc_id=:doc_id";
+            "UPDATE answer_reservations SET status='DONE', updated_at=NOW() " +
+                    "WHERE case_id=:case_id AND query_id=:query_id AND doc_id=:doc_id";
 
     private static final String SQL_MARK_FAILED =
-        "UPDATE answer_reservations SET status='FAILED', updated_at=NOW() " +
-        "WHERE case_id=:case_id AND query_id=:query_id AND doc_id=:doc_id";
+            "UPDATE answer_reservations SET status='FAILED', updated_at=NOW() " +
+                    "WHERE case_id=:case_id AND query_id=:query_id AND doc_id=:doc_id";
 
     private static final SingleColumnRowMapper<Integer> INT_ROW_MAPPER =
-        new SingleColumnRowMapper<>(Integer.class);
+            new SingleColumnRowMapper<>(Integer.class);
 
     private static MapSqlParameterSource reservationParams(final UUID caseId, final UUID queryId, final UUID docId) {
         return new MapSqlParameterSource()
-            .addValue("case_id", caseId)
-            .addValue("query_id", queryId)
-            .addValue("doc_id", docId);
+                .addValue("case_id", caseId)
+                .addValue("query_id", queryId)
+                .addValue("doc_id", docId);
     }
 
     private static MapSqlParameterSource answerParamsRow(
-        final UUID caseId,
-        final UUID queryId,
-        final Integer version,
-        final String answer,
-        final String llmInput,
-        final UUID docId
+            final UUID caseId,
+            final UUID queryId,
+            final Integer version,
+            final String answer,
+            final String llmInput,
+            final UUID docId
     ) {
         return new MapSqlParameterSource()
-            .addValue("case_id", caseId)
-            .addValue("query_id", queryId)
-            .addValue("version", version)
-            .addValue("answer", answer)
-            .addValue("llm_input", llmInput)
-            .addValue("doc_id", docId);
+                .addValue("case_id", caseId)
+                .addValue("query_id", queryId)
+                .addValue("version", version)
+                .addValue("answer", answer)
+                .addValue("llm_input", llmInput)
+                .addValue("doc_id", docId);
     }
 
     private static List<MetadataFilter> buildMetadataFilters(final UUID docId) {
         return Collections.singletonList(
-            new MetadataFilter().key("document_id").value(docId.toString())
+                new MetadataFilter().key("document_id").value(docId.toString())
         );
     }
 
     @Override
-    @SuppressWarnings({ "PMD.CyclomaticComplexity", "PMD.OnlyOneReturn" })
+    @SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.OnlyOneReturn"})
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final ExecutionContext stepCtx = contribution.getStepExecution().getExecutionContext();
         final JobExecution jobExecution = contribution.getStepExecution().getJobExecution();
@@ -150,7 +161,7 @@ public class GenerateAnswersTasklet implements Tasklet {
                 final Optional<UUID> existing = documentIdResolver.resolveExistingDocId(caseId, materialId);
                 if (existing.isPresent() && !existing.get().equals(docId)) {
                     log.info("GenerateAnswersTasklet: overriding docId from context {} -> {} based on DB for caseId={}, materialId={}",
-                        docId, existing.get(), caseId, materialId);
+                            docId, existing.get(), caseId, materialId);
                     docId = existing.get();
                     stepCtx.putString(CTX_DOC_ID_KEY, docId.toString()); // keep downstream in sync
                 }
@@ -166,11 +177,11 @@ public class GenerateAnswersTasklet implements Tasklet {
 
         // Make final copies for all lambdas below
         final UUID resolvedCaseId = caseId;
-        final UUID resolvedDocId  = docId;
+        final UUID resolvedDocId = docId;
 
         // Check ingestion verified for resolved docId
         final String verifiedKey = CTX_UPLOAD_VERIFIED_KEY + ":" + resolvedDocId;
-        final Boolean jobVerified  = (Boolean) jobCtx.get(verifiedKey);
+        final Boolean jobVerified = (Boolean) jobCtx.get(verifiedKey);
         if (!Boolean.TRUE.equals(jobVerified)) {
             log.info("GenerateAnswersTasklet: ingestion not verified as SUCCESS for docId={}; skipping.", resolvedDocId);
             return RepeatStatus.FINISHED;
@@ -233,7 +244,7 @@ public class GenerateAnswersTasklet implements Tasklet {
             });
 
             final QueryDefinitionLatest qdl = defCache.computeIfAbsent(
-                queryId, k -> qdlRepo.findByQueryId(k).orElse(null)
+                    queryId, k -> qdlRepo.findByQueryId(k).orElse(null)
             );
 
             final String userQuery = qdl != null ? Optional.ofNullable(qdl.getUserQuery()).orElse("") : "";
@@ -245,31 +256,31 @@ public class GenerateAnswersTasklet implements Tasklet {
             // ==== APIM call with retry ====
             final long started = System.currentTimeMillis();
             final UserQueryAnswerReturnedSuccessfully resp =
-                retryTemplate.execute((RetryContext context) -> {
-                    if (context.getRetryCount() > 0) {
-                        log.warn("Retrying APIM call (attempt #{}) caseId={}, docId={}, queryId={}",
-                                context.getRetryCount() + 1, resolvedCaseId, resolvedDocId, queryId);
-                    }
+                    retryTemplate.execute((RetryContext context) -> {
+                        if (context.getRetryCount() > 0) {
+                            log.warn("Retrying APIM call (attempt #{}) caseId={}, docId={}, queryId={}",
+                                    context.getRetryCount() + 1, resolvedCaseId, resolvedDocId, queryId);
+                        }
 
-                    final ResponseEntity<UserQueryAnswerReturnedSuccessfully> responseEntity =
-                        documentInformationSummarisedApi.answerUserQuery(reusableRequest);
+                        final ResponseEntity<UserQueryAnswerReturnedSuccessfully> responseEntity =
+                                documentInformationSummarisedApi.answerUserQuery(reusableRequest);
 
-                    if (responseEntity == null || responseEntity.getBody() == null) {
-                        throw new IllegalStateException("Empty response body from APIM");
-                    }
+                        if (responseEntity == null || responseEntity.getBody() == null) {
+                            throw new IllegalStateException("Empty response body from APIM");
+                        }
 
-                    final UserQueryAnswerReturnedSuccessfully body = responseEntity.getBody();
-                    final String llmResponse = body.getLlmResponse();
-                    if (llmResponse == null || llmResponse.isBlank()) {
-                        throw new IllegalStateException("Empty llmResponse from APIM");
-                    }
-                    return body;
-                }, (RetryContext context) -> {
-                    log.warn("APIM call permanently failed after {} attempts for caseId={}, docId={}, queryId={}",
-                            context.getRetryCount(), resolvedCaseId, resolvedDocId, queryId, context.getLastThrowable());
-                    failedBatch.add(reservationParams(resolvedCaseId, queryId, resolvedDocId));
-                    return null;
-                });
+                        final UserQueryAnswerReturnedSuccessfully body = responseEntity.getBody();
+                        final String llmResponse = body.getLlmResponse();
+                        if (llmResponse == null || llmResponse.isBlank()) {
+                            throw new IllegalStateException("Empty llmResponse from APIM");
+                        }
+                        return body;
+                    }, (RetryContext context) -> {
+                        log.warn("APIM call permanently failed after {} attempts for caseId={}, docId={}, queryId={}",
+                                context.getRetryCount(), resolvedCaseId, resolvedDocId, queryId, context.getLastThrowable());
+                        failedBatch.add(reservationParams(resolvedCaseId, queryId, resolvedDocId));
+                        return null;
+                    });
             log.info("RAG call duration for queryId={}: {} ms", queryId, System.currentTimeMillis() - started);
 
             if (resp == null) {

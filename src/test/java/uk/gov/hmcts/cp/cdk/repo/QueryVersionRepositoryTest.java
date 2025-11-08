@@ -1,5 +1,16 @@
 package uk.gov.hmcts.cp.cdk.repo;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
+import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,16 +25,6 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import uk.gov.hmcts.cp.cdk.domain.Query;
-import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
-import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
-
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @DataJpaTest(
         properties = {
@@ -93,7 +94,8 @@ class QueryVersionRepositoryTest {
         repo.saveAndFlush(v2);
     }
 
-    @Test@DisplayName("Snapshot Definitions As Of returns latest not after cutoff")
+    @Test
+    @DisplayName("Snapshot Definitions As Of returns latest not after cutoff")
     void snapshotDefinitionsAsOf_returns_latest_not_after_cutoff() {
         final OffsetDateTime asOf = OffsetDateTime.parse("2025-05-01T11:58:30Z");
         final List<Object[]> rows = repo.snapshotDefinitionsAsOf(asOf);
@@ -107,7 +109,8 @@ class QueryVersionRepositoryTest {
         assertEquals("QP v1", r[3]);
     }
 
-    @Test@DisplayName("Find All Versions returns ascending effective at")
+    @Test
+    @DisplayName("Find All Versions returns ascending effective at")
     void findAllVersions_returns_ascending_effective_at() {
         final List<QueryVersion> versions = repo.findAllVersions(qid);
         assertEquals(2, versions.size());

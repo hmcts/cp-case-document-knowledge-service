@@ -1,11 +1,15 @@
 package uk.gov.hmcts.cp.cdk.services;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.springframework.dao.IncorrectResultSizeDataAccessException;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
@@ -17,7 +21,13 @@ import uk.gov.hmcts.cp.cdk.repo.QueriesAsOfRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryVersionRepository;
 import uk.gov.hmcts.cp.cdk.services.mapper.QueryMapper;
-import uk.gov.hmcts.cp.openapi.model.cdk.*;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryDefinitionsResponse;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryLifecycleStatus;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryStatusResponse;
+import uk.gov.hmcts.cp.openapi.model.cdk.QuerySummary;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryUpsertRequest;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryUpsertRequestQueriesInner;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryVersionSummary;
 
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
@@ -25,11 +35,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @DisplayName("QueryService tests")
 class QueryServiceTest {
@@ -40,7 +51,7 @@ class QueryServiceTest {
                              final CaseDocumentRepository docRepo,
                              final QueryMapper mapper,
                              final ProgressionClient progressionClient) {
-        return new QueryService(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        return new QueryService(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
     }
 
     @Test
@@ -57,9 +68,9 @@ class QueryServiceTest {
         Object[] row = new Object[]{qid, "L", "UQ", "QP", asOf};
         when(qvRepo.snapshotDefinitionsAsOf(asOf)).thenReturn(List.<Object[]>of(row));
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
 
-        QueryStatusResponse resp = service.listForCaseAsOf(null, asOf,"u-123");
+        QueryStatusResponse resp = service.listForCaseAsOf(null, asOf, "u-123");
 
         assertThat(resp.getAsOf()).isEqualTo(asOf);
         assertThat(resp.getScope()).isNull();
@@ -104,9 +115,9 @@ class QueryServiceTest {
         when(progressionClient.getCourtDocuments(any(), anyString()))
                 .thenReturn(Optional.of(info));
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
 
-        QueryStatusResponse resp = service.listForCaseAsOf(caseId, eff,"u-123");
+        QueryStatusResponse resp = service.listForCaseAsOf(caseId, eff, "u-123");
 
         assertThat(resp.getScope().getCaseId()).isEqualTo(caseId);
         assertThat(resp.getScope().getIsIdpcAvailable()).isTrue();
@@ -132,9 +143,9 @@ class QueryServiceTest {
         when(asOfRepo.listForCaseAsOf(eq(caseId), any())).thenReturn(List.<Object[]>of(row));
         when(docRepo.findFirstByCaseIdOrderByUploadedAtDesc(caseId)).thenReturn(Optional.empty());
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
 
-        QueryStatusResponse resp = service.listForCaseAsOf(caseId, eff,"u-123");
+        QueryStatusResponse resp = service.listForCaseAsOf(caseId, eff, "u-123");
 
         assertThat(resp.getScope().getIsIdpcAvailable()).isFalse();
         assertThat(resp.getQueries().get(0).getStatus()).isEqualTo(QueryLifecycleStatus.ANSWER_NOT_AVAILABLE);
@@ -157,7 +168,7 @@ class QueryServiceTest {
         Object[] row = new Object[]{qid, caseId, "L", "UQ", "QP", eff, "ANSWER_AVAILABLE"};
         when(asOfRepo.getOneForCaseAsOf(caseId, qid, eff)).thenReturn(row);
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
 
         QuerySummary s = service.getOneForCaseAsOf(caseId, qid, eff);
 
@@ -183,7 +194,7 @@ class QueryServiceTest {
 
         when(asOfRepo.getOneForCaseAsOf(caseId, qid, eff)).thenReturn(null);
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> service.getOneForCaseAsOf(caseId, qid, eff));
@@ -206,7 +217,7 @@ class QueryServiceTest {
         when(asOfRepo.getOneForCaseAsOf(caseId, qid, eff))
                 .thenThrow(new IncorrectResultSizeDataAccessException(1));
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> service.getOneForCaseAsOf(caseId, qid, eff));
@@ -231,7 +242,7 @@ class QueryServiceTest {
         Object[] row = new Object[]{qid, "L", "UQ", "QP", eff};
         when(qvRepo.snapshotDefinitionsAsOf(eff)).thenReturn(List.<Object[]>of(row));
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
 
         QueryUpsertRequest req = new QueryUpsertRequest();
         QueryUpsertRequestQueriesInner item = new QueryUpsertRequestQueriesInner();
@@ -269,7 +280,7 @@ class QueryServiceTest {
         UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         when(qRepo.findById(qid)).thenReturn(Optional.of(new Query()));
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
 
         QueryUpsertRequest req = new QueryUpsertRequest();
         QueryUpsertRequestQueriesInner item = new QueryUpsertRequestQueriesInner();
@@ -295,7 +306,7 @@ class QueryServiceTest {
         QueryMapper mapper = mock(QueryMapper.class);
         ProgressionClient progressionClient = mock(ProgressionClient.class);
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> service.upsertDefinitions(new QueryUpsertRequest()));
@@ -314,7 +325,7 @@ class QueryServiceTest {
 
         when(qRepo.findById(any())).thenReturn(Optional.empty());
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
 
         QueryUpsertRequest req = new QueryUpsertRequest();
         QueryUpsertRequestQueriesInner item = new QueryUpsertRequestQueriesInner();
@@ -341,7 +352,7 @@ class QueryServiceTest {
         UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         when(qRepo.findById(qid)).thenReturn(Optional.of(new Query()));
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
 
         QueryUpsertRequest req = new QueryUpsertRequest();
         QueryUpsertRequestQueriesInner item = new QueryUpsertRequestQueriesInner();
@@ -368,7 +379,7 @@ class QueryServiceTest {
         UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         when(qRepo.findById(qid)).thenReturn(Optional.of(new Query()));
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
 
         QueryUpsertRequest req = new QueryUpsertRequest();
         QueryUpsertRequestQueriesInner item = new QueryUpsertRequestQueriesInner();
@@ -407,7 +418,7 @@ class QueryServiceTest {
         vs.setEffectiveAt(OffsetDateTime.parse("2025-05-01T12:00:00Z"));
         when(mapper.toVersionSummary(query, v)).thenReturn(vs);
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
 
         List<QueryVersionSummary> out = service.listVersions(qid);
 
@@ -428,13 +439,12 @@ class QueryServiceTest {
 
         when(qRepo.findById(any())).thenReturn(Optional.empty());
 
-        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper,progressionClient);
+        QueryService service = svc(qRepo, qvRepo, asOfRepo, docRepo, mapper, progressionClient);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> service.listVersions(UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")));
         assertThat(ex.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
     }
-
 
 
 }

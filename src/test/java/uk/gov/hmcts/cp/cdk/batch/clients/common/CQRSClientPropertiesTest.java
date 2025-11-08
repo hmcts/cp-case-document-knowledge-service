@@ -1,12 +1,12 @@
 package uk.gov.hmcts.cp.cdk.batch.clients.common;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 
 class CQRSClientPropertiesTest {
 

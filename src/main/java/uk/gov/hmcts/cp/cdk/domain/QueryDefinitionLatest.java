@@ -1,12 +1,12 @@
 package uk.gov.hmcts.cp.cdk.domain;
 
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-
-import java.time.OffsetDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "v_query_definitions_latest")

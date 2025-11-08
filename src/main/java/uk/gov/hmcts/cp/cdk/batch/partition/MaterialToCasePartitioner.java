@@ -1,10 +1,11 @@
 package uk.gov.hmcts.cp.cdk.batch.partition;
 
-import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.core.partition.Partitioner;
-import org.springframework.batch.item.ExecutionContext;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_MATERIAL_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_MATERIAL_NAME;
+
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.MaterialMetaData;
 
 import java.util.Collections;
@@ -12,7 +13,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.*;
+import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.partition.Partitioner;
+import org.springframework.batch.item.ExecutionContext;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 @Component("eligibleCasePartitioner")
 @StepScope

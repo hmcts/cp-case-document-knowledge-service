@@ -1,11 +1,6 @@
 package uk.gov.hmcts.cp.cdk.batch.clients.hearing;
 
 
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.HttpHeaders;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.util.UriComponentsBuilder;
 import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummaries;
 import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
@@ -17,6 +12,12 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpHeaders;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 
 @Component
@@ -41,7 +42,7 @@ public class HearingClientImpl implements HearingClient {
     }
 
     @Override
-    @SuppressWarnings({"PMD.OnlyOneReturn","PMD.UseExplicitTypes"})
+    @SuppressWarnings({"PMD.OnlyOneReturn", "PMD.UseExplicitTypes"})
     public List<HearingSummariesInfo> getHearingsAndCases(final String courtId, final String roomId, final LocalDate date, final String userId) {
         final URI uriHearing = UriComponentsBuilder
                 .fromPath(hearingsPath)

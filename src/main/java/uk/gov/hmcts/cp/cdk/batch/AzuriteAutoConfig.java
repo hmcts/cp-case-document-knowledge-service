@@ -1,5 +1,9 @@
 package uk.gov.hmcts.cp.cdk.batch;
 
+import uk.gov.hmcts.cp.cdk.batch.storage.StorageProperties;
+
+import java.time.Duration;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -7,9 +11,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.DockerImageName;
-import uk.gov.hmcts.cp.cdk.batch.storage.StorageProperties;
-
-import java.time.Duration;
 
 @Configuration
 @ConditionalOnProperty(name = "storage.connection-string", havingValue = "auto-azurite")

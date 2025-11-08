@@ -13,9 +13,12 @@ import org.springframework.web.server.ResponseStatusException;
  */
 public final class RequestUtils {
 
-    private RequestUtils() { }
+    private RequestUtils() {
+    }
 
-    /** Obtain the current HttpServletRequest or throw 500 if not in a servlet request context. */
+    /**
+     * Obtain the current HttpServletRequest or throw 500 if not in a servlet request context.
+     */
     public static HttpServletRequest currentRequest() {
         final RequestAttributes attrs = RequestContextHolder.getRequestAttributes();
         if (!(attrs instanceof ServletRequestAttributes sra)) {
@@ -24,7 +27,9 @@ public final class RequestUtils {
         return sra.getRequest();
     }
 
-    /** Read a required header and translate absence into a 400 Bad Request. */
+    /**
+     * Read a required header and translate absence into a 400 Bad Request.
+     */
     public static String requireHeader(final String headerName) {
         final String value = currentRequest().getHeader(headerName);
         if (value == null || value.isBlank()) {

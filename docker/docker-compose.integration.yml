@@ -28,7 +28,7 @@ services:
     ports:
       - "55432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U casedocumentknowledge -d casedocumentknowledgeDatabase"]
+      test: [ "CMD-SHELL", "pg_isready -U casedocumentknowledge -d casedocumentknowledgeDatabase" ]
       interval: 5s
       timeout: 3s
       retries: 30
@@ -42,7 +42,7 @@ services:
       - ../src/integrationTest/resources/wiremock/mappings:/home/wiremock/mappings
       - ../src/integrationTest/resources/wiremock/__files:/home/wiremock/__files
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/__admin/health || exit 1"]
+      test: [ "CMD-SHELL", "curl -f http://localhost:8080/__admin/health || exit 1" ]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -106,10 +106,10 @@ services:
       CP_CDK_RAG_SUBSCRIPTION_KEY: dummy-key
       CP_CDK_CJSCPPUID_HEADER: CJSCPPUID
       CP_CDK_BASE_URL: http://wiremock:8080
-      CP_CDK_REST_AUTH_URL: http://wiremock:8080/usersgroups-query-api/query/api/rest/usersgroups/users/logged-in-user/permissions
+
 
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/casedocumentknowledge-service/actuator/health || exit 1"]
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:8082/casedocumentknowledge-service/actuator/health || exit 1" ]
       interval: 10s
       timeout: 3s
       retries: 12

@@ -1,5 +1,18 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
+import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
+import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+import uk.gov.hmcts.cp.cdk.util.TimeUtils;
+import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
+import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
+import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully.StatusEnum;
+
+import java.time.OffsetDateTime;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -22,18 +35,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
-import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
-import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
-import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
-import uk.gov.hmcts.cp.cdk.util.TimeUtils;
-import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
-import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
-import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully.StatusEnum;
-
-import java.time.OffsetDateTime;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Component
@@ -61,7 +62,7 @@ public class VerifyUploadTasklet implements Tasklet {
     private long maxWaitMs;
 
     @Override
-    @SuppressWarnings({ "PMD.OnlyOneReturn", "PMD.CyclomaticComplexity" })
+    @SuppressWarnings({"PMD.OnlyOneReturn", "PMD.CyclomaticComplexity"})
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
 
         final ExecutionContext stepCtx = contribution.getStepExecution().getExecutionContext();
@@ -190,7 +191,7 @@ public class VerifyUploadTasklet implements Tasklet {
         final AlwaysRetryPolicy always = new AlwaysRetryPolicy();
 
         final CompositeRetryPolicy composite = new CompositeRetryPolicy();
-        composite.setPolicies(new org.springframework.retry.RetryPolicy[]{ timeout, always });
+        composite.setPolicies(new org.springframework.retry.RetryPolicy[]{timeout, always});
 
         final FixedBackOffPolicy backoff = new FixedBackOffPolicy();
         backoff.setBackOffPeriod(intervalMs);
@@ -253,6 +254,7 @@ public class VerifyUploadTasklet implements Tasklet {
             ctx.put(CTX_DOCUMENT_STATUS_TS, lastUpdated);
         }
     }
+
     private OffsetDateTime nowUtc() {
         return TimeUtils.utcNow();
     }

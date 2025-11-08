@@ -1,9 +1,9 @@
 package uk.gov.hmcts.cp.cdk.http;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.http.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_NAME;
+import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_VALUE;
+
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 
 import java.sql.Connection;
@@ -15,9 +15,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_NAME;
-import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_VALUE;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
 

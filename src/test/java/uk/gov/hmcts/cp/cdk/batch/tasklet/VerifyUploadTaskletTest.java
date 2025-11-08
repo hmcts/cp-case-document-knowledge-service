@@ -1,5 +1,24 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
+import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
+import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
+import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully.StatusEnum;
+
+import java.time.OffsetDateTime;
+import java.util.Optional;
+import java.util.UUID;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,32 +40,26 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.SimpleTransactionStatus;
-import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
-import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
-import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
-import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
-import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
-import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
-import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully.StatusEnum;
-
-import java.time.OffsetDateTime;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class VerifyUploadTaskletTest {
 
-    @Mock private DocumentIngestionStatusApi documentIngestionStatusApi;
-    @Mock private CaseDocumentRepository caseDocumentRepository;
-    @Mock private StepContribution contribution;
-    @Mock private ChunkContext chunkContext;
-    @Mock private StepExecution stepExecution;
-    @Mock private JobExecution jobExecution;
+    @Mock
+    private DocumentIngestionStatusApi documentIngestionStatusApi;
+    @Mock
+    private CaseDocumentRepository caseDocumentRepository;
+    @Mock
+    private StepContribution contribution;
+    @Mock
+    private ChunkContext chunkContext;
+    @Mock
+    private StepExecution stepExecution;
+    @Mock
+    private JobExecution jobExecution;
 
-    /** No-op tx manager for REQUIRES_NEW updates inside the tasklet. */
+    /**
+     * No-op tx manager for REQUIRES_NEW updates inside the tasklet.
+     */
     private final PlatformTransactionManager txManager = new NoopTxManager();
 
     private ObjectMapper objectMapper;
@@ -69,7 +82,7 @@ class VerifyUploadTaskletTest {
         ReflectionTestUtils.setField(tasklet, "maxWaitMs", 25L);
 
         stepCtx = new ExecutionContext();
-        jobCtx  = new ExecutionContext();
+        jobCtx = new ExecutionContext();
 
         when(contribution.getStepExecution()).thenReturn(stepExecution);
         when(stepExecution.getExecutionContext()).thenReturn(stepCtx);
@@ -216,11 +229,16 @@ class VerifyUploadTaskletTest {
     // ---------- helpers ----------
 
     private static class NoopTxManager implements PlatformTransactionManager {
-        @Override public TransactionStatus getTransaction(final TransactionDefinition definition) {
+        @Override
+        public TransactionStatus getTransaction(final TransactionDefinition definition) {
             return new SimpleTransactionStatus();
         }
-        @Override public void commit(final TransactionStatus status) { /* no-op */ }
-        @Override public void rollback(final TransactionStatus status) { /* no-op */ }
+
+        @Override
+        public void commit(final TransactionStatus status) { /* no-op */ }
+
+        @Override
+        public void rollback(final TransactionStatus status) { /* no-op */ }
     }
 
     private CaseDocument createCaseDocument(UUID caseId, String documentName, UUID docid) {

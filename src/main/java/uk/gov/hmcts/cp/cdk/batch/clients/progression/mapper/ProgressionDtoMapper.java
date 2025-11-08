@@ -1,6 +1,5 @@
 package uk.gov.hmcts.cp.cdk.batch.clients.progression.mapper;
 
-import org.springframework.stereotype.Component;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClientConfig;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.CourtDocumentSearchResponse;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
@@ -8,16 +7,19 @@ import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
 import java.util.Comparator;
 import java.util.Optional;
 
+import org.springframework.stereotype.Component;
+
 
 @Component
 public class ProgressionDtoMapper {
     private final String docTypeId;
-    private final static String DOC_NAME_DEFAULT ="IDPC";
+    private final static String DOC_NAME_DEFAULT = "IDPC";
+
     public ProgressionDtoMapper(final ProgressionClientConfig config) {
         this.docTypeId = config.docTypeId();
     }
 
-    @SuppressWarnings({"PMD.OnlyOneReturn","PMD.UseExplicitTypes"})
+    @SuppressWarnings({"PMD.OnlyOneReturn", "PMD.UseExplicitTypes"})
     public Optional<LatestMaterialInfo> mapToLatestMaterialInfo(final CourtDocumentSearchResponse.DocumentIndex index) {
         final var caseIds = index.caseIds();
         final var document = index.document();

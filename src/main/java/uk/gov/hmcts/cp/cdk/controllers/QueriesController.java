@@ -1,5 +1,20 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
+import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
+import uk.gov.hmcts.cp.cdk.services.QueryService;
+import uk.gov.hmcts.cp.cdk.util.RequestUtils;
+import uk.gov.hmcts.cp.openapi.api.cdk.QueriesApi;
+import uk.gov.hmcts.cp.openapi.model.cdk.ListQueryVersions200Response;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryDefinitionsResponse;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryStatusResponse;
+import uk.gov.hmcts.cp.openapi.model.cdk.QuerySummary;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryUpsertRequest;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryVersionSummary;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -8,15 +23,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
-import uk.gov.hmcts.cp.cdk.services.QueryService;
-import uk.gov.hmcts.cp.cdk.util.RequestUtils;
-import uk.gov.hmcts.cp.openapi.api.cdk.QueriesApi;
-import uk.gov.hmcts.cp.openapi.model.cdk.*;
-
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.UUID;
 
 /**
  * Queries API controller.

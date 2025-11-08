@@ -1,14 +1,14 @@
 package uk.gov.hmcts.cp.cdk.repo;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Resolves the authoritative {@code doc_id} from the database for a given {@code (case_id, material_id)}.

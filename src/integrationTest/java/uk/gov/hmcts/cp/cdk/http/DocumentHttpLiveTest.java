@@ -1,7 +1,9 @@
 package uk.gov.hmcts.cp.cdk.http;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.http.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_NAME;
+import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_VALUE;
+
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 
 import java.sql.Connection;
@@ -10,9 +12,13 @@ import java.sql.PreparedStatement;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_NAME;
-import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_VALUE;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 public class DocumentHttpLiveTest extends AbstractHttpLiveTest {
     public final MediaType VND_TYPE_MATERIAL = MediaType.valueOf("application/vnd.casedocumentknowledge-service.document-content+json");

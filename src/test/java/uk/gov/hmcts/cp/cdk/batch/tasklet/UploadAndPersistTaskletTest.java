@@ -1,5 +1,35 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_MATERIAL_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_MATERIAL_NAME;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
+
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
+import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
+import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -18,21 +48,6 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.retry.backoff.NoBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
-import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
-import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
-import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
-import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
-
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.*;
 
 @ExtendWith(MockitoExtension.class)
 class UploadAndPersistTaskletTest {

@@ -1,5 +1,14 @@
 package uk.gov.hmcts.cp.cdk.filters.tracing;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static uk.gov.hmcts.cp.cdk.filters.tracing.TracingFilter.APPLICATION_NAME;
+import static uk.gov.hmcts.cp.cdk.filters.tracing.TracingFilter.SPAN_ID;
+import static uk.gov.hmcts.cp.cdk.filters.tracing.TracingFilter.TRACE_ID;
+
+import java.io.IOException;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,13 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
-
-import java.io.IOException;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static uk.gov.hmcts.cp.cdk.filters.tracing.TracingFilter.*;
 
 @ExtendWith(MockitoExtension.class)
 class TracingFilterTest {

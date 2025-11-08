@@ -1,10 +1,11 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import uk.gov.hmcts.cp.cdk.services.QueryCatalogueService;
 import uk.gov.hmcts.cp.openapi.model.cdk.LabelUpdateRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.QueryCatalogueItem;
@@ -12,14 +13,13 @@ import uk.gov.hmcts.cp.openapi.model.cdk.QueryCatalogueItem;
 import java.util.List;
 import java.util.UUID;
 
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 @DisplayName("Query Catalogue Controller tests")
-
 class QueryCatalogueControllerTest {
 
     public final String VND_TYPE_JSON = "application/vnd.casedocumentknowledge-service.query-catalogue+json";

@@ -1,5 +1,24 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.MaterialMetaData;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,17 +33,8 @@ import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
-import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.MaterialMetaData;
 
-import java.util.*;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
 @DisplayName("Filter Eligible Cases Tasklet tests")
-
 class FilterEligibleCasesTaskletTest {
 
     private JobRepository jobRepository;
@@ -60,19 +70,19 @@ class FilterEligibleCasesTaskletTest {
         List<String> caseIds = new ArrayList<String>();
         caseIds.add(case1.toString());
         // Only first case has document
-        LatestMaterialInfo meta1 = new LatestMaterialInfo(caseIds, "application/pdf", "123L",material1.toString(),"IDPC",null);
-        when(progressionClient.getCourtDocuments(case1,"userId")).thenReturn(Optional.of(meta1));
-        when(progressionClient.getCourtDocuments(case2,"userId")).thenReturn(Optional.empty());
+        LatestMaterialInfo meta1 = new LatestMaterialInfo(caseIds, "application/pdf", "123L", material1.toString(), "IDPC", null);
+        when(progressionClient.getCourtDocuments(case1, "userId")).thenReturn(Optional.of(meta1));
+        when(progressionClient.getCourtDocuments(case2, "userId")).thenReturn(Optional.empty());
 
         JobParameters params = new JobParametersBuilder()
                 .addString("jobName", "filterEligibleCases")
-                .addString("cppuid","userId")
+                .addString("cppuid", "userId")
                 .toJobParameters();
 
         StepExecution stepExecution = newStepExecution("filter_eligible_cases", params);
         ExecutionContext ctx = stepExecution.getJobExecution().getExecutionContext();
         ctx.put(BatchKeys.CTX_CASE_IDS_KEY, List.of(case1.toString(), case2.toString()));
-        ctx.put(BatchKeys.USERID_FOR_EXTERNAL_CALLS,"userId");
+        ctx.put(BatchKeys.USERID_FOR_EXTERNAL_CALLS, "userId");
         StepContribution contribution = new StepContribution(stepExecution);
         ChunkContext chunkContext = new ChunkContext(new StepContext(stepExecution));
 
@@ -87,8 +97,8 @@ class FilterEligibleCasesTaskletTest {
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
         assertThat(materialToCaseMap).containsKey(case1.toString());
 
-        verify(progressionClient, times(1)).getCourtDocuments(case1,"userId");
-        verify(progressionClient, times(1)).getCourtDocuments(case2,"userId");
+        verify(progressionClient, times(1)).getCourtDocuments(case1, "userId");
+        verify(progressionClient, times(1)).getCourtDocuments(case2, "userId");
     }
 
 

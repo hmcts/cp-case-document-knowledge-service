@@ -1,9 +1,5 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RestController;
 import uk.gov.hmcts.cp.cdk.services.AnswerService;
 import uk.gov.hmcts.cp.openapi.api.cdk.AnswersApi;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerResponse;
@@ -11,6 +7,11 @@ import uk.gov.hmcts.cp.openapi.model.cdk.AnswerWithLlmResponse;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Answers API controller.

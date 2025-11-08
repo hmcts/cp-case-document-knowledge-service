@@ -1,13 +1,19 @@
 package uk.gov.hmcts.cp.cdk.domain;
 
-import jakarta.persistence.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+import jakarta.persistence.Column;
+import jakarta.persistence.EmbeddedId;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(

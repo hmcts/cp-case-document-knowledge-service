@@ -2,7 +2,7 @@
 authz:
   http:
     enabled: true
-    identity-url-template: ${CP_CDK_REST_AUTH_URL}
+    identity-url-template:  ${CP_CDK_BASE_URL}/usersgroups-query-api/query/api/rest/usersgroups/users/logged-in-user/permissions
     user-id-header: "CJSCPPUID"
     action-header: "CPP-ACTION"
     accept-header: "application/vnd.usersgroups.get-logged-in-user-permissions+json"

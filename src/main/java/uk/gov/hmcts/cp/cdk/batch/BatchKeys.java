@@ -15,13 +15,15 @@ public final class BatchKeys {
     public static final class Params {
 
         public static final String COURT_CENTRE_ID = "courtCentreId";
-        public static final String ROOM_ID         = "roomId";
-        public static final String DATE            = "date";
-        public static final String CPPUID          = "cppuid";
-        public static final String RUN_ID          = "run";
+        public static final String ROOM_ID = "roomId";
+        public static final String DATE = "date";
+        public static final String CPPUID = "cppuid";
+        public static final String RUN_ID = "run";
 
-        private Params() {}
+        private Params() {
+        }
     }
 
-    private BatchKeys() {}
+    private BatchKeys() {
+    }
 }

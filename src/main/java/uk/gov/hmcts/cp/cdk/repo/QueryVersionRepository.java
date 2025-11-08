@@ -1,13 +1,14 @@
 package uk.gov.hmcts.cp.cdk.repo;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 public interface QueryVersionRepository extends JpaRepository<QueryVersion, QueryVersionId> {
 

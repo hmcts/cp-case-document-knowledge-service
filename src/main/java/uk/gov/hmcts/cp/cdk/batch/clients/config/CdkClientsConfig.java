@@ -1,11 +1,6 @@
 package uk.gov.hmcts.cp.cdk.batch.clients.config;
 
 
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.RestClient;
 import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
 import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClientConfig;
@@ -15,6 +10,12 @@ import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClientConfig;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClientImpl;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.mapper.ProgressionDtoMapper;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestClient;
 
 
 @Configuration

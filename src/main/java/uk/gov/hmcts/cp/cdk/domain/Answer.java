@@ -1,12 +1,18 @@
 package uk.gov.hmcts.cp.cdk.domain;
 
-import jakarta.persistence.*;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.AttributeOverrides;
+import jakarta.persistence.Column;
+import jakarta.persistence.EmbeddedId;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(

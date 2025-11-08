@@ -1,11 +1,9 @@
 package uk.gov.hmcts.cp.cdk.batch.partition;
 
 
-import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.core.partition.Partitioner;
-import org.springframework.batch.item.ExecutionContext;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+
 import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 
@@ -14,8 +12,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.partition.Partitioner;
+import org.springframework.batch.item.ExecutionContext;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 /**
  * Creates one partition per query so we can run GenerateAnswersTasklet once per query.

@@ -1,5 +1,23 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_MATERIAL_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
+
+import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
+import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
+
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.JobExecution;
@@ -15,14 +33,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
-import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
-import uk.gov.hmcts.cp.cdk.domain.Query;
-import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
-
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.*;
 
 @Slf4j
 @Component
@@ -35,7 +45,7 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
     private final DocumentIdResolver documentIdResolver;
 
     @Override
-    @SuppressWarnings({ "PMD.CyclomaticComplexity", "PMD.OnlyOneReturn", "ignoreElseIf" })
+    @SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.OnlyOneReturn", "ignoreElseIf"})
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
         final RepeatStatus status = RepeatStatus.FINISHED;
 
@@ -99,7 +109,7 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
 
         // Make final copies for lambdas
         final UUID resolvedCaseId = caseId;
-        final UUID resolvedDocId  = docId;
+        final UUID resolvedDocId = docId;
 
         // ---- Verify ingestion success flag for this docId -------------------------------------
         final String verifiedKey = CTX_UPLOAD_VERIFIED_KEY + ":" + resolvedDocId;
@@ -111,13 +121,13 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
 
         // ---- Ensure the document is present in case_documents ---------------------------------
         final MapSqlParameterSource checkParams = new MapSqlParameterSource()
-            .addValue("case_id", resolvedCaseId)
-            .addValue("doc_id", resolvedDocId);
+                .addValue("case_id", resolvedCaseId)
+                .addValue("doc_id", resolvedDocId);
 
         final Boolean documentExists = Boolean.TRUE.equals(jdbc.queryForObject(
-            "SELECT EXISTS (SELECT 1 FROM case_documents WHERE case_id=:case_id AND doc_id=:doc_id)",
-            checkParams,
-            Boolean.class
+                "SELECT EXISTS (SELECT 1 FROM case_documents WHERE case_id=:case_id AND doc_id=:doc_id)",
+                checkParams,
+                Boolean.class
         ));
 
         if (!documentExists) {
@@ -133,9 +143,9 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
         }
 
         final Set<UUID> queryIds = queries.stream()
-            .map(Query::getQueryId)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toCollection(LinkedHashSet::new));
+                .map(Query::getQueryId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
 
         if (queryIds.isEmpty()) {
             log.debug("ReserveAnswerVersionTasklet: All resolved queries had null IDs; nothing to reserve.");
@@ -145,8 +155,8 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
         // ---- Call get_or_create_answer_version for each query --------------------------------
         final StringBuilder values = new StringBuilder();
         final MapSqlParameterSource params = new MapSqlParameterSource()
-            .addValue("case_id", resolvedCaseId)
-            .addValue("doc_id", resolvedDocId);
+                .addValue("case_id", resolvedCaseId)
+                .addValue("doc_id", resolvedDocId);
 
         int paramIndex = 0;
         for (final UUID qid : queryIds) {
@@ -159,8 +169,8 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
         }
 
         final String sql =
-            "WITH q(id) AS (VALUES " + values + ") " +
-            "SELECT id AS query_id, get_or_create_answer_version(:case_id, id, :doc_id) AS version FROM q";
+                "WITH q(id) AS (VALUES " + values + ") " +
+                        "SELECT id AS query_id, get_or_create_answer_version(:case_id, id, :doc_id) AS version FROM q";
 
         final TransactionTemplate transactionTemplate = new TransactionTemplate(txManager);
         transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
@@ -178,17 +188,17 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
                 final UUID queryId = (UUID) row.get("query_id");
                 final int version = ((Number) row.get("version")).intValue();
                 batch[rowIndex++] = new MapSqlParameterSource()
-                    .addValue("case_id", resolvedCaseId)
-                    .addValue("query_id", queryId)
-                    .addValue("doc_id", resolvedDocId)
-                    .addValue("version", version);
+                        .addValue("case_id", resolvedCaseId)
+                        .addValue("query_id", queryId)
+                        .addValue("doc_id", resolvedDocId)
+                        .addValue("version", version);
             }
 
             jdbc.batchUpdate(
-                "UPDATE answer_reservations " +
-                "   SET updated_at = NOW() " +
-                " WHERE case_id=:case_id AND query_id=:query_id AND doc_id=:doc_id AND version=:version",
-                batch
+                    "UPDATE answer_reservations " +
+                            "   SET updated_at = NOW() " +
+                            " WHERE case_id=:case_id AND query_id=:query_id AND doc_id=:doc_id AND version=:version",
+                    batch
             );
             return null;
         });
@@ -196,7 +206,7 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
         return status;
     }
 
-    @SuppressWarnings({ "PMD.OnlyOneReturn", "ignoreElseIf" })
+    @SuppressWarnings({"PMD.OnlyOneReturn", "ignoreElseIf"})
     private static String getOrNull(final ExecutionContext ctx, final String key) {
         if (ctx == null || key == null) {
             return null;

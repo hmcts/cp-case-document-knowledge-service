@@ -1,10 +1,14 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.isNull;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import uk.gov.hmcts.cp.cdk.services.AnswerService;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerResponse;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerWithLlmResponse;
@@ -12,11 +16,13 @@ import uk.gov.hmcts.cp.openapi.model.cdk.AnswerWithLlmResponse;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-@DisplayName("Answers Controller tests")
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+@DisplayName("Answers Controller tests")
 class AnswersControllerTest {
 
     public final String VND_TYPE_JSON = "application/vnd.casedocumentknowledge-service.answers+json";

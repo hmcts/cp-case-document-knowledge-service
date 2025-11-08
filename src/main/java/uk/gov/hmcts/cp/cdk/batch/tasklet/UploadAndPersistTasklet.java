@@ -1,5 +1,26 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_MATERIAL_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_MATERIAL_NAME;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
+import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
+import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+
+import java.time.format.DateTimeFormatter;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,18 +34,6 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.retry.RetryContext;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
-import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
-import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
-import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
-import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
-
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.*;
-import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 @Component
 @RequiredArgsConstructor

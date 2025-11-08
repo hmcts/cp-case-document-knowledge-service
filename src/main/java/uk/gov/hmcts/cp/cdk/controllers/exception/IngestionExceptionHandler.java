@@ -1,15 +1,16 @@
 package uk.gov.hmcts.cp.cdk.controllers.exception;
 
+import static uk.gov.hmcts.cp.cdk.controllers.IngestionController.VND_INGESTION;
+
+import uk.gov.hmcts.cp.cdk.controllers.IngestionController;
+import uk.gov.hmcts.cp.openapi.model.cdk.ErrorResponse;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
-import uk.gov.hmcts.cp.cdk.controllers.IngestionController;
-import uk.gov.hmcts.cp.openapi.model.cdk.ErrorResponse;
-
-import static uk.gov.hmcts.cp.cdk.controllers.IngestionController.VND_INGESTION;
 
 
 @RestControllerAdvice(assignableTypes = IngestionController.class)

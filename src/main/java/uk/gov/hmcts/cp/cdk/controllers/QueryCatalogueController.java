@@ -1,9 +1,5 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RestController;
 import uk.gov.hmcts.cp.cdk.services.QueryCatalogueService;
 import uk.gov.hmcts.cp.openapi.api.cdk.QueryCatalogueApi;
 import uk.gov.hmcts.cp.openapi.model.cdk.LabelUpdateRequest;
@@ -12,6 +8,11 @@ import uk.gov.hmcts.cp.openapi.model.cdk.QueryCatalogueItem;
 
 import java.util.List;
 import java.util.UUID;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Query Catalogue API controller.

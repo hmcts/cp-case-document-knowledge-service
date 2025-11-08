@@ -1,5 +1,9 @@
 package uk.gov.hmcts.cp.cdk.batch;
 
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.JOB_NAME;
+
+import uk.gov.hmcts.cp.cdk.batch.partition.QueryIdPartitioner;
+
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -13,9 +17,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
-import uk.gov.hmcts.cp.cdk.batch.partition.QueryIdPartitioner;
-
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.JOB_NAME;
 
 @Configuration
 public class CaseIngestionJobConfig {

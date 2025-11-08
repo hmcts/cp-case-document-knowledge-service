@@ -4,8 +4,12 @@
     "method": "GET",
     "urlPath": "/usersgroups-query-api/query/api/rest/usersgroups/users/logged-in-user/permissions",
     "headers": {
-      "Accept": { "contains": "application/vnd.usersgroups.get-logged-in-user-permissions+json" },
-      "CJSCPPUID": { "equalTo": "a085e359-6069-4694-8820-7810e7dfe762" }
+      "Accept": {
+        "contains": "application/vnd.usersgroups.get-logged-in-user-permissions+json"
+      },
+      "CJSCPPUID": {
+        "equalTo": "a085e359-6069-4694-8820-7810e7dfe762"
+      }
     }
   },
   "response": {

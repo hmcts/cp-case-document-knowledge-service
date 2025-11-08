@@ -1,5 +1,20 @@
 package uk.gov.hmcts.cp.cdk.services;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import uk.gov.hmcts.cp.cdk.repo.IngestionStatusViewRepository;
+import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
+import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
+
+import java.time.LocalDate;
+import java.util.UUID;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -8,17 +23,6 @@ import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.core.task.SyncTaskExecutor;
-import uk.gov.hmcts.cp.cdk.repo.IngestionStatusViewRepository;
-import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
-import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
-
-import java.time.LocalDate;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
 
 @DisplayName("Ingestion Service tests (asynchronous start)")
 class IngestionServiceTest {

@@ -1,10 +1,10 @@
 package uk.gov.hmcts.cp.cdk.testsupport;
 
-import org.springframework.web.client.RestTemplate;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+
+import org.springframework.web.client.RestTemplate;
 
 public abstract class AbstractHttpLiveTest {
     protected final String baseUrl = TestConstants.baseUrl();

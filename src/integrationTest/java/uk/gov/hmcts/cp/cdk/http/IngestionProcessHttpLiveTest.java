@@ -1,9 +1,8 @@
 package uk.gov.hmcts.cp.cdk.http;
 
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.springframework.http.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
 
@@ -11,8 +10,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 /**
  * End-to-end tests for ingestion process endpoint:
@@ -125,13 +131,13 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
             final String date = "2025-10-23";
 
             final String requestBody = """
-                {
-                  "courtCentreId": "%s",
-                  "roomId": "%s",
-                  "date": "%s",
-                  "effectiveAt": "%s"
-                }
-                """.formatted(courtCentreId, roomId, date, effectiveAt);
+                    {
+                      "courtCentreId": "%s",
+                      "roomId": "%s",
+                      "date": "%s",
+                      "effectiveAt": "%s"
+                    }
+                    """.formatted(courtCentreId, roomId, date, effectiveAt);
 
             final HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
 

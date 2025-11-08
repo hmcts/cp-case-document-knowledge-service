@@ -1,13 +1,13 @@
 package uk.gov.hmcts.cp.cdk.batch.http;
 
+import java.io.IOException;
+import java.util.UUID;
+
 import org.slf4j.MDC;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
-
-import java.io.IOException;
-import java.util.UUID;
 
 public class CorrelationIdInterceptor implements ClientHttpRequestInterceptor {
     public static final String HEADER = "X-Request-ID";

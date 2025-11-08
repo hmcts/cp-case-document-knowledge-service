@@ -1,10 +1,5 @@
 package uk.gov.hmcts.cp.cdk.batch.clients.progression;
 
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.HttpHeaders;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.util.UriComponentsBuilder;
 import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.CourtDocumentSearchResponse;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
@@ -17,9 +12,14 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpHeaders;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
+
 @Component
 public class ProgressionClientImpl implements ProgressionClient {
-
 
 
     private final RestClient restClient;
@@ -45,7 +45,7 @@ public class ProgressionClientImpl implements ProgressionClient {
     }
 
     @Override
-    @SuppressWarnings({"PMD.OnlyOneReturn","PMD.UseExplicitTypes"})
+    @SuppressWarnings({"PMD.OnlyOneReturn", "PMD.UseExplicitTypes"})
     public Optional<LatestMaterialInfo> getCourtDocuments(final UUID caseId, final String userId) {
         final URI uri = UriComponentsBuilder
                 .fromPath(courtDocsPath)

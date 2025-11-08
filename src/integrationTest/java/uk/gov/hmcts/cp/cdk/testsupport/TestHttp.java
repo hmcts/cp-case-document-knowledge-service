@@ -1,14 +1,15 @@
 package uk.gov.hmcts.cp.cdk.testsupport;
 
+import java.util.List;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.BufferingClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
-
 public final class TestHttp {
-    private TestHttp() {}
+    private TestHttp() {
+    }
 
     public static RestTemplate newClient() {
         RestTemplate rt = new RestTemplate(

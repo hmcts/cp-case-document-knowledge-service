@@ -1,10 +1,5 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.services.DocumentService;
 import uk.gov.hmcts.cp.cdk.util.RequestUtils;
@@ -13,6 +8,12 @@ import uk.gov.hmcts.cp.openapi.model.cdk.GetMaterialContentUrl200Response;
 
 import java.net.URI;
 import java.util.UUID;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Document API controller.
