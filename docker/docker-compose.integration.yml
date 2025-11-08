@@ -39,8 +39,8 @@ services:
     ports:
       - "8089:8080"
     volumes:
-      - ../src/integrationTest/wiremock/mappings:/home/wiremock/mappings
-      - ../src/integrationTest/wiremock/__files:/home/wiremock/__files
+      - ../src/integrationTest/resources/wiremock/mappings:/home/wiremock/mappings
+      - ../src/integrationTest/resources/wiremock/__files:/home/wiremock/__files
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/__admin/health || exit 1"]
       interval: 5s
