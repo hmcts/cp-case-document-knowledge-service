@@ -1,6 +1,6 @@
 # ---- Base image (default fallback) ----
 ARG BASE_IMAGE
-FROM ${BASE_IMAGE:-eclipse-temurin:21-jdk}
+FROM ${BASE_IMAGE:-mcr.microsoft.com/openjdk/jdk:21-ubuntu}
 
 # ---- Runtime arguments ----
 ARG SERVER_PORT
