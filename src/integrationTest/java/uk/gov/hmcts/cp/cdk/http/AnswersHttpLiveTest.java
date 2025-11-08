@@ -14,7 +14,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
-
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static java.util.UUID.fromString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_NAME;
@@ -176,7 +176,7 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
                             && "application/vnd.casedocumentknowledge-service.answers+json".equals(json.get("content").get("_metadata").get("name").asText())
                             && "audit.events.audit-recorded".equals(json.get("_metadata").get("name").asText())
             );
-            //assertNotNull(auditRequest);
+            assertNotNull(auditRequest);
 
             String auditResponse = brokerUtil.getMessageMatching(json ->
                     json.has("content")
@@ -187,7 +187,7 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
                             && "application/vnd.casedocumentknowledge-service.answers+json".equals(json.get("content").get("_metadata").get("name").asText())
                             && "audit.events.audit-recorded".equals(json.get("_metadata").get("name").asText())
             );
-            //assertNotNull(auditResponse);
+            assertNotNull(auditResponse);
         }
     }
 

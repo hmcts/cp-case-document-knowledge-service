@@ -18,9 +18,10 @@ authz:
       - "/actuator"
       - "/error"
 
-cp:
-  audit:
-    rest-spec: ${CP_CDK_REST_SPECIFICATION}
+audit:
+  http:
+    enabled: true
+    openapi-rest-spec: ${CP_CDK_REST_SPECIFICATION}
 
 
 # Virtual threads toggle (Boot 3.2+/4.x)

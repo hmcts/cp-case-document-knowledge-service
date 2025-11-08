@@ -10,13 +10,24 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 
 /**
  * End-to-end tests for ingestion process endpoint:
@@ -59,27 +70,27 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
         final String effectiveAt = "2025-01-01T00:00:00Z";
 
         final String upsertBody = """
-            {
-              "effectiveAt": "%s",
-              "queries": [
                 {
-                  "queryId": "%s",
-                  "userQuery": "Give me a concise case summary including parties, charges, hearing dates, and current status.",
-                  "queryPrompt": "Summarise the case in bullet points. Focus on parties, charges, hearing dates, and procedural status."
-                },
-                {
-                  "queryId": "%s",
-                  "userQuery": "Summarise the key evidence and exhibits (IDs, types, and relevance).",
-                  "queryPrompt": "List evidence/exhibits with IDs, types, short relevance notes; avoid speculation."
-                },
-                {
-                  "queryId": "%s",
-                  "userQuery": "What are the next procedural steps and likely timelines?",
-                  "queryPrompt": "Outline upcoming procedural steps with indicative timelines based on current case status."
+                  "effectiveAt": "%s",
+                  "queries": [
+                    {
+                      "queryId": "%s",
+                      "userQuery": "Give me a concise case summary including parties, charges, hearing dates, and current status.",
+                      "queryPrompt": "Summarise the case in bullet points. Focus on parties, charges, hearing dates, and procedural status."
+                    },
+                    {
+                      "queryId": "%s",
+                      "userQuery": "Summarise the key evidence and exhibits (IDs, types, and relevance).",
+                      "queryPrompt": "List evidence/exhibits with IDs, types, short relevance notes; avoid speculation."
+                    },
+                    {
+                      "queryId": "%s",
+                      "userQuery": "What are the next procedural steps and likely timelines?",
+                      "queryPrompt": "Outline upcoming procedural steps with indicative timelines based on current case status."
+                    }
+                  ]
                 }
-              ]
-            }
-            """.formatted(effectiveAt, QID_CASE_SUMMARY, QID_EVIDENCE_BUNDLE, QID_NEXT_STEPS);
+                """.formatted(effectiveAt, QID_CASE_SUMMARY, QID_EVIDENCE_BUNDLE, QID_NEXT_STEPS);
 
         final ResponseEntity<String> upsertResp = http.exchange(
                 baseUrl + "/queries",
@@ -98,8 +109,8 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
         headers.setAccept(List.of(VND_TYPE_JSON_CATA));
 
         final String body = """
-            { "label": "%s" }
-            """.formatted(escapeJson(label));
+                { "label": "%s" }
+                """.formatted(escapeJson(label));
 
         final ResponseEntity<String> resp = http.exchange(
                 baseUrl + "/query-catalogue/" + queryId + "/label",
@@ -153,10 +164,15 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
             assertThat(response.getBody()).contains("\"message\":\"Ingestion request accepted");
             assertThat(response.getBody()).contains("STARTED");
 
-            // If you later assert the audit event, capture it via brokerUtil
-            // auditResponse = ...
+            // Validate audit message published (if applicable)
+            auditResponse = brokerUtil.getMessageMatching(json ->
+                    json.has("content") &&
+                            courtCentreId.toString().equals(json.get("content").get("courtCentreId").asText()) &&
+                            roomId.toString().equals(json.get("content").get("roomId").asText()) &&
+                            date.equals(json.get("content").get("date").asText())
+            );
         }
 
-        // assertNotNull(auditResponse, "Expected an audit event for ingestion process start");
+        assertNotNull(auditResponse, "Expected an audit event for ingestion process start");
     }
 }
