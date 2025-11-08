@@ -91,7 +91,7 @@ dependencies {
 
     //Auth and Audit
     implementation "uk.gov.hmcts.cp:cp-springboot-auth-rules-filter:1.0.1"
-    implementation "uk.gov.hmcts.cp:cp-springboot-audit-filter:1.0.1"
+    implementation "uk.gov.hmcts.cp:cp-audit-filter-springboot:1.0.0"
 
     // Web / validation/ Batch
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -277,8 +277,8 @@ tasks.register('integration', Test) {
     classpath = sourceSets.integrationTest.runtimeClasspath
     useJUnitPlatform()
 
-    dependsOn tasks.composeUp
-    finalizedBy tasks.composeDown
+//    dependsOn tasks.composeUp
+//    finalizedBy tasks.composeDown
 
     systemProperty 'app.baseUrl', 'http://localhost:8082/casedocumentknowledge-service'
     jvmArgs = ['-Xshare:off']
