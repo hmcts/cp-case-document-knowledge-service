@@ -35,7 +35,7 @@ class GlobalExceptionHandlerTest {
         ResponseStatusException ex = new ResponseStatusException(HttpStatus.NOT_FOUND, reason);
 
         // Act
-        var response = handler.handleResponseStatusException(ex);
+        var response = handler.onResponseStatus(ex);
 
         // Assert
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
