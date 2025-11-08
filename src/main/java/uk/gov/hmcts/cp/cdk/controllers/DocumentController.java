@@ -11,13 +11,11 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.services.DocumentService;
-import uk.gov.hmcts.cp.cdk.services.QueryService;
+import uk.gov.hmcts.cp.openapi.api.cdk.DocumentApi;
 import uk.gov.hmcts.cp.openapi.model.cdk.GetMaterialContentUrl200Response;
 
 import java.net.URI;
 import java.util.UUID;
-import uk.gov.hmcts.cp.openapi.api.cdk.DocumentApi;
-import uk.gov.hmcts.cp.openapi.model.cdk.*;
 
 @RestController
 @Slf4j
@@ -33,7 +31,6 @@ public class DocumentController implements DocumentApi{
 
     @Override
     public ResponseEntity<GetMaterialContentUrl200Response> getMaterialContentUrl(final UUID docId) {
-        String cppuid=null;
         try {
             final String headerName = cqrsClientProperties.headers().cjsCppuid();
 
@@ -46,7 +43,7 @@ public class DocumentController implements DocumentApi{
             }
 
             final HttpServletRequest req = attrs.getRequest();
-            cppuid = req.getHeader(headerName);
+            final String cppuid = req.getHeader(headerName);
 
             if (cppuid == null || cppuid.isBlank()) {
                 throw new ResponseStatusException(

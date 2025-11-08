@@ -8,15 +8,16 @@ import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 
 import java.time.OffsetDateTime;
-import java.util.Objects;
 
 public final class AzureSasUtil {
     public static void main(String[] args) {
-        System.out.println(sasUrlFromEnv( "idpc-ai",     // container
+        System.out.println(sasUrlFromEnv("idpc-ai",     // container
                 "hello.pdf",   // blob
-                120  ));
+                120));
     }
-    private AzureSasUtil() {}
+
+    private AzureSasUtil() {
+    }
 
     public static String sasUrlFromEnv(final String container, final String blobName, final int minutes) {
         String conn = "";
@@ -28,7 +29,7 @@ public final class AzureSasUtil {
     }
 
     public static String sasUrl(final String connectionString, final String container, final String blobName, final int minutes) {
-         final BlobServiceClient svc = new BlobServiceClientBuilder()
+        final BlobServiceClient svc = new BlobServiceClientBuilder()
                 .connectionString(connectionString)
                 .buildClient();
         final BlobContainerClient cont = svc.getBlobContainerClient(container);

@@ -4,7 +4,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.*;
-import org.springframework.web.client.RestTemplate;
+import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
 
 import java.sql.Connection;
@@ -16,25 +16,14 @@ import java.util.UUID;
 
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * End-to-end tests for ingestion status read endpoint:
  * - GET /ingestions/status?caseId=...
  */
-public class IngestionStatusHttpLiveTest {
+public class IngestionStatusHttpLiveTest extends AbstractHttpLiveTest {
 
     public final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.ingestion+json");
-    private final String baseUrl = System.getProperty(
-            "app.baseUrl",
-            "http://localhost:8082/casedocumentknowledge-service"
-    );
-
-    private final String jdbcUrl = System.getProperty("it.db.url", "jdbc:postgresql://localhost:55432/casedocumentknowledgeDatabase");
-    private final String jdbcUser = System.getProperty("it.db.user", "casedocumentknowledge");
-    private final String jdbcPass = System.getProperty("it.db.pass", "casedocumentknowledge");
-
-    private final RestTemplate http = new RestTemplate();
     private UUID caseId;
 
     @BeforeEach
@@ -107,6 +96,6 @@ public class IngestionStatusHttpLiveTest {
                             && caseId.equals(UUID.fromString(json.get("content").get("scope").get("caseId").asText()))
             );
         }
-       // assertNotNull(auditResponse);
+        // assertNotNull(auditResponse);
     }
 }

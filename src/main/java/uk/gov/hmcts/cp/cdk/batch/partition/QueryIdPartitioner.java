@@ -1,9 +1,9 @@
 package uk.gov.hmcts.cp.cdk.batch.partition;
 
 
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.partition.Partitioner;
 import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import uk.gov.hmcts.cp.cdk.batch.QueryResolver;

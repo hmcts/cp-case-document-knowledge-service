@@ -106,6 +106,7 @@ services:
       CP_CDK_RAG_SUBSCRIPTION_KEY: dummy-key
       CP_CDK_CJSCPPUID_HEADER: CJSCPPUID
       CP_CDK_BASE_URL: http://wiremock:8080
+      CP_CDK_REST_AUTH_URL: http://wiremock:8080/usersgroups-query-api/query/api/rest/usersgroups/users/logged-in-user/permissions
 
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8082/casedocumentknowledge-service/actuator/health || exit 1"]

@@ -2,8 +2,14 @@ package uk.gov.hmcts.cp.cdk.http;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.*;
-import org.springframework.web.client.RestTemplate;
+import org.junit.jupiter.api.TestInstance;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
 
 import java.nio.charset.StandardCharsets;
@@ -14,21 +20,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * End-to-end tests for ingestion process endpoint:
- * - POST /ingestion-process
+ * - POST /ingestions/start
  */
-public class IngestionProcessHttpLiveTest {
-    private static final RestTemplate http = new RestTemplate();
-    // Custom VND type defined by OpenAPI contract
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
+
+    // Custom VND types defined by OpenAPI contract
     private static final MediaType VND_TYPE_JSON =
             MediaType.valueOf("application/vnd.casedocumentknowledge-service.ingestion-process+json");
-    public static final MediaType VND_TYPE_JSON_QUERIES = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
-    public static final MediaType VND_TYPE_JSON_CATA = MediaType.valueOf("    application/vnd.casedocumentknowledge-service.query-catalogue+json");
+    public static final MediaType VND_TYPE_JSON_QUERIES =
+            MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
+    public static final MediaType VND_TYPE_JSON_CATA =
+            MediaType.valueOf("application/vnd.casedocumentknowledge-service.query-catalogue+json");
 
-    // Base URL (points to local service when running via composeUp)
-    private static final String baseUrl = System.getProperty(
-            "app.baseUrl",
-            "http://localhost:8082/casedocumentknowledge-service"
-    );
     // Stable IDs so test is idempotent across runs
     private static final UUID QID_CASE_SUMMARY =
             UUID.nameUUIDFromBytes("query-case-summary".getBytes(StandardCharsets.UTF_8));
@@ -43,17 +47,14 @@ public class IngestionProcessHttpLiveTest {
     private static final String LABEL_NEXT_STEPS = "Next Steps";
 
     @BeforeAll
-    public static void seedQueriesAndLabels() {
-
+    void seedQueriesAndLabels() {
         labelQuery(QID_CASE_SUMMARY, LABEL_CASE_SUMMARY);
         labelQuery(QID_EVIDENCE_BUNDLE, LABEL_EVIDENCE_BUNDLE);
         labelQuery(QID_NEXT_STEPS, LABEL_NEXT_STEPS);
 
-
         final HttpHeaders upsertHeaders = new HttpHeaders();
         upsertHeaders.setContentType(VND_TYPE_JSON_QUERIES);
         upsertHeaders.setAccept(List.of(VND_TYPE_JSON_QUERIES));
-        upsertHeaders.add("CJSCPPUID", "la-user-1");
 
         final String effectiveAt = "2025-01-01T00:00:00Z";
 
@@ -86,16 +87,15 @@ public class IngestionProcessHttpLiveTest {
                 new HttpEntity<>(upsertBody, upsertHeaders),
                 String.class
         );
-        // Contract returns 202 Accepted on upsert
-        assertThat(upsertResp.getStatusCode()).isIn(HttpStatus.ACCEPTED, HttpStatus.OK);
 
+        // Contract returns 202 Accepted (or sometimes 200 OK) on upsert
+        assertThat(upsertResp.getStatusCode()).isIn(HttpStatus.ACCEPTED, HttpStatus.OK);
     }
 
-    private static void labelQuery(final UUID queryId, final String label) {
+    private void labelQuery(final UUID queryId, final String label) {
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(VND_TYPE_JSON_CATA);
         headers.setAccept(List.of(VND_TYPE_JSON_CATA));
-        headers.add("CJSCPPUID", "la-user-1");
 
         final String body = """
             { "label": "%s" }
@@ -118,19 +118,17 @@ public class IngestionProcessHttpLiveTest {
     void start_ingestion_process_returns_started_phase() throws Exception {
         String auditResponse;
         try (BrokerUtil brokerUtil = new BrokerUtil()) {
-
             final HttpHeaders headers = new HttpHeaders();
             headers.setContentType(VND_TYPE_JSON);
             headers.setAccept(List.of(VND_TYPE_JSON));
-            headers.add("CJSCPPUID", "la-user-1");
 
             // Build request body — matches the OpenAPI schema
-            UUID courtCentreId = UUID.randomUUID();
-            UUID roomId = UUID.randomUUID();
-            String effectiveAt = "2025-05-01T12:00:00Z";
-            String date = "2025-10-23";
+            final UUID courtCentreId = UUID.randomUUID();
+            final UUID roomId = UUID.randomUUID();
+            final String effectiveAt = "2025-05-01T12:00:00Z";
+            final String date = "2025-10-23";
 
-            String requestBody = """
+            final String requestBody = """
                 {
                   "courtCentreId": "%s",
                   "roomId": "%s",
@@ -141,27 +139,24 @@ public class IngestionProcessHttpLiveTest {
 
             final HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
 
-            // Execute POST /ingestion-process
-            ResponseEntity<String> response = http.exchange(
+            // Execute POST /ingestions/start
+            final ResponseEntity<String> response = http.exchange(
                     baseUrl + "/ingestions/start",
                     HttpMethod.POST,
                     entity,
                     String.class
             );
-            // Validate HTTP 200 and body fields
+
+            // Validate HTTP 202 and body fields
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
             assertThat(response.getBody()).contains("\"phase\":\"STARTED\"");
             assertThat(response.getBody()).contains("\"message\":\"Ingestion request accepted");
             assertThat(response.getBody()).contains("STARTED");
 
-            // Validate audit message published (if applicable)
-           /** auditResponse = brokerUtil.getMessageMatching(json ->
-                    json.has("content") &&
-                            "STARTED".equals(json.get("content").get("phase").asText()) &&
-                            "Ingestion process started".equals(json.get("content").get("message").asText())
-            );**/
+            // If you later assert the audit event, capture it via brokerUtil
+            // auditResponse = ...
         }
 
-        //assertNotNull(auditResponse, "Expected an audit event for ingestion process start");
+        // assertNotNull(auditResponse, "Expected an audit event for ingestion process start");
     }
 }

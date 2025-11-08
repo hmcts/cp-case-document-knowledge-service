@@ -9,7 +9,6 @@ import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Optional;

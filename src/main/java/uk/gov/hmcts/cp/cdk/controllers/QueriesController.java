@@ -15,7 +15,6 @@ import uk.gov.hmcts.cp.cdk.services.QueryService;
 import uk.gov.hmcts.cp.openapi.api.cdk.QueriesApi;
 import uk.gov.hmcts.cp.openapi.model.cdk.*;
 
-import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -50,7 +49,6 @@ public class QueriesController implements QueriesApi {
             final UUID caseId,
             final OffsetDateTime asOf
     ) {
-         String cppuid=null;
         try {
             final String headerName = cqrsClientProperties.headers().cjsCppuid();
 
@@ -63,7 +61,7 @@ public class QueriesController implements QueriesApi {
             }
 
             final HttpServletRequest req = attrs.getRequest();
-             cppuid = req.getHeader(headerName);
+            final   String cppuid = req.getHeader(headerName);
 
             if (cppuid == null || cppuid.isBlank()) {
                 throw new ResponseStatusException(

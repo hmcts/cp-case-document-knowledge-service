@@ -4,7 +4,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.*;
-import org.springframework.web.client.RestTemplate;
+import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -22,19 +22,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Lists all versions for a single query via the live HTTP API.
  * Assumes the service exposes GET /queries/{queryId}/versions
  */
-public class QueryVersionsHttpLiveTest {
+public class QueryVersionsHttpLiveTest extends AbstractHttpLiveTest {
 
     public final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
-    private final String baseUrl = System.getProperty(
-            "app.baseUrl",
-            "http://localhost:8082/casedocumentknowledge-service"
-    );
-
-    private final String jdbcUrl  = System.getProperty("it.db.url",  "jdbc:postgresql://localhost:55432/casedocumentknowledgeDatabase");
-    private final String jdbcUser = System.getProperty("it.db.user", "casedocumentknowledge");
-    private final String jdbcPass = System.getProperty("it.db.pass", "casedocumentknowledge");
-
-    private final RestTemplate http = new RestTemplate();
     private UUID queryId;
 
     @BeforeEach
