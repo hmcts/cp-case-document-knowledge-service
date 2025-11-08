@@ -7,4 +7,4 @@ spring:
   jms:
     pub-sub-domain: true
     cache:
-      session-cache-size: 5
+      session-cache-size: ${CP_CDK_JMS_SESSION_CACHE_SIZE}
