@@ -124,6 +124,9 @@ class CaseIngestionJobTest {
         // faster polling for any verify logic
         r.add("cdk.ingestion.verify.poll-interval-ms", () -> "10");
         r.add("cdk.ingestion.verify.max-wait-ms", () -> "2000");
+
+        // *** FIX: Provide value for the missing audit property ***
+        r.add("audit.http.openapi-rest-spec", () -> "test-openapi-spec.yml");
     }
 
     // Real repos
