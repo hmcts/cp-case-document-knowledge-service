@@ -10,7 +10,6 @@ import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.services.QueryService;
 import uk.gov.hmcts.cp.openapi.model.cdk.*;
 
-import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;

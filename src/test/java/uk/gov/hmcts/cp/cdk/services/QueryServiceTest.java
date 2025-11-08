@@ -19,7 +19,6 @@ import uk.gov.hmcts.cp.cdk.repo.QueryVersionRepository;
 import uk.gov.hmcts.cp.cdk.services.mapper.QueryMapper;
 import uk.gov.hmcts.cp.openapi.model.cdk.*;
 
-import java.net.URI;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.List;

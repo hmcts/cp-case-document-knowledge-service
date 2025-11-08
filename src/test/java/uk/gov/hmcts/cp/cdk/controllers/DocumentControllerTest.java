@@ -8,7 +8,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.services.DocumentService;
 
-
 import java.net.URI;
 import java.util.UUID;
 

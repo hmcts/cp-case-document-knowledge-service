@@ -14,9 +14,10 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import static java.util.UUID.fromString;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_NAME;
 import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_VALUE;
 

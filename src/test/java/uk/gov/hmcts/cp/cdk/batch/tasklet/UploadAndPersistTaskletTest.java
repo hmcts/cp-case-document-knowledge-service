@@ -30,7 +30,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.lenient;
 import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.*;
 
 @ExtendWith(MockitoExtension.class)

@@ -8,7 +8,6 @@ import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 
-
 import java.net.URI;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,7 +15,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.when;
 
 public class DocumentServiceTest {
 
