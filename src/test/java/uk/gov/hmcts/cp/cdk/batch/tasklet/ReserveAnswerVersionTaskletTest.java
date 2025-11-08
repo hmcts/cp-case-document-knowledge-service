@@ -18,6 +18,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
 
 import java.util.*;
 
@@ -32,6 +33,7 @@ class ReserveAnswerVersionTaskletTest {
     private QueryResolver queryResolver;
     private NamedParameterJdbcTemplate jdbc;
     private PlatformTransactionManager txManager;
+    private DocumentIdResolver documentIdResolver;
 
     private StepContribution stepContribution;
     private ChunkContext chunkContext;
@@ -48,6 +50,7 @@ class ReserveAnswerVersionTaskletTest {
         queryResolver = mock(QueryResolver.class);
         jdbc = mock(NamedParameterJdbcTemplate.class);
         txManager = mock(PlatformTransactionManager.class);
+        documentIdResolver = mock(DocumentIdResolver.class);
 
         stepContribution = mock(StepContribution.class);
         chunkContext = mock(ChunkContext.class);
@@ -57,7 +60,7 @@ class ReserveAnswerVersionTaskletTest {
         stepCtx = new ExecutionContext();
         jobCtx = new ExecutionContext();
 
-        tasklet = new ReserveAnswerVersionTasklet(queryResolver, jdbc, txManager);
+        tasklet = new ReserveAnswerVersionTasklet(queryResolver, jdbc, txManager, documentIdResolver);
 
         lenient().when(stepContribution.getStepExecution()).thenReturn(stepExecution);
         lenient().when(stepExecution.getExecutionContext()).thenReturn(stepCtx);
@@ -81,12 +84,12 @@ class ReserveAnswerVersionTaskletTest {
     }
 
     @Test
-    @DisplayName("Skips when case/doc ids missing")
+    @DisplayName("Skips when caseId missing")
     void skipsWhenIdsMissing() throws Exception {
         RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
 
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
-        verifyNoInteractions(queryResolver, jdbc);
+        verifyNoInteractions(queryResolver, jdbc, documentIdResolver);
     }
 
     @Test
@@ -124,7 +127,6 @@ class ReserveAnswerVersionTaskletTest {
         verifyNoMoreInteractions(jdbc);
         verifyNoInteractions(queryResolver);
     }
-
 
     @Test
     @DisplayName("Happy path: reserves versions for unique query ids and touches updated_at")
@@ -185,29 +187,65 @@ class ReserveAnswerVersionTaskletTest {
     }
 
     @Test
-    @DisplayName("Skips when resolver returns no queries or all null IDs")
-    void skipsWhenNoQueries() throws Exception {
+    @DisplayName("Overrides docId from DB and updates context before reservations")
+    void overridesDocIdAndUpdatesContext() throws Exception {
         UUID caseId = UUID.randomUUID();
-        UUID docId = UUID.randomUUID();
+        UUID oldDocId = UUID.randomUUID();
+        UUID resolvedDocId = UUID.randomUUID();
+        UUID materialId = UUID.randomUUID();
+
         stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
-        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
-        jobCtx.put(CTX_UPLOAD_VERIFIED_KEY + ":" + docId, true);
+        stepCtx.putString(CTX_DOC_ID_KEY, oldDocId.toString());
+        stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
+        jobCtx.put(CTX_UPLOAD_VERIFIED_KEY + ":" + resolvedDocId, true);
+
+        when(documentIdResolver.resolveExistingDocId(eq(caseId), eq(materialId)))
+                .thenReturn(Optional.of(resolvedDocId));
 
         when(jdbc.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Boolean.class)))
                 .thenReturn(Boolean.TRUE);
 
-        when(queryResolver.resolve()).thenReturn(List.of());
+        UUID q1 = UUID.randomUUID();
+        Query a = mock(Query.class); when(a.getQueryId()).thenReturn(q1);
+        when(queryResolver.resolve()).thenReturn(List.of(a));
+
+        Map<String, Object> r1 = new HashMap<>();
+        r1.put("query_id", q1);
+        r1.put("version", 2);
+        when(jdbc.queryForList(anyString(), any(MapSqlParameterSource.class)))
+                .thenReturn(List.of(r1));
 
         RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
-        verify(jdbc, never()).queryForList(anyString(), any(MapSqlParameterSource.class));
 
-        Query q1 = mock(Query.class); when(q1.getQueryId()).thenReturn(null);
-        Query q2 = mock(Query.class); when(q2.getQueryId()).thenReturn(null);
-        when(queryResolver.resolve()).thenReturn(List.of(q1, q2));
+        // Context updated
+        assertThat(stepCtx.getString(CTX_DOC_ID_KEY)).isEqualTo(resolvedDocId.toString());
 
-        status = tasklet.execute(stepContribution, chunkContext);
+        ArgumentCaptor<MapSqlParameterSource[]> captor = ArgumentCaptor.forClass(MapSqlParameterSource[].class);
+        verify(jdbc).batchUpdate(startsWith("UPDATE answer_reservations"), captor.capture());
+        MapSqlParameterSource[] batch = captor.getValue();
+        assertThat(batch).hasSize(1);
+        assertThat(batch[0].getValues().get("doc_id")).isEqualTo(resolvedDocId);
+    }
+
+    @Test
+    @DisplayName("Skips early when verified flag missing for resolved docId")
+    void skipsWhenVerifiedMissingForResolvedDocId() throws Exception {
+        UUID caseId = UUID.randomUUID();
+        UUID oldDocId = UUID.randomUUID();
+        UUID resolvedDocId = UUID.randomUUID();
+        UUID materialId = UUID.randomUUID();
+
+        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
+        stepCtx.putString(CTX_DOC_ID_KEY, oldDocId.toString());
+        stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
+
+        when(documentIdResolver.resolveExistingDocId(eq(caseId), eq(materialId)))
+                .thenReturn(Optional.of(resolvedDocId));
+
+        RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
-        verify(jdbc, never()).queryForList(anyString(), any(MapSqlParameterSource.class));
+
+        verifyNoInteractions(jdbc, queryResolver);
     }
 }
