@@ -1,5 +1,12 @@
 package uk.gov.hmcts.cp.cdk.batch.clients.rag;
 
+import uk.gov.hmcts.cp.cdk.batch.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
+import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -8,12 +15,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClient;
-import uk.gov.hmcts.cp.cdk.batch.clients.common.RagClientProperties;
-import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
-import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
-
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 /**
  * RestClient-backed proxy that IMPLEMENTS the OpenAPI interface and forwards requests to APIM.
@@ -27,7 +28,7 @@ public class ApimDocumentIngestionStatusClient implements DocumentIngestionStatu
     private final RagClientProperties props;
 
     @Override
-    @SuppressWarnings("PMD.OnlyOneReturn" )
+    @SuppressWarnings("PMD.OnlyOneReturn")
     public ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> documentStatus(final String documentName) {
         try {
             return restClient

@@ -1,14 +1,7 @@
 package uk.gov.hmcts.cp.cdk.services;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.IncorrectResultSizeDataAccessException;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
-import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
@@ -18,15 +11,26 @@ import uk.gov.hmcts.cp.cdk.repo.QueryRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryVersionRepository;
 import uk.gov.hmcts.cp.cdk.services.mapper.QueryMapper;
 import uk.gov.hmcts.cp.cdk.util.TimeUtils;
-import uk.gov.hmcts.cp.openapi.model.cdk.*;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryDefinitionsResponse;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryLifecycleStatus;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryStatusResponse;
+import uk.gov.hmcts.cp.openapi.model.cdk.QuerySummary;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryUpsertRequest;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryVersionSummary;
+import uk.gov.hmcts.cp.openapi.model.cdk.Scope;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Query read/write operations with as-of semantics and versioned definitions.
@@ -73,7 +77,7 @@ public class QueryService {
         this.queriesAsOfRepository = queriesAsOfRepository;
         this.caseDocumentRepository = caseDocumentRepository;
         this.mapper = mapper;
-        this.progressionClient =progressionClient;
+        this.progressionClient = progressionClient;
     }
 
     /* ---------- helpers (use util) ---------- */
@@ -132,7 +136,7 @@ public class QueryService {
             summaries = rows.stream().map(QueryService::mapCaseRowToSummary).toList();
 
             //Retrieval of casedocument to populate isIdpcAvailable info as part of DD-40778
-            final Optional<LatestMaterialInfo> courtDocuments = progressionClient.getCourtDocuments(caseId,userId);
+            final Optional<LatestMaterialInfo> courtDocuments = progressionClient.getCourtDocuments(caseId, userId);
             log.info("courtDocuments retrieved  for : . caseId={} ",
                     caseId);
             final boolean isIdpcAvailable = courtDocuments
@@ -236,7 +240,6 @@ public class QueryService {
                 .map(version -> mapper.toVersionSummary(query, version))
                 .toList();
     }
-
 
 
 }

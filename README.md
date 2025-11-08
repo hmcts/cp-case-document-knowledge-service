@@ -1,7 +1,8 @@
 # case-document-knowledge-service
 
 **AI-powered answers for case documents — every response cited and auditable.**  
-Spring Boot 4 (Java 21), PostgreSQL + Flyway, production-ready observability, and CI-friendly **Gradle** build.
+Spring Boot 4 (Java 21), PostgreSQL + Flyway, production-ready observability, and CI-friendly *
+*Gradle** build.
 
 ---
 
@@ -31,7 +32,8 @@ Spring Boot 4 (Java 21), PostgreSQL + Flyway, production-ready observability, an
 - **Quality gates**: PMD, JaCoCo coverage
 - **Gradle 9** build with Docker-Compose-backed **integration tests**
 
-> Note: HTTP security/authorization is intentionally minimal by default. Integrate with your gateway or add your own
+> Note: HTTP security/authorization is intentionally minimal by default. Integrate with your gateway
+> or add your own
 > authorization as needed.
 
 ---
@@ -113,7 +115,8 @@ gradle bootRun
 
 ## Run with Docker Compose
 
-This brings up **PostgreSQL 16** (exposed as `localhost:55432`) and the **app** (exposed as `localhost:8082`).  
+This brings up **PostgreSQL 16** (exposed as `localhost:55432`) and the **app** (exposed as
+`localhost:8082`).  
 It uses `docker/docker-compose.integration.yml`.
 
 ```bash
@@ -134,7 +137,8 @@ docker compose -f docker/docker-compose.integration.yml down -v
 
 ## Integration tests with Docker Compose
 
-Integration tests automatically **bring up** Postgres + app, **wait** until they’re healthy, run tests, then **tear down
+Integration tests automatically **bring up** Postgres + app, **wait** until they’re healthy, run
+tests, then **tear down
 ** the stack.
 
 ```bash
@@ -144,7 +148,8 @@ gradle clean integration
 What happens under the hood:
 
 - Gradle task `integration` depends on `composeUp` (from the Compose plugin)
-- `composeUp` builds the app image, starts Postgres (host port **55432**) and app (**8082**), and waits for health
+- `composeUp` builds the app image, starts Postgres (host port **55432**) and app (**8082**), and
+  waits for health
 - Tests run against `http://localhost:8082`
 - `composeDown` is always called to clean up
 
@@ -154,17 +159,17 @@ What happens under the hood:
 
 The application is configured via environment variables with sensible defaults. Key settings:
 
-| Property                      | Default                                   | Notes                             |
-|-------------------------------|-------------------------------------------|-----------------------------------|
-| `server.port`                 | `8082`                                    | API & Actuator port               |
+| Property                      | Default                                                           | Notes                             |
+|-------------------------------|-------------------------------------------------------------------|-----------------------------------|
+| `server.port`                 | `8082`                                                            | API & Actuator port               |
 | `SPRING_DATASOURCE_URL`       | `jdbc:postgresql://localhost:55432/casedocumentknowledgeDatabase` | Postgres JDBC URL                 |
-| `SPRING_DATASOURCE_USERNAME`  | `app`                                     | DB user                           |
-| `SPRING_DATASOURCE_PASSWORD`  | `app`                                     | DB password                       |
-| `DB_POOL_SIZE`                | `10`                                      | Hikari pool size                  |
-| `TRACING_SAMPLER_PROBABILITY` | `1.0`                                     | OTel tracing sample rate          |
-| `OTEL_TRACES_URL`             | `http://localhost:4318/traces`            | OTLP traces endpoint              |
-| `OTEL_METRICS_ENABLED`        | `false`                                   | Export metrics via OTLP if `true` |
-| `OTEL_METRICS_URL`            | `http://localhost:4318/metrics`           | OTLP metrics endpoint             |
+| `SPRING_DATASOURCE_USERNAME`  | `app`                                                             | DB user                           |
+| `SPRING_DATASOURCE_PASSWORD`  | `app`                                                             | DB password                       |
+| `DB_POOL_SIZE`                | `10`                                                              | Hikari pool size                  |
+| `TRACING_SAMPLER_PROBABILITY` | `1.0`                                                             | OTel tracing sample rate          |
+| `OTEL_TRACES_URL`             | `http://localhost:4318/traces`                                    | OTLP traces endpoint              |
+| `OTEL_METRICS_ENABLED`        | `false`                                                           | Export metrics via OTLP if `true` |
+| `OTEL_METRICS_URL`            | `http://localhost:4318/metrics`                                   | OTLP metrics endpoint             |
 
 Flyway is enabled and points at `classpath:db/migration`.
 
@@ -248,15 +253,19 @@ flowchart TD
 
 ## Troubleshooting
 
-- **Port in use** — Change ports in `application.yml` or Compose file. DB uses **55432** to avoid conflicts with a local
-  5432.
-- **Compose not found** — You need **Docker Compose v2** (`docker compose`). The Gradle plugin calls the Docker CLI
+- **Port in use** — Change ports in `application.yml` or Compose file. DB uses **55432** to avoid
+  conflicts with a local
+    5432.
+- **Compose not found** — You need **Docker Compose v2** (`docker compose`). The Gradle plugin calls
+  the Docker CLI
   directly.
 - **DB auth failures** — Ensure env vars match Postgres service in Compose: `app/app@appdb`.
 - **Slow startup in CI** — Increase Compose wait timeouts (plugin `upAdditionalArgs`) if needed.
-- **Gradle “buildDir deprecated”** — The build uses `layout.buildDirectory`; avoid legacy `buildDir` in custom tasks.
+- **Gradle “buildDir deprecated”** — The build uses `layout.buildDirectory`; avoid legacy `buildDir`
+  in custom tasks.
 
 ---
 
 ## License
+
 MIT

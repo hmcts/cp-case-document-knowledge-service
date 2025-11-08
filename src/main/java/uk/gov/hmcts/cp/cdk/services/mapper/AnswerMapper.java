@@ -1,11 +1,12 @@
 package uk.gov.hmcts.cp.cdk.services.mapper;
 
-import org.mapstruct.Mapper;
-import org.mapstruct.ReportingPolicy;
 import uk.gov.hmcts.cp.cdk.domain.Answer;
 import uk.gov.hmcts.cp.cdk.domain.AnswerId;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerResponse;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerWithLlmResponse;
+
+import org.mapstruct.Mapper;
+import org.mapstruct.ReportingPolicy;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface AnswerMapper {

@@ -253,7 +253,7 @@ tasks.named('composeBuild') { dependsOn tasks.named('bootJar') }
 
 dockerCompose {
     useComposeFiles = ['docker/docker-compose.integration.yml']
-    startedServices = ['db', 'app', 'artemis','wiremock', 'azurite']
+    startedServices = ['db', 'app', 'artemis', 'wiremock', 'azurite']
     buildBeforeUp = true
     waitForTcpPorts = true
     upAdditionalArgs = ['--wait', '--wait-timeout', '120']

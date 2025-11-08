@@ -1,8 +1,8 @@
 # Authz, misc controls and other small blocks
 authz:
   http:
-    enabled: false
-    identity-url-template: "http://localhost:8080/usersgroups-query-api/query/api/rest/usersgroups/users/logged-in-user/permissions"
+    enabled: true
+    identity-url-template:  ${CP_CDK_BASE_URL}/usersgroups-query-api/query/api/rest/usersgroups/users/logged-in-user/permissions
     user-id-header: "CJSCPPUID"
     action-header: "CPP-ACTION"
     accept-header: "application/vnd.usersgroups.get-logged-in-user-permissions+json"

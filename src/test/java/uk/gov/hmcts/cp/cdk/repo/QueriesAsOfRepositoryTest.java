@@ -1,5 +1,18 @@
 package uk.gov.hmcts.cp.cdk.repo;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import uk.gov.hmcts.cp.cdk.domain.CaseQueryStatus;
+import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.domain.QueryLifecycleStatus;
+import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
+import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,14 +28,6 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import uk.gov.hmcts.cp.cdk.domain.*;
-
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @DataJpaTest(
         properties = {
@@ -106,7 +111,8 @@ class QueriesAsOfRepositoryTest {
         em.flush();
     }
 
-    @Test@DisplayName("List For Case As Of returns definition and status")
+    @Test
+    @DisplayName("List For Case As Of returns definition and status")
     void listForCaseAsOf_returns_definition_and_status() {
         final OffsetDateTime asOf = OffsetDateTime.parse("2025-05-01T12:00:00Z");
         final List<Object[]> rows = repo.listForCaseAsOf(caseId, asOf);
@@ -122,7 +128,8 @@ class QueriesAsOfRepositoryTest {
         assertEquals("ANSWER_NOT_AVAILABLE", r[6]);
     }
 
-    @Test@DisplayName("Get One For Case As Of retrieves single row")
+    @Test
+    @DisplayName("Get One For Case As Of retrieves single row")
     void getOneForCaseAsOf_retrieves_single_row() {
         final OffsetDateTime asOf = OffsetDateTime.parse("2025-05-01T12:00:00Z");
         final Object[] r = repo.getOneForCaseAsOf(caseId, qid, asOf);

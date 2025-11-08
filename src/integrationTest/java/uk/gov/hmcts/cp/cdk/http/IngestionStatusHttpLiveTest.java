@@ -4,6 +4,7 @@ import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
 
 import java.sql.Connection;
@@ -22,25 +23,14 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
 
 /**
  * End-to-end tests for ingestion status read endpoint:
  * - GET /ingestions/status?caseId=...
  */
-public class IngestionStatusHttpLiveTest {
+public class IngestionStatusHttpLiveTest extends AbstractHttpLiveTest {
 
     public final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.ingestion+json");
-    private final String baseUrl = System.getProperty(
-            "app.baseUrl",
-            "http://localhost:8082/casedocumentknowledge-service"
-    );
-
-    private final String jdbcUrl = System.getProperty("it.db.url", "jdbc:postgresql://localhost:55432/casedocumentknowledgeDatabase");
-    private final String jdbcUser = System.getProperty("it.db.user", "casedocumentknowledge");
-    private final String jdbcPass = System.getProperty("it.db.pass", "casedocumentknowledge");
-
-    private final RestTemplate http = new RestTemplate();
     private UUID caseId;
 
     @BeforeEach
@@ -114,5 +104,6 @@ public class IngestionStatusHttpLiveTest {
             );
             assertNotNull(auditResponse);
         }
+        assertNotNull(auditResponse);
     }
 }

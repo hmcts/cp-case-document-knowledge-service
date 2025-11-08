@@ -1,19 +1,19 @@
 package uk.gov.hmcts.cp.cdk.services;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
-
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Optional;
 import java.util.UUID;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @Slf4j
@@ -29,7 +29,7 @@ public class DocumentService {
     ) {
 
         this.caseDocumentRepository = caseDocumentRepository;
-        this.progressionClient =progressionClient;
+        this.progressionClient = progressionClient;
     }
 
     @Transactional(readOnly = true)
@@ -43,7 +43,7 @@ public class DocumentService {
 
         final Optional<String> optUrl = progressionClient.getMaterialDownloadUrl(materialId, userId);
 
-        final String url = optUrl.orElseThrow(() -> new  ResponseStatusException(HttpStatus.NOT_FOUND,
+        final String url = optUrl.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "No download URL returned for materialId: " + materialId));
 
         try {

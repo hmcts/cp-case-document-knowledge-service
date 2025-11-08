@@ -1,6 +1,38 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_MATERIAL_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_MATERIAL_NAME;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
+
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
+import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
+import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,22 +48,6 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.retry.backoff.NoBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
-import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
-import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
-import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
-import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
-
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.lenient;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.*;
 
 @ExtendWith(MockitoExtension.class)
 class UploadAndPersistTaskletTest {
@@ -66,23 +82,23 @@ class UploadAndPersistTaskletTest {
         stepCtx = new ExecutionContext();
         jobCtx = new ExecutionContext();
 
-        objectMapper = new ObjectMapper();
+        objectMapper = JsonMapper.builder().build();
         uploadProperties = new UploadProperties(
-                "cases",         // blobPrefix (not used in current path)
+                "cases",         // blobPrefix (not used by current tasklet)
                 "yyyyMMdd",      // datePattern
                 ".pdf",          // fileExtension
                 "application/pdf"
         );
 
         RetryTemplate retryTemplate = new RetryTemplate();
-        retryTemplate.setRetryPolicy(new SimpleRetryPolicy(1)); // single attempt
+        retryTemplate.setRetryPolicy(new SimpleRetryPolicy(1)); // single attempt to simplify tests
         retryTemplate.setBackOffPolicy(new NoBackOffPolicy());
 
         tasklet = new UploadAndPersistTasklet(
                 objectMapper, progressionClient, storageService, caseDocumentRepository, uploadProperties, retryTemplate
         );
 
-        // lenient stubs to avoid UnnecessaryStubbingException in tests that override
+        // lenient stubs to avoid UnnecessaryStubbingException in tests that override behavior
         lenient().when(stepContribution.getStepExecution()).thenReturn(stepExecution);
         lenient().when(stepExecution.getExecutionContext()).thenReturn(stepCtx);
         lenient().when(stepExecution.getJobExecution()).thenReturn(jobExecution);
@@ -115,7 +131,7 @@ class UploadAndPersistTaskletTest {
     }
 
     @Test
-    @DisplayName("Skips when partition context missing CTX_MATERIAL_ID_KEY / CTX_CASE_ID_KEY")
+    @DisplayName("Skips when partition context missing CTX_MATERIAL_ID_KEY / CTX_CASE_ID_KEY / CTX_DOC_ID_KEY")
     void skipsWhenPartitionKeysMissing() throws Exception {
         // nothing set in stepCtx
         RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
@@ -125,7 +141,7 @@ class UploadAndPersistTaskletTest {
     }
 
     @Test
-    @DisplayName("Skips when material/case UUIDs invalid")
+    @DisplayName("Skips when material/case/doc UUIDs invalid")
     void skipsWhenInvalidUuids() throws Exception {
         stepCtx.putString(CTX_MATERIAL_ID_KEY, "not-a-uuid");
         stepCtx.putString(CTX_CASE_ID_KEY, "also-not-a-uuid");
@@ -139,13 +155,15 @@ class UploadAndPersistTaskletTest {
     }
 
     @Test
-    @DisplayName("Skips when no download URL")
+    @DisplayName("Skips when no download URL (empty Optional)")
     void skipsWhenNoDownloadUrl() throws Exception {
         UUID materialId = UUID.randomUUID();
         UUID caseId = UUID.randomUUID();
+        UUID docId = UUID.randomUUID();
+
         stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
         stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
-        stepCtx.putString(CTX_DOC_ID_KEY, materialId.toString());
+        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
         stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
 
         when(progressionClient.getMaterialDownloadUrl(eq(materialId), eq("la-user-1")))
@@ -154,22 +172,55 @@ class UploadAndPersistTaskletTest {
         RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
 
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
+
         verify(progressionClient).getMaterialDownloadUrl(eq(materialId), eq("la-user-1"));
-        verifyNoInteractions(storageService, caseDocumentRepository);
+        verifyNoInteractions(storageService);
+        verify(caseDocumentRepository).existsByDocId(eq(docId));
+        verify(caseDocumentRepository).existsByCaseIdAndMaterialIdAndIngestionPhaseIn(eq(caseId), eq(materialId), anyCollection());
+        verify(caseDocumentRepository, never()).saveAndFlush(any());
+        verifyNoMoreInteractions(caseDocumentRepository);
+    }
+
+
+    @Test
+    @DisplayName("Skips when getMaterialDownloadUrl throws")
+    void skipsWhenGetMaterialDownloadUrlThrows() throws Exception {
+        UUID materialId = UUID.randomUUID();
+        UUID caseId = UUID.randomUUID();
+        UUID docId = UUID.randomUUID();
+
+        stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
+        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
+        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
+        stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
+
+        when(progressionClient.getMaterialDownloadUrl(eq(materialId), eq("la-user-1")))
+                .thenThrow(new RuntimeException("boom"));
+
+        RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
+
+        assertThat(status).isEqualTo(RepeatStatus.FINISHED);
+        verify(progressionClient).getMaterialDownloadUrl(eq(materialId), eq("la-user-1"));
+        verifyNoInteractions(storageService);
+        verify(caseDocumentRepository).existsByDocId(eq(docId));
+        verify(caseDocumentRepository).existsByCaseIdAndMaterialIdAndIngestionPhaseIn(eq(caseId), eq(materialId), anyCollection());
+        verify(caseDocumentRepository, never()).saveAndFlush(any());
     }
 
     @Test
-    @DisplayName("Happy path: copies blob with blobName only, persists CaseDocument")
+    @DisplayName("Happy path: copies blob, persists CaseDocument, sets step context outputs")
     void happyPathPersistsAndSetsContext() throws Exception {
         UUID materialId = UUID.randomUUID();
         UUID caseId = UUID.randomUUID();
+        UUID docId = UUID.randomUUID();
+
         String downloadUrl = "https://example.com/material.pdf";
         String returnedBlobUrl = "https://storage/account/container/blobname.pdf";
         long blobSize = 2048L;
 
         stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
         stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
-        stepCtx.putString(CTX_DOC_ID_KEY, materialId.toString());
+        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
         stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
 
         when(progressionClient.getMaterialDownloadUrl(eq(materialId), eq("la-user-1")))
@@ -181,29 +232,41 @@ class UploadAndPersistTaskletTest {
         RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
 
-        // capture arguments to  copyFromUrl
+        // capture arguments to copyFromUrl
+        ArgumentCaptor<String> srcUrlCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> destPathCaptor = ArgumentCaptor.forClass(String.class);
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Map<String, String>> metadataCaptor = ArgumentCaptor.forClass(Map.class);
 
         verify(storageService).copyFromUrl(
-                eq(downloadUrl),
+                srcUrlCaptor.capture(),
                 destPathCaptor.capture(),
                 eq("application/pdf"),
                 metadataCaptor.capture()
         );
 
+        assertThat(srcUrlCaptor.getValue()).isEqualTo(downloadUrl);
+
         String destBlobPath = destPathCaptor.getValue();
-        // current implementation uses just blobName (no prefix/folders)
-        assertThat(destBlobPath).contains(materialId.toString());
+        assertThat(destBlobPath).contains(docId.toString()); // <-- robust: blob name is based on docId
         assertThat(destBlobPath).endsWith(".pdf");
         assertThat(destBlobPath).doesNotContain("/");
 
         verify(storageService).getBlobSize(eq(destBlobPath));
 
-        // verify metadata
+        // verify metadata keys and payload
         Map<String, String> meta = metadataCaptor.getValue();
         assertThat(meta).containsKeys("document_id", "metadata");
+        assertThat(meta.get("document_id")).isEqualTo(docId.toString());
+        // basic shape check for embedded JSON
+        Map<String, Object> metaJson = objectMapper.readValue(
+                meta.get("metadata"),
+                new TypeReference<>() {
+                }
+        );
+        assertThat(metaJson).containsKeys("case_id", "material_id", "material_name", "uploaded_at");
+        assertThat(metaJson.get("case_id")).isEqualTo(caseId.toString());
+        assertThat(metaJson.get("material_id")).isEqualTo(materialId.toString());
 
         // verify persistence
         ArgumentCaptor<CaseDocument> docCaptor = ArgumentCaptor.forClass(CaseDocument.class);
@@ -211,7 +274,9 @@ class UploadAndPersistTaskletTest {
         CaseDocument saved = docCaptor.getValue();
 
         assertThat(saved.getCaseId()).isEqualTo(caseId);
-        assertThat(saved.getDocName()).contains(materialId.toString());
+        assertThat(saved.getMaterialId()).isEqualTo(materialId);
+        assertThat(saved.getDocId()).isEqualTo(docId);
+        assertThat(saved.getDocName()).contains(docId.toString());
         assertThat(saved.getBlobUri()).isEqualTo(returnedBlobUrl);
         assertThat(saved.getContentType()).isEqualTo("application/pdf");
         assertThat(saved.getSizeBytes()).isEqualTo(blobSize);
@@ -219,7 +284,12 @@ class UploadAndPersistTaskletTest {
         assertThat(saved.getUploadedAt()).isNotNull();
         assertThat(saved.getIngestionPhaseAt()).isNotNull();
 
-        // step context still contains pre-set values
+        // step context outputs added by tasklet
+        assertThat(stepCtx.get("uploaded_blob_path")).isEqualTo(destBlobPath);
+        assertThat(stepCtx.get("uploaded_blob_url")).isEqualTo(returnedBlobUrl);
+        assertThat(stepCtx.get("uploaded_size_bytes")).isEqualTo(blobSize);
+
+        // original keys preserved
         assertThat(stepCtx.getString(CTX_DOC_ID_KEY)).isEqualTo(saved.getDocId().toString());
         assertThat(stepCtx.getString(CTX_CASE_ID_KEY)).isEqualTo(caseId.toString());
     }
@@ -229,11 +299,12 @@ class UploadAndPersistTaskletTest {
     void skipsIfCopyThrows() throws Exception {
         UUID materialId = UUID.randomUUID();
         UUID caseId = UUID.randomUUID();
+        UUID docId = UUID.randomUUID();
         String downloadUrl = "https://example.com/material.pdf";
 
         stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
         stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
-        stepCtx.putString(CTX_DOC_ID_KEY, materialId.toString());
+        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
         stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
 
         when(progressionClient.getMaterialDownloadUrl(eq(materialId), eq("la-user-1")))
@@ -253,12 +324,13 @@ class UploadAndPersistTaskletTest {
     void persistsWithMinusOneIfSizeFails() throws Exception {
         UUID materialId = UUID.randomUUID();
         UUID caseId = UUID.randomUUID();
+        UUID docId = UUID.randomUUID();
         String downloadUrl = "https://example.com/material.pdf";
         String returnedBlobUrl = "https://storage/account/container/blobname.pdf";
 
         stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
         stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
-        stepCtx.putString(CTX_DOC_ID_KEY, materialId.toString());
+        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
         stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
 
         when(progressionClient.getMaterialDownloadUrl(eq(materialId), eq("la-user-1")))
@@ -278,5 +350,53 @@ class UploadAndPersistTaskletTest {
         assertThat(saved.getSizeBytes()).isEqualTo(-1L);
         assertThat(saved.getBlobUri()).isEqualTo(returnedBlobUrl);
         assertThat(saved.getIngestionPhase()).isEqualTo(DocumentIngestionPhase.UPLOADED);
+    }
+
+    // ---------------- NEW IDEMPOTENCY TESTS ----------------
+
+    @Test
+    @DisplayName("Idempotency: skips immediately when docId already persisted")
+    void skipsWhenDocIdAlreadyPersisted() throws Exception {
+        UUID materialId = UUID.randomUUID();
+        UUID caseId = UUID.randomUUID();
+        UUID docId = UUID.randomUUID();
+
+        stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
+        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
+        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
+        stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
+
+        when(caseDocumentRepository.existsByDocId(eq(docId))).thenReturn(true);
+
+        RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
+
+        assertThat(status).isEqualTo(RepeatStatus.FINISHED);
+        verify(caseDocumentRepository).existsByDocId(eq(docId));
+        verifyNoInteractions(progressionClient, storageService);
+        verify(caseDocumentRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("Idempotency: skips when (caseId, materialId) already in UPLOADED/INGESTED/INGESTING")
+    void skipsWhenCaseMaterialAlreadyInFinalOrOngoingPhase() throws Exception {
+        UUID materialId = UUID.randomUUID();
+        UUID caseId = UUID.randomUUID();
+        UUID docId = UUID.randomUUID();
+
+        stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
+        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
+        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
+        stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
+
+        when(caseDocumentRepository.existsByCaseIdAndMaterialIdAndIngestionPhaseIn(
+                eq(caseId), eq(materialId), anyCollection()))
+                .thenReturn(true);
+
+        RepeatStatus status = tasklet.execute(stepContribution, chunkContext);
+
+        assertThat(status).isEqualTo(RepeatStatus.FINISHED);
+        verify(caseDocumentRepository).existsByCaseIdAndMaterialIdAndIngestionPhaseIn(eq(caseId), eq(materialId), anyCollection());
+        verifyNoInteractions(progressionClient, storageService);
+        verify(caseDocumentRepository, never()).saveAndFlush(any());
     }
 }

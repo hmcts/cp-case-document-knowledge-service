@@ -1,16 +1,21 @@
 package uk.gov.hmcts.cp.cdk.util;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.jms.*;
-import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
+import static java.util.UUID.randomUUID;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
-import static java.util.UUID.randomUUID;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.jms.Connection;
+import jakarta.jms.JMSException;
+import jakarta.jms.MessageConsumer;
+import jakarta.jms.Session;
+import jakarta.jms.TextMessage;
+import jakarta.jms.Topic;
+import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 
 public class BrokerUtil implements AutoCloseable {
 

@@ -1,8 +1,10 @@
 package uk.gov.hmcts.cp.cdk.http;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.http.*;
-import org.springframework.web.client.RestTemplate;
+import static org.assertj.core.api.Assertions.assertThat;
+import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_NAME;
+import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_VALUE;
+
+import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -10,25 +12,17 @@ import java.sql.PreparedStatement;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
-public class DocumentHttpLiveTest {
+public class DocumentHttpLiveTest extends AbstractHttpLiveTest {
     public final MediaType VND_TYPE_MATERIAL = MediaType.valueOf("application/vnd.casedocumentknowledge-service.document-content+json");
-
-    private final String baseUrl = System.getProperty(
-            "app.baseUrl",
-            "http://localhost:8082/casedocumentknowledge-service"
-    );
-
-    private final String jdbcUrl  = System.getProperty("it.db.url",  "jdbc:postgresql://localhost:55432/casedocumentknowledgeDatabase");
-    private final String jdbcUser = System.getProperty("it.db.user", "casedocumentknowledge");
-    private final String jdbcPass = System.getProperty("it.db.pass", "casedocumentknowledge");
-
-    private final RestTemplate http = new RestTemplate();
     private UUID queryId;
-    private static final String HEADER_NAME = "CJSCPPUID";
-    private static final String HEADER_VALUE = "u-123";
-
 
     @Test
     void getMaterialContentUrl_returns_expected_url() throws Exception {

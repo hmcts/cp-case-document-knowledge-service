@@ -1,6 +1,13 @@
 // src/test/java/uk/gov/hmcts/cp/cdk/repo/IngestionStatusViewRepositoryTest.java
 package uk.gov.hmcts.cp.cdk.repo;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.time.OffsetDateTime;
+import java.util.Optional;
+import java.util.UUID;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.AfterEach;
@@ -19,13 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-
-import java.time.OffsetDateTime;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DataJpaTest(
         properties = {
@@ -79,42 +79,42 @@ class IngestionStatusViewRepositoryTest {
     void initViewAndData() {
         // Minimal base table used by the view + inserts (create only if missing)
         jdbc.execute("""
-            DO $$
-            BEGIN
-              IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='case_documents') THEN
-                CREATE TABLE public.case_documents (
-                  doc_id             UUID         PRIMARY KEY,
-                  case_id            UUID         NOT NULL,
-                  source             VARCHAR(64)  NOT NULL,
-                  doc_name           VARCHAR(255) NOT NULL,
-                  blob_uri           VARCHAR(1024),
-                  uploaded_at        TIMESTAMPTZ  NOT NULL,
-                  ingestion_phase    VARCHAR(64)  NOT NULL,
-                  ingestion_phase_at TIMESTAMPTZ  NOT NULL
-                );
-                CREATE INDEX IF NOT EXISTS idx_case_docs_case_uploaded ON public.case_documents (case_id, uploaded_at);
-              END IF;
-            END $$;
-        """);
+                    DO $$
+                    BEGIN
+                      IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='case_documents') THEN
+                        CREATE TABLE public.case_documents (
+                          doc_id             UUID         PRIMARY KEY,
+                          case_id            UUID         NOT NULL,
+                          source             VARCHAR(64)  NOT NULL,
+                          doc_name           VARCHAR(255) NOT NULL,
+                          blob_uri           VARCHAR(1024),
+                          uploaded_at        TIMESTAMPTZ  NOT NULL,
+                          ingestion_phase    VARCHAR(64)  NOT NULL,
+                          ingestion_phase_at TIMESTAMPTZ  NOT NULL
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_case_docs_case_uploaded ON public.case_documents (case_id, uploaded_at);
+                      END IF;
+                    END $$;
+                """);
 
         // Create/replace the view that the repository queries
         jdbc.execute("""
-            CREATE OR REPLACE VIEW v_case_ingestion_status AS
-            SELECT DISTINCT ON (case_id)
-              case_id,
-              ingestion_phase    AS phase,
-              ingestion_phase_at AS last_updated
-            FROM case_documents
-            ORDER BY case_id, ingestion_phase_at DESC;
-        """);
+                    CREATE OR REPLACE VIEW v_case_ingestion_status AS
+                    SELECT DISTINCT ON (case_id)
+                      case_id,
+                      ingestion_phase    AS phase,
+                      ingestion_phase_at AS last_updated
+                    FROM case_documents
+                    ORDER BY case_id, ingestion_phase_at DESC;
+                """);
 
         // Seed data
         caseId = UUID.randomUUID();
 
         jdbc.update("""
-            INSERT INTO case_documents (doc_id, case_id,material_id, source, doc_name, blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
-            VALUES (?, ?, ?,'IDPC', 'material_id_1', 'blob://uri', ?, 'INGESTING', ?)
-        """,
+                            INSERT INTO case_documents (doc_id, case_id,material_id, source, doc_name, blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
+                            VALUES (?, ?, ?,'IDPC', 'material_id_1', 'blob://uri', ?, 'INGESTING', ?)
+                        """,
                 UUID.randomUUID(),
                 caseId,
                 UUID.randomUUID(),
@@ -123,9 +123,9 @@ class IngestionStatusViewRepositoryTest {
         );
 
         jdbc.update("""
-            INSERT INTO case_documents (doc_id, case_id,material_id, source, doc_name, blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
-            VALUES (?, ?,?, 'IDPC', 'material_id_2', 'blob://uri2', ?, 'INGESTED', ?)
-        """,
+                            INSERT INTO case_documents (doc_id, case_id,material_id, source, doc_name, blob_uri, uploaded_at, ingestion_phase, ingestion_phase_at)
+                            VALUES (?, ?,?, 'IDPC', 'material_id_2', 'blob://uri2', ?, 'INGESTED', ?)
+                        """,
                 UUID.randomUUID(),
                 caseId,
                 UUID.randomUUID(),
@@ -139,13 +139,13 @@ class IngestionStatusViewRepositoryTest {
         // Clean view & table so each test starts fresh (drops view if exists; truncates table if exists)
         jdbc.execute("DROP VIEW IF EXISTS v_case_ingestion_status");
         jdbc.execute("""
-            DO $$
-            BEGIN
-              IF to_regclass('public.case_documents') IS NOT NULL THEN
-                TRUNCATE TABLE public.case_documents;
-              END IF;
-            END $$;
-        """);
+                    DO $$
+                    BEGIN
+                      IF to_regclass('public.case_documents') IS NOT NULL THEN
+                        TRUNCATE TABLE public.case_documents;
+                      END IF;
+                    END $$;
+                """);
     }
 
     @Test

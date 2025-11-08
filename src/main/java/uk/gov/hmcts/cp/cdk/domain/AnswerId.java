@@ -1,11 +1,11 @@
 package uk.gov.hmcts.cp.cdk.domain;
 
-import jakarta.persistence.Embeddable;
-
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;
+
+import jakarta.persistence.Embeddable;
 
 @Embeddable
 public class AnswerId implements Serializable {

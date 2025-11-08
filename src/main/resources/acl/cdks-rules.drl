@@ -1,25 +1,67 @@
-
-
 import uk.gov.moj.cpp.authz.drools.Outcome;
 import uk.gov.moj.cpp.authz.drools.Action;
 
 global uk.gov.moj.cpp.authz.http.providers.UserAndGroupProvider userAndGroupProvider;
 
-
-
-rule "Allow POST /casedocumentknowledge-service/queries for LA"
+rule "Allow LA – ingestion-process"
 when
   $o: Outcome()
-  $a: Action(name == "POST /casedocumentknowledge-service/queries")
+  $a: Action(name == "casedocumentknowledge-service.ingestion-process")
   eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers"))
 then
   $o.setSuccess(true);
 end
 
-rule "Allow GET /query-catalogue for LA users"
+rule "Allow LA – queries"
+when
+  $o: Outcome()
+  $a: Action(name == "casedocumentknowledge-service.queries")
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers"))
+then
+  $o.setSuccess(true);
+end
+
+rule "Allow LA – answers"
+when
+  $o: Outcome()
+  $a: Action(name == "casedocumentknowledge-service.answers")
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers"))
+then
+  $o.setSuccess(true);
+end
+
+rule "Allow LA – query-catalogue"
 when
   $o: Outcome()
   $a: Action(name == "casedocumentknowledge-service.query-catalogue")
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers"))
+then
+  $o.setSuccess(true);
+end
+
+rule "Allow LA – document-content"
+when
+  $o: Outcome()
+  $a: Action(name == "casedocumentknowledge-service.document-content")
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers"))
+then
+  $o.setSuccess(true);
+end
+
+rule "Allow LA – ingestion sattus"
+when
+  $o: Outcome()
+  $a: Action(name == "casedocumentknowledge-service.ingestion")
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers"))
+then
+  $o.setSuccess(true);
+end
+
+
+rule "Allow LA – ingestion process"
+when
+  $o: Outcome()
+  $a: Action(name == "casedocumentknowledge-service.ingestion-process")
   eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers"))
 then
   $o.setSuccess(true);

@@ -1,15 +1,6 @@
 package uk.gov.hmcts.cp.cdk.batch.storage;
 
-import com.azure.storage.blob.BlobClient;
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobContainerClientBuilder;
-import com.azure.storage.blob.models.BlobHttpHeaders;
-import com.azure.storage.blob.models.BlobProperties;
-import com.azure.storage.blob.models.CopyStatusType;
-import com.azure.storage.blob.specialized.BlockBlobClient;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.stereotype.Service;
+import static java.util.Objects.requireNonNull;
 
 import java.io.InputStream;
 import java.net.URI;
@@ -20,7 +11,16 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-import static java.util.Objects.requireNonNull;
+import com.azure.storage.blob.BlobClient;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobContainerClientBuilder;
+import com.azure.storage.blob.models.BlobHttpHeaders;
+import com.azure.storage.blob.models.BlobProperties;
+import com.azure.storage.blob.models.CopyStatusType;
+import com.azure.storage.blob.specialized.BlockBlobClient;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.stereotype.Service;
 
 @Service
 @ConditionalOnMissingBean(StorageService.class)
@@ -172,7 +172,7 @@ public class AzureBlobStorageService implements StorageService {
     }
 
     /* -------------------- helpers -------------------- */
-    @SuppressWarnings("PMD.OnlyOneReturn" )
+    @SuppressWarnings("PMD.OnlyOneReturn")
     private String normalizeToBlobName(final String pathOrUrl) {
         if (pathOrUrl == null || pathOrUrl.isBlank()) {
             throw new IllegalArgumentException("blob path/url must not be blank");
@@ -206,7 +206,7 @@ public class AzureBlobStorageService implements StorageService {
         return normalized;
     }
 
-    private void sleepQuiet( final long millis) {
+    private void sleepQuiet(final long millis) {
         try {
             Thread.sleep(Math.max(1L, millis));
         } catch (InterruptedException ie) {

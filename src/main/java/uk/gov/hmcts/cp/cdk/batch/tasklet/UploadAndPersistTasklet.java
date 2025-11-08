@@ -1,5 +1,26 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_MATERIAL_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_MATERIAL_NAME;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
+import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
+import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+
+import java.time.format.DateTimeFormatter;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,26 +34,23 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.retry.RetryContext;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
-import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
-import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
-import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
-import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
-
-import java.time.format.DateTimeFormatter;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.*;
-import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class UploadAndPersistTasklet implements Tasklet {
 
+    /**
+     * Idempotency rule: if we already have a document for (caseId, materialId) in any of these phases,
+     * we skip re-copying from Progression to avoid duplicate uploads.
+     */
+    private static final Set<DocumentIngestionPhase> SKIP_IF_EXISTS_PHASES = EnumSet.of(
+            DocumentIngestionPhase.UPLOADED,
+            DocumentIngestionPhase.INGESTED,
+            DocumentIngestionPhase.INGESTING
+    );
+
+    // Blob metadata keys
     private static final String META_CASE_ID = "case_id";
     private static final String META_MATERIAL_ID = "material_id";
     private static final String META_MATERIAL_NAME = "material_name";
@@ -45,145 +63,152 @@ public class UploadAndPersistTasklet implements Tasklet {
     private final StorageService storageService;
     private final CaseDocumentRepository caseDocumentRepository;
     private final UploadProperties uploadProperties;
-
     private final RetryTemplate retryTemplate;
 
+    /**
+     * Uploads a material from Progression to blob storage and persists a CaseDocument row.
+     * Idempotent by (docId) and by (caseId, materialId) in {UPLOADED, INGESTED, INGESTING}.
+     */
     @Override
-    @SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.OnlyOneReturn","ignoreElseIf"})
+    @SuppressWarnings("PMD.OnlyOneReturn")
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
-        final RepeatStatus status = RepeatStatus.FINISHED;
-
-        final StepExecution stepExecution = (contribution != null) ? contribution.getStepExecution() : null;
+        final StepExecution stepExecution = contribution != null ? contribution.getStepExecution() : null;
         if (stepExecution == null) {
-            log.warn("StepExecution is null; finishing with no work.");
-            return status;
+            log.warn("UploadAndPersistTasklet invoked without StepExecution; nothing to do.");
+            return RepeatStatus.FINISHED;
         }
 
-        final ExecutionContext stepCtx = (stepExecution.getExecutionContext() != null)
+        final ExecutionContext stepCtx = stepExecution.getExecutionContext() != null
                 ? stepExecution.getExecutionContext()
                 : new ExecutionContext();
 
         final JobExecution jobExecution = stepExecution.getJobExecution();
+        final String jobId = jobExecution != null ? String.valueOf(jobExecution.getId()) : "unknown";
         final String userId = (jobExecution != null && jobExecution.getExecutionContext() != null)
                 ? jobExecution.getExecutionContext().getString(USERID_FOR_EXTERNAL_CALLS, null)
                 : null;
 
         if (userId == null || userId.isBlank()) {
-            log.warn("User id for external calls (key={}) is missing; no uploads will be attempted.", USERID_FOR_EXTERNAL_CALLS);
-            return status;
+            log.warn("jobId={} Missing user id for external calls (key={}); skipping.", jobId, USERID_FOR_EXTERNAL_CALLS);
+            return RepeatStatus.FINISHED;
         }
 
-        final boolean hasMaterialId = stepCtx.containsKey(CTX_MATERIAL_ID_KEY);
-        final boolean hasCaseId = stepCtx.containsKey(CTX_CASE_ID_KEY);
+        final UUID materialId = parseUuid(stepCtx, CTX_MATERIAL_ID_KEY, "materialId", jobId);
+        final UUID caseId = parseUuid(stepCtx, CTX_CASE_ID_KEY, "caseId", jobId);
+        final UUID docId = parseUuid(stepCtx, CTX_DOC_ID_KEY, "docId", jobId);
+        final String materialName = stepCtx.containsKey(CTX_MATERIAL_NAME) ? stepCtx.getString(CTX_MATERIAL_NAME) : "";
 
-        if (!hasMaterialId || !hasCaseId) {
-            log.warn("Partition context missing required keys: {} present?={}, {} present?={}",
-                    CTX_MATERIAL_ID_KEY, hasMaterialId, CTX_CASE_ID_KEY, hasCaseId);
-            return status;
+        if (materialId == null || caseId == null || docId == null) {
+            return RepeatStatus.FINISHED;
         }
 
-        final UUID materialId;
-        final UUID caseId;
-        final UUID persistedDocId;
-        final String materialNameStr;
-        try {
-            final String materialIdStr = stepCtx.getString(CTX_MATERIAL_ID_KEY);
-            materialNameStr = stepCtx.getString(CTX_MATERIAL_NAME);
-            final String caseIdStr = stepCtx.getString(CTX_CASE_ID_KEY);
-            final String persistedDocIdStr = stepCtx.getString(CTX_DOC_ID_KEY);
-            materialId = UUID.fromString(materialIdStr);
-            caseId = UUID.fromString(caseIdStr);
-            persistedDocId = UUID.fromString(persistedDocIdStr);
-        } catch (IllegalArgumentException ex) {
-            log.warn("Invalid UUID(s) in partition context. materialId='{}', caseId='{}' — skipping",
-                    stepCtx.getString(CTX_MATERIAL_ID_KEY), stepCtx.getString(CTX_CASE_ID_KEY));
-            return status;
+
+        // 1) If this docId is already persisted, do NOT repeat work.
+        if (caseDocumentRepository.existsByDocId(docId)) {
+            log.info("jobId={} Idempotent skip: docId={} already persisted.", jobId, docId);
+            return RepeatStatus.FINISHED;
         }
 
-        final UUID fMaterialId = materialId;
-        final String fUserId = userId;
+        // 2) If we already have a successful/ongoing upload for (caseId, materialId), skip.
+        if (caseDocumentRepository.existsByCaseIdAndMaterialIdAndIngestionPhaseIn(caseId, materialId, SKIP_IF_EXISTS_PHASES)) {
+            log.info("jobId={} Idempotent skip: caseId={}, materialId={} already in phases {}.", jobId, caseId, materialId, SKIP_IF_EXISTS_PHASES);
+            return RepeatStatus.FINISHED;
+        }
 
+        // ---- FETCH DOWNLOAD URL FROM PROGRESSION ----------------------------------------------
         final String downloadUrl = retryTemplate.execute((RetryContext ctx) -> {
             if (ctx.getRetryCount() > 0) {
-                log.warn("Retrying getMaterialDownloadUrl (attempt #{}) materialId={}, userId={}",
-                        ctx.getRetryCount() + 1, fMaterialId, fUserId);
+                log.warn("jobId={} Retrying getMaterialDownloadUrl attempt #{} materialId={}, userId={}", jobId, ctx.getRetryCount() + 1, materialId, userId);
             }
-            final Optional<String> opt = progressionClient.getMaterialDownloadUrl(fMaterialId, fUserId);
+            final Optional<String> opt = progressionClient.getMaterialDownloadUrl(materialId, userId);
             if (opt.isEmpty() || opt.get().isBlank()) {
                 throw new IllegalStateException("Empty download URL from Progression");
             }
             return opt.get();
         }, (RetryContext ctx) -> {
-            log.warn("getMaterialDownloadUrl permanently failed after {} attempts for materialId={}, userId={}",
-                    ctx.getRetryCount(), fMaterialId, fUserId, ctx.getLastThrowable());
+            log.error("jobId={} getMaterialDownloadUrl failed after {} attempts for materialId={}, userId={}. cause={}",
+                    jobId, ctx.getRetryCount(), materialId, userId, ctx.getLastThrowable() != null ? ctx.getLastThrowable().getMessage() : "n/a", ctx.getLastThrowable());
             return null;
         });
 
         if (downloadUrl == null) {
-            log.warn("No download URL for materialId={} — skipping.", materialId);
-            return status;
+            log.warn("jobId={} No download URL for materialId={}; skipping.", jobId, materialId);
+            return RepeatStatus.FINISHED;
         }
 
+        // ---- COPY TO BLOB STORAGE --------------------------------------------------------------
         final DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern(uploadProperties.datePattern());
         final String today = utcNow().format(dateFmt);
-
-        final String blobName = persistedDocId + "_" + today + uploadProperties.fileExtension();
+        final String blobName = docId + "_" + today + uploadProperties.fileExtension();
         final String destBlobPath = blobName;
         final String contentType = uploadProperties.contentType();
 
-        final Map<String, String> metadata =
-                createBlobMetadata(persistedDocId, materialId, caseId.toString(), today,materialNameStr);
-
-        final String fDestBlobPath = destBlobPath;
-        final String fContentType = contentType;
-        final Map<String, String> fMetadata = metadata;
-        final String fDownloadUrl = downloadUrl;
+        final Map<String, String> metadata = createBlobMetadata(docId, materialId, caseId.toString(), today, materialName);
 
         final String blobUrl = retryTemplate.execute((RetryContext ctx) -> {
             if (ctx.getRetryCount() > 0) {
-                log.warn("Retrying copyFromUrl (attempt #{}) path={}, materialId={}",
-                        ctx.getRetryCount() + 1, fDestBlobPath, fMaterialId);
+                log.warn("jobId={} Retrying copyFromUrl attempt #{} path={}, materialId={}", jobId, ctx.getRetryCount() + 1, destBlobPath, materialId);
             }
-            return storageService.copyFromUrl(fDownloadUrl, fDestBlobPath, fContentType, fMetadata);
+            return storageService.copyFromUrl(downloadUrl, destBlobPath, contentType, metadata);
         }, (RetryContext ctx) -> {
-            log.error("copyFromUrl permanently failed after {} attempts. materialId={}, path={}",
-                    ctx.getRetryCount(), fMaterialId, fDestBlobPath, ctx.getLastThrowable());
+            log.error("jobId={} copyFromUrl failed after {} attempts. materialId={}, path={}, cause={}",
+                    jobId, ctx.getRetryCount(), materialId, destBlobPath, ctx.getLastThrowable() != null ? ctx.getLastThrowable().getMessage() : "n/a", ctx.getLastThrowable());
             return null;
         });
 
         if (blobUrl == null) {
-            return status;
+            return RepeatStatus.FINISHED;
         }
 
+        // ---- LOOKUP SIZE & PERSIST ROW ---------------------------------------------------------
         final Long sizeObj = retryTemplate.execute((RetryContext ctx) -> {
             if (ctx.getRetryCount() > 0) {
-                log.warn("Retrying getBlobSize (attempt #{}) path={}",
-                        ctx.getRetryCount() + 1, fDestBlobPath);
+                log.warn("jobId={} Retrying getBlobSize attempt #{} path={}", jobId, ctx.getRetryCount() + 1, destBlobPath);
             }
-            return storageService.getBlobSize(fDestBlobPath);
+            return storageService.getBlobSize(destBlobPath);
         }, (RetryContext ctx) -> {
-            log.warn("getBlobSize permanently failed after {} attempts. path={}",
-                    ctx.getRetryCount(), fDestBlobPath, ctx.getLastThrowable());
+            log.warn("jobId={} getBlobSize failed after {} attempts. path={}, cause={}", jobId, ctx.getRetryCount(), destBlobPath,
+                    ctx.getLastThrowable() != null ? ctx.getLastThrowable().getMessage() : "n/a", ctx.getLastThrowable());
             return null;
         });
-        final long sizeBytes = (sizeObj != null) ? sizeObj : -1L;
+        final long sizeBytes = sizeObj != null ? sizeObj : -1L;
 
-        final CaseDocument caseDocumentEntity = new CaseDocument();
-        caseDocumentEntity.setDocId(persistedDocId);
-        caseDocumentEntity.setCaseId(caseId);
-        caseDocumentEntity.setMaterialId(materialId);
-        caseDocumentEntity.setDocName(blobName);
-        caseDocumentEntity.setBlobUri(blobUrl);
-        caseDocumentEntity.setContentType(contentType);
-        caseDocumentEntity.setSizeBytes(sizeBytes);
-        caseDocumentEntity.setUploadedAt(utcNow());
-        caseDocumentEntity.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
-        caseDocumentEntity.setIngestionPhaseAt(utcNow());
-        caseDocumentRepository.saveAndFlush(caseDocumentEntity);
+        final CaseDocument entity = new CaseDocument();
+        entity.setDocId(docId);
+        entity.setCaseId(caseId);
+        entity.setMaterialId(materialId);
+        entity.setDocName(blobName);
+        entity.setBlobUri(blobUrl);
+        entity.setContentType(contentType);
+        entity.setSizeBytes(sizeBytes);
+        entity.setUploadedAt(utcNow());
+        entity.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
+        entity.setIngestionPhaseAt(utcNow());
 
-        log.info("Saved CaseDocument: docId={}, caseId={}, sizeBytes={}", persistedDocId, caseId, sizeBytes);
+        caseDocumentRepository.saveAndFlush(entity);
 
-        return status;
+        log.info("jobId={} Saved CaseDocument docId={}, caseId={}, materialId={}, sizeBytes={}, blobUri={}",
+                jobId, docId, caseId, materialId, sizeBytes, blobUrl);
+
+        stepCtx.put("uploaded_blob_path", destBlobPath);
+        stepCtx.put("uploaded_blob_url", blobUrl);
+        stepCtx.put("uploaded_size_bytes", sizeBytes);
+
+        return RepeatStatus.FINISHED;
+    }
+
+    @SuppressWarnings("PMD.OnlyOneReturn")
+    private UUID parseUuid(final ExecutionContext ctx, final String key, final String label, final String jobId) {
+        if (!ctx.containsKey(key)) {
+            log.warn("jobId={} Missing required key '{}' in step context.", jobId, key);
+            return null;
+        }
+        try {
+            return UUID.fromString(ctx.getString(key));
+        } catch (IllegalArgumentException ex) {
+            log.warn("jobId={} Invalid UUID for {} (key='{}'): '{}'", jobId, label, key, ctx.getString(key));
+            return null;
+        }
     }
 
     private Map<String, String> createBlobMetadata(final UUID newDocumentId,
@@ -198,7 +223,6 @@ public class UploadAndPersistTasklet implements Tasklet {
                     META_MATERIAL_NAME, materialName,
                     META_UPLOADED_AT, uploadedDate
             );
-
             return Map.of(
                     META_DOCUMENT_ID, newDocumentId.toString(),
                     META_METADATA, objectMapper.writeValueAsString(metadataJson)

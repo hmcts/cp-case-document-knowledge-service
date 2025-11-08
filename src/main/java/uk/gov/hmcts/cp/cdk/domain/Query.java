@@ -1,14 +1,14 @@
 package uk.gov.hmcts.cp.cdk.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "queries")

@@ -2,7 +2,8 @@
     <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <shortenedLoggerNameLength>0</shortenedLoggerNameLength>
-            <customFields>{"app":"cp-case-document-knowledge-service","service":"cp-case-document-knowledge-service"}
+            <customFields>
+                {"app":"cp-case-document-knowledge-service","service":"cp-case-document-knowledge-service"}
             </customFields>
         </encoder>
     </appender>

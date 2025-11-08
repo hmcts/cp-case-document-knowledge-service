@@ -1,19 +1,5 @@
 package uk.gov.hmcts.cp.cdk.batch.clients.hearing;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.client.MockRestServiceServer;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestTemplate;
-import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.mapper.HearingDtoMapper;
-
-import java.time.LocalDate;
-import java.util.List;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
@@ -21,6 +7,21 @@ import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+
+import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
+import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
+import uk.gov.hmcts.cp.cdk.batch.clients.hearing.mapper.HearingDtoMapper;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestTemplate;
 
 @DisplayName("Hearing Client Impl tests")
 class HearingClientImplTest {
@@ -58,12 +59,12 @@ class HearingClientImplTest {
 
         final String headerName = rootProps.headers().cjsCppuid(); // <-- use configured name
         final String responseBody = """
-            {
-              "hearingSummaries": [
-                { "prosecutionCaseSummaries": [ { "id": "CASE-1" }, { "id": "CASE-2" } ] }
-              ]
-            }
-            """;
+                {
+                  "hearingSummaries": [
+                    { "prosecutionCaseSummaries": [ { "id": "CASE-1" }, { "id": "CASE-2" } ] }
+                  ]
+                }
+                """;
 
         // Expect
         server.expect(once(),
@@ -79,7 +80,7 @@ class HearingClientImplTest {
 
         // Act
         final List<HearingSummariesInfo> infos =
-                client.getHearingsAndCases("C001", "R12", LocalDate.of(2025, 10, 29),"userId");
+                client.getHearingsAndCases("C001", "R12", LocalDate.of(2025, 10, 29), "userId");
 
         // Assert
         server.verify();
@@ -114,7 +115,7 @@ class HearingClientImplTest {
 
         // Act
         final List<HearingSummariesInfo> infos =
-                client.getHearingsAndCases("C001", "R12", LocalDate.of(2025, 10, 29),"userId");
+                client.getHearingsAndCases("C001", "R12", LocalDate.of(2025, 10, 29), "userId");
 
         // Assert
         server.verify();

@@ -1,5 +1,40 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_MATERIAL_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
+
+import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
+import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
+import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
+import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
+import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
+import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
+import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,50 +62,52 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.SimpleTransactionStatus;
-import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
-import uk.gov.hmcts.cp.cdk.domain.Query;
-import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
-import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
-import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
-import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
-import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
-
-import java.util.*;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
 
 @DisplayName("GenerateAnswersTasklet tests")
 @ExtendWith(MockitoExtension.class)
 class GenerateAnswersTaskletTest {
 
-    @Mock private QueryResolver queryResolver;
-    @Mock private QueryDefinitionLatestRepository qdlRepo;
-    @Mock private NamedParameterJdbcTemplate jdbc;
-    @Mock private DocumentInformationSummarisedApi documentInformationSummarisedApi;
+    @Mock
+    private QueryResolver queryResolver;
+    @Mock
+    private QueryDefinitionLatestRepository qdlRepo;
+    @Mock
+    private NamedParameterJdbcTemplate jdbc;
+    @Mock
+    private DocumentInformationSummarisedApi documentInformationSummarisedApi;
+    @Mock
+    private DocumentIdResolver documentIdResolver;
 
     private final PlatformTransactionManager txManager = new NoopTxManager();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Mock private StepContribution contribution;
-    @Mock private ChunkContext chunkContext;
-    @Mock private StepExecution stepExecution;
+    @Mock
+    private StepContribution contribution;
+    @Mock
+    private ChunkContext chunkContext;
+    @Mock
+    private StepExecution stepExecution;
 
     private RetryTemplate retryTemplate;
 
     static class NoopTxManager implements PlatformTransactionManager {
-        @Override public TransactionStatus getTransaction(TransactionDefinition definition) { return new SimpleTransactionStatus(); }
-        @Override public void commit(TransactionStatus status) { }
-        @Override public void rollback(TransactionStatus status) { }
+        @Override
+        public TransactionStatus getTransaction(TransactionDefinition definition) {
+            return new SimpleTransactionStatus();
+        }
+
+        @Override
+        public void commit(TransactionStatus status) {
+        }
+
+        @Override
+        public void rollback(TransactionStatus status) {
+        }
     }
 
     private GenerateAnswersTasklet newTasklet() {
         return new GenerateAnswersTasklet(
-                queryResolver, qdlRepo, jdbc, txManager, objectMapper, documentInformationSummarisedApi, retryTemplate);
+                queryResolver, qdlRepo, jdbc, txManager, objectMapper, documentInformationSummarisedApi, retryTemplate, documentIdResolver);
     }
 
     @BeforeEach
@@ -84,7 +121,7 @@ class GenerateAnswersTaskletTest {
     @DisplayName("Processes multiple queries: reserves versions, marks IN_PROGRESS, calls RAG, upserts answers, marks DONE")
     void processesMultipleQueriesWithBatchWrites() throws Exception {
         final UUID caseId = UUID.randomUUID();
-        final UUID docId  = UUID.randomUUID();
+        final UUID docId = UUID.randomUUID();
         ExecutionContext stepCtx = new ExecutionContext();
         stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
         stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
@@ -95,6 +132,9 @@ class GenerateAnswersTaskletTest {
         ExecutionContext jobCtx = new ExecutionContext();
         when(stepExecution.getJobExecution().getExecutionContext()).thenReturn(jobCtx);
         jobCtx.put(CTX_UPLOAD_VERIFIED_KEY + ":" + docId, true);
+
+        // no override
+        lenient().when(documentIdResolver.resolveExistingDocId(any(), any())).thenReturn(Optional.empty());
 
         UUID q1 = UUID.randomUUID();
         UUID q2 = UUID.randomUUID();
@@ -161,11 +201,11 @@ class GenerateAnswersTaskletTest {
 
         ArgumentCaptor<MapSqlParameterSource[]> answersBatchCaptor = ArgumentCaptor.forClass(MapSqlParameterSource[].class);
         when(jdbc.batchUpdate(startsWith("INSERT INTO answers"), answersBatchCaptor.capture()))
-                .thenReturn(new int[]{1,1});
+                .thenReturn(new int[]{1, 1});
 
         ArgumentCaptor<MapSqlParameterSource[]> doneBatchCaptor = ArgumentCaptor.forClass(MapSqlParameterSource[].class);
         when(jdbc.batchUpdate(startsWith("UPDATE answer_reservations SET status='DONE'"), doneBatchCaptor.capture()))
-                .thenReturn(new int[]{1,1});
+                .thenReturn(new int[]{1, 1});
 
         RepeatStatus status = newTasklet().execute(contribution, chunkContext);
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
@@ -203,7 +243,7 @@ class GenerateAnswersTaskletTest {
             seenAnswers.add(answer);
 
             String llmInput = (String) vals.get("llm_input");
-            assertThat(llmInput).contains("\"provenanceChunksSample\"");
+            assertThat(llmInput).contains("provenanceChunksSample");
 
             seenQueryIds.add((UUID) vals.get("query_id"));
         }
@@ -221,7 +261,7 @@ class GenerateAnswersTaskletTest {
     }
 
     @Test
-    @DisplayName("Returns FINISHED and does nothing when caseId/docId missing")
+    @DisplayName("Returns FINISHED and does nothing when caseId missing")
     void returnsFinishedWhenNoContext() throws Exception {
         ExecutionContext stepCtx = new ExecutionContext();
         when(contribution.getStepExecution()).thenReturn(stepExecution);
@@ -233,14 +273,14 @@ class GenerateAnswersTaskletTest {
         RepeatStatus status = newTasklet().execute(contribution, chunkContext);
 
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
-        verifyNoInteractions(jdbc, queryResolver, qdlRepo, documentInformationSummarisedApi);
+        verifyNoInteractions(jdbc, queryResolver, qdlRepo, documentInformationSummarisedApi, documentIdResolver);
     }
 
     @Test
     @DisplayName("Returns FINISHED when no queries to run")
     void returnsFinishedWhenNoQueries() throws Exception {
         final UUID caseId = UUID.randomUUID();
-        final UUID docId  = UUID.randomUUID();
+        final UUID docId = UUID.randomUUID();
         ExecutionContext stepCtx = new ExecutionContext();
         stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
         stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
@@ -252,11 +292,98 @@ class GenerateAnswersTaskletTest {
         when(stepExecution.getJobExecution().getExecutionContext()).thenReturn(jobCtx);
         jobCtx.put(CTX_UPLOAD_VERIFIED_KEY + ":" + docId, true);
 
+        lenient().when(documentIdResolver.resolveExistingDocId(any(), any())).thenReturn(Optional.empty());
         when(queryResolver.resolve()).thenReturn(Collections.emptyList());
 
         RepeatStatus status = newTasklet().execute(contribution, chunkContext);
 
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
+        verifyNoInteractions(jdbc, qdlRepo, documentInformationSummarisedApi);
+    }
+
+    @Test
+    @DisplayName("Overrides docId from DB when materialId present; uses resolved docId and updates context")
+    void overridesDocIdFromDbAndUpdatesContext() throws Exception {
+        final UUID caseId = UUID.randomUUID();
+        final UUID oldDocId = UUID.randomUUID();
+        final UUID resolvedDocId = UUID.randomUUID();
+        final UUID materialId = UUID.randomUUID();
+
+        ExecutionContext stepCtx = new ExecutionContext();
+        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
+        stepCtx.putString(CTX_DOC_ID_KEY, oldDocId.toString());
+        stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
+
+        when(contribution.getStepExecution()).thenReturn(stepExecution);
+        when(stepExecution.getExecutionContext()).thenReturn(stepCtx);
+        when(stepExecution.getJobExecution()).thenReturn(mock(JobExecution.class));
+        ExecutionContext jobCtx = new ExecutionContext();
+        when(stepExecution.getJobExecution().getExecutionContext()).thenReturn(jobCtx);
+
+        // Verified only for the RESOLVED docId
+        jobCtx.put(CTX_UPLOAD_VERIFIED_KEY + ":" + resolvedDocId, true);
+
+        when(documentIdResolver.resolveExistingDocId(eq(caseId), eq(materialId))).thenReturn(Optional.of(resolvedDocId));
+
+        // Provide a single query
+        UUID q1 = UUID.randomUUID();
+        Query query1 = mock(Query.class);
+        when(query1.getQueryId()).thenReturn(q1);
+        when(queryResolver.resolve()).thenReturn(List.of(query1));
+
+        // basic JDBC stubs
+        when(jdbc.query(anyString(), any(SqlParameterSource.class), ArgumentMatchers.<RowMapper<Integer>>any()))
+                .thenReturn(Collections.emptyList());
+        when(jdbc.queryForObject(startsWith("SELECT get_or_create_answer_version"), any(SqlParameterSource.class), eq(Integer.class)))
+                .thenReturn(1);
+        when(jdbc.update(startsWith("UPDATE answer_reservations SET status='IN_PROGRESS'"), any(SqlParameterSource.class)))
+                .thenReturn(1);
+
+        var resp1 = new UserQueryAnswerReturnedSuccessfully().userQuery("").queryPrompt("").llmResponse("ans").chunkedEntries(List.of());
+        when(documentInformationSummarisedApi.answerUserQuery(any())).thenReturn(ResponseEntity.ok(resp1));
+
+        ArgumentCaptor<MapSqlParameterSource[]> answersBatchCaptor = ArgumentCaptor.forClass(MapSqlParameterSource[].class);
+        when(jdbc.batchUpdate(startsWith("INSERT INTO answers"), answersBatchCaptor.capture()))
+                .thenReturn(new int[]{1});
+
+        RepeatStatus status = newTasklet().execute(contribution, chunkContext);
+        assertThat(status).isEqualTo(RepeatStatus.FINISHED);
+
+        // Context updated
+        assertThat(stepCtx.getString(CTX_DOC_ID_KEY)).isEqualTo(resolvedDocId.toString());
+
+        MapSqlParameterSource[] answersBatch = answersBatchCaptor.getValue();
+        assertThat(answersBatch).hasSize(1);
+        assertThat(answersBatch[0].getValues().get("doc_id")).isEqualTo(resolvedDocId);
+        assertThat(answersBatch[0].getValues().get("case_id")).isEqualTo(caseId);
+    }
+
+    @Test
+    @DisplayName("Skips early when verified flag missing for resolved docId")
+    void skipsWhenVerifiedMissingForResolvedDoc() throws Exception {
+        final UUID caseId = UUID.randomUUID();
+        final UUID oldDocId = UUID.randomUUID();
+        final UUID resolvedDocId = UUID.randomUUID();
+        final UUID materialId = UUID.randomUUID();
+
+        ExecutionContext stepCtx = new ExecutionContext();
+        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
+        stepCtx.putString(CTX_DOC_ID_KEY, oldDocId.toString());
+        stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
+
+        when(contribution.getStepExecution()).thenReturn(stepExecution);
+        when(stepExecution.getExecutionContext()).thenReturn(stepCtx);
+        when(stepExecution.getJobExecution()).thenReturn(mock(JobExecution.class));
+        ExecutionContext jobCtx = new ExecutionContext();
+        when(stepExecution.getJobExecution().getExecutionContext()).thenReturn(jobCtx);
+
+        when(documentIdResolver.resolveExistingDocId(eq(caseId), eq(materialId))).thenReturn(Optional.of(resolvedDocId));
+
+        // NOTE: do NOT set verified for resolvedDocId
+
+        RepeatStatus status = newTasklet().execute(contribution, chunkContext);
+        assertThat(status).isEqualTo(RepeatStatus.FINISHED);
+
         verifyNoInteractions(jdbc, qdlRepo, documentInformationSummarisedApi);
     }
 }

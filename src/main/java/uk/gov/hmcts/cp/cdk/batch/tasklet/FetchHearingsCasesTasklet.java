@@ -1,5 +1,21 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_IDS_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.Params.COURT_CENTRE_ID;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.Params.CPPUID;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.Params.DATE;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.Params.ROOM_ID;
+import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
+
+import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
+import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.ExitStatus;
@@ -10,18 +26,6 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.stereotype.Component;
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
-
-import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_IDS_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.Params.*;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
 
 @Slf4j
 @Component
@@ -31,7 +35,7 @@ public class FetchHearingsCasesTasklet implements Tasklet {
     private final HearingClient hearingClient;
 
     @Override
-    @SuppressWarnings("PMD.OnlyOneReturn" )
+    @SuppressWarnings("PMD.OnlyOneReturn")
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) throws Exception {
         final JobParameters params = contribution.getStepExecution().getJobParameters();
         final ExecutionContext jobCtx = contribution.getStepExecution().getJobExecution().getExecutionContext();
@@ -59,7 +63,7 @@ public class FetchHearingsCasesTasklet implements Tasklet {
             return RepeatStatus.FINISHED;
         }
 
-        final List<HearingSummariesInfo> summaries = hearingClient.getHearingsAndCases(courtCentreId, roomId, date,cppuid);
+        final List<HearingSummariesInfo> summaries = hearingClient.getHearingsAndCases(courtCentreId, roomId, date, cppuid);
         final List<String> caseIds = new ArrayList<>(summaries.size());
         for (final HearingSummariesInfo hearingSummariesInfo : summaries) {
             caseIds.add(hearingSummariesInfo.caseId());

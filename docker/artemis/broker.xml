@@ -77,7 +77,6 @@ under the License.
         <!-- <network-check-ping6-command>ping6 -c 1 %2$s</network-check-ping6-command> -->
 
 
-
         <!--
          This value was determined through a calculation.
          Your system could perform 1 writes per millisecond
@@ -118,7 +117,9 @@ under the License.
             <!-- useEpoll means: it will use Netty epoll if you are on a system (Linux) that supports it -->
             <!-- amqpCredits: The number of credits sent to AMQP producers -->
             <!-- amqpLowCredits: The server will send the # credits specified at amqpCredits at this low mark -->
-            <acceptor name="netty-acceptor">tcp://0.0.0.0:61616?tcpSendBufferSize=1048576;tcpReceiveBufferSize=1048576</acceptor>
+            <acceptor name="netty-acceptor">
+                tcp://0.0.0.0:61616?tcpSendBufferSize=1048576;tcpReceiveBufferSize=1048576
+            </acceptor>
         </acceptors>
 
 

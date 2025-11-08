@@ -1,5 +1,32 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
+import uk.gov.hmcts.cp.cdk.controllers.exception.IngestionExceptionHandler;
+import uk.gov.hmcts.cp.cdk.services.IngestionService;
+import uk.gov.hmcts.cp.openapi.model.cdk.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
+import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
+import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
+import uk.gov.hmcts.cp.openapi.model.cdk.IngestionStatusResponse;
+import uk.gov.hmcts.cp.openapi.model.cdk.Scope;
+
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -7,22 +34,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.server.ResponseStatusException;
-import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
-import uk.gov.hmcts.cp.cdk.controllers.exception.IngestionExceptionHandler;
-import uk.gov.hmcts.cp.cdk.services.IngestionService;
-import uk.gov.hmcts.cp.openapi.model.cdk.*;
-
-import java.time.OffsetDateTime;
-import java.util.UUID;
-
-import static org.hamcrest.Matchers.containsString;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
-import static org.springframework.http.HttpStatus.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @DisplayName("Ingestion Controller tests")
 class IngestionControllerTest {
@@ -88,13 +99,13 @@ class IngestionControllerTest {
         when(service.startIngestionProcess(anyString(), any(IngestionProcessRequest.class))).thenReturn(response);
 
         String body = """
-            {
-              "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-              "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-              "date": "2025-10-23",
-              "effectiveAt": "2025-05-01T12:00:00Z"
-            }
-            """;
+                {
+                  "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                  "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                  "date": "2025-10-23",
+                  "effectiveAt": "2025-05-01T12:00:00Z"
+                }
+                """;
 
         mvc.perform(post("/ingestions/start")
                         .contentType(VND).accept(VND)
@@ -116,12 +127,12 @@ class IngestionControllerTest {
                 .thenThrow(new ResponseStatusException(NOT_FOUND, "caseIngestionJob"));
 
         String body = """
-            {
-              "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-              "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-              "date": "2025-10-24"
-            }
-            """;
+                {
+                  "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                  "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                  "date": "2025-10-24"
+                }
+                """;
 
         mvc.perform(post("/ingestions/start")
                         .contentType(VND).accept(VND)
@@ -142,12 +153,12 @@ class IngestionControllerTest {
                 .thenThrow(new ResponseStatusException(BAD_REQUEST, "invalid parameters"));
 
         String body = """
-            {
-              "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-              "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-              "date": "not-a-date"
-            }
-            """;
+                {
+                  "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                  "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                  "date": "not-a-date"
+                }
+                """;
 
         mvc.perform(post("/ingestions/start")
                         .contentType(VND).accept(VND)
@@ -168,12 +179,12 @@ class IngestionControllerTest {
                 .thenThrow(new ResponseStatusException(CONFLICT, "already running"));
 
         String body = """
-            {
-              "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-              "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-              "date": "2025-10-23"
-            }
-            """;
+                {
+                  "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                  "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                  "date": "2025-10-23"
+                }
+                """;
 
         mvc.perform(post("/ingestions/start")
                         .contentType(VND).accept(VND)

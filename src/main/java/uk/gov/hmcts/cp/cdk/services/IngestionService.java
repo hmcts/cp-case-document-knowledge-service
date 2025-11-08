@@ -1,5 +1,18 @@
 package uk.gov.hmcts.cp.cdk.services;
 
+import uk.gov.hmcts.cp.cdk.batch.IngestionJobParams;
+import uk.gov.hmcts.cp.cdk.repo.IngestionStatusViewRepository;
+import uk.gov.hmcts.cp.openapi.model.cdk.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
+import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
+import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
+import uk.gov.hmcts.cp.openapi.model.cdk.IngestionStatusResponse;
+import uk.gov.hmcts.cp.openapi.model.cdk.Scope;
+
+import java.time.Clock;
+import java.util.Objects;
+import java.util.UUID;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
@@ -13,13 +26,6 @@ import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import uk.gov.hmcts.cp.cdk.batch.IngestionJobParams;
-import uk.gov.hmcts.cp.cdk.repo.IngestionStatusViewRepository;
-import uk.gov.hmcts.cp.openapi.model.cdk.*;
-
-import java.time.Clock;
-import java.util.Objects;
-import java.util.UUID;
 
 
 @Service

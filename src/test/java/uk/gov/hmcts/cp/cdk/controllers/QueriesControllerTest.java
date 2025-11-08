@@ -1,20 +1,6 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
-import uk.gov.hmcts.cp.cdk.services.QueryService;
-import uk.gov.hmcts.cp.openapi.model.cdk.*;
-
-import java.net.URI;
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.UUID;
-
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -22,21 +8,41 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@DisplayName("Queries Controller tests")
+import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
+import uk.gov.hmcts.cp.cdk.services.QueryService;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryDefinitionsResponse;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryLifecycleStatus;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryStatusResponse;
+import uk.gov.hmcts.cp.openapi.model.cdk.QuerySummary;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryUpsertRequest;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryVersionSummary;
+import uk.gov.hmcts.cp.openapi.model.cdk.Scope;
 
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+@DisplayName("Queries Controller tests")
 class QueriesControllerTest {
 
     public final String VND_TYPE_JSON = "application/vnd.casedocumentknowledge-service.queries+json";
 
     private static final String HEADER_NAME = "CJSCPPUID";
     private static final String HEADER_VALUE = "u-123";
+
     @Test
     @DisplayName("List Queries returns case as of")
     void listQueries_returns_case_as_of() throws Exception {
         final QueryService service = Mockito.mock(QueryService.class);
         final CQRSClientProperties props = mock(CQRSClientProperties.class, Mockito.RETURNS_DEEP_STUBS);
         when(props.headers().cjsCppuid()).thenReturn(HEADER_NAME);
-        final QueriesController controller = new QueriesController(service,props);
+        final QueriesController controller = new QueriesController(service, props);
         final MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         final UUID caseId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
@@ -58,7 +64,7 @@ class QueriesControllerTest {
         resp.setScope(scope);
         resp.setQueries(List.of(qs));
 
-        when(service.listForCaseAsOf(Mockito.eq(caseId), Mockito.any(),Mockito.any())).thenReturn(resp);
+        when(service.listForCaseAsOf(Mockito.eq(caseId), Mockito.any(), Mockito.any())).thenReturn(resp);
 
         mvc.perform(get("/queries")
                         .header(HEADER_NAME, HEADER_VALUE)
@@ -76,7 +82,7 @@ class QueriesControllerTest {
         final QueryService service = Mockito.mock(QueryService.class);
         final CQRSClientProperties props = mock(CQRSClientProperties.class, Mockito.RETURNS_DEEP_STUBS);
         when(props.headers().cjsCppuid()).thenReturn(HEADER_NAME);
-        final QueriesController controller = new QueriesController(service,props);
+        final QueriesController controller = new QueriesController(service, props);
         final MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         final QueryVersionSummary v = new QueryVersionSummary();
@@ -119,7 +125,7 @@ class QueriesControllerTest {
         final QueryService service = Mockito.mock(QueryService.class);
         final CQRSClientProperties props = mock(CQRSClientProperties.class, Mockito.RETURNS_DEEP_STUBS);
         when(props.headers().cjsCppuid()).thenReturn(HEADER_NAME);
-        final QueriesController controller = new QueriesController(service,props);
+        final QueriesController controller = new QueriesController(service, props);
         final MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         final UUID caseId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
@@ -151,7 +157,7 @@ class QueriesControllerTest {
         final QueryService service = Mockito.mock(QueryService.class);
         final CQRSClientProperties props = mock(CQRSClientProperties.class, Mockito.RETURNS_DEEP_STUBS);
         when(props.headers().cjsCppuid()).thenReturn(HEADER_NAME);
-        final QueriesController controller = new QueriesController(service,props);
+        final QueriesController controller = new QueriesController(service, props);
         final MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         final UUID queryId = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
@@ -170,13 +176,14 @@ class QueriesControllerTest {
                 .andExpect(jsonPath("$.queryId").value(queryId.toString()))
                 .andExpect(jsonPath("$.versions[0].userQuery").value("UQ1"));
     }
+
     @Test
     @DisplayName("Get Query -> 404 when not found")
     void getQuery_notFound_404() throws Exception {
         final QueryService service = Mockito.mock(QueryService.class);
         final CQRSClientProperties props = mock(CQRSClientProperties.class, Mockito.RETURNS_DEEP_STUBS);
         when(props.headers().cjsCppuid()).thenReturn(HEADER_NAME);
-        final QueriesController controller = new QueriesController(service,props);
+        final QueriesController controller = new QueriesController(service, props);
         final MockMvc mvc = MockMvcBuilders
                 .standaloneSetup(controller)
                 .build();
@@ -195,8 +202,6 @@ class QueriesControllerTest {
                         .param("caseId", caseId.toString()))
                 .andExpect(status().isNotFound());
     }
-
-
 
 
 }

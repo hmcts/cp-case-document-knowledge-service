@@ -1,15 +1,5 @@
 package uk.gov.hmcts.cp.cdk.batch.clients.rag;
 
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestClient;
 import uk.gov.hmcts.cp.cdk.batch.clients.common.RagClientProperties;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQuery500Response;
@@ -20,6 +10,17 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestClient;
 
 /**
  * Implements the OpenAPI contract and delegates to the upstream RAG endpoint.

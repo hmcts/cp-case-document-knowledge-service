@@ -3,7 +3,10 @@ package uk.gov.hmcts.cp.cdk.http;
 import static java.util.UUID.fromString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_NAME;
+import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_VALUE;
 
+import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
 
 import java.sql.Connection;
@@ -23,32 +26,18 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
 
 /**
  * End-to-end tests for Answers & Queries endpoints.
  * Assumes endpoints:
- *   - GET /answers/{caseId}/{queryId}                  (latest or specific ?version=)
- *   - GET /answers/{caseId}/{queryId}/with-llm         (latest with LLM payload)
- *   - GET /queries?caseId={caseId}&at={isoInstant}     (as-of queries view for a case)
+ * - GET /answers/{caseId}/{queryId}                  (latest or specific ?version=)
+ * - GET /answers/{caseId}/{queryId}/with-llm         (latest with LLM payload)
+ * - GET /queries?caseId={caseId}&at={isoInstant}     (as-of queries view for a case)
  */
-public class AnswersHttpLiveTest {
+public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
 
     public final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.answers+json");
     public final MediaType VND_TYPE_JSON_QUERIES = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
-    private final String baseUrl = System.getProperty(
-            "app.baseUrl",
-            "http://localhost:8082/casedocumentknowledge-service"
-    );
-
-    private final String jdbcUrl = System.getProperty("it.db.url", "jdbc:postgresql://localhost:55432/casedocumentknowledgeDatabase");
-    private final String jdbcUser = System.getProperty("it.db.user", "casedocumentknowledge");
-    private final String jdbcPass = System.getProperty("it.db.pass", "casedocumentknowledge");
-
-    private final RestTemplate http = new RestTemplate();
-    private static final String HEADER_NAME = "CJSCPPUID";
-    private static final String HEADER_VALUE = "u-123";
-
     private UUID caseId;
     private UUID queryId;
 
@@ -230,7 +219,7 @@ public class AnswersHttpLiveTest {
     void get_answer_with_llm_latest() {
         final HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(VND_TYPE_JSON));
-
+        headers.set(HEADER_NAME, HEADER_VALUE);
         final ResponseEntity<String> response = http.exchange(
                 baseUrl + "/answers/" + caseId + "/" + queryId + "/with-llm",
                 HttpMethod.GET,

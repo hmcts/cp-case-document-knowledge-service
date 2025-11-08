@@ -1,7 +1,5 @@
 package uk.gov.hmcts.cp.cdk.services;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import uk.gov.hmcts.cp.cdk.domain.Answer;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.repo.AnswerRepository;
@@ -15,6 +13,9 @@ import java.time.OffsetDateTime;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
