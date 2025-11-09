@@ -1,7 +1,7 @@
 # Authz, misc controls and other small blocks
 authz:
   http:
-    enabled: true
+    enabled: false
     identity-url-template:  ${CP_CDK_BASE_URL}/usersgroups-query-api/query/api/rest/usersgroups/users/logged-in-user/permissions
     user-id-header: "CJSCPPUID"
     action-header: "CPP-ACTION"
