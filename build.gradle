@@ -2,7 +2,7 @@ plugins {
     id 'application'
     id 'java'
 
-    id 'org.springframework.boot' version '4.0.0-M3'
+    id 'org.springframework.boot' version '4.0.0-RC2'
     id 'io.spring.dependency-management' version '1.1.7'
 
     id 'jacoco'
@@ -73,10 +73,10 @@ configurations {
 ext {
     lombokVersion = "1.18.42"
     apiSpecVersion = "0.4.2"
-    testcontainersBom = "1.20.4"
-    cdk = "0.0.5-2b481e3"
+    testcontainersBom = "2.0.1"
+    cdk = "0.0.5-5343edf"
     aiRag = "0.0.2"
-    mapstruct = "1.5.5.Final"
+    mapstruct = "1.6.3"
 }
 
 // ---- Dependencies ----
@@ -91,7 +91,7 @@ dependencies {
 
     //Auth and Audit
     implementation "uk.gov.hmcts.cp:cp-springboot-auth-rules-filter:1.0.1"
-    implementation "uk.gov.hmcts.cp:cp-audit-filter-springboot:1.0.0"
+    implementation "uk.gov.hmcts.cp:cp-audit-filter-springboot:0.0.0-70d65d2"
 
     // Web / validation/ Batch
     implementation 'org.springframework.boot:spring-boot-starter-web'
