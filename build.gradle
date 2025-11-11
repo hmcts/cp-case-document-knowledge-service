@@ -173,12 +173,22 @@ pmd {
     ruleSetFiles = files(".github/pmd-ruleset.xml")
     ignoreFailures = false
 }
+
 tasks.withType(Pmd).configureEach {
     reports { xml.required.set(true); html.required.set(true) }
+
+    // Disable PMD for test and integration source sets
+    if (name.toLowerCase().contains("test") || name.toLowerCase().contains("integration")) {
+        enabled = false
+    }
 }
-tasks.named("pmdMain").configure { onlyIf { gradle.startParameter.taskNames.contains(name) } }
-tasks.named("pmdTest").configure { enabled = false }
-tasks.named("pmdIntegrationTest").configure { enabled = false }
+// Run PMD only when explicitly enabled
+tasks.named("pmdMain").configure {
+    onlyIf {
+        // Check for a system property or environment variable
+        Boolean.getBoolean("runPmd") || System.getenv("RUN_PMD")?.toBoolean() == true
+    }
+}
 
 // ---- SBOM ----
 tasks.cyclonedxDirectBom {
