@@ -53,7 +53,7 @@ public class VerifyUploadTasklet implements Tasklet {
     private final DocumentIngestionStatusApi documentIngestionStatusApi;
     private final CaseDocumentRepository caseDocumentRepository;
     private final ObjectMapper objectMapper;
-    private final PlatformTransactionManager txManager; // NEW: short, explicit DB tx
+    private final PlatformTransactionManager txManager;
 
     @Value("${cdk.ingestion.verify.poll-interval-ms:2000}")
     private long pollIntervalMs;
@@ -62,8 +62,8 @@ public class VerifyUploadTasklet implements Tasklet {
     private long maxWaitMs;
 
     @Override
-    @SuppressWarnings({"PMD.OnlyOneReturn", "PMD.CyclomaticComplexity"})
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
+        boolean proceed = true;
 
         final ExecutionContext stepCtx = contribution.getStepExecution().getExecutionContext();
         final JobExecution jobExecution = contribution.getStepExecution().getJobExecution();
@@ -72,116 +72,127 @@ public class VerifyUploadTasklet implements Tasklet {
         if (Boolean.TRUE.equals(alreadyVerified)) {
             ensureStatusJson(stepCtx);
             log.info("VerifyUploadTasklet: already verified for this partition; skipping poll.");
-            return RepeatStatus.FINISHED;
+            proceed = false;
         }
 
         final String caseIdStr = stepCtx.getString(CTX_CASE_ID, null);
-        final String docIdRaw = stepCtx.getString(CTX_DOC_ID, null);
-        if (docIdRaw == null) {
-            log.warn("VerifyUploadTasklet: CTX_DOC_ID missing; cannot poll ingestion status (caseId={}).", caseIdStr);
-            markUnverified(stepCtx, null, null, null);
-            return RepeatStatus.FINISHED;
-        }
+        final String docIdRaw  = stepCtx.getString(CTX_DOC_ID, null);
 
-        final UUID docId;
-        try {
-            docId = UUID.fromString(docIdRaw);
-        } catch (IllegalArgumentException ex) {
-            log.warn("VerifyUploadTasklet: invalid CTX_DOC_ID='{}' (caseId={}) – {}", docIdRaw, caseIdStr, ex.getMessage());
-            markUnverified(stepCtx, null, null, null);
-            return RepeatStatus.FINISHED;
-        }
-
-        final Optional<String> documentNameOpt = caseDocumentRepository.findById(docId)
-                .map(doc -> {
-                    log.debug("VerifyUploadTasklet: resolved docId={} to blobName='{}' (caseId={}).",
-                            docId, doc.getDocName(), caseIdStr);
-                    return doc.getDocName();
-                });
-
-        if (documentNameOpt.isEmpty() || documentNameOpt.get() == null || documentNameOpt.get().isBlank()) {
-            log.warn("VerifyUploadTasklet: document not found or name blank for docId={} (caseId={}); skipping.", docId, caseIdStr);
-            markUnverified(stepCtx, null, null, null);
-            return RepeatStatus.FINISHED;
-        }
-
-        final String documentName = documentNameOpt.get();
-
-        final RetryTemplate pollTemplate = buildPollTemplate(pollIntervalMs, maxWaitMs);
-        final AtomicReference<String> lastStatusRef = new AtomicReference<>(null);
-        final AtomicReference<String> lastReasonRef = new AtomicReference<>(null);
-        final AtomicReference<OffsetDateTime> lastUpdatedRef = new AtomicReference<>(null);
-
-        final Boolean finished = pollTemplate.execute(context -> {
-            log.debug("VerifyUploadTasklet: polling ingestion status for identifier='{}' (caseId={}).",
-                    documentName, caseIdStr);
-
-            final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> resp =
-                    documentIngestionStatusApi.documentStatus(documentName);
-
-            if (resp == null) {
-                throw new IllegalStateException("Null HTTP response");
+        UUID parsedDocId = null;
+        if (proceed) {
+            if (docIdRaw == null) {
+                log.warn("VerifyUploadTasklet: CTX_DOC_ID missing; cannot poll ingestion status (caseId={}).", caseIdStr);
+                markUnverified(stepCtx, null, null, null);
+                proceed = false;
+            } else {
+                try {
+                    parsedDocId = UUID.fromString(docIdRaw);
+                } catch (IllegalArgumentException ex) {
+                    log.warn("VerifyUploadTasklet: invalid CTX_DOC_ID='{}' (caseId={}) – {}", docIdRaw, caseIdStr, ex.getMessage());
+                    markUnverified(stepCtx, null, null, null);
+                    proceed = false;
+                }
             }
+        }
 
-            if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
-                final DocumentIngestionStatusReturnedSuccessfully body = resp.getBody();
-                final String status = body.getStatus() != null ? body.getStatus().getValue() : null;
-                lastStatusRef.set(status);
-                lastReasonRef.set(body.getReason());
-                lastUpdatedRef.set(body.getLastUpdated());
+        String documentName = null;
+        if (proceed) {
+            final UUID docIdForLookup = parsedDocId; // effectively final for lambda
+            final Optional<String> documentNameOpt = caseDocumentRepository.findById(docIdForLookup)
+                    .map(doc -> {
+                        log.debug("VerifyUploadTasklet: resolved docId={} to blobName='{}' (caseId={}).",
+                                docIdForLookup, doc.getDocName(), caseIdStr);
+                        return doc.getDocName();
+                    });
 
-                if (status != null
-                        && !StatusEnum.INGESTION_SUCCESS.name().equalsIgnoreCase(status)
-                        && !StatusEnum.INGESTION_FAILED.name().equalsIgnoreCase(status)
-                        && !StatusEnum.INVALID_METADATA.name().equalsIgnoreCase(status)) {
-                    updateIngestionPhaseTx(docId, DocumentIngestionPhase.INGESTING);
+            if (documentNameOpt.isEmpty() || documentNameOpt.get() == null || documentNameOpt.get().isBlank()) {
+                log.warn("VerifyUploadTasklet: document not found or name blank for docId={} (caseId={}); skipping.",
+                        docIdForLookup, caseIdStr);
+                markUnverified(stepCtx, null, null, null);
+                proceed = false;
+            } else {
+                documentName = documentNameOpt.get();
+            }
+        }
+
+        if (proceed) {
+            final UUID docId = parsedDocId;         // effectively final
+            final String identifier = documentName; // effectively final
+
+            final RetryTemplate pollTemplate = buildPollTemplate(pollIntervalMs, maxWaitMs);
+            final AtomicReference<String> lastStatusRef  = new AtomicReference<>();
+            final AtomicReference<String> lastReasonRef  = new AtomicReference<>();
+            final AtomicReference<OffsetDateTime> lastUpdatedRef = new AtomicReference<>();
+
+            final Boolean finished = pollTemplate.execute(context -> {
+                log.debug("VerifyUploadTasklet: polling ingestion status for identifier='{}' (caseId={}).",
+                        identifier, caseIdStr);
+
+                final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> resp =
+                        documentIngestionStatusApi.documentStatus(identifier);
+
+                if (resp == null) {
+                    throw new IllegalStateException("Null HTTP response");
                 }
 
-                if (StatusEnum.INGESTION_SUCCESS.name().equalsIgnoreCase(status)) {
-                    putStatusJson(stepCtx, body);
-                    updateIngestionPhaseTx(docId, DocumentIngestionPhase.INGESTED);
-                    final String verifiedKey = CTX_UPLOAD_VERIFIED + ":" + docId;
-                    if (jobExecution != null) {
-                        jobExecution.getExecutionContext().put(verifiedKey, true);
+                if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
+                    final DocumentIngestionStatusReturnedSuccessfully body = resp.getBody();
+                    final String status = body.getStatus() != null ? body.getStatus().getValue() : null;
+                    lastStatusRef.set(status);
+                    lastReasonRef.set(body.getReason());
+                    lastUpdatedRef.set(body.getLastUpdated());
+
+                    if (status != null
+                            && !StatusEnum.INGESTION_SUCCESS.name().equalsIgnoreCase(status)
+                            && !StatusEnum.INGESTION_FAILED.name().equalsIgnoreCase(status)
+                            && !StatusEnum.INVALID_METADATA.name().equalsIgnoreCase(status)) {
+                        updateIngestionPhaseTx(docId, DocumentIngestionPhase.INGESTING);
                     }
-                    stepCtx.put(CTX_UPLOAD_VERIFIED, true);
-                    log.info("VerifyUploadTasklet: ingestion SUCCESS for identifier='{}' (caseId={}).",
-                            documentName, caseIdStr);
-                    return Boolean.TRUE; // stop retry loop (success)
+
+                    if (StatusEnum.INGESTION_SUCCESS.name().equalsIgnoreCase(status)) {
+                        putStatusJson(stepCtx, body);
+                        updateIngestionPhaseTx(docId, DocumentIngestionPhase.INGESTED);
+                        final String verifiedKey = CTX_UPLOAD_VERIFIED + ":" + docId;
+                        if (jobExecution != null) {
+                            jobExecution.getExecutionContext().put(verifiedKey, true);
+                        }
+                        stepCtx.put(CTX_UPLOAD_VERIFIED, true);
+                        log.info("VerifyUploadTasklet: ingestion SUCCESS for identifier='{}' (caseId={}).",
+                                identifier, caseIdStr);
+                        return Boolean.TRUE; // stop retry loop
+                    }
+
+                    if (StatusEnum.INGESTION_FAILED.name().equalsIgnoreCase(status)
+                            || StatusEnum.INVALID_METADATA.name().equalsIgnoreCase(status)) {
+                        putStatusJson(stepCtx, body);
+                        updateIngestionPhaseTx(docId, DocumentIngestionPhase.FAILED);
+                        log.error("VerifyUploadTasklet: ingestion FAILED for identifier='{}' reason='{}' (caseId={}).",
+                                identifier, lastReasonRef.get(), caseIdStr);
+                        return Boolean.TRUE; // terminal
+                    }
+
+                    throw new IllegalStateException("Not ready: status=" + status);
                 }
 
-                if (StatusEnum.INGESTION_FAILED.name().equalsIgnoreCase(status)
-                        || StatusEnum.INVALID_METADATA.name().equalsIgnoreCase(status)) {
-                    putStatusJson(stepCtx, body);
-                    updateIngestionPhaseTx(docId, DocumentIngestionPhase.FAILED);
-                    log.error("VerifyUploadTasklet: ingestion FAILED for identifier='{}' reason='{}' (caseId={}).",
-                            documentName, lastReasonRef.get(), caseIdStr);
-                    return Boolean.TRUE; // stop retry loop (terminal)
+                if (resp.getStatusCode() == HttpStatus.NOT_FOUND) {
+                    log.debug("VerifyUploadTasklet: identifier='{}' not found yet (404); will retry.", identifier);
+                    throw new IllegalStateException("404 Not Found, will retry");
                 }
 
-                throw new IllegalStateException("Not ready: status=" + status);
+                log.warn("VerifyUploadTasklet: unexpected HTTP status {} for identifier='{}'. Stopping.",
+                        resp.getStatusCode(), identifier);
+                return Boolean.TRUE;
+
+            }, context -> Boolean.FALSE);
+
+            if (!Boolean.TRUE.equals(finished)) {
+                markUnverified(stepCtx, lastStatusRef.get(), lastReasonRef.get(), lastUpdatedRef.get());
+                log.info("VerifyUploadTasklet: finished without success for identifier='{}' (caseId={}). verified=false; continuing.",
+                        identifier, caseIdStr);
             }
-
-            if (resp.getStatusCode() == HttpStatus.NOT_FOUND) {
-                log.debug("VerifyUploadTasklet: identifier='{}' not found yet (404); will retry.", documentName);
-                throw new IllegalStateException("404 Not Found, will retry");
-            }
-
-            log.warn("VerifyUploadTasklet: unexpected HTTP status {} for identifier='{}'. Stopping.",
-                    resp.getStatusCode(), documentName);
-            return Boolean.TRUE;
-
-        }, context -> {
-            return Boolean.FALSE;
-        });
-
-        if (!Boolean.TRUE.equals(finished)) {
-            markUnverified(stepCtx, lastStatusRef.get(), lastReasonRef.get(), lastUpdatedRef.get());
-            log.info("VerifyUploadTasklet: finished without success for identifier='{}' (caseId={}). verified=false; continuing.",
-                    documentName, caseIdStr);
         }
 
-        return RepeatStatus.FINISHED;
+        return RepeatStatus.FINISHED; // single exit
     }
 
     private RetryTemplate buildPollTemplate(final long intervalMs, final long timeoutMs) {
@@ -203,10 +214,9 @@ public class VerifyUploadTasklet implements Tasklet {
     }
 
     private void updateIngestionPhaseTx(final UUID docId, final DocumentIngestionPhase phase) {
-
         final TransactionTemplate transactionTemplate = new TransactionTemplate(txManager);
         transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-        transactionTemplate.setTimeout(5); // seconds
+        transactionTemplate.setTimeout(5);
         try {
             transactionTemplate.execute(status -> {
                 caseDocumentRepository.findById(docId).ifPresent(doc -> {
