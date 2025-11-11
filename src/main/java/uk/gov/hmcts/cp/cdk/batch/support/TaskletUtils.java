@@ -42,7 +42,9 @@ public class TaskletUtils {
 
     // ---------- Date helpers ----------
 
-    /** Parses ISO-8601 date (yyyy-MM-dd). Empty if null/blank/invalid; logs on invalid. */
+    /**
+     * Parses ISO-8601 date (yyyy-MM-dd). Empty if null/blank/invalid; logs on invalid.
+     */
     public static Optional<LocalDate> parseIsoDate(final String dateString) {
         Optional<LocalDate> result;
         if (dateString == null || dateString.isBlank()) {
@@ -58,7 +60,9 @@ public class TaskletUtils {
         return result;
     }
 
-    /** Null-returning companion to {@link #parseIsoDate(String)}. */
+    /**
+     * Null-returning companion to {@link #parseIsoDate(String)}.
+     */
     public static LocalDate parseIsoDateOrNull(final String dateString) {
         return parseIsoDate(dateString).orElse(null);
     }
