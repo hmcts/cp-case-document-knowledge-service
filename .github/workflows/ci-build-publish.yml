@@ -64,6 +64,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: current
+          gradle-home-cache-includes: |
+            caches
+            configuration-cache
 
       - name: Pre-pull integration images
         run: |
@@ -110,6 +113,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: current
+          gradle-home-cache-includes: |
+            caches
+            configuration-cache
 
       - name: Gradle Publish
         if: ${{ inputs.is_publish }}

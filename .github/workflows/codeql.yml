@@ -87,12 +87,23 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: current
+          gradle-home-cache-includes: |
+            caches
+            configuration-cache
 
       - name: Gradle Build
         run: gradle build -x test -x integration
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Pre-pull integration images
+        run: |
+          docker pull postgres:16-alpine
+          docker pull wiremock/wiremock:3.9.1
+          docker pull mcr.microsoft.com/azure-storage/azurite:3.33.0
+          docker pull eclipse-temurin:21-jdk
+          docker pull testcontainers/ryuk:0.12.0
 
       - name: DAST - Build and run containerised app
         run: |
