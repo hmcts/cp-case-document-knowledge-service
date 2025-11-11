@@ -4,7 +4,8 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskLookupUtils.parseUuidOrNull;
+import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.getStringFromContexts;
+import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.parseUuidOrNull;
 
 import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.Query;
@@ -71,9 +72,9 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
         final String docIdStr;
         final String materialIdStr;
         if (proceed) {
-            caseIdStr = getString(stepCtx, jobCtx, CTX_CASE_ID_KEY);
-            docIdStr = getString(stepCtx, jobCtx, CTX_DOC_ID_KEY);
-            materialIdStr = getString(stepCtx, jobCtx, CTX_MATERIAL_ID_KEY);
+            caseIdStr = getStringFromContexts(stepCtx, jobCtx, CTX_CASE_ID_KEY);
+            docIdStr = getStringFromContexts(stepCtx, jobCtx, CTX_DOC_ID_KEY);
+            materialIdStr = getStringFromContexts(stepCtx, jobCtx, CTX_MATERIAL_ID_KEY);
             if (caseIdStr == null || docIdStr == null) {
                 log.debug("ReserveAnswerVersionTasklet: Missing caseId/docId in context; skipping.");
                 proceed = false;
@@ -192,15 +193,5 @@ public class ReserveAnswerVersionTasklet implements Tasklet {
         }
 
         return result;
-    }
-
-    private static String getString(final ExecutionContext stepCtx, final ExecutionContext jobCtx, final String key) {
-        String value = null;
-        if (stepCtx != null && stepCtx.containsKey(key)) {
-            value = stepCtx.getString(key);
-        } else if (jobCtx != null && jobCtx.containsKey(key)) {
-            value = jobCtx.getString(key);
-        }
-        return value;
     }
 }

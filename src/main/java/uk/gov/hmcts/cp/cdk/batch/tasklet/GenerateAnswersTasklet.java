@@ -4,9 +4,10 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskLookupUtils.parseUuidOrNull;
+import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.parseUuidOrNull;
 
 import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
+import uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
 import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
@@ -189,7 +190,7 @@ public class GenerateAnswersTasklet implements Tasklet {
 
         for (final UUID queryId : eligibleIds) {
             final WorkPlan plan = transactionTemplate.execute(status -> {
-                final MapSqlParameterSource paramsForReservation = reservationParams(caseId, queryId, docId);
+                final MapSqlParameterSource paramsForReservation = TaskletUtils.buildReservationParams(caseId, queryId, docId);
 
                 Integer versionNumber = jdbc.query(SQL_FIND_VERSION, paramsForReservation, INT_ROW_MAPPER)
                         .stream().findFirst().orElse(null);
@@ -239,7 +240,7 @@ public class GenerateAnswersTasklet implements Tasklet {
                     }, (RetryContext recoveryCtx) -> {
                         log.warn("RAG call permanently failed after {} attempts for caseId={}, docId={}, queryId={}",
                                 recoveryCtx.getRetryCount(), caseId, docId, queryId, recoveryCtx.getLastThrowable());
-                        failedBatch.add(reservationParams(caseId, queryId, docId));
+                        failedBatch.add(TaskletUtils.buildReservationParams(caseId, queryId, docId));
                         return null;
                     });
             log.info("RAG call duration for queryId={}: {} ms", queryId, System.currentTimeMillis() - started);
@@ -258,12 +259,12 @@ public class GenerateAnswersTasklet implements Tasklet {
             } catch (final Exception e) {
                 log.warn("Failed to build llm_input JSON for caseId={}, docId={}, queryId={}: {}",
                         caseId, docId, queryId, e.getMessage(), e);
-                failedBatch.add(reservationParams(caseId, queryId, docId));
+                failedBatch.add(TaskletUtils.buildReservationParams(caseId, queryId, docId));
                 continue;
             }
 
-            answersBatch.add(answerParamsRow(caseId, queryId, plan.version, resp.getLlmResponse(), llmInputJson, docId));
-            doneBatch.add(reservationParams(caseId, queryId, docId));
+            answersBatch.add(TaskletUtils.buildAnswerParams(caseId, queryId, plan.version, resp.getLlmResponse(), llmInputJson, docId));
+            doneBatch.add(TaskletUtils.buildReservationParams(caseId, queryId, docId));
         }
 
         transactionTemplate.execute(status -> {
@@ -284,31 +285,6 @@ public class GenerateAnswersTasklet implements Tasklet {
 
         return RepeatStatus.FINISHED;
     }
-
-    private static MapSqlParameterSource reservationParams(final UUID caseId, final UUID queryId, final UUID docId) {
-        return new MapSqlParameterSource()
-                .addValue("case_id", caseId)
-                .addValue("query_id", queryId)
-                .addValue("doc_id", docId);
-    }
-
-    private static MapSqlParameterSource answerParamsRow(
-            final UUID caseId,
-            final UUID queryId,
-            final Integer version,
-            final String answer,
-            final String llmInput,
-            final UUID docId
-    ) {
-        return new MapSqlParameterSource()
-                .addValue("case_id", caseId)
-                .addValue("query_id", queryId)
-                .addValue("version", version)
-                .addValue("answer", answer)
-                .addValue("llm_input", llmInput)
-                .addValue("doc_id", docId);
-    }
-
 
     private static final class WorkPlan {
         private final int version;

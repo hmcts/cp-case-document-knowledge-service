@@ -5,8 +5,11 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CA
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_CASE_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_RESULT_MATERIAL_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_RESULT_MATERIAL_NAME;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskLookupUtils.parseUuid;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskLookupUtils.safeGetCourtDocuments;
+import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.parseUuid;
+import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.safeGetCourtDocuments;
+
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -20,8 +23,6 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.stereotype.Component;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
 
 @Slf4j
 @Component

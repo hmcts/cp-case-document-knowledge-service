@@ -4,7 +4,7 @@ import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.CONTEXT_KEY_MATERI
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_CASE_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_RESULT_MATERIAL_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_RESULT_MATERIAL_NAME;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskLookupUtils.parseUuid;
+import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.parseUuid;
 
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.MaterialDocumentMapping;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;

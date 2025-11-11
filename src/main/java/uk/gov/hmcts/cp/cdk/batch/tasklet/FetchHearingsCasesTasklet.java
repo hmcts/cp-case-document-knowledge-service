@@ -10,9 +10,9 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CA
 
 import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
 import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
+import uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
@@ -53,7 +53,7 @@ public class FetchHearingsCasesTasklet implements Tasklet {
         List<String> caseIds = EMPTY_CASE_IDS;
 
         if (hasText(courtCentreId) && hasText(roomId) && hasText(hearingDate)) {
-            final LocalDate date = parseDate(hearingDate);
+            final LocalDate date = TaskletUtils.parseIsoDateOrNull(hearingDate);
             if (date != null) {
                 final List<HearingSummariesInfo> summaries =
                         hearingClient.getHearingsAndCases(courtCentreId, roomId, date, cppuid);
@@ -73,15 +73,5 @@ public class FetchHearingsCasesTasklet implements Tasklet {
         jobCtx.put(CTX_CASE_IDS_KEY, caseIds);
         contribution.setExitStatus(exitStatus);
         return RepeatStatus.FINISHED;
-    }
-
-    private static LocalDate parseDate(final String hearingDate) {
-        LocalDate parsed = null;
-        try {
-            parsed = LocalDate.parse(hearingDate);
-        } catch (DateTimeParseException ex) {
-            log.error("DateTimeParseException: hearingDate {}", hearingDate);
-        }
-        return parsed;
     }
 }

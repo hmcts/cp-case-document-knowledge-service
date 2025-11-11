@@ -6,7 +6,8 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_NEW_UPLOAD;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskLookupUtils.parseUuidOrNull;
+import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.getBooleanFromContext;
+import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
@@ -103,7 +104,7 @@ public class UploadAndPersistTasklet implements Tasklet {
             materialName = "";
         }
 
-        if (proceed && !getBooleanFlag(stepContext, CTX_MATERIAL_NEW_UPLOAD)) {
+        if (proceed && !getBooleanFromContext(stepContext, CTX_MATERIAL_NEW_UPLOAD)) {
             log.info("jobId={} Skipping upload: existing docId={} will be reused for caseId={}, materialId={}.",
                     jobId, documentId, caseId, materialId);
             proceed = false;
@@ -214,16 +215,6 @@ public class UploadAndPersistTasklet implements Tasklet {
         });
     }
 
-    private static boolean getBooleanFlag(final ExecutionContext context, final String key) {
-        boolean flag = false;
-        final Object value = context.get(key);
-        if (value instanceof Boolean boolValue) {
-            flag = boolValue;
-        } else if (value instanceof String stringValue) {
-            flag = Boolean.parseBoolean(stringValue);
-        }
-        return flag;
-    }
 
     private UUID readUuidFromContext(final ExecutionContext context,
                                      final String key,
