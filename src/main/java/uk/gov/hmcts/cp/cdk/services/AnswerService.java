@@ -12,7 +12,6 @@ import uk.gov.hmcts.cp.openapi.model.cdk.AnswerResponse;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerWithLlmResponse;
 
 import java.time.OffsetDateTime;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 
