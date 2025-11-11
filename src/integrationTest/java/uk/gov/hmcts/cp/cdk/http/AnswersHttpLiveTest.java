@@ -223,7 +223,6 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
                         .contains("Query not found for case=" + caseId)
                         .contains("queryId=" + nonExistentQueryId);
             }
-
         }
     }
 
