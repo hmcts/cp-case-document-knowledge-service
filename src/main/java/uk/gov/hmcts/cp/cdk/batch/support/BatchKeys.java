@@ -1,4 +1,4 @@
-package uk.gov.hmcts.cp.cdk.batch;
+package uk.gov.hmcts.cp.cdk.batch.support;
 
 public final class BatchKeys {
     public static final String JOB_NAME = "caseIngestionJob";
@@ -7,7 +7,7 @@ public final class BatchKeys {
     public static final String CTX_DOC_ID_KEY = "docId";
     public static final String CTX_MATERIAL_ID_KEY = "materialId";
     public static final String CTX_MATERIAL_NAME = "materialName";
-    public static final String CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY = "materialToCaseMap";
+    public static final String CTX_MATERIAL_NEW_UPLOAD = "materialNewUpload";
     public static final String CTX_UPLOAD_VERIFIED_KEY = "uploadVerified";
     public static final String CTX_DOCUMENT_STATUS_JSON_KEY = "documentStatusResponseJson";
     public static final String USERID_FOR_EXTERNAL_CALLS = "userIdForExternalCalls";

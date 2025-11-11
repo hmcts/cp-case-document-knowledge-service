@@ -7,7 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
+import uk.gov.hmcts.cp.cdk.batch.support.BatchKeys;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
@@ -90,7 +90,7 @@ class VerifyUploadTaskletTest {
     }
 
     @Test
-    @DisplayName("Already verified → skips poll, ensures {} in status JSON")
+    @DisplayName("Already verified -> skips poll, ensures {} in status JSON")
     void alreadyVerifiedSkipsPoll() throws Exception {
         stepCtx.put(BatchKeys.CTX_UPLOAD_VERIFIED_KEY, true); // simulate prior partition verification
 
@@ -103,7 +103,7 @@ class VerifyUploadTaskletTest {
     }
 
     @Test
-    @DisplayName("SUCCESS → sets job-level verified flag, step verified=true, JSON present, persists INGESTED")
+    @DisplayName("SUCCESS -> sets job-level verified flag, step verified=true, JSON present, persists INGESTED")
     void finishedWhenSuccess() throws Exception {
         UUID caseId = UUID.randomUUID();
         UUID docId = UUID.randomUUID();
@@ -140,7 +140,7 @@ class VerifyUploadTaskletTest {
     }
 
     @Test
-    @DisplayName("HTTP 404 → times out → verified=false and {} in step context")
+    @DisplayName("HTTP 404 -> times out -> verified=false and {} in step context")
     void finishedWhenNotFound() throws Exception {
         UUID caseId = UUID.randomUUID();
         UUID docId = UUID.randomUUID();
@@ -162,7 +162,7 @@ class VerifyUploadTaskletTest {
     }
 
     @Test
-    @DisplayName("Missing case document → verified=false and {}")
+    @DisplayName("Missing case document -> verified=false and {}")
     void finishedWhenNoDocument() throws Exception {
         UUID caseId = UUID.randomUUID();
         UUID docId = UUID.randomUUID();
@@ -180,7 +180,7 @@ class VerifyUploadTaskletTest {
     }
 
     @Test
-    @DisplayName("Invalid doc UUID → verified=false and {}")
+    @DisplayName("Invalid doc UUID -> verified=false and {}")
     void finishedWhenInvalidDocId() throws Exception {
         stepCtx.putString(BatchKeys.CTX_CASE_ID_KEY, UUID.randomUUID().toString());
         stepCtx.putString(BatchKeys.CTX_DOC_ID_KEY, "bad-uuid");
@@ -193,7 +193,7 @@ class VerifyUploadTaskletTest {
     }
 
     @Test
-    @DisplayName("FAILED → terminal stop, JSON present, verified not set to true, persists FAILED")
+    @DisplayName("FAILED -> terminal stop, JSON present, verified not set to true, persists FAILED")
     void finishedWhenFailed() throws Exception {
         UUID caseId = UUID.randomUUID();
         UUID docId = UUID.randomUUID();
@@ -222,7 +222,7 @@ class VerifyUploadTaskletTest {
         assertThat(stepCtx.containsKey(BatchKeys.CTX_UPLOAD_VERIFIED_KEY)).isFalse();
         assertThat(stepCtx.getString(BatchKeys.CTX_DOCUMENT_STATUS_JSON_KEY)).isNotBlank();
 
-        // Phase persisted to FAILED
+
         verify(caseDocumentRepository, atLeastOnce()).saveAndFlush(any(CaseDocument.class));
     }
 

@@ -1,6 +1,6 @@
 package uk.gov.hmcts.cp.cdk.services;
 
-import uk.gov.hmcts.cp.cdk.batch.IngestionJobParams;
+import uk.gov.hmcts.cp.cdk.batch.support.IngestionJobParams;
 import uk.gov.hmcts.cp.cdk.repo.IngestionStatusViewRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;

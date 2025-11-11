@@ -1,6 +1,6 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
-import uk.gov.hmcts.cp.cdk.batch.BatchKeys;
+import uk.gov.hmcts.cp.cdk.batch.support.BatchKeys;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.util.TimeUtils;
