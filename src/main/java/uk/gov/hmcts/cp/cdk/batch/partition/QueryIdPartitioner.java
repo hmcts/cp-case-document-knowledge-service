@@ -1,10 +1,10 @@
 package uk.gov.hmcts.cp.cdk.batch.partition;
 
 
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_CASE_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_DOC_ID_KEY;
 
-import uk.gov.hmcts.cp.cdk.batch.QueryResolver;
+import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 
 import java.util.LinkedHashMap;
@@ -18,10 +18,7 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-/**
- * Creates one partition per query so we can run GenerateAnswersTasklet once per query.
- * It copies caseId/docId from the current per-case step context and adds CTX_SINGLE_QUERY_ID.
- */
+
 @Component
 @StepScope
 public class QueryIdPartitioner implements Partitioner {

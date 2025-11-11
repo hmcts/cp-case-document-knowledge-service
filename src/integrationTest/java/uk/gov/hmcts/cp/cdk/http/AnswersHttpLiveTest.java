@@ -216,6 +216,28 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
     }
 
     @Test
+    void cors_preflight_allows_get_answers_version() {
+        final String origin = "http://localhost:3000";
+
+        final HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.ORIGIN, origin);
+        headers.add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.GET.name());
+        headers.add(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Content-Type, Accept");
+
+        final HttpEntity<Void> req = new HttpEntity<>(headers);
+
+        final String url = baseUrl + "/answers/" + caseId + "/" + queryId + "?version=1";
+
+        final ResponseEntity<Void> resp = http.exchange(
+                url,
+                HttpMethod.OPTIONS,
+                req,
+                Void.class
+        );
+        assertThat(resp.getStatusCode().is2xxSuccessful()).isTrue();
+    }
+
+    @Test
     void get_answer_with_llm_latest() {
         final HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(VND_TYPE_JSON));

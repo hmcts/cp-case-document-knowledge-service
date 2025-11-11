@@ -1,10 +1,10 @@
-package uk.gov.hmcts.cp.cdk.batch;
+package uk.gov.hmcts.cp.cdk.batch.support;
 
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.Params.COURT_CENTRE_ID;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.Params.CPPUID;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.Params.DATE;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.Params.ROOM_ID;
-import static uk.gov.hmcts.cp.cdk.batch.BatchKeys.Params.RUN_ID;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.COURT_CENTRE_ID;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.CPPUID;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.DATE;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.ROOM_ID;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.RUN_ID;
 
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
 
