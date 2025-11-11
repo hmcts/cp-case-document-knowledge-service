@@ -90,7 +90,7 @@ dependencies {
     annotationProcessor "org.mapstruct:mapstruct-processor:$mapstruct"
 
     //Auth and Audit
-    implementation "uk.gov.hmcts.cp:cp-springboot-auth-rules-filter:1.0.1"
+    implementation "uk.gov.hmcts.cp:cp-auth-rules-filter:1.0.6"
     implementation "uk.gov.hmcts.cp:cp-audit-filter-springboot:1.0.0"
 
     // Web / validation/ Batch

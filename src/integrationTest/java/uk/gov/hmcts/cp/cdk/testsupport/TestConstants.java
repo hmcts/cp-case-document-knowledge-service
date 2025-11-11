@@ -4,7 +4,7 @@ public final class TestConstants {
     private TestConstants() {
     }
 
-    public static final String HEADER_NAME = "CJSCPPUID";
+    public static final String HEADER_NAME = "Cjscppuid";
     public static final String HEADER_VALUE = "a085e359-6069-4694-8820-7810e7dfe762";
 
     public static String baseUrl() {
