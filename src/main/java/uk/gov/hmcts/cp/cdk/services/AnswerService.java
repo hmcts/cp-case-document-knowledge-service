@@ -1,5 +1,7 @@
 package uk.gov.hmcts.cp.cdk.services;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import uk.gov.hmcts.cp.cdk.domain.Answer;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.repo.AnswerRepository;
@@ -10,7 +12,6 @@ import uk.gov.hmcts.cp.openapi.model.cdk.AnswerResponse;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerWithLlmResponse;
 
 import java.time.OffsetDateTime;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -81,8 +82,11 @@ public class AnswerService {
             }
             maybeAnswer = answerRepository.findLatestAsOfAnyCase(queryId, asOf);
         }
-
-        return maybeAnswer.orElseThrow(() -> new NoSuchElementException("Answer not found"));
+        return maybeAnswer.orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Query not found for case=" + caseIdOrNull + ", queryId=" + queryId
+                )
+        );
     }
 
     private String resolveUserQueryText(final UUID queryId, final OffsetDateTime createdAt) {

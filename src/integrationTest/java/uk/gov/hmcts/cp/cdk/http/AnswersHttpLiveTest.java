@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_NAME;
 import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_VALUE;
 
+import org.springframework.web.client.HttpClientErrorException;
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
 
@@ -197,6 +198,35 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
             assertNotNull(auditResponse);
         }
     }
+
+    @Test
+    void get_latest_answer_not_found() throws Exception {
+
+        try (BrokerUtil brokerUtil = new BrokerUtil()) {
+
+            final HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(List.of(VND_TYPE_JSON));
+
+            final UUID nonExistentQueryId = UUID.randomUUID();
+
+            try {
+                http.exchange(
+                        baseUrl + "/answers/" + caseId + "/" + nonExistentQueryId,
+                        HttpMethod.GET,
+                        new HttpEntity<>(headers),
+                        String.class
+                );
+
+            } catch (HttpClientErrorException.NotFound ex) {
+                assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+                assertThat(ex.getResponseBodyAsString())
+                        .contains("Query not found for case=" + caseId)
+                        .contains("queryId=" + nonExistentQueryId);
+            }
+        }
+    }
+
+
 
     @Test
     void get_specific_answer_version() {
