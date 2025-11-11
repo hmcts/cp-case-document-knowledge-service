@@ -175,6 +175,11 @@ pmd {
 }
 tasks.withType(Pmd).configureEach {
     reports { xml.required.set(true); html.required.set(true) }
+
+    // Disable PMD for test and integration source sets
+    if (name.toLowerCase().contains("test") || name.toLowerCase().contains("integration")) {
+        enabled = false
+    }
 }
 tasks.named("pmdMain").configure { onlyIf { gradle.startParameter.taskNames.contains(name) } }
 tasks.named("pmdTest").configure { enabled = false }
