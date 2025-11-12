@@ -84,6 +84,7 @@ class QueriesAsOfRepositoryTest {
         final Query q = new Query();
         q.setQueryId(qid);
         q.setLabel("Defendant Position");
+        q.setOrder(200);
         queryRepo.saveAndFlush(q);
 
         final OffsetDateTime t1 = OffsetDateTime.parse("2025-05-01T11:58:00Z");

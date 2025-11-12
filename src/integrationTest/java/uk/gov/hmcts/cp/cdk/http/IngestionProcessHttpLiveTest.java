@@ -100,8 +100,9 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
         headers.setAccept(List.of(VND_TYPE_JSON_CATA));
 
         final String body = """
-                { "label": "%s" }
-                """.formatted(escapeJson(label));
+                { "label": "%s" ,
+                 "order": %d }
+                """.formatted(escapeJson(label),200);
 
         final ResponseEntity<String> resp = http.exchange(
                 baseUrl + "/query-catalogue/" + queryId + "/label",

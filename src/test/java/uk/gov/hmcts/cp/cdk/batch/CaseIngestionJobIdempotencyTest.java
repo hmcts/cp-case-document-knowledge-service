@@ -205,11 +205,12 @@ class CaseIngestionJobIdempotencyTest {
 
         // step 5 — seed one canonical query + definition
         jdbc.update(
-                "INSERT INTO queries(query_id, label, created_at) VALUES (?, ?, NOW()) " +
+                "INSERT INTO queries(query_id, label, created_at,\"order\") VALUES (?, ?, NOW(),?) " +
                         "ON CONFLICT (query_id) DO NOTHING",
                 ps -> {
                     ps.setObject(1, queryId);
                     ps.setString(2, "E2E Query");
+                    ps.setInt(3,100);
                 }
         );
         jdbc.update(
