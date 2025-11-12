@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS queries (
   query_id   UUID        PRIMARY KEY,
   label      TEXT        NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "order"    INTEGER     NOT NULL DEFAULT 10000,
   CONSTRAINT queries_label_not_blank CHECK (length(btrim(label)) > 0)
 );
 COMMENT ON TABLE queries IS 'Canonical queries; stable UI label + created_at; definition text/prompt live in query_versions.';

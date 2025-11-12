@@ -51,10 +51,11 @@ public class QueryCatalogueService {
         }
 
         final String newLabel = body.getLabel().trim();
-
+        final Integer newOrder = body.getOrder();
         Query query = queryRepository.findById(queryId).orElseGet(() -> {
             final Query created = new Query();
             created.setQueryId(queryId);
+            created.setOrder(newOrder != null ? newOrder : 10000);
             return created;
         });
 
