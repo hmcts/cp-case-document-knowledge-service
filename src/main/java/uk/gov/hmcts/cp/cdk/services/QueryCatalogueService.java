@@ -60,6 +60,7 @@ public class QueryCatalogueService {
         });
 
         query.setLabel(newLabel);
+        query.setDisplayOrder(newOrder);
         query = queryRepository.saveAndFlush(query);
 
         return mapper.toCatalogueItem(query);
