@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import com.azure.core.util.polling.SyncPoller;
 import com.azure.storage.blob.BlobClient;
@@ -32,6 +33,8 @@ public class AzureBlobStorageService implements StorageService {
     private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
     private final BlobContainerClient blobContainerClient;
+    private final long pollIntervalMs;
+    private final long timeoutSeconds;
 
     public AzureBlobStorageService(final StorageProperties storageProperties) {
         requireNonNull(storageProperties, "storageProperties");
@@ -49,10 +52,16 @@ public class AzureBlobStorageService implements StorageService {
             log.warn("createIfNotExists failed (continuing, may already exist): {}", container, e);
         }
 
+        this.pollIntervalMs = storageProperties.copyPollIntervalMs() != null
+                ? storageProperties.copyPollIntervalMs() : 1_000L;
+        this.timeoutSeconds = storageProperties.copyTimeoutSeconds() != null
+                ? storageProperties.copyTimeoutSeconds() : 120L;
     }
 
     /* package */ AzureBlobStorageService(final BlobContainerClient blobContainerClient) {
         this.blobContainerClient = requireNonNull(blobContainerClient, "blobContainerClient");
+        this.pollIntervalMs = 1_000L;
+        this.timeoutSeconds = 120L;
     }
 
     @Override
@@ -72,28 +81,37 @@ public class AzureBlobStorageService implements StorageService {
             log.warn("deleteIfExists failed (continuing). name={}", blobName, ex);
         }
 
-        final String ctype = StringUtils.defaultIfBlank(contentType, DEFAULT_CONTENT_TYPE);
-        try {
-            blob.setHttpHeaders(new BlobHttpHeaders().setContentType(ctype));
-        } catch (RuntimeException ex) {
-            log.warn("Failed to set content-type on copied blob (continuing). name={}, type={}", blobName, ctype, ex);
-        }
-
         final Map<String, String> normalizedMetadata = MapUtils.isNotEmpty(metadata) ? normalizeMetadataKeys(metadata) : Map.of();
-        BlobBeginCopyOptions options = new BlobBeginCopyOptions(sourceUrl).setPollInterval(Duration.ofSeconds(2));
+        final BlobBeginCopyOptions options = new BlobBeginCopyOptions(sourceUrl).setPollInterval(Duration.ofMillis(pollIntervalMs));
         if (MapUtils.isNotEmpty(normalizedMetadata)) {
             options.setMetadata(normalizedMetadata);
         }
 
-        SyncPoller<BlobCopyInfo, Void> poller = blob.beginCopy(options);
+        try {
+            final SyncPoller<BlobCopyInfo, Void> poller = blob.beginCopy(options);
+            final BlobCopyInfo copyInfo = poller.waitForCompletion(Duration.ofSeconds(timeoutSeconds)).getValue();
+            final CopyStatusType copyStatus = copyInfo.getCopyStatus();
+            if (copyStatus == CopyStatusType.ABORTED || copyStatus == CopyStatusType.FAILED) {
+                throw new IllegalStateException("Blob copy failed: " + copyStatus);
+            }
 
-        BlobCopyInfo copyInfo = poller.waitForCompletion().getValue();
-        CopyStatusType copyStatus = copyInfo.getCopyStatus();
-        if (copyStatus == CopyStatusType.ABORTED || copyStatus == CopyStatusType.FAILED) {
-            throw new IllegalStateException("Blob copy failed: " + copyStatus);
+            if (copyStatus == CopyStatusType.SUCCESS) {
+                final String ctype = StringUtils.defaultIfBlank(contentType, DEFAULT_CONTENT_TYPE);
+                try {
+                    blob.setHttpHeaders(new BlobHttpHeaders().setContentType(ctype));
+                } catch (RuntimeException ex) {
+                    log.warn("Failed to set content-type on copied blob (continuing). name={}, type={}", blobName, ctype, ex);
+                }
+            }
+
+            return blob.getBlobUrl();
+        } catch (RuntimeException e) {
+            // Sync poller throws this exception if it exceeds the timeout
+            if (e.getCause() instanceof TimeoutException) {
+                throw new IllegalStateException("Timed out after " + timeoutSeconds + "s waiting for blob copy to succeed");
+            }
+            throw e;
         }
-
-        return blob.getBlobUrl();
     }
 
     @Override

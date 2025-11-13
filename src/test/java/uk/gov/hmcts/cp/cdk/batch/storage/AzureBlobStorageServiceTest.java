@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.batch.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.DURATION;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -11,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
+import java.time.Duration;
 import java.util.Map;
 
 import com.azure.core.util.polling.PollResponse;
@@ -63,7 +65,7 @@ class AzureBlobStorageServiceTest {
         when(mockBlobContainerClient.getBlobClient(path)).thenReturn(mockBlob);
         when(mockBlob.getBlobUrl()).thenReturn("https://account.blob.core.windows.net/documents/" + path);
         when(mockBlob.beginCopy(any(BlobBeginCopyOptions.class))).thenReturn(mockSyncPoller);
-        when(mockSyncPoller.waitForCompletion()).thenReturn(mockPollResponse);
+        when(mockSyncPoller.waitForCompletion(any(Duration.class))).thenReturn(mockPollResponse);
         when(mockPollResponse.getValue()).thenReturn(new BlobCopyInfo("", "", CopyStatusType.SUCCESS, "", null, null, null));
 
         final BlobProperties props = mock(BlobProperties.class);
@@ -80,7 +82,7 @@ class AzureBlobStorageServiceTest {
         assertThat(out).endsWith(path);
 
         verify(mockBlob).deleteIfExists();
-        verify(mockSyncPoller).waitForCompletion();
+        verify(mockSyncPoller).waitForCompletion(any(Duration.class));
         verify(mockPollResponse).getValue();
 
         ArgumentCaptor<BlobBeginCopyOptions> optionsCaptor = ArgumentCaptor.forClass(BlobBeginCopyOptions.class);
@@ -102,7 +104,7 @@ class AzureBlobStorageServiceTest {
         when(mockBlobContainerClient.getBlobClient(anyString())).thenReturn(mockBlob);
         when(mockBlob.getBlobUrl()).thenReturn("https://account.blob.core.windows.net/documents/cases/123/idpc.pdf");
         when(mockBlob.beginCopy(any(BlobBeginCopyOptions.class))).thenReturn(mockSyncPoller);
-        when(mockSyncPoller.waitForCompletion()).thenReturn(mockPollResponse);
+        when(mockSyncPoller.waitForCompletion(any(Duration.class))).thenReturn(mockPollResponse);
         when(mockPollResponse.getValue()).thenReturn(new BlobCopyInfo("", "", CopyStatusType.SUCCESS, "", null, null, null));
 
         service.copyFromUrl(src, destUrl, "application/pdf", null);
@@ -121,7 +123,7 @@ class AzureBlobStorageServiceTest {
         when(mockBlobContainerClient.getBlobClient(path)).thenReturn(mockBlob);
         when(mockBlob.getBlobUrl()).thenReturn("https://account.blob.core.windows.net/documents/" + path);
         when(mockBlob.beginCopy(any(BlobBeginCopyOptions.class))).thenReturn(mockSyncPoller);
-        when(mockSyncPoller.waitForCompletion()).thenReturn(mockPollResponse);
+        when(mockSyncPoller.waitForCompletion(any(Duration.class))).thenReturn(mockPollResponse);
         when(mockPollResponse.getValue()).thenReturn(new BlobCopyInfo("", "", CopyStatusType.SUCCESS, "", null, null, null));
 
         service.copyFromUrl(src, path, null, null);
