@@ -9,6 +9,7 @@ import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -47,115 +48,54 @@ public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
              PreparedStatement ps = c.prepareStatement(
                      "INSERT INTO queries (query_id, label, created_at, display_order) VALUES (?, ?, ?, ?)"
              )) {
-            ps.setObject(1, queryId);
-            ps.setString(2, "Test Query");
-            ps.setInt(4, 1000);
-            ps.setObject(3, OffsetDateTime.parse("2025-04-01T00:00:00Z"));
-            ps.executeUpdate();
-
-            ps.setObject(1, qid1);
-            ps.setString(2, "Query 1");
-            ps.setObject(3, OffsetDateTime.now());
-            ps.setInt(4, 300);
-            ps.executeUpdate();
-
-            ps.setObject(1, qid2);
-            ps.setString(2, "Query 2");
-            ps.setObject(3, OffsetDateTime.now());
-            ps.setInt(4, 100);
-            ps.executeUpdate();
-
-            ps.setObject(1, qid3);
-            ps.setString(2, "Query 3");
-            ps.setObject(3, OffsetDateTime.now());
-            ps.setInt(4, 200);
-            ps.executeUpdate();
+            insertQuery(ps, queryId, "Test Query", OffsetDateTime.parse("2025-04-01T00:00:00Z"), 1000);
+            insertQuery(ps, qid1, "Query 1", OffsetDateTime.now(), 300);
+            insertQuery(ps, qid2, "Query 2", OffsetDateTime.now(), 100);
+            insertQuery(ps, qid3, "Query 3", OffsetDateTime.now(), 200);
         }
 
+
+
+        ResponseEntity<String> r1 = postQuerySnapshot(queryId, "2025-05-01T12:00:00Z", "Q1 @ t1", "Prompt for Q1 @ t1");
+        assertThat(r1.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+
+        ResponseEntity<String> r2 = postQuerySnapshot(queryId, "2025-06-01T12:00:00Z", "Q1 @ t2", "Prompt for Q1 @ t2");
+        assertThat(r2.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+
+        ResponseEntity<String> r3 = postQuerySnapshot(qid1, "2025-06-01T12:00:00Z", "Q1 @ t2", "Prompt for Q1 @ t2");
+        ResponseEntity<String> r4 = postQuerySnapshot(qid2, "2025-06-01T12:00:00Z", "Q2 @ t2", "Prompt for Q2 @ t2");
+        ResponseEntity<String> r5 = postQuerySnapshot(qid3, "2025-06-01T12:00:00Z", "Q3 @ t2", "Prompt for Q3 @ t2");
+
+        assertThat(r3.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(r4.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(r5.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+
+    }
+
+    private void insertQuery(PreparedStatement ps, UUID id, String label, OffsetDateTime createdAt, int displayOrder) throws SQLException {
+        ps.setObject(1, id);
+        ps.setString(2, label);
+        ps.setObject(3, createdAt);
+        ps.setInt(4, displayOrder);
+        ps.executeUpdate();
+    }
+
+    private ResponseEntity<String> postQuerySnapshot(UUID queryId, String effectiveAt, String userQuery, String queryPrompt) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("effectiveAt", effectiveAt);
+
+        Map<String, Object> query = new HashMap<>();
+        query.put("queryId", queryId.toString());
+        query.put("userQuery", userQuery);
+        query.put("queryPrompt", queryPrompt);
+
+        body.put("queries", List.of(query));
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(VND_TYPE_JSON);
         // Add your custom header
         headers.set(HEADER_NAME, HEADER_VALUE);
 
-        // ---------- Snapshot t1 ----------
-        Map<String, Object> body1 = new HashMap<>();
-        body1.put("effectiveAt", "2025-05-01T12:00:00Z");
-        Map<String, Object> q1 = new HashMap<>();
-        q1.put("queryId", queryId.toString());
-        q1.put("userQuery", "Q1 @ t1");
-        q1.put("queryPrompt", "Prompt for Q1 @ t1");
-        body1.put("queries", List.of(q1));
-        ResponseEntity<String> r1 = http.postForEntity(
-                baseUrl + "/queries",
-                new HttpEntity<>(body1, headers),
-                String.class
-        );
-        assertThat(r1.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
-
-        // ---------- Snapshot t2 ----------
-        Map<String, Object> body2 = new HashMap<>();
-        body2.put("effectiveAt", "2025-06-01T12:00:00Z");
-        Map<String, Object> q2 = new HashMap<>();
-        q2.put("queryId", queryId.toString());
-        q2.put("userQuery", "Q1 @ t2");
-        q2.put("queryPrompt", "Prompt for Q1 @ t2");
-        body2.put("queries", List.of(q2));
-        ResponseEntity<String> r2 = http.postForEntity(
-                baseUrl + "/queries",
-                new HttpEntity<>(body2, headers),
-                String.class
-        );
-        assertThat(r2.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
-
-        // ---------- Snapshot t2 ----------
-        Map<String, Object> body3 = new HashMap<>();
-        body3.put("effectiveAt", "2025-06-01T12:00:00Z");
-
-        Map<String, Object> body4 = new HashMap<>();
-        body4.put("effectiveAt", "2025-06-01T12:00:00Z");
-
-        Map<String, Object> body5 = new HashMap<>();
-        body5.put("effectiveAt", "2025-06-01T12:00:00Z");
-
-        Map<String, Object> q3 = new HashMap<>();
-        q3.put("queryId", qid1.toString());
-        q3.put("userQuery", "Q1 @ t2");
-        q3.put("queryPrompt", "Prompt for Q1 @ t2");
-
-        Map<String, Object> q4 = new HashMap<>();
-        q4.put("queryId", qid2.toString());
-        q4.put("userQuery", "Q2 @ t2");
-        q4.put("queryPrompt", "Prompt for Q2 @ t2");
-
-        Map<String, Object> q5 = new HashMap<>();
-        q5.put("queryId", qid3.toString());
-        q5.put("userQuery", "Q3 @ t2");
-        q5.put("queryPrompt", "Prompt for Q3 @ t2");
-        body3.put("queries", List.of(q3));
-        body4.put("queries", List.of(q4));
-        body5.put("queries", List.of(q5));
-        ResponseEntity<String> r3 = http.postForEntity(
-                baseUrl + "/queries",
-                new HttpEntity<>(body3, headers),
-                String.class
-        );
-
-        ResponseEntity<String> r4 = http.postForEntity(
-                baseUrl + "/queries",
-                new HttpEntity<>(body4, headers),
-                String.class
-        );
-
-        ResponseEntity<String> r5 = http.postForEntity(
-                baseUrl + "/queries",
-                new HttpEntity<>(body5, headers),
-                String.class
-        );
-        assertThat(r3.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
-        assertThat(r4.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
-        assertThat(r5.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
-
-
+        return http.postForEntity(baseUrl + "/queries", new HttpEntity<>(body, headers), String.class);
     }
 
     @AfterEach
@@ -247,12 +187,12 @@ public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
         );
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-            objectMapper = new ObjectMapper();
-            var root = objectMapper.readTree(res.getBody());
-            var items = root.get("queries");
+        objectMapper = new ObjectMapper();
+        var root = objectMapper.readTree(res.getBody());
+        var items = root.get("queries");
 
         assertThat(items).isNotNull();
-            assertThat(items.size()).isGreaterThanOrEqualTo(2);
+        assertThat(items.size()).isGreaterThanOrEqualTo(2);
 
         int indexQuery1 = -1;
         int indexQuery2 = -1;
