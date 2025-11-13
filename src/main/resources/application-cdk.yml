@@ -4,19 +4,19 @@ cdk:
     azure:
       connection-string: ${CP_CDK_AZURE_STORAGE_CONNECTION_STRING:NO_CONNECTION_STRING_DEFINED}
       container: ${CP_CDK_AZURE_STORAGE_CONTAINER}
-      copy-poll-interval-ms: 5000
-      copy-timeout-seconds: 300
+      copy-poll-interval-ms: ${CP_CDK_AZURE_POLL_INTERVAL_MS}
+      copy-timeout-seconds: ${CP_CDK_AZURE_TIMEOUT_SECONDS}
   ingestion:
-    core-pool-size: 8
-    max-pool-size: 16
-    queue-capacity: 64
+    core-pool-size: ${CP_CDK_INGESTION_CORE_POOL_SIZE}
+    max-pool-size: ${CP_CDK_INGESTION_MAX_POOL_SIZE}
+    queue-capacity: ${CP_CDK_INGESTION_QUEUE_CAPACITY}
     verify:
       max-wait-ms: ${CDK_INGEST_VERIFY_MAX_WAIT_MS:300000}
     retry:
-      max-attempts: 10
+      max-attempts: ${CDK_RETRY_MAX_WAIT_MS}
       backoff:
-        initial-ms: 1000
-        max-ms: 15000
+        initial-ms: ${CDK_RETRY_BACKOFF_INITIAL_MS}
+        max-ms: ${CDK_RETRY_BACKOFF_MAX_MS}
     upload:
       blob-prefix: ${CDK_UPLOAD_BLOB_PREFIX:cases}
       date-pattern: ${CDK_UPLOAD_DATE_PATTERN:yyyyMMdd}
