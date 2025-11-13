@@ -1,6 +1,5 @@
 package uk.gov.hmcts.cp.cdk.batch.storage;
 
-import java.io.InputStream;
 import java.util.Map;
 
 public interface StorageService {
