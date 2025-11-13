@@ -95,6 +95,9 @@ services:
       OTEL_TRACES_URL: http://localhost:4318/traces
       OTEL_METRICS_URL: http://localhost:4318/metrics
 
+      CP_CDK_JMS_PUB_SUB_DOMAIN: true
+      CP_CDK_JMS_SESSION_CACHE_SIZE: 5
+
       # Use Azurite locally with your existing config keys
       CP_CDK_AZURE_STORAGE_CONNECTION_STRING: >
         DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;

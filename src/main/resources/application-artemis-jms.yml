@@ -5,6 +5,6 @@ spring:
     broker-url: ${CP_CDK_ARTEMIS_URL}
 
   jms:
-    pub-sub-domain: true
+    pub-sub-domain: ${CP_CDK_JMS_PUB_SUB_DOMAIN}
     cache:
-      session-cache-size: 5
+      session-cache-size: ${CP_CDK_JMS_SESSION_CACHE_SIZE}
