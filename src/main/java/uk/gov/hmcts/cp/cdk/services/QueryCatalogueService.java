@@ -55,7 +55,7 @@ public class QueryCatalogueService {
         Query query = queryRepository.findById(queryId).orElseGet(() -> {
             final Query created = new Query();
             created.setQueryId(queryId);
-            created.setOrder(newOrder != null ? newOrder : 10000);
+            created.setDisplayOrder(newOrder);
             return created;
         });
 

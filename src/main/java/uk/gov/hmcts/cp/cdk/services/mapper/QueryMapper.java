@@ -15,7 +15,7 @@ public interface QueryMapper {
         final QueryCatalogueItem item = new QueryCatalogueItem();
         item.setQueryId(query.getQueryId());
         item.setLabel(query.getLabel());
-        item.setOrder(query.getOrder());
+        item.setOrder(query.getDisplayOrder());
         return item;
     }
 

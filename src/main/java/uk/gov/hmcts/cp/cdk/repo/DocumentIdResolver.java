@@ -19,8 +19,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DocumentIdResolver {
 
-    private final NamedParameterJdbcTemplate jdbc;
-
     private static final String SQL_FIND_EXISTING_DOC = """
             SELECT doc_id
               FROM case_documents
@@ -30,7 +28,7 @@ public class DocumentIdResolver {
              ORDER BY ingestion_phase_at DESC
              LIMIT 1
             """;
-
+    private final NamedParameterJdbcTemplate jdbc;
 
     /**
      * Attempts to resolve an existing document id for the given case and material.
@@ -43,15 +41,10 @@ public class DocumentIdResolver {
                 .addValue("case_id", caseId)
                 .addValue("material_id", materialId);
 
-        try {
-            final List<UUID> rows = jdbc.query(SQL_FIND_EXISTING_DOC, params,
-                    (rs, rowNum) -> (UUID) rs.getObject(1));
-            if (!rows.isEmpty()) {
-                result = Optional.ofNullable(rows.get(0));
-            }
-        } catch (final Exception ex) {
-            log.warn("Failed to resolve existing docId for caseId={}, materialId={}: {}",
-                    caseId, materialId, ex.getMessage(), ex);
+        final List<UUID> rows = jdbc.query(SQL_FIND_EXISTING_DOC, params,
+                (rs, rowNum) -> (UUID) rs.getObject(1));
+        if (!rows.isEmpty()) {
+            result = Optional.ofNullable(rows.get(0));
         }
 
         return result;

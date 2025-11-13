@@ -45,7 +45,7 @@ public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
         // Seed the catalogue row first (POST /queries only upserts DEFINITIONS, not catalogue)
         try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass);
              PreparedStatement ps = c.prepareStatement(
-                     "INSERT INTO queries (query_id, label, created_at, \"order\") VALUES (?, ?, ?, ?)"
+                     "INSERT INTO queries (query_id, label, created_at, display_order) VALUES (?, ?, ?, ?)"
              )) {
             ps.setObject(1, queryId);
             ps.setString(2, "Test Query");

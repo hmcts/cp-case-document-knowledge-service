@@ -205,7 +205,7 @@ class CaseIngestionJobIdempotencyTest {
 
         // step 5 — seed one canonical query + definition
         jdbc.update(
-                "INSERT INTO queries(query_id, label, created_at,\"order\") VALUES (?, ?, NOW(),?) " +
+                "INSERT INTO queries(query_id, label, created_at,display_order) VALUES (?, ?, NOW(),?) " +
                         "ON CONFLICT (query_id) DO NOTHING",
                 ps -> {
                     ps.setObject(1, queryId);
