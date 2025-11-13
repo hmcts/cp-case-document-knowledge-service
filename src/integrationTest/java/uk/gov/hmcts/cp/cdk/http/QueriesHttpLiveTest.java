@@ -273,7 +273,7 @@ public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
         assertThat(indexQuery2).isNotEqualTo(-1);
         assertThat(indexQuery3).isNotEqualTo(-1);
 
-        // Assert order:   Query 2 < Query 3 < Query 1
+        // Assert order: Query 2 < Query 3 < Query 1
         assertThat(indexQuery2)
                 .as("Query 2 should appear before Query 3")
                 .isLessThan(indexQuery3);
