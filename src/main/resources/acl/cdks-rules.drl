@@ -16,7 +16,7 @@ rule "Allow LA – queries"
 when
   $o: Outcome()
   $a: Action(name == "casedocumentknowledge-service.queries")
-  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers"))
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers","System Users"))
 then
   $o.setSuccess(true);
 end
@@ -34,7 +34,7 @@ rule "Allow LA – query-catalogue"
 when
   $o: Outcome()
   $a: Action(name == "casedocumentknowledge-service.query-catalogue")
-  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers"))
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers","System Users"))
 then
   $o.setSuccess(true);
 end

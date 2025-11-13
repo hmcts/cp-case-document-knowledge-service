@@ -86,7 +86,7 @@ class QueryCatalogueControllerTest {
         mvc.perform(
                         put("/query-catalogue/{queryId}/label", id)
                                 .contentType(VND_TYPE_JSON)
-                                .content("{\"label\":\"New Label\"}")
+                                .content("{\"label\":\"New Label\", \"order\":100}")
                 )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.queryId").value(id.toString()))

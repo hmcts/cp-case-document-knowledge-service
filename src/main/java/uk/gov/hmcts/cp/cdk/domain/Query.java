@@ -24,6 +24,10 @@ public class Query {
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt = utcNow();
 
+    @Column(name = "display_order", nullable = false)
+    private Integer displayOrder;
+
+
     public UUID getQueryId() {
         return queryId;
     }
@@ -42,6 +46,15 @@ public class Query {
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
+    }
+
+
+    public Integer getDisplayOrder() {
+        return displayOrder;
+    }
+
+    public void setDisplayOrder(final Integer displayOrder) {
+        this.displayOrder = displayOrder;
     }
 
     public void setCreatedAt(final OffsetDateTime createdAt) {

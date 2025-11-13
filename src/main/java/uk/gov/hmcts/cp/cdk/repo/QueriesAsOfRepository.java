@@ -41,13 +41,14 @@ public class QueriesAsOfRepository {
                   ld.query_prompt,
                   ld.effective_at,
                   cqs.status::text AS status,
-                  cqs.status_at
+                  cqs.status_at,
+                  q.display_order
                 FROM queries q
                 JOIN latest_def ld
                   ON ld.query_id = q.query_id AND ld.rn = 1
                 LEFT JOIN case_query_status cqs
                   ON cqs.query_id = q.query_id AND cqs.case_id = :caseId
-                ORDER BY q.query_id
+                ORDER BY q.display_order ASC, q.query_id
                 """;
 
         final Query nativeQuery = entityManager.createNativeQuery(sql);

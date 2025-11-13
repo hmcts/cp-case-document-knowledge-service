@@ -11,8 +11,10 @@ import java.util.UUID;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Query Catalogue API controller.
@@ -44,8 +46,18 @@ public class QueryCatalogueController implements QueryCatalogueApi {
             final UUID queryId,
             final LabelUpdateRequest labelUpdateRequest
     ) {
-        log.debug("setQueryCatalogueLabel queryId={}, label={}", queryId,
-                labelUpdateRequest != null ? labelUpdateRequest.getLabel() : null);
+        log.debug("setQueryCatalogueLabel queryId={}, label={}, order={}",
+                queryId,
+                labelUpdateRequest != null ? labelUpdateRequest.getLabel() : null,
+                labelUpdateRequest != null ? labelUpdateRequest.getOrder() : null
+        );
+        if (labelUpdateRequest == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body must not be null");
+        }
+
+        if (labelUpdateRequest.getOrder() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order must be provided");
+        }
         return ResponseEntity.ok(service.updateLabel(queryId, labelUpdateRequest));
     }
 }
