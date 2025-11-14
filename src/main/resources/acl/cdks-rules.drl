@@ -7,7 +7,7 @@ rule "Allow LA – ingestion-process"
 when
   $o: Outcome()
   $a: Action(name == "casedocumentknowledge-service.ingestion-process")
-  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers"))
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers","District Judge"))
 then
   $o.setSuccess(true);
 end
@@ -16,7 +16,7 @@ rule "Allow LA – queries"
 when
   $o: Outcome()
   $a: Action(name == "casedocumentknowledge-service.queries")
-  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers","System Users"))
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers","System Users","District Judge"))
 then
   $o.setSuccess(true);
 end
@@ -25,7 +25,7 @@ rule "Allow LA – answers"
 when
   $o: Outcome()
   $a: Action(name == "casedocumentknowledge-service.answers")
-  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers"))
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers","District Judge"))
 then
   $o.setSuccess(true);
 end
@@ -34,7 +34,7 @@ rule "Allow LA – query-catalogue"
 when
   $o: Outcome()
   $a: Action(name == "casedocumentknowledge-service.query-catalogue")
-  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers","System Users"))
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers","System Users","District Judge"))
 then
   $o.setSuccess(true);
 end
@@ -43,7 +43,7 @@ rule "Allow LA – document-content"
 when
   $o: Outcome()
   $a: Action(name == "casedocumentknowledge-service.document-content")
-  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers"))
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers","District Judge"))
 then
   $o.setSuccess(true);
 end
@@ -52,7 +52,7 @@ rule "Allow LA – ingestion sattus"
 when
   $o: Outcome()
   $a: Action(name == "casedocumentknowledge-service.ingestion")
-  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers"))
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers","District Judge"))
 then
   $o.setSuccess(true);
 end
@@ -62,7 +62,7 @@ rule "Allow LA – ingestion process"
 when
   $o: Outcome()
   $a: Action(name == "casedocumentknowledge-service.ingestion-process")
-  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers"))
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "Legal Advisers","District Judge"))
 then
   $o.setSuccess(true);
 end
