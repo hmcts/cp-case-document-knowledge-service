@@ -9,9 +9,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-
+@Slf4j
 @Component
 public class HearingDtoMapper {
 
@@ -21,6 +22,15 @@ public class HearingDtoMapper {
             return List.of();
         }
         return summaries.prosecutionCaseSummaries().stream()
+                .filter(pcs -> {
+                    int count = pcs.defendants() == null ? 0 : pcs.defendants().size();
+                    if (count != 1) {
+                        log.warn("Skipping prosecution case {} because it has {} defendants (expected exactly 1)",
+                                pcs.prosecutionCaseId(), count);
+                        return false;
+                    }
+                    return true;
+                })
                 .map(ProsecutionCaseSummaries::prosecutionCaseId)
                 .filter(Objects::nonNull)
                 .toList();

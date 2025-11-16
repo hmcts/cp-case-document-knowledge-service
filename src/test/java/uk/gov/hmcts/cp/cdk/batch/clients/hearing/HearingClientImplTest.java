@@ -45,7 +45,7 @@ class HearingClientImplTest {
     @Test
     @DisplayName("Get Hearings And Cases collects Ids And Maps")
     void getHearingsAndCases_collectsIdsAndMaps() {
-        // Arrange
+
         var rootProps = new CQRSClientProperties(
                 "http://localhost:8080",
                 3000, 15000,
@@ -61,12 +61,16 @@ class HearingClientImplTest {
         final String responseBody = """
                 {
                   "hearingSummaries": [
-                    { "prosecutionCaseSummaries": [ { "id": "CASE-1" }, { "id": "CASE-2" } ] }
+                    { 
+                      "prosecutionCaseSummaries": [
+                        { "id": "CASE-1", "defendants": [ { "id": "D1" } ] },
+                        { "id": "CASE-2", "defendants": [ { "id": "D2" } ] }
+                      ]
+                    }
                   ]
                 }
                 """;
 
-        // Expect
         server.expect(once(),
                         requestTo(allOf(
                                 containsString("/hearing-query-api/query/api/rest/hearing/hearings"),
@@ -78,11 +82,9 @@ class HearingClientImplTest {
                 .andExpect(header("Accept", "application/vnd.hearing.get.hearings+json"))
                 .andRespond(withSuccess(responseBody, MediaType.APPLICATION_JSON));
 
-        // Act
         final List<HearingSummariesInfo> infos =
                 client.getHearingsAndCases("C001", "R12", LocalDate.of(2025, 10, 29), "userId");
 
-        // Assert
         server.verify();
         assertThat(infos).extracting(HearingSummariesInfo::caseId)
                 .containsExactly("CASE-1", "CASE-2");
@@ -113,12 +115,66 @@ class HearingClientImplTest {
                 .andExpect(header("Accept", "application/vnd.hearing.get.hearings+json"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-        // Act
         final List<HearingSummariesInfo> infos =
                 client.getHearingsAndCases("C001", "R12", LocalDate.of(2025, 10, 29), "userId");
 
-        // Assert
         server.verify();
         assertThat(infos).isEmpty();
     }
+
+
+    @Test
+    @DisplayName("Get Hearings And Cases ignores cases with more than one defendant")
+    void getHearingsAndCases_ignoresCasesWithMultipleDefendants() {
+        var rootProps = new CQRSClientProperties(
+                "http://localhost:8080",
+                3000, 15000,
+                new CQRSClientProperties.Headers("X-CJSCPPUID")
+        );
+        final var hearingCfg = new HearingClientConfig(
+                "application/vnd.hearing.get.hearings+json",
+                "/hearing-query-api/query/api/rest/hearing/hearings"
+        );
+        final var client = new HearingClientImpl(restClient, rootProps, hearingCfg, new HearingDtoMapper());
+
+        final String headerName = rootProps.headers().cjsCppuid();
+
+        final String responseBody = """
+                {
+                  "hearingSummaries": [
+                    {
+                      "prosecutionCaseSummaries": [
+                        {
+                          "id": "CASE-MULTI",
+                          "defendants": [
+                            { "id": "D1" },
+                            { "id": "D2" }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """;
+
+        server.expect(once(),
+                        requestTo(allOf(
+                                containsString("/hearing-query-api/query/api/rest/hearing/hearings"),
+                                containsString("courtCentreId=C001"),
+                                containsString("roomId=R12"),
+                                containsString("date=2025-10-29")
+                        )))
+                .andExpect(header(headerName, "userId"))
+                .andExpect(header("Accept", "application/vnd.hearing.get.hearings+json"))
+                .andRespond(withSuccess(responseBody, MediaType.APPLICATION_JSON));
+
+        final List<HearingSummariesInfo> infos =
+                client.getHearingsAndCases("C001", "R12", LocalDate.of(2025, 10, 29), "userId");
+
+        server.verify();
+        assertThat(infos)
+                .as("Cases with 2 defendants must be filtered out")
+                .isEmpty();
+    }
+
 }
