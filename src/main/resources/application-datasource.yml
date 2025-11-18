@@ -9,12 +9,12 @@ spring:
       pool-name: cp-hikari
       maximum-pool-size: ${CP_CDK_DB_POOL_SIZE:20}
       minimum-idle: ${CP_CDK_DB_MIN_IDLE:5}
-      connection-timeout: 300000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      keepalive-time: 300000
+      connection-timeout: ${CP_CDK_DB_CONNECTION_TIMEOUT:300000}
+      idle-timeout: ${CP_CDK_DB_IDLE_TIMEOUT:600000}
+      max-lifetime: ${CP_CDK_DB_MAX_LIFETIME:1800000}
+      keepalive-time: ${CP_CDK_DB_KEEPLIVE_TIME:300000}
       auto-commit: false
-      validation-timeout: 5000
+      validation-timeout: ${CP_CDK_DB_VALIDATION_TIMEOUT:5000}
 
   jpa:
     open-in-view: false
