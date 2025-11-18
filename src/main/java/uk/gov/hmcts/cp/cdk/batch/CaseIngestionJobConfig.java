@@ -48,11 +48,12 @@ public class CaseIngestionJobConfig {
     public Step step3To6Partitioned(final JobRepository repo,
                                     final Step perCaseFlowStep,
                                     final Partitioner eligibleMaterialCasePartitioner,
-                                    final TaskExecutor ingestionTaskExecutor) {
+                                    final TaskExecutor ingestionTaskExecutor,
+                                    final PartitioningProperties partitionProps) {
         return new StepBuilder("step3_to_6_partitioned", repo)
                 .partitioner("perCaseFlowStep", eligibleMaterialCasePartitioner)
                 .step(perCaseFlowStep)
-                .gridSize(2)
+                .gridSize(partitionProps.caseGridSize())
                 .taskExecutor(ingestionTaskExecutor)
                 .build();
     }
@@ -62,11 +63,12 @@ public class CaseIngestionJobConfig {
     public Step step6GenerateAnswersByQueryPartitioned(final JobRepository repo,
                                                        final Step step6GenerateAnswerSingleQuery,
                                                        final QueryIdPartitioner queryIdPartitioner,
-                                                       final TaskExecutor ingestionTaskExecutor) {
+                                                       final TaskExecutor ingestionTaskExecutor,
+                                                       final PartitioningProperties partitionProps) {
         return new StepBuilder("step6_generate_answers_by_query_partitioned", repo)
                 .partitioner("step6_generate_answer_single_query", queryIdPartitioner)
                 .step(step6GenerateAnswerSingleQuery)
-                .gridSize(2)
+                .gridSize(partitionProps.queryGridSize())
                 .taskExecutor(ingestionTaskExecutor)
                 .build();
     }
@@ -84,14 +86,16 @@ public class CaseIngestionJobConfig {
                                                     final Partitioner caseIdPartitioner,          // bean: "caseIdPartitioner"
                                                     final Step step2ResolveEligibleCaseWorker,
                                                     final TaskExecutor ingestionTaskExecutor,
-                                                    final MaterialMappingAggregator materialMappingAggregator) {
+                                                    final MaterialMappingAggregator materialMappingAggregator,
+                                                    final PartitioningProperties partitionProps
+    ) {
         return new StepBuilder("step2_filter_case_partitioned", repo)
                 .partitioner(step2ResolveEligibleCaseWorker.getName(), caseIdPartitioner)
                 .step(step2ResolveEligibleCaseWorker)
                 .aggregator(materialMappingAggregator)
                 .listener(eligibleMaterialListener())
                 .taskExecutor(ingestionTaskExecutor)
-                .gridSize(2)
+                .gridSize(partitionProps.filterGridSize())
                 .build();
     }
 
