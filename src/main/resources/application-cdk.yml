@@ -10,8 +10,14 @@ cdk:
     core-pool-size: ${CP_CDK_INGESTION_CORE_POOL_SIZE:8}
     max-pool-size: ${CP_CDK_INGESTION_MAX_POOL_SIZE:16}
     queue-capacity: ${CP_CDK_INGESTION_QUEUE_CAPACITY:64}
+    batch:
+      partition:
+        case-grid-size: ${CDK_INGESTION_BATCH_PARTITION_CASE_GRID_SIZE:8}
+        query-grid-size: ${CDK_INGESTION_BATCH_PARTITION_QUERY_GRID_SIZE:4}
+        filter-grid-size: ${CDK_INGESTION_BATCH_PARTITION_FILTER_GRID_SIZE:4}
     verify:
-      max-wait-ms: ${CDK_INGEST_VERIFY_MAX_WAIT_MS:300000}
+      max-wait-ms: ${CDK_INGEST_VERIFY_MAX_WAIT_MS:3600000}
+      poll-interval-ms: ${CDK_INGESTION_VERIFY_POLL_INTERVAL_MS:30000}
     retry:
       max-attempts: ${CDK_RETRY_MAX_WAIT_MS:10}
       backoff:
