@@ -1,8 +1,8 @@
 rag:
   client:
     base-url: ${CP_CDK_RAG_URL}
-    connect-timeout-ms: 3000
-    read-timeout-ms: 180000
+    connect-timeout-ms: ${CP_CDK_RAG_CONNECTION_TIMEOUT_MS:3000}
+    read-timeout-ms: ${CP_CDK_RAG_READ_TIMEOUT_MS:180000}
     headers:
       Accept: application/json
       Content-Type: application/json
