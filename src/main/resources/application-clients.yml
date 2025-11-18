@@ -10,8 +10,8 @@ rag:
 cqrs:
   client:
     base-url: ${CP_CDK_BASE_URL:http://localhost:8080}
-    connect-timeout-ms: 3000
-    read-timeout-ms: 15000
+    connect-timeout-ms: ${CP_CDK_CQRS_CONNECTION_TIMEOUT_MS:3000}
+    read-timeout-ms: ${CP_CDK_CQRS_READ_TIMEOUT_MS:15000}
     headers:
       cjs-cppuid: ${CP_CDK_CJSCPPUID_HEADER:CJSCPPUID}
     hearing:
