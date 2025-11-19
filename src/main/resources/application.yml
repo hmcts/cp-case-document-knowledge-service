@@ -16,4 +16,5 @@ spring:
 server:
   port: ${SERVER_PORT:8082}
 
+
 # Developer note: keep this file minimal; per-environment overrides go into application-env.yml or profile files

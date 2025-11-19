@@ -31,7 +31,7 @@ public class RestClientFactoryConfig {
 
     @Bean(destroyMethod = "close")
     public CloseableHttpClient closeableHttpClient(final PoolingHttpClientConnectionManager connectionManager) {
-        final RequestConfig requestConfig = RequestConfig.custom()
+        final RequestConfig defaultConfig = RequestConfig.custom()
                 .setConnectTimeout(Timeout.of(THREE_MIN))
                 .setConnectionRequestTimeout(Timeout.of(THREE_MIN))
                 .setResponseTimeout(Timeout.of(THREE_MIN))
@@ -39,7 +39,8 @@ public class RestClientFactoryConfig {
 
         return HttpClients.custom()
                 .setConnectionManager(connectionManager)
-                .setDefaultRequestConfig(requestConfig)
+                .setDefaultRequestConfig(defaultConfig)
+                .setConnectionManagerShared(true)
                 .evictExpiredConnections()
                 .evictIdleConnections(TimeValue.ofMinutes(3))
                 .disableAutomaticRetries()
@@ -47,16 +48,20 @@ public class RestClientFactoryConfig {
     }
 
     @Bean
-    public RestClientFactory restClientFactory(final CloseableHttpClient httpClient) {
-        return new RestClientFactory(httpClient);
+    public RestClientFactory restClientFactory(final CloseableHttpClient httpClient,
+                                               final PoolingHttpClientConnectionManager connectionManager) {
+        return new RestClientFactory(httpClient, connectionManager);
     }
 
     public static class RestClientFactory {
 
-        private final CloseableHttpClient httpClient;
+        private final CloseableHttpClient baseHttpClient;
+        private final PoolingHttpClientConnectionManager connectionManager;
 
-        public RestClientFactory(final CloseableHttpClient httpClient) {
-            this.httpClient = httpClient;
+        public RestClientFactory(final CloseableHttpClient baseHttpClient,
+                                 final PoolingHttpClientConnectionManager connectionManager) {
+            this.baseHttpClient = baseHttpClient;
+            this.connectionManager = connectionManager;
         }
 
         public RestClient build(final String baseUrl,
@@ -65,23 +70,42 @@ public class RestClientFactoryConfig {
                                 final Duration readTimeout,
                                 final boolean enableDebugLogging) {
 
-            final HttpComponentsClientHttpRequestFactory requestFactory =
-                    new HttpComponentsClientHttpRequestFactory(this.httpClient);
-            requestFactory.setConnectTimeout(connectTimeout != null ? connectTimeout : THREE_MIN);
-            requestFactory.setReadTimeout(readTimeout != null ? readTimeout : THREE_MIN);
-            requestFactory.setConnectionRequestTimeout(THREE_MIN);
+            final boolean overrideTimeouts = (connectTimeout != null) || (readTimeout != null);
 
-            final ClientHttpRequestFactory clientRequestFactory = requestFactory;
+            final CloseableHttpClient clientForThis;
+            if (overrideTimeouts) {
+                final Duration ct = (connectTimeout != null) ? connectTimeout : THREE_MIN;
+                final Duration rt = (readTimeout  != null) ? readTimeout  : THREE_MIN;
+
+                final RequestConfig perClientConfig = RequestConfig.custom()
+                        .setConnectTimeout(Timeout.of(ct))
+                        .setConnectionRequestTimeout(Timeout.of(ct))
+                        .setResponseTimeout(Timeout.of(rt))
+                        .build();
+
+                clientForThis = HttpClients.custom()
+                        .setConnectionManager(connectionManager)
+                        .setConnectionManagerShared(true)
+                        .setDefaultRequestConfig(perClientConfig)
+                        .evictExpiredConnections()
+                        .evictIdleConnections(TimeValue.ofMinutes(3))
+                        .disableAutomaticRetries()
+                        .build();
+            } else {
+                clientForThis = this.baseHttpClient;
+            }
+
+            final ClientHttpRequestFactory requestFactory =
+                    new HttpComponentsClientHttpRequestFactory(clientForThis);
 
             final RestClient.Builder builder = RestClient.builder()
                     .baseUrl(baseUrl)
-                    .requestFactory(clientRequestFactory)
+                    .requestFactory(requestFactory)
                     .requestInterceptor(new CorrelationIdInterceptor());
 
             if (enableDebugLogging) {
                 builder.requestInterceptor(new DebugLoggingInterceptor());
             }
-
             if (defaultHeaders != null && !defaultHeaders.isEmpty()) {
                 defaultHeaders.forEach(builder::defaultHeader);
             }

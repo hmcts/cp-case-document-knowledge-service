@@ -90,7 +90,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
                 CaseIngestionJobIdempotencyTest.TestOverrides.class
         },
         properties = {
-                "spring.main.allow-bean-definition-overriding=true"
+                "spring.main.allow-bean-definition-overriding=true",
+                "cp.audit.enabled=false"
         }
 )
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

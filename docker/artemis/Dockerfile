@@ -25,7 +25,7 @@ RUN wget --no-check-certificate https://archive.apache.org/dist/activemq/activem
 RUN unzip apache-artemis-${ARTEMIS_VERSION}-bin.zip && rm -r apache-artemis-${ARTEMIS_VERSION}-bin.zip && mv apache-artemis-${ARTEMIS_VERSION} ${ARTEMIS_HOME}
 
 USER artemis
-EXPOSE 8161 9404 61616 5445 5672 1883 61613
+EXPOSE 8161 9404 61616 5445 5672 1883 61613 61617
 
 USER artemis
 WORKDIR ${ARTEMIS_INSTANCE}

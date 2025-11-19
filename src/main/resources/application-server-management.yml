@@ -19,10 +19,6 @@ management:
       exposure:
         include: "health,info,metrics,prometheus,env,loggers,threaddump"
 
-  health:
-    jms:
-      enabled: false
-
   endpoint:
     health:
       probes:

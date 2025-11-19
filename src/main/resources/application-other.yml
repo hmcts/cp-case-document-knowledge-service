@@ -18,12 +18,6 @@ authz:
       - "/actuator"
       - "/error"
 
-audit:
-  http:
-    enabled: true
-    openapi-rest-spec: ${CP_CDK_REST_SPECIFICATION}
-
-
 # Virtual threads toggle (Boot 3.2+/4.x)
 spring.threads.virtual.enabled: ${VIRTUAL_THREADS:false}
 

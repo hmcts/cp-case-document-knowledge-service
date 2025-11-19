@@ -5,6 +5,7 @@ services:
     command: azurite-blob --loose --blobHost 0.0.0.0 --blobPort 10000 --skipApiVersionCheck
     ports:
       - "10000:10000"
+    restart: unless-stopped
 
   artemis:
     container_name: cdks_artemis
@@ -13,10 +14,17 @@ services:
       args:
         - ARTEMIS_BASE_IMAGE
     ports:
-      - "61616:61616"
+      - "61617:61617"
       - "8161:8161"
     environment:
       ACTIVEMQ_ENABLED_AUTH: "false"
+    volumes:
+      # persist ONLY data, don't shadow /var/lib/artemis-instance/etc
+      - artemis-data:/var/lib/artemis-instance/data
+      # mount config + keystore to the *instance* path
+      - ./artemis/broker.xml:/var/lib/artemis-instance/etc/broker.xml:ro
+      - ../src/integrationTest/resources/ssl/keystore.jks:/var/lib/artemis-instance/etc/keystore.jks:ro
+    restart: unless-stopped
 
   db:
     image: postgres:16-alpine
@@ -28,10 +36,11 @@ services:
     ports:
       - "55432:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U casedocumentknowledge -d casedocumentknowledgeDatabase" ]
+      test: ["CMD-SHELL", "pg_isready -U casedocumentknowledge -d casedocumentknowledgeDatabase"]
       interval: 5s
       timeout: 3s
       retries: 30
+    restart: unless-stopped
 
   wiremock:
     image: wiremock/wiremock:3.9.1
@@ -42,15 +51,16 @@ services:
       - ../src/integrationTest/resources/wiremock/mappings:/home/wiremock/mappings
       - ../src/integrationTest/resources/wiremock/__files:/home/wiremock/__files
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8080/__admin/health || exit 1" ]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/__admin/health || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
 
   app:
     container_name: cdks_application
     build:
-      context: ..        # project root
+      context: ..
       dockerfile: docker/Dockerfile
     depends_on:
       db:
@@ -98,7 +108,27 @@ services:
       SERVER_SERVLET_CONTEXT_PATH: /casedocumentknowledge-service
       SPRING_APPLICATION_NAME: cp-case-document-knowledge-service
 
-      CP_CDK_ARTEMIS_URL: tcp://artemis:61616
+      # Artemis TLS connection (matches broker.xml acceptor)
+      CP_CDK_ARTEMIS_HOST_PRIMARY: artemis
+      CP_CDK_ARTEMIS_PORT: 61617
+      CP_CDK_ARTEMIS_SSL_ENABLED: "true"
+      CP_CDK_ARTEMIS_KEYSTORE: /opt/ssl/keystore.jks
+      CP_CDK_ARTEMIS_KEYSTORE_PASSWORD: changeit
+      CP_CDK_ARTEMIS_TRUSTSTORE: /opt/ssl/truststore.jks
+      CP_CDK_ARTEMIS_TRUSTSTORE_PASSWORD: changeit
+      # For self-signed local cert; set true in prod with proper SANs
+      CP_CDK_ARTEMIS_VERIFY_HOST: "false"
+
+      # JMS retry/timeout tuning (safe universally)
+      CP_CDK_JMS_RETRY_INTERVAL_MS: 100
+      CP_CDK_JMS_RECONNECT_ATTEMPTS: 0
+      CP_CDK_JMS_INITIAL_CONNECT_ATTEMPTS: 10
+      CP_CDK_JMS_CONNECTION_TTL_MS: 15000
+      CP_CDK_JMS_CALL_TIMEOUT_MS: 3000
+
+      CP_CDK_ARTEMIS_HA: "false"
+      MANAGEMENT_HEALTH_JMS_ENABLED: "false"
+
       CP_CDK_REST_SPECIFICATION: case-admin-doc-knowledge-api.openapi.yml
       CDK_INGEST_VERIFY_MAX_WAIT_MS: 10000
 
@@ -118,7 +148,6 @@ services:
       OTEL_TRACES_URL: http://localhost:4318/traces
       OTEL_METRICS_URL: http://localhost:4318/metrics
 
-      # Use Azurite locally with your existing config keys
       CP_CDK_AZURE_STORAGE_CONNECTION_STRING: >
         DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;
         AccountKey=Eby8vdM02xNOcqFeqCnf2w==;
@@ -129,10 +158,15 @@ services:
       CP_CDK_RAG_SUBSCRIPTION_KEY: dummy-key
       CP_CDK_CJSCPPUID_HEADER: CJSCPPUID
       CP_CDK_BASE_URL: http://wiremock:8080
-
-
+    volumes:
+      - ../src/integrationTest/resources/ssl/keystore.jks:/opt/ssl/keystore.jks:ro
+      - ../src/integrationTest/resources/ssl/truststore.jks:/opt/ssl/truststore.jks:ro
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fsS http://localhost:8082/casedocumentknowledge-service/actuator/health || exit 1" ]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/casedocumentknowledge-service/actuator/health || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 12
+    restart: unless-stopped
+
+volumes:
+  artemis-data: {}

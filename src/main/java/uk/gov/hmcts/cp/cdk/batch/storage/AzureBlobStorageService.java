@@ -20,7 +20,8 @@ import com.azure.storage.blob.models.BlobHttpHeaders;
 import com.azure.storage.blob.models.CopyStatusType;
 import com.azure.storage.blob.options.BlobBeginCopyOptions;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections.MapUtils;
+
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Service;

@@ -1,10 +1,30 @@
-# Artemis (ActiveMQ Artemis) and JMS configuration
-spring:
-  artemis:
-    mode: native
-    broker-url: ${CP_CDK_ARTEMIS_URL}
+cp:
+  audit:
+    high-availability: ${CP_CDK_ARTEMIS_HA:false}   # was 'ha', won't bind
+    hosts:
+      - ${CP_CDK_ARTEMIS_HOST_PRIMARY:localhost}
+      - ${CP_CDK_ARTEMIS_HOST_SECONDARY:}
+    port: ${CP_CDK_ARTEMIS_PORT:61616}
+    user: ${CP_CDK_ARTEMIS_USER:}
+    password: ${CP_CDK_ARTEMIS_PASSWORD:}
+    ssl-enabled: ${CP_CDK_ARTEMIS_SSL_ENABLED:true}
+    client-auth-required: ${CP_CDK_ARTEMIS_CLIENT_AUTH_REQUIRED:false}  # <- missing
+    keystore: ${CP_CDK_ARTEMIS_KEYSTORE:}
+    keystore-password: ${CP_CDK_ARTEMIS_KEYSTORE_PASSWORD:}
+    truststore: ${CP_CDK_ARTEMIS_KEYSTORE:}
+    truststore-password: ${CP_CDK_ARTEMIS_KEYSTORE_PASSWORD:}
+    verify-host: ${CP_CDK_ARTEMIS_VERIFY_HOST:false}
+    jms:
+      reconnect-attempts: ${CP_CDK_JMS_RECONNECT_ATTEMPTS:-1}
+      initial-connect-attempts: ${CP_CDK_JMS_INITIAL_CONNECT_ATTEMPTS:10}
+      retry-interval-ms: ${CP_CDK_JMS_RETRY_INTERVAL_MS:2000}
+      retry-multiplier: ${CP_CDK_JMS_RETRY_MULTIPLIER:1.5}
+      max-retry-interval-ms: ${CP_CDK_JMS_MAX_RETRY_INTERVAL_MS:30000}
+      connection-ttl-ms: ${CP_CDK_JMS_CONNECTION_TTL_MS:60000}
+      call-timeout-ms: ${CP_CDK_JMS_CALL_TIMEOUT_MS:15000}
+      session-cache-size: ${CP_CDK_JMS_SESSION_CACHE_SIZE:10}
 
-  jms:
-    pub-sub-domain: true
-    cache:
-      session-cache-size: 5
+audit:
+  http:
+    enabled: ${CP_CDK_HTTP_AUDIT_ENABLED:true}
+    openapi-rest-spec: ${CP_CDK_REST_SPECIFICATION}
