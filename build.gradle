@@ -87,10 +87,8 @@ ext.vers = [
         commonsText        : findProperty('version.commonsText'),
         jjwt               : findProperty('version.jjwt'),
         swaggerParser      : findProperty('version.swaggerParser'),
-        commonsCollections4: findProperty('version.commonsCollections4'),
         azureIdentitys     : findProperty('version.azureIdentitys'),
         azureBlob          : findProperty('version.azureBlob'),
-        azureIdentityBroker: findProperty('version.azureIdentityBroker'),
         mockwebserver      : findProperty('version.mockwebserver'),
         assertj            : findProperty('version.assertj'),
         restAssured        : findProperty('version.restAssured'),
@@ -166,9 +164,14 @@ dependencies {
     implementation "com.azure:azure-storage-blob:${vers.azureBlob}"
 
     // MM
-    implementation "com.azure:azure-identity-broker:${vers.azureIdentityBroker}"
     implementation "com.azure:azure-identity:${vers.azureIdentitys}"
-    implementation "org.apache.commons:commons-collections4:${vers.commonsCollections4}"
+
+    implementation "org.apache.logging.log4j:log4j-to-slf4j"
+   // implementation "org.apache.commons:commons-text:${vers.commonsText}"
+
+
+    //implementation "org.apache.commons:commons-collections4:${vers.commonsCollections4}"
+
 
     // Testcontainers (BOM)
     testImplementation platform("org.testcontainers:testcontainers-bom:${vers.testcontainersBom}")
