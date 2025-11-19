@@ -134,6 +134,7 @@ dependencies {
     //Azure
     implementation 'com.azure:azure-storage-blob:12.32.0'
     implementation "org.testcontainers:testcontainers"
+    implementation 'com.azure:azure-identity:1.14.0'
     // Lombok for handwritten code
     compileOnly "org.projectlombok:lombok:$lombokVersion"
     annotationProcessor "org.projectlombok:lombok:$lombokVersion"

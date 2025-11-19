@@ -2,7 +2,8 @@
 cdk:
   storage:
     azure:
-      connection-string: ${CP_CDK_AZURE_STORAGE_CONNECTION_STRING:NO_CONNECTION_STRING_DEFINED}
+      # connection-string: ${CP_CDK_AZURE_STORAGE_CONNECTION_STRING:NO_CONNECTION_STRING_DEFINED}
+      endpoint: https://myaccount.blob.core.windows.net
       container: ${CP_CDK_AZURE_STORAGE_CONTAINER}
       copy-poll-interval-ms: 5000
       copy-timeout-seconds: 300
@@ -10,6 +11,11 @@ cdk:
     core-pool-size: 8
     max-pool-size: 16
     queue-capacity: 64
+    batch:
+      partition:
+        case-grid-size: ${CDK_INGESTION_BATCH_PARTITION_CASE_GRID_SIZE:8}
+        query-grid-size: ${CDK_INGESTION_BATCH_PARTITION_QUERY_GRID_SIZE:4}
+        filter-grid-size: ${CDK_INGESTION_BATCH_PARTITION_FILTER_GRID_SIZE:4}
     verify:
       max-wait-ms: ${CDK_INGEST_VERIFY_MAX_WAIT_MS:300000}
     retry:

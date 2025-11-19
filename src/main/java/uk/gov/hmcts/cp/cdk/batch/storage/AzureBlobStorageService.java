@@ -11,10 +11,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
+import com.azure.core.credential.TokenCredential;
 import com.azure.core.util.polling.SyncPoller;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobContainerClientBuilder;
+import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobCopyInfo;
 import com.azure.storage.blob.models.BlobHttpHeaders;
 import com.azure.storage.blob.models.CopyStatusType;
@@ -38,13 +41,17 @@ public class AzureBlobStorageService implements StorageService {
 
     public AzureBlobStorageService(final StorageProperties storageProperties) {
         requireNonNull(storageProperties, "storageProperties");
-        final String conn = requireNonNull(storageProperties.connectionString(), "storage connectionString is required");
+        final String endpoint = requireNonNull(storageProperties.endpoint(), "storage endpoint is required");
         final String container = requireNonNull(storageProperties.container(), "storage container is required");
 
-        this.blobContainerClient = new BlobContainerClientBuilder()
-                .connectionString(conn)
-                .containerName(container)
+        TokenCredential credential = new DefaultAzureCredentialBuilder().build();
+
+        BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
+                .endpoint(endpoint)
+                .credential(credential)
                 .buildClient();
+
+        this.blobContainerClient = blobServiceClient.getBlobContainerClient(container);
 
         try {
             this.blobContainerClient.createIfNotExists();

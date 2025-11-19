@@ -19,7 +19,7 @@ import org.springframework.retry.support.RetryTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @Configuration
-@EnableConfigurationProperties({StorageProperties.class, UploadProperties.class, IngestionProperties.class})
+@EnableConfigurationProperties({StorageProperties.class, UploadProperties.class, IngestionProperties.class,PartitioningProperties.class})
 public class BatchConfig {
 
     private final IngestionProperties props;
