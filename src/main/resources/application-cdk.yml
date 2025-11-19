@@ -2,7 +2,7 @@
 cdk:
   storage:
     azure:
-      connection-string: ${CP_CDK_AZURE_STORAGE_CONNECTION_STRING:NO_CONNECTION_STRING_DEFINED}
+      endpoint: https://myaccount.blob.core.windows.net
       container: ${CP_CDK_AZURE_STORAGE_CONTAINER}
       copy-poll-interval-ms: ${CP_CDK_AZURE_POLL_INTERVAL_MS:5000}
       copy-timeout-seconds: ${CP_CDK_AZURE_TIMEOUT_SECONDS:300}
