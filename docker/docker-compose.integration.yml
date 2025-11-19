@@ -112,11 +112,6 @@ services:
       CP_CDK_ARTEMIS_HOST_PRIMARY: artemis
       CP_CDK_ARTEMIS_PORT: 61617
       CP_CDK_ARTEMIS_SSL_ENABLED: "true"
-      CP_CDK_ARTEMIS_KEYSTORE: /opt/ssl/keystore.jks
-      CP_CDK_ARTEMIS_KEYSTORE_PASSWORD: changeit
-      CP_CDK_ARTEMIS_TRUSTSTORE: /opt/ssl/truststore.jks
-      CP_CDK_ARTEMIS_TRUSTSTORE_PASSWORD: changeit
-      # For self-signed local cert; set true in prod with proper SANs
       CP_CDK_ARTEMIS_VERIFY_HOST: "false"
 
       # JMS retry/timeout tuning (safe universally)
@@ -158,9 +153,7 @@ services:
       CP_CDK_RAG_SUBSCRIPTION_KEY: dummy-key
       CP_CDK_CJSCPPUID_HEADER: CJSCPPUID
       CP_CDK_BASE_URL: http://wiremock:8080
-    volumes:
-      - ../src/integrationTest/resources/ssl/keystore.jks:/opt/ssl/keystore.jks:ro
-      - ../src/integrationTest/resources/ssl/truststore.jks:/opt/ssl/truststore.jks:ro
+
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8082/casedocumentknowledge-service/actuator/health || exit 1"]
       interval: 10s
