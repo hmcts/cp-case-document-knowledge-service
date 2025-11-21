@@ -76,7 +76,7 @@ public class VerifyUploadTasklet implements Tasklet {
         }
 
         final String caseIdStr = stepCtx.getString(CTX_CASE_ID, null);
-        final String docIdRaw  = stepCtx.getString(CTX_DOC_ID, null);
+        final String docIdRaw = stepCtx.getString(CTX_DOC_ID, null);
 
         UUID parsedDocId = null;
         if (proceed) {
@@ -120,8 +120,8 @@ public class VerifyUploadTasklet implements Tasklet {
             final String identifier = documentName; // effectively final
 
             final RetryTemplate pollTemplate = buildPollTemplate(pollIntervalMs, maxWaitMs);
-            final AtomicReference<String> lastStatusRef  = new AtomicReference<>();
-            final AtomicReference<String> lastReasonRef  = new AtomicReference<>();
+            final AtomicReference<String> lastStatusRef = new AtomicReference<>();
+            final AtomicReference<String> lastReasonRef = new AtomicReference<>();
             final AtomicReference<OffsetDateTime> lastUpdatedRef = new AtomicReference<>();
 
             final Boolean finished = pollTemplate.execute(context -> {

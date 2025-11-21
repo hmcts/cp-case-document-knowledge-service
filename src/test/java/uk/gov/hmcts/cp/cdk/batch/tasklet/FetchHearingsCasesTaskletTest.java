@@ -5,11 +5,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_IDS_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.COURT_CENTRE_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.CPPUID;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.DATE;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.ROOM_ID;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
+
+import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
+import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -29,9 +32,6 @@ import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
-
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -82,8 +82,7 @@ class FetchHearingsCasesTaskletTest {
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
 
         assertThat(jobExecutionContext.getString(USERID_FOR_EXTERNAL_CALLS)).isEqualTo("user-123");
-        @SuppressWarnings("unchecked")
-        final List<String> caseIds = (List<String>) jobExecutionContext.get(CTX_CASE_IDS_KEY);
+        @SuppressWarnings("unchecked") final List<String> caseIds = (List<String>) jobExecutionContext.get(CTX_CASE_IDS_KEY);
         assertThat(caseIds).isNotNull().isEmpty();
 
         verify(contribution).setExitStatus(ExitStatus.NOOP);
@@ -106,8 +105,7 @@ class FetchHearingsCasesTaskletTest {
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
 
         assertThat(jobExecutionContext.getString(USERID_FOR_EXTERNAL_CALLS)).isEqualTo("user-xyz");
-        @SuppressWarnings("unchecked")
-        final List<String> caseIds = (List<String>) jobExecutionContext.get(CTX_CASE_IDS_KEY);
+        @SuppressWarnings("unchecked") final List<String> caseIds = (List<String>) jobExecutionContext.get(CTX_CASE_IDS_KEY);
         assertThat(caseIds).isNotNull().isEmpty();
 
         verify(contribution).setExitStatus(ExitStatus.NOOP);
@@ -130,8 +128,7 @@ class FetchHearingsCasesTaskletTest {
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
 
         assertThat(jobExecutionContext.getString(USERID_FOR_EXTERNAL_CALLS)).isEqualTo("uid-1");
-        @SuppressWarnings("unchecked")
-        final List<String> caseIds = (List<String>) jobExecutionContext.get(CTX_CASE_IDS_KEY);
+        @SuppressWarnings("unchecked") final List<String> caseIds = (List<String>) jobExecutionContext.get(CTX_CASE_IDS_KEY);
         assertThat(caseIds).isNotNull().isEmpty();
 
         verify(contribution).setExitStatus(ExitStatus.NOOP);
@@ -156,8 +153,7 @@ class FetchHearingsCasesTaskletTest {
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
 
         assertThat(jobExecutionContext.getString(USERID_FOR_EXTERNAL_CALLS)).isEqualTo("cpp-9");
-        @SuppressWarnings("unchecked")
-        final List<String> caseIds = (List<String>) jobExecutionContext.get(CTX_CASE_IDS_KEY);
+        @SuppressWarnings("unchecked") final List<String> caseIds = (List<String>) jobExecutionContext.get(CTX_CASE_IDS_KEY);
         assertThat(caseIds).isNotNull().isEmpty();
 
         verify(contribution).setExitStatus(ExitStatus.COMPLETED);
@@ -188,8 +184,7 @@ class FetchHearingsCasesTaskletTest {
         assertThat(status).isEqualTo(RepeatStatus.FINISHED);
 
         assertThat(jobExecutionContext.getString(USERID_FOR_EXTERNAL_CALLS)).isEqualTo("user-777");
-        @SuppressWarnings("unchecked")
-        final List<String> caseIds = (List<String>) jobExecutionContext.get(CTX_CASE_IDS_KEY);
+        @SuppressWarnings("unchecked") final List<String> caseIds = (List<String>) jobExecutionContext.get(CTX_CASE_IDS_KEY);
         assertThat(caseIds).containsExactly("CASE-A", "CASE-B");
 
         verify(contribution).setExitStatus(ExitStatus.COMPLETED);

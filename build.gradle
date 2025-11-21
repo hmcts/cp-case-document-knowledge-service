@@ -88,6 +88,7 @@ ext.vers = [
         jjwt               : findProperty('version.jjwt'),
         swaggerParser      : findProperty('version.swaggerParser'),
         azureBlob          : findProperty('version.azureBlob'),
+        azureIdentity      : findProperty('version.azureIdentity'),
         mockwebserver      : findProperty('version.mockwebserver'),
         assertj            : findProperty('version.assertj'),
         restAssured        : findProperty('version.restAssured'),
@@ -161,6 +162,7 @@ dependencies {
 
     // Azure
     implementation "com.azure:azure-storage-blob:${vers.azureBlob}"
+    implementation "com.azure:azure-identity:${vers.azureIdentity}"
 
     // Testcontainers (BOM)
     testImplementation platform("org.testcontainers:testcontainers-bom:${vers.testcontainersBom}")

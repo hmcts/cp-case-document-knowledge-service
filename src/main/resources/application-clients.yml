@@ -3,10 +3,16 @@ rag:
     base-url: ${CP_CDK_RAG_URL}
     connect-timeout-ms: ${CP_CDK_RAG_CONNECTION_TIMEOUT_MS:3000}
     read-timeout-ms: ${CP_CDK_RAG_READ_TIMEOUT_MS:180000}
+    auth:
+      mode: ${CP_CDK_RAG_AUTH_MODE:subscription-key}    # subscription-key | aad
+      subscription-key: ${CP_CDK_RAG_SUBSCRIPTION_KEY:} # used when mode=subscription-key
+      aad:
+        scope: ${CP_CDK_RAG_AAD_SCOPE:}                 # e.g. http://<app-id>/.default
+        clientId: ${AZURE_MI_CLIENT_ID:}
+        tenantId: ${AZURE_TENANT_ID:}
     headers:
       Accept: application/json
       Content-Type: application/json
-      Ocp-Apim-Subscription-Key: ${CP_CDK_RAG_SUBSCRIPTION_KEY}
 cqrs:
   client:
     base-url: ${CP_CDK_BASE_URL:http://localhost:8080}

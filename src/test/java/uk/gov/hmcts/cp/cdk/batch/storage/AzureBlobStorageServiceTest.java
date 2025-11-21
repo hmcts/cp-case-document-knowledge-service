@@ -22,7 +22,6 @@ import com.azure.storage.blob.models.BlobHttpHeaders;
 import com.azure.storage.blob.models.BlobProperties;
 import com.azure.storage.blob.models.CopyStatusType;
 import com.azure.storage.blob.options.BlobBeginCopyOptions;
-import com.azure.storage.blob.specialized.BlockBlobClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,9 +32,8 @@ class AzureBlobStorageServiceTest {
 
     private BlobContainerClient mockBlobContainerClient;
     private BlobClient mockBlob;
-    private BlockBlobClient mockBlockBlobClient;
     private AzureBlobStorageService service;
-    private SyncPoller<BlobCopyInfo, Void> mockSyncPoller ;
+    private SyncPoller<BlobCopyInfo, Void> mockSyncPoller;
     private PollResponse<BlobCopyInfo> mockPollResponse;
 
     @SuppressWarnings("unchecked")
@@ -43,15 +41,27 @@ class AzureBlobStorageServiceTest {
     void setUp() {
         mockBlobContainerClient = mock(BlobContainerClient.class);
         mockBlob = mock(BlobClient.class);
-        mockBlockBlobClient = mock(BlockBlobClient.class);
         mockSyncPoller = (SyncPoller<BlobCopyInfo, Void>) mock(SyncPoller.class);
         mockPollResponse = (PollResponse<BlobCopyInfo>) mock(PollResponse.class);
 
-        when(mockBlob.getBlockBlobClient()).thenReturn(mockBlockBlobClient);
         when(mockBlobContainerClient.getBlobContainerName()).thenReturn("documents");
 
-        // Use the package-visible constructor
-        service = new AzureBlobStorageService(mockBlobContainerClient);
+        // Build minimal StorageProperties for the constructor
+        StorageProperties.Azurite azurite = new StorageProperties.Azurite(null);
+        StorageProperties props = new StorageProperties(
+                "connection-string",   // mode (not used by service; only poll/timeout are read)
+                null,                  // connectionString
+                "documents",           // container (only used in helpers via mockBlobContainerClient.getBlobContainerName())
+                1_000L,                // copyPollIntervalMs
+                120L,                  // copyTimeoutSeconds
+                null,                  // accountName
+                null,                  // blobEndpoint
+                null,                  // managedIdentityClientId
+                azurite                // azurite
+        );
+
+        // Use the new ctor
+        service = new AzureBlobStorageService(mockBlobContainerClient, props);
     }
 
     @Test

@@ -11,6 +11,15 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
 
+import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
+import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
+import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
+import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
+import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
+import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
+import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -45,15 +54,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.SimpleTransactionStatus;
-
-import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
-import uk.gov.hmcts.cp.cdk.domain.Query;
-import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
-import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
-import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
-import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
-import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
-import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
 
 @ExtendWith(MockitoExtension.class)
 class GenerateAnswersTaskletTest {
@@ -376,10 +376,14 @@ class GenerateAnswersTaskletTest {
         public TransactionStatus getTransaction(final TransactionDefinition definition) {
             return new SimpleTransactionStatus();
         }
+
         @Override
-        public void commit(final TransactionStatus status) { }
+        public void commit(final TransactionStatus status) {
+        }
+
         @Override
-        public void rollback(final TransactionStatus status) { }
+        public void rollback(final TransactionStatus status) {
+        }
     }
 
     /**

@@ -14,6 +14,12 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_NEW_UPLOAD;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
 
+import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
+import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,12 +44,6 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.retry.backoff.NoBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
-
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
-import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
-import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
-import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 
 @ExtendWith(MockitoExtension.class)
 class UploadAndPersistTaskletTest {
@@ -299,7 +299,8 @@ class UploadAndPersistTaskletTest {
         assertThat(meta.get("document_id")).isEqualTo(docId.toString());
 
         final Map<String, Object> metaJson =
-                objectMapper.readValue(meta.get("metadata"), new TypeReference<Map<String, Object>>() { });
+                objectMapper.readValue(meta.get("metadata"), new TypeReference<Map<String, Object>>() {
+                });
         assertThat(metaJson).containsKeys("case_id", "material_id", "material_name", "uploaded_at");
         assertThat(metaJson.get("case_id")).isEqualTo(caseId.toString());
         assertThat(metaJson.get("material_id")).isEqualTo(materialId.toString());
