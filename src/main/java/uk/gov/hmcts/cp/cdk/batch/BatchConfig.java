@@ -48,7 +48,7 @@ public class BatchConfig {
     private static final int AZURITE_PORT = 10_000;
     private static final String DEFAULT_AZURITE_IMAGE = "mcr.microsoft.com/azure-storage/azurite:3.33.0";
     private static final String DEV_ACCOUNT_NAME = "devstoreaccount1";
-    private static final String DEV_ACCOUNT_KEY = "Eby8vdM02xNOcqFeqCnf2w==";
+    private static final String DEV_ACCOUNT_KEY = "REDACTED";
     private static final String CONNECTION_STRING = "connection-string";
     private static final String MANAGED_IDENTITY = "managed-identity";
     private static final String AZURITE = "azurite";
