@@ -11,7 +11,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.common.AzureIdentityConfig;
 import uk.gov.hmcts.cp.cdk.batch.clients.config.CdkClientsConfig;
 import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
 import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;

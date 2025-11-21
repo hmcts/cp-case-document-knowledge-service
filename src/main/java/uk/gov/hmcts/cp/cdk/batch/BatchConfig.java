@@ -2,7 +2,6 @@ package uk.gov.hmcts.cp.cdk.batch;
 
 import static java.util.Objects.requireNonNull;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.common.AzureIdentityConfig;
 import uk.gov.hmcts.cp.cdk.batch.storage.AzureBlobStorageService;
 import uk.gov.hmcts.cp.cdk.batch.storage.StorageProperties;
 import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
