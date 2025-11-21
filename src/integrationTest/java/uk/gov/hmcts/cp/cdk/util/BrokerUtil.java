@@ -12,14 +12,12 @@ import java.util.function.Predicate;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import jakarta.jms.Connection;
 import jakarta.jms.JMSException;
 import jakarta.jms.MessageConsumer;
 import jakarta.jms.Session;
 import jakarta.jms.TextMessage;
 import jakarta.jms.Topic;
-
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 
 public class BrokerUtil implements AutoCloseable {
@@ -87,7 +85,8 @@ public class BrokerUtil implements AutoCloseable {
             if (message instanceof TextMessage textMessage) {
                 try {
                     receivedMessages.add(textMessage.getText());
-                } catch (JMSException ignore) { }
+                } catch (JMSException ignore) {
+                }
             }
         });
     }

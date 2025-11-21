@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_NAME;
 import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_VALUE;
 
-import org.springframework.web.client.HttpClientErrorException;
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
 
@@ -27,6 +26,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
 
 /**
  * End-to-end tests for Answers & Queries endpoints.
@@ -225,7 +225,6 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
             }
         }
     }
-
 
 
     @Test

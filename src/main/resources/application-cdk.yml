@@ -2,10 +2,29 @@
 cdk:
   storage:
     azure:
-      connection-string: ${CP_CDK_AZURE_STORAGE_CONNECTION_STRING:NO_CONNECTION_STRING_DEFINED}
-      container: ${CP_CDK_AZURE_STORAGE_CONTAINER}
-      copy-poll-interval-ms: ${CP_CDK_AZURE_POLL_INTERVAL_MS:5000}
-      copy-timeout-seconds: ${CP_CDK_AZURE_TIMEOUT_SECONDS:300}
+      # Pick one: connection-string | managed-identity | azurite
+      mode: ${CP_CDK_STORAGE_MODE:connection-string}
+
+      # Common
+      container: ${CP_CDK_AZURE_STORAGE_CONTAINER:cdk}
+
+      # Connection string mode
+      connection-string: ${CP_CDK_AZURE_STORAGE_CONNECTION_STRING:}
+
+      # Managed Identity mode
+      account-name: ${CP_CDK_STORAGE_ACCOUNT_NAME:}
+      blob-endpoint: ${CP_CDK_STORAGE_BLOB_ENDPOINT:}
+      managed-identity-client-id: ${AZURE_CLIENT_ID:}
+
+      # Copy ops
+      copy-poll-interval-ms: ${CP_CDK_AZURE_POLL_INTERVAL_MS:1000}
+      copy-timeout-seconds: ${CP_CDK_AZURE_TIMEOUT_SECONDS:120}
+
+      # Azurite (local) – only used when mode=azurite
+      azurite:
+        image: ${CP_CDK_AZURITE_IMAGE:mcr.microsoft.com/azure-storage/azurite:3.33.0}
+
+
   ingestion:
     core-pool-size: ${CP_CDK_INGESTION_CORE_POOL_SIZE:8}
     max-pool-size: ${CP_CDK_INGESTION_MAX_POOL_SIZE:16}

@@ -13,10 +13,12 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
 
+import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
+import uk.gov.hmcts.cp.cdk.domain.Query;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -39,10 +41,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.SimpleTransactionStatus;
-import org.springframework.transaction.support.TransactionTemplate;
-
-import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
-import uk.gov.hmcts.cp.cdk.domain.Query;
 
 @ExtendWith(MockitoExtension.class)
 class ReserveAnswerVersionTaskletTest {
@@ -80,11 +78,18 @@ class ReserveAnswerVersionTaskletTest {
     void setUp() {
         // Minimal no-op tx manager so TransactionTemplate can run without a real DB tx
         txManager = new PlatformTransactionManager() {
-            @Override public TransactionStatus getTransaction(final TransactionDefinition definition) {
+            @Override
+            public TransactionStatus getTransaction(final TransactionDefinition definition) {
                 return new SimpleTransactionStatus();
             }
-            @Override public void commit(final TransactionStatus status) { }
-            @Override public void rollback(final TransactionStatus status) { }
+
+            @Override
+            public void commit(final TransactionStatus status) {
+            }
+
+            @Override
+            public void rollback(final TransactionStatus status) {
+            }
         };
 
         tasklet = new ReserveAnswerVersionTasklet(queryResolver, jdbc, txManager);
@@ -183,8 +188,12 @@ class ReserveAnswerVersionTaskletTest {
                 .thenReturn(Boolean.TRUE);
 
         // resolver returns two queries (plus a null to prove filtering)
-        final Query qq1 = new Query(); qq1.setQueryId(q1); qq1.setLabel("Q1");
-        final Query qq2 = new Query(); qq2.setQueryId(q2); qq2.setLabel("Q2");
+        final Query qq1 = new Query();
+        qq1.setQueryId(q1);
+        qq1.setLabel("Q1");
+        final Query qq2 = new Query();
+        qq2.setQueryId(q2);
+        qq2.setLabel("Q2");
         final Query qqNull = new Query(); // null id
         when(queryResolver.resolve()).thenReturn(List.of(qq1, qq2, qqNull));
 
@@ -220,8 +229,12 @@ class ReserveAnswerVersionTaskletTest {
         when(jdbc.queryForObject(eq(SQL_EXISTS_CASE_DOC), any(MapSqlParameterSource.class), eq(Boolean.class)))
                 .thenReturn(Boolean.TRUE);
 
-        final Query qq1 = new Query(); qq1.setQueryId(q1); qq1.setLabel("Q1");
-        final Query qq2 = new Query(); qq2.setQueryId(q2); qq2.setLabel("Q2");
+        final Query qq1 = new Query();
+        qq1.setQueryId(q1);
+        qq1.setLabel("Q1");
+        final Query qq2 = new Query();
+        qq2.setQueryId(q2);
+        qq2.setLabel("Q2");
         when(queryResolver.resolve()).thenReturn(List.of(qq1, qq2));
 
         // Only q1 already exists; q2 should be reserved

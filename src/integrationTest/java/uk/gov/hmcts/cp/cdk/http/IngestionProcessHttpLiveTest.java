@@ -102,7 +102,7 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
         final String body = """
                 { "label": "%s" ,
                  "order": %d }
-                """.formatted(escapeJson(label),200);
+                """.formatted(escapeJson(label), 200);
 
         final ResponseEntity<String> resp = http.exchange(
                 baseUrl + "/query-catalogue/" + queryId + "/label",

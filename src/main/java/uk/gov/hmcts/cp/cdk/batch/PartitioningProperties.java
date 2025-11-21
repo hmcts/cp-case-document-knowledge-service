@@ -7,4 +7,5 @@ public record PartitioningProperties(
         int caseGridSize,
         int queryGridSize,
         int filterGridSize
-) {}
+) {
+}
