@@ -75,7 +75,7 @@ public class RestClientFactoryConfig {
             final CloseableHttpClient clientForThis;
             if (overrideTimeouts) {
                 final Duration ct = (connectTimeout != null) ? connectTimeout : THREE_MIN;
-                final Duration rt = (readTimeout  != null) ? readTimeout  : THREE_MIN;
+                final Duration rt = (readTimeout != null) ? readTimeout : THREE_MIN;
 
                 final RequestConfig perClientConfig = RequestConfig.custom()
                         .setConnectTimeout(Timeout.of(ct))

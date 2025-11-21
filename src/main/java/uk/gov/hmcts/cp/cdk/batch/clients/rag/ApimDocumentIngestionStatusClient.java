@@ -1,11 +1,11 @@
 package uk.gov.hmcts.cp.cdk.batch.clients.rag;
 
+import uk.gov.hmcts.cp.cdk.batch.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.batch.clients.common.RagClientProperties;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,19 +16,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClient;
 
-/**
- * RestClient-backed proxy that IMPLEMENTS the OpenAPI interface and forwards requests to APIM.
- */
 @Slf4j
 @RequiredArgsConstructor
 @ConditionalOnMissingBean(ApimDocumentIngestionStatusClient.class)
 public class ApimDocumentIngestionStatusClient implements DocumentIngestionStatusApi {
 
-    private final RestClient restClient;           // should be preconfigured with baseUrl, timeouts, etc.
-    private final RagClientProperties props;
+    private final RestClient restClient;
+    private final RagClientProperties ragClientProperties;
+    private final ApimAuthHeaderService apimAuthHeaderService;
 
     @Override
-    @SuppressWarnings("PMD.OnlyOneReturn")
     public ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> documentStatus(final String documentName) {
         try {
             return restClient
@@ -38,24 +35,22 @@ public class ApimDocumentIngestionStatusClient implements DocumentIngestionStatu
                             .queryParam("document-name", documentName)
                             .build())
                     .accept(MediaType.APPLICATION_JSON)
-                    .headers(h -> {
-                        final Map<String, String> hdrs = props.getHeaders();
-                        if (hdrs != null) {
-                            hdrs.forEach(h::add);
-                        }
+                    .headers(httpHeaders -> {
+                        apimAuthHeaderService.applyCommonHeaders(httpHeaders, ragClientProperties.getHeaders());
+                        apimAuthHeaderService.applyAuthHeaders(httpHeaders, ragClientProperties);
                     })
                     .retrieve()
                     .toEntity(DocumentIngestionStatusReturnedSuccessfully.class);
 
-        } catch (HttpStatusCodeException ex) {
-            if (ex.getStatusCode() == HttpStatus.NOT_FOUND) {
-                log.info("Document not found in APIM for name='{}' (404). Body={}",
-                        documentName, ex.getResponseBodyAsString(StandardCharsets.UTF_8));
+        } catch (HttpStatusCodeException exception) {
+            if (exception.getStatusCode() == HttpStatus.NOT_FOUND) {
+                log.info("Document not found in APIM. name='{}' body={}",
+                        documentName, exception.getResponseBodyAsString(StandardCharsets.UTF_8));
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
-            final String body = ex.getResponseBodyAsString(StandardCharsets.UTF_8);
-            log.warn("APIM error on document-status: {} {} - {}", ex.getStatusCode(), ex.getStatusText(), body, ex);
-            throw ex;
+            String body = exception.getResponseBodyAsString(StandardCharsets.UTF_8);
+            log.warn("APIM error on document-status: {} {} - {}", exception.getStatusCode(), exception.getStatusText(), body, exception);
+            throw exception;
         }
     }
 }

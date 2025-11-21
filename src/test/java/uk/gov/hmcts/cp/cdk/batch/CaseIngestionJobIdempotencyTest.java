@@ -11,6 +11,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import uk.gov.hmcts.cp.cdk.batch.clients.common.AzureIdentityConfig;
 import uk.gov.hmcts.cp.cdk.batch.clients.config.CdkClientsConfig;
 import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
 import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
@@ -35,13 +36,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.azure.core.credential.TokenCredential;
 import jakarta.persistence.EntityManagerFactory;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
-
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.test.JobOperatorTestUtils;
@@ -109,7 +109,8 @@ class CaseIngestionJobIdempotencyTest {
                     classes = AzureBlobStorageService.class // avoid real Azure bean in tests
             )
     )
-    static class TestApplication {}
+    static class TestApplication {
+    }
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
@@ -119,7 +120,9 @@ class CaseIngestionJobIdempotencyTest {
                     .withPassword("postgres")
                     .withReuse(true);
 
-    static { POSTGRES.start(); }
+    static {
+        POSTGRES.start();
+    }
 
     @DynamicPropertySource
     static void dbProps(final DynamicPropertyRegistry r) {
@@ -139,23 +142,38 @@ class CaseIngestionJobIdempotencyTest {
 
         // required audit prop
         r.add("audit.http.openapi-rest-spec", () -> "test-openapi-spec.yml");
+
+
+        r.add("cdk.storage.azure.connection-string", () -> "DefaultEndpointsProtocol=http;AccountName=dev;AccountKey=dev;BlobEndpoint=http://localhost:10000/dev;");
+        r.add("cdk.storage.azure.container", () -> "test");
+        r.add("cdk.storage.azure.mode", () -> "connection-string");
     }
 
     // Real repos
-    @Autowired private QueryDefinitionLatestRepository qdlRepo;
-    @Autowired private CaseDocumentRepository caseDocumentRepository;
+    @Autowired
+    private QueryDefinitionLatestRepository qdlRepo;
+    @Autowired
+    private CaseDocumentRepository caseDocumentRepository;
 
     // External mocks (injected via config)
-    @Autowired private HearingClient hearingClient;
-    @Autowired private ProgressionClient progressionClient;
-    @Autowired private DocumentIngestionStatusApi documentIngestionStatusApi;
-    @Autowired private DocumentInformationSummarisedApi documentInformationSummarisedApi;
-    @Autowired private QueryResolver queryResolver;
-    @Autowired private StorageService storageService;
+    @Autowired
+    private HearingClient hearingClient;
+    @Autowired
+    private ProgressionClient progressionClient;
+    @Autowired
+    private DocumentIngestionStatusApi documentIngestionStatusApi;
+    @Autowired
+    private DocumentInformationSummarisedApi documentInformationSummarisedApi;
+    @Autowired
+    private QueryResolver queryResolver;
+    @Autowired
+    private StorageService storageService;
 
     // Infra
-    @Autowired private JobOperatorTestUtils jobOperatorTestUtils;
-    @Autowired private JdbcTemplate jdbc;
+    @Autowired
+    private JobOperatorTestUtils jobOperatorTestUtils;
+    @Autowired
+    private JdbcTemplate jdbc;
 
     private UUID caseId1, caseId2, materialId1, materialId2, queryId;
 
@@ -187,6 +205,7 @@ class CaseIngestionJobIdempotencyTest {
                 .thenReturn(Optional.of(lm1));
         when(progressionClient.getCourtDocuments(eq(caseId2), anyString()))
                 .thenReturn(Optional.of(lm2));
+
         // step 3 — storage interactions (upload once per new doc)
         when(progressionClient.getMaterialDownloadUrl(any(UUID.class), anyString()))
                 .thenReturn(Optional.of("http://example.test/doc.pdf"));
@@ -211,7 +230,7 @@ class CaseIngestionJobIdempotencyTest {
                 ps -> {
                     ps.setObject(1, queryId);
                     ps.setString(2, "E2E Query");
-                    ps.setInt(3,100);
+                    ps.setInt(3, 100);
                 }
         );
         jdbc.update(
@@ -273,8 +292,8 @@ class CaseIngestionJobIdempotencyTest {
         assertThat(exec1.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 
         Integer docCountAfter1 = jdbc.queryForObject("SELECT COUNT(*) FROM case_documents", Integer.class);
-        Integer answersAfter1  = jdbc.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
-        Integer doneAfter1     = jdbc.queryForObject("SELECT COUNT(*) FROM answer_reservations WHERE status='DONE'", Integer.class);
+        Integer answersAfter1 = jdbc.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
+        Integer doneAfter1 = jdbc.queryForObject("SELECT COUNT(*) FROM answer_reservations WHERE status='DONE'", Integer.class);
 
         assertThat(docCountAfter1).isEqualTo(2);
         assertThat(answersAfter1).isEqualTo(2);
@@ -292,8 +311,8 @@ class CaseIngestionJobIdempotencyTest {
         assertThat(exec2.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 
         Integer docCountAfter2 = jdbc.queryForObject("SELECT COUNT(*) FROM case_documents", Integer.class);
-        Integer answersAfter2  = jdbc.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
-        Integer doneAfter2     = jdbc.queryForObject("SELECT COUNT(*) FROM answer_reservations WHERE status='DONE'", Integer.class);
+        Integer answersAfter2 = jdbc.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
+        Integer doneAfter2 = jdbc.queryForObject("SELECT COUNT(*) FROM answer_reservations WHERE status='DONE'", Integer.class);
 
         // No new documents, no new answers, reservations unchanged
         assertThat(docCountAfter2).isEqualTo(docCountAfter1);
@@ -380,7 +399,8 @@ class CaseIngestionJobIdempotencyTest {
 
     @TestConfiguration
     static class TestOverrides {
-        @Bean @Primary
+        @Bean
+        @Primary
         RetryTemplate retryTemplate() {
             RetryTemplate t = new RetryTemplate();
             t.setRetryPolicy(new SimpleRetryPolicy(1)); // no retries to keep tests crisp
@@ -390,22 +410,59 @@ class CaseIngestionJobIdempotencyTest {
             return t;
         }
 
-        @Bean @Primary
+        @Bean
+        @Primary
         public PlatformTransactionManager transactionManager(EntityManagerFactory emf) {
             return new JpaTransactionManager(emf);
         }
 
-        @Bean(name = "ingestionTaskExecutor") @Primary
+        @Bean(name = "ingestionTaskExecutor")
+        @Primary
         public TaskExecutor ingestionTaskExecutor() {
             return new SyncTaskExecutor();
         }
 
         // External systems as mocks
-        @Bean @Primary public HearingClient hearingClient() { return mock(HearingClient.class); }
-        @Bean @Primary public ProgressionClient progressionClient() { return mock(ProgressionClient.class); }
-        @Bean @Primary public DocumentIngestionStatusApi documentIngestionStatusApi() { return mock(DocumentIngestionStatusApi.class); }
-        @Bean @Primary public DocumentInformationSummarisedApi documentInformationSummarisedApi() { return mock(DocumentInformationSummarisedApi.class); }
-        @Bean @Primary public QueryResolver queryResolver() { return mock(QueryResolver.class); }
-        @Bean @Primary public StorageService storageService() { return mock(StorageService.class); }
+        @Bean
+        @Primary
+        public HearingClient hearingClient() {
+            return mock(HearingClient.class);
+        }
+
+        @Bean
+        @Primary
+        public ProgressionClient progressionClient() {
+            return mock(ProgressionClient.class);
+        }
+
+        @Bean
+        @Primary
+        public DocumentIngestionStatusApi documentIngestionStatusApi() {
+            return mock(DocumentIngestionStatusApi.class);
+        }
+
+        @Bean
+        @Primary
+        public DocumentInformationSummarisedApi documentInformationSummarisedApi() {
+            return mock(DocumentInformationSummarisedApi.class);
+        }
+
+        @Bean
+        @Primary
+        public QueryResolver queryResolver() {
+            return mock(QueryResolver.class);
+        }
+
+        @Bean
+        @Primary
+        public StorageService storageService() {
+            return mock(StorageService.class);
+        }
+
+        @Bean
+        @Primary
+        public TokenCredential tokenCredential() {
+            return mock(TokenCredential.class);
+        }
     }
 }

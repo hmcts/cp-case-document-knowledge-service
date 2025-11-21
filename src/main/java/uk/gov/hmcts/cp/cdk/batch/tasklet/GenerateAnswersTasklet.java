@@ -8,7 +8,15 @@ import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.buildAnswerParams;
 import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.buildReservationParams;
 import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.parseUuidOrNull;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
+import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
+import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
+import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
+import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
+import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
+import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,6 +28,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.JobExecution;
@@ -39,14 +49,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
-import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
-import uk.gov.hmcts.cp.cdk.domain.Query;
-import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
-import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
-import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
-import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
-import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
-import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
 
 @Slf4j
 @Component

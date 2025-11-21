@@ -55,7 +55,6 @@ public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
         }
 
 
-
         ResponseEntity<String> r1 = postQuerySnapshot(queryId, "2025-05-01T12:00:00Z", "Q1 @ t1", "Prompt for Q1 @ t1");
         assertThat(r1.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
 

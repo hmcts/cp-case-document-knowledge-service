@@ -15,26 +15,26 @@ import org.springframework.web.client.RestClient;
 @RequiredArgsConstructor
 public class ExternalClientsConfig {
 
-    private final RestClientFactory factory;
+    private final RestClientFactory restClientFactory;
 
     @Bean
-    public RestClient ragRestClient(final RagClientProperties props) {
-        return factory.build(
-                props.getBaseUrl(),
-                props.getHeaders(),
-                props.connectTimeout(),
-                props.readTimeout(),
+    public RestClient ragRestClient(final RagClientProperties properties) {
+        return restClientFactory.build(
+                properties.getBaseUrl(),
+                properties.getHeaders(),
+                properties.connectTimeout(),
+                properties.readTimeout(),
                 false
         );
     }
 
     @Bean
-    public RestClient cqrsRestClient(final RestClientFactory factory, final CQRSClientProperties props) {
+    public RestClient cqrsRestClient(final RestClientFactory factory, final CQRSClientProperties properties) {
         return factory.build(
-                props.baseUrl(),
+                properties.baseUrl(),
                 null,
-                props.connectTimeout(),
-                props.readTimeout(),
+                properties.connectTimeout(),
+                properties.readTimeout(),
                 false
         );
     }
