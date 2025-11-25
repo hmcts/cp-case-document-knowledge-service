@@ -28,7 +28,7 @@ public class ApimDocumentIngestionStatusClient implements DocumentIngestionStatu
     @Override
     public ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> documentStatus(final String documentName) {
         try {
-            return restClient
+            ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> response = restClient
                     .get()
                     .uri(uriBuilder -> uriBuilder
                             .path(PATH_DOCUMENT_STATUS)
@@ -41,6 +41,22 @@ public class ApimDocumentIngestionStatusClient implements DocumentIngestionStatu
                     })
                     .retrieve()
                     .toEntity(DocumentIngestionStatusReturnedSuccessfully.class);
+            if (response.getBody() != null) {
+                log.info(
+                        "APIM document-status success: name='{}' status={} body={}",
+                        documentName,
+                        response.getStatusCode(),
+                        response.getBody()
+                );
+            } else {
+                log.info(
+                        "APIM document-status success: name='{}' status={} (empty body)",
+                        documentName,
+                        response.getStatusCode()
+                );
+            }
+
+            return response;
 
         } catch (HttpStatusCodeException exception) {
             if (exception.getStatusCode() == HttpStatus.NOT_FOUND) {
