@@ -16,6 +16,7 @@ import org.springframework.batch.core.partition.Partitioner;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
@@ -23,6 +24,13 @@ import org.springframework.core.task.TaskExecutor;
 @Configuration
 public class CaseIngestionJobConfig {
 
+    /**
+     * Per-case flow:
+     *  3. Upload + persist documents
+     *  4. Verify upload
+     *  5. Reserve answer version
+     *  6. Generate answers (partitioned by query)
+     */
     @Bean
     public Flow perCaseFlow(final Step step3UploadAndPersist,
                             final Step step4VerifyUploadPerCase,
@@ -43,11 +51,15 @@ public class CaseIngestionJobConfig {
                 .build();
     }
 
-
+    /**
+     * Case-level partitioning of steps 3–6.
+     * Uses the shared ingestionTaskExecutor.
+     */
     @Bean
     public Step step3To6Partitioned(final JobRepository repo,
                                     final Step perCaseFlowStep,
                                     final Partitioner eligibleMaterialCasePartitioner,
+                                    @Qualifier("ingestionTaskExecutor")
                                     final TaskExecutor ingestionTaskExecutor,
                                     final PartitioningProperties partitionProps) {
         return new StepBuilder("step3_to_6_partitioned", repo)
@@ -58,22 +70,29 @@ public class CaseIngestionJobConfig {
                 .build();
     }
 
-
+    /**
+     * Query-level partitioning for step 6.
+     * Uses dedicated queryPartitionTaskExecutor.
+     */
     @Bean
     public Step step6GenerateAnswersByQueryPartitioned(final JobRepository repo,
                                                        final Step step6GenerateAnswerSingleQuery,
                                                        final QueryIdPartitioner queryIdPartitioner,
-                                                       final TaskExecutor ingestionTaskExecutor,
+                                                       @Qualifier("queryPartitionTaskExecutor")
+                                                       final TaskExecutor queryPartitionTaskExecutor,
                                                        final PartitioningProperties partitionProps) {
         return new StepBuilder("step6_generate_answers_by_query_partitioned", repo)
                 .partitioner("step6_generate_answer_single_query", queryIdPartitioner)
                 .step(step6GenerateAnswerSingleQuery)
                 .gridSize(partitionProps.queryGridSize())
-                .taskExecutor(ingestionTaskExecutor)
+                .taskExecutor(queryPartitionTaskExecutor)
                 .build();
     }
 
-
+    /**
+     * Promotes material-to-case map from step2 worker executions to the master
+     * execution context for later partitioning.
+     */
     @Bean
     public ExecutionContextPromotionListener eligibleMaterialListener() {
         final ExecutionContextPromotionListener listener = new ExecutionContextPromotionListener();
@@ -81,14 +100,17 @@ public class CaseIngestionJobConfig {
         return listener;
     }
 
+    /**
+     * Step 2 – partition by case ID, resolve eligible materials per case.
+     */
     @Bean
     public Step step2FilterEligibleCasesPartitioned(final JobRepository repo,
-                                                    final Partitioner caseIdPartitioner,          // bean: "caseIdPartitioner"
+                                                    final Partitioner caseIdPartitioner,
                                                     final Step step2ResolveEligibleCaseWorker,
+                                                    @Qualifier("ingestionTaskExecutor")
                                                     final TaskExecutor ingestionTaskExecutor,
                                                     final MaterialMappingAggregator materialMappingAggregator,
-                                                    final PartitioningProperties partitionProps
-    ) {
+                                                    final PartitioningProperties partitionProps) {
         return new StepBuilder("step2_filter_case_partitioned", repo)
                 .partitioner(step2ResolveEligibleCaseWorker.getName(), caseIdPartitioner)
                 .step(step2ResolveEligibleCaseWorker)
@@ -99,6 +121,12 @@ public class CaseIngestionJobConfig {
                 .build();
     }
 
+    /**
+     * Full case ingestion job:
+     *  1. Fetch hearings / cases
+     *  2. Partitioned filter of eligible cases/materials
+     *  3. Partitioned per-case flow (upload, verify, reserve, generate answers)
+     */
     @Bean
     public Job caseIngestionJob(final JobRepository repo,
                                 final Step step1FetchHearingsCasesWithSingleDefendant,

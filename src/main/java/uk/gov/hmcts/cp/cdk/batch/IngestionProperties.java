@@ -8,9 +8,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "cdk.ingestion")
 public class IngestionProperties {
 
-    private int corePoolSize = 8;
-    private int maxPoolSize = 16;
-    private int queueCapacity = 64;
+    private int corePoolSize = 25;
+    private int maxPoolSize = 30;
+    private int queueCapacity = 128;
     private final Retry retry = new Retry();
 
     public static class Retry {
