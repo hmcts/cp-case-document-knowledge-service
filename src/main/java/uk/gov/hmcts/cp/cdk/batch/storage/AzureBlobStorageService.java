@@ -55,13 +55,14 @@ public class AzureBlobStorageService implements StorageService {
                 blobContainerClient.getBlobContainerName(), blobName, pollIntervalMs, timeoutSeconds);
 
         try {
-            final boolean deleted = blobClient.deleteIfExists();
-            if (deleted) {
-                log.debug("Existing blob deleted before copy. blob={}", blobName);
+            final boolean existsFlag = blobClient.exists();
+            if (existsFlag) {
+                log.debug("Blob already exists before copy. blob={}", blobName);
             }
-        } catch (final RuntimeException deleteException) {
-            log.warn("Delete if exists failed (continuing). blob={}", blobName, deleteException);
+        } catch (final RuntimeException existsException) {
+            log.warn("exists check failed . blob={}", blobName, existsException);
         }
+
 
         final Map<String, String> normalizedMetadata =
                 MapUtils.isNotEmpty(metadata) ? normalizeMetadataKeys(metadata) : Map.of();
@@ -71,7 +72,7 @@ public class AzureBlobStorageService implements StorageService {
 
         if (MapUtils.isNotEmpty(normalizedMetadata)) {
             copyOptions.setMetadata(normalizedMetadata);
-            log.debug("Applying metadata on copy. blob={}, metadataKeys={}", blobName, normalizedMetadata.keySet());
+            log.info("Applying metadata on copy. blob={}, metadataKeys={}", blobName, normalizedMetadata.keySet());
         }
 
         try {
@@ -88,8 +89,8 @@ public class AzureBlobStorageService implements StorageService {
             if (copyStatus == CopyStatusType.SUCCESS) {
                 final String finalContentType = StringUtils.defaultIfBlank(contentType, DEFAULT_CONTENT_TYPE);
                 try {
-                    blobClient.setHttpHeaders(new BlobHttpHeaders().setContentType(finalContentType));
-                    log.debug("Content-Type set on blob. blob={}, contentType={}", blobName, finalContentType);
+                   // blobClient.setHttpHeaders(new BlobHttpHeaders().setContentType(finalContentType));
+                    log.info("not required Content-Type set on blob. blob={}, contentType={}", blobName, finalContentType);
                 } catch (final RuntimeException headerException) {
                     log.warn("Failed to set content-type (continuing). blob={}, contentType={}",
                             blobName, finalContentType, headerException);
@@ -115,7 +116,7 @@ public class AzureBlobStorageService implements StorageService {
     public boolean exists(final String blobPath) {
         final String blobName = normalizeToBlobName(blobPath);
         final boolean exists = blobContainerClient.getBlobClient(blobName).exists();
-        log.debug("Blob exists check. blob={}, exists={}", blobName, exists);
+        log.info("Blob exists check. blob={}, exists={}", blobName, exists);
         return exists;
     }
 
@@ -128,7 +129,7 @@ public class AzureBlobStorageService implements StorageService {
             throw new IllegalStateException("Blob not found: " + blobClient.getBlobName());
         }
         final long size = blobClient.getProperties().getBlobSize();
-        log.debug("Blob size fetched. blob={}, size={}", blobName, size);
+        log.info("Blob size fetched. blob={}, size={}", blobName, size);
         return size;
     }
 
@@ -146,12 +147,12 @@ public class AzureBlobStorageService implements StorageService {
                     : rawPath.replaceFirst("^/", "");
             withinContainer = URLDecoder.decode(withinContainer, StandardCharsets.UTF_8);
             final String normalized = withinContainer.replaceFirst("^/", "");
-            log.debug("Normalized URL to blob name. url={}, normalized={}", pathOrUrl, normalized);
+            log.info("Normalized URL to blob name. url={}, normalized={}", pathOrUrl, normalized);
             return normalized;
         }
 
         final String normalized = pathOrUrl.replaceFirst("^/", "");
-        log.debug("Normalized path to blob name. path={}, normalized={}", pathOrUrl, normalized);
+        log.info("Normalized path to blob name. path={}, normalized={}", pathOrUrl, normalized);
         return normalized;
     }
 
