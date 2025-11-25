@@ -15,7 +15,6 @@ import com.azure.core.util.polling.SyncPoller;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobCopyInfo;
-import com.azure.storage.blob.models.BlobHttpHeaders;
 import com.azure.storage.blob.models.CopyStatusType;
 import com.azure.storage.blob.options.BlobBeginCopyOptions;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +38,17 @@ public class AzureBlobStorageService implements StorageService {
         this.timeoutSeconds = storageProperties.copyTimeoutSeconds() != null ? storageProperties.copyTimeoutSeconds() : 120L;
     }
 
+    private static Map<String, String> normalizeMetadataKeys(final Map<String, String> metadata) {
+        final Map<String, String> normalized = new HashMap<>();
+        if (metadata != null) {
+            for (final Map.Entry<String, String> entry : metadata.entrySet()) {
+                final String key = entry.getKey() == null ? "" : entry.getKey().trim().toLowerCase(Locale.ROOT);
+                normalized.put(key, entry.getValue());
+            }
+        }
+        return normalized;
+    }
+
     @Override
     public String copyFromUrl(final String sourceUrl,
                               final String destBlobPath,
@@ -47,23 +57,13 @@ public class AzureBlobStorageService implements StorageService {
         if (StringUtils.isBlank(sourceUrl)) {
             throw new IllegalArgumentException("sourceUrl must not be blank");
         }
-
+        boolean existsFlag;
+        String blobUrl = "";
         final String blobName = normalizeToBlobName(destBlobPath);
         final BlobClient blobClient = blobContainerClient.getBlobClient(blobName);
 
         log.info("Starting server-side blob copy. container={}, blob={}, pollIntervalMs={}, timeoutSeconds={}",
                 blobContainerClient.getBlobContainerName(), blobName, pollIntervalMs, timeoutSeconds);
-
-        try {
-            final boolean existsFlag = blobClient.exists();
-            if (existsFlag) {
-                log.debug("Blob already exists before copy. blob={}", blobName);
-            }
-        } catch (final RuntimeException existsException) {
-            log.warn("exists check failed . blob={}", blobName, existsException);
-        }
-
-
         final Map<String, String> normalizedMetadata =
                 MapUtils.isNotEmpty(metadata) ? normalizeMetadataKeys(metadata) : Map.of();
 
@@ -74,42 +74,56 @@ public class AzureBlobStorageService implements StorageService {
             copyOptions.setMetadata(normalizedMetadata);
             log.info("Applying metadata on copy. blob={}, metadataKeys={}", blobName, normalizedMetadata.keySet());
         }
-
         try {
-            final SyncPoller<BlobCopyInfo, Void> syncPoller = blobClient.beginCopy(copyOptions);
-            final BlobCopyInfo blobCopyInfo = syncPoller.waitForCompletion(Duration.ofSeconds(timeoutSeconds)).getValue();
-            final CopyStatusType copyStatus = blobCopyInfo.getCopyStatus();
 
-            log.info("Blob copy completed with status {}. blob={}", copyStatus, blobName);
-
-            if (copyStatus == CopyStatusType.ABORTED || copyStatus == CopyStatusType.FAILED) {
-                throw new IllegalStateException("Blob copy failed: " + copyStatus);
-            }
-
-            if (copyStatus == CopyStatusType.SUCCESS) {
-                final String finalContentType = StringUtils.defaultIfBlank(contentType, DEFAULT_CONTENT_TYPE);
+            existsFlag = blobClient.exists();
+            if (existsFlag) {
+                log.debug("Blob already exists before copy. blob={}", blobName);
+            } else {
                 try {
-                   // blobClient.setHttpHeaders(new BlobHttpHeaders().setContentType(finalContentType));
-                    log.info("not required Content-Type set on blob. blob={}, contentType={}", blobName, finalContentType);
-                } catch (final RuntimeException headerException) {
-                    log.warn("Failed to set content-type (continuing). blob={}, contentType={}",
-                            blobName, finalContentType, headerException);
+
+                    final SyncPoller<BlobCopyInfo, Void> syncPoller = blobClient.beginCopy(copyOptions);
+                    final BlobCopyInfo blobCopyInfo = syncPoller.waitForCompletion(Duration.ofSeconds(timeoutSeconds)).getValue();
+                    final CopyStatusType copyStatus = blobCopyInfo.getCopyStatus();
+
+                    log.info("Blob copy completed with status {}. blob={}", copyStatus, blobName);
+
+                    if (copyStatus == CopyStatusType.ABORTED || copyStatus == CopyStatusType.FAILED) {
+                        throw new IllegalStateException("Blob copy failed: " + copyStatus);
+                    }
+
+                    if (copyStatus == CopyStatusType.SUCCESS) {
+                        final String finalContentType = StringUtils.defaultIfBlank(contentType, DEFAULT_CONTENT_TYPE);
+                        try {
+                            // blobClient.setHttpHeaders(new BlobHttpHeaders().setContentType(finalContentType));
+                            log.info("not required Content-Type set on blob. blob={}, contentType={}", blobName, finalContentType);
+                        } catch (final RuntimeException headerException) {
+                            log.warn("Failed to set content-type (continuing). blob={}, contentType={}",
+                                    blobName, finalContentType, headerException);
+                        }
+                    }
+
+                    blobUrl = blobClient.getBlobUrl();
+                    log.info("Server-side copy successful. blob={}, url={}", blobName, blobUrl);
+                    return blobUrl;
+
+                } catch (final RuntimeException runtimeException) {
+                    if (runtimeException.getCause() instanceof TimeoutException) {
+                        final String message = "Timed out after " + timeoutSeconds + "s waiting for blob copy to succeed";
+                        log.error("{} . blob={}", message, blobName);
+                        throw new IllegalStateException(message);
+                    }
+                    log.error("Unexpected error during blob copy. blob={}", blobName, runtimeException);
+                    throw runtimeException;
                 }
-            }
 
-            final String blobUrl = blobClient.getBlobUrl();
-            log.info("Server-side copy successful. blob={}, url={}", blobName, blobUrl);
-            return blobUrl;
-
-        } catch (final RuntimeException runtimeException) {
-            if (runtimeException.getCause() instanceof TimeoutException) {
-                final String message = "Timed out after " + timeoutSeconds + "s waiting for blob copy to succeed";
-                log.error("{} . blob={}", message, blobName);
-                throw new IllegalStateException(message);
             }
-            log.error("Unexpected error during blob copy. blob={}", blobName, runtimeException);
-            throw runtimeException;
+        } catch (final RuntimeException existsException) {
+            log.warn("exists check failed . blob={}", blobName, existsException);
+            throw existsException;
         }
+
+        return blobUrl;
     }
 
     @Override
@@ -158,16 +172,5 @@ public class AzureBlobStorageService implements StorageService {
 
     private boolean isHttpUrl(final String url) {
         return url.startsWith("http://") || url.startsWith("https://");
-    }
-
-    private static Map<String, String> normalizeMetadataKeys(final Map<String, String> metadata) {
-        final Map<String, String> normalized = new HashMap<>();
-        if (metadata != null) {
-            for (final Map.Entry<String, String> entry : metadata.entrySet()) {
-                final String key = entry.getKey() == null ? "" : entry.getKey().trim().toLowerCase(Locale.ROOT);
-                normalized.put(key, entry.getValue());
-            }
-        }
-        return normalized;
     }
 }
