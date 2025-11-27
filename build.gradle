@@ -73,29 +73,29 @@ configurations {
 
 /* ------------ Versions from gradle.properties ------------ */
 ext.vers = [
-        lombok             : findProperty('version.lombok'),
-        apiSpec            : findProperty('version.apiSpec'),
-        testcontainersBom  : findProperty('version.testcontainersBom'),
-        cdk                : findProperty('version.cdk'),
-        aiRag              : findProperty('version.aiRag'),
-        mapstruct          : findProperty('version.mapstruct'),
-        artemis            : findProperty('version.artemis'),
-        httpclient5        : findProperty('version.httpclient5'),
-        springdoc          : findProperty('version.springdoc'),
-        jacksonKotlin      : findProperty('version.jacksonKotlin'),
-        logstashEncoder    : findProperty('version.logstashEncoder'),
-        commonsText        : findProperty('version.commonsText'),
-        jjwt               : findProperty('version.jjwt'),
-        swaggerParser      : findProperty('version.swaggerParser'),
-        azureBlob          : findProperty('version.azureBlob'),
-        azureIdentity      : findProperty('version.azureIdentity'),
-        mockwebserver      : findProperty('version.mockwebserver'),
-        assertj            : findProperty('version.assertj'),
-        restAssured        : findProperty('version.restAssured'),
-        jacoco             : findProperty('version.jacoco'),
-        commonsCollections : findProperty('version.commonsCollections'),
-        cpAuthFilter       : findProperty('version.cpAuthFilter'),
-        cpAuditFilter      : findProperty('version.cpAuditFilter')
+        lombok            : findProperty('version.lombok'),
+        apiSpec           : findProperty('version.apiSpec'),
+        testcontainersBom : findProperty('version.testcontainersBom'),
+        cdk               : findProperty('version.cdk'),
+        aiRag             : findProperty('version.aiRag'),
+        mapstruct         : findProperty('version.mapstruct'),
+        artemis           : findProperty('version.artemis'),
+        httpclient5       : findProperty('version.httpclient5'),
+        springdoc         : findProperty('version.springdoc'),
+        jacksonKotlin     : findProperty('version.jacksonKotlin'),
+        logstashEncoder   : findProperty('version.logstashEncoder'),
+        commonsText       : findProperty('version.commonsText'),
+        jjwt              : findProperty('version.jjwt'),
+        swaggerParser     : findProperty('version.swaggerParser'),
+        azureBlob         : findProperty('version.azureBlob'),
+        azureIdentity     : findProperty('version.azureIdentity'),
+        mockwebserver     : findProperty('version.mockwebserver'),
+        assertj           : findProperty('version.assertj'),
+        restAssured       : findProperty('version.restAssured'),
+        jacoco            : findProperty('version.jacoco'),
+        commonsCollections: findProperty('version.commonsCollections'),
+        cpAuthFilter      : findProperty('version.cpAuthFilter'),
+        cpAuditFilter     : findProperty('version.cpAuditFilter')
 ]
 
 /* ---- Import Spring Boot BOM explicitly (helps with milestone builds) ---- */
@@ -342,7 +342,7 @@ tasks.named('check') { dependsOn tasks.named('integration') }
 /* ------------ Publishing (GitHub releases safe) ------------ */
 def githubActor = project.findProperty("github.actor") ?: System.getenv("GITHUB_ACTOR")
 def githubToken = project.findProperty("github.token") ?: System.getenv("GITHUB_TOKEN")
-def githubRepo  = System.getenv("GITHUB_REPOSITORY")     // e.g. org/repo
+def githubRepo = System.getenv("GITHUB_REPOSITORY")     // e.g. org/repo
 def azureADOArtifactRepository = 'https://pkgs.dev.azure.com/hmcts/Artifacts/_packaging/hmcts-lib/maven/v1'
 def azureADOArtifactActor = System.getenv("AZURE_DEVOPS_ARTIFACT_USERNAME")
 def azureADOArtifactToken = System.getenv("AZURE_DEVOPS_ARTIFACT_TOKEN")

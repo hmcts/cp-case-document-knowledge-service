@@ -6,6 +6,7 @@ import uk.gov.hmcts.cp.cdk.batch.storage.AzureBlobStorageService;
 import uk.gov.hmcts.cp.cdk.batch.storage.StorageProperties;
 import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
 import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
+import uk.gov.hmcts.cp.cdk.config.VerifySchedulerProperties;
 
 import java.time.Duration;
 import java.util.Locale;
@@ -31,17 +32,27 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.DockerImageName;
 
+/**
+ * Core batch infrastructure configuration:
+ * - RetryTemplate for tasklets
+ * - TaskExecutors for partitioning
+ * - Azure Blob Storage client wiring
+ * - Azurite for local / integration tests
+ */
 @Slf4j
 @Configuration
+@EnableScheduling
 @EnableConfigurationProperties({
         StorageProperties.class,
         UploadProperties.class,
         IngestionProperties.class,
-        PartitioningProperties.class
+        PartitioningProperties.class,
+        VerifySchedulerProperties.class
 })
 public class BatchConfig {
 
@@ -50,9 +61,9 @@ public class BatchConfig {
             "mcr.microsoft.com/azure-storage/azurite:3.33.0";
     private static final String DEV_ACCOUNT_NAME = "devstoreaccount1";
     private static final String DEV_ACCOUNT_KEY = "REDACTED";
-    private static final String CONNECTION_STRING = "connection-string";
-    private static final String MANAGED_IDENTITY = "managed-identity";
-    private static final String AZURITE = "azurite";
+    private static final String CONNECTION_STRING_MODE = "connection-string";
+    private static final String MANAGED_IDENTITY_MODE = "managed-identity";
+    private static final String AZURITE_MODE = "azurite";
 
     private final IngestionProperties ingestionProperties;
 
@@ -64,18 +75,18 @@ public class BatchConfig {
     public RetryTemplate retryTemplate() {
         final RetryTemplate retryTemplate = new RetryTemplate();
 
-        final SimpleRetryPolicy retryPolicy =
+        final SimpleRetryPolicy simpleRetryPolicy =
                 new SimpleRetryPolicy(ingestionProperties.getRetry().getMaxAttempts());
 
-        final ExponentialBackOffPolicy backOffPolicy = new ExponentialBackOffPolicy();
-        backOffPolicy.setInitialInterval(
+        final ExponentialBackOffPolicy exponentialBackOffPolicy = new ExponentialBackOffPolicy();
+        exponentialBackOffPolicy.setInitialInterval(
                 ingestionProperties.getRetry().getBackoff().getInitialMs());
-        backOffPolicy.setMultiplier(2.0);
-        backOffPolicy.setMaxInterval(
+        exponentialBackOffPolicy.setMultiplier(2.0);
+        exponentialBackOffPolicy.setMaxInterval(
                 ingestionProperties.getRetry().getBackoff().getMaxMs());
 
-        retryTemplate.setRetryPolicy(retryPolicy);
-        retryTemplate.setBackOffPolicy(backOffPolicy);
+        retryTemplate.setRetryPolicy(simpleRetryPolicy);
+        retryTemplate.setBackOffPolicy(exponentialBackOffPolicy);
         return retryTemplate;
     }
 
@@ -87,15 +98,15 @@ public class BatchConfig {
     @Primary
     @ConditionalOnMissingBean(name = "ingestionTaskExecutor")
     public TaskExecutor ingestionTaskExecutor() {
-        final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setThreadNamePrefix("ingestion-");
-        executor.setCorePoolSize(ingestionProperties.getCorePoolSize());
-        executor.setMaxPoolSize(ingestionProperties.getMaxPoolSize());
-        executor.setQueueCapacity(ingestionProperties.getQueueCapacity());
-        executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(30);
-        executor.initialize();
-        return executor;
+        final ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
+        threadPoolTaskExecutor.setThreadNamePrefix("ingestion-");
+        threadPoolTaskExecutor.setCorePoolSize(ingestionProperties.getCorePoolSize());
+        threadPoolTaskExecutor.setMaxPoolSize(ingestionProperties.getMaxPoolSize());
+        threadPoolTaskExecutor.setQueueCapacity(ingestionProperties.getQueueCapacity());
+        threadPoolTaskExecutor.setWaitForTasksToCompleteOnShutdown(true);
+        threadPoolTaskExecutor.setAwaitTerminationSeconds(30);
+        threadPoolTaskExecutor.initialize();
+        return threadPoolTaskExecutor;
     }
 
     /**
@@ -104,29 +115,39 @@ public class BatchConfig {
      */
     @Bean(name = "queryPartitionTaskExecutor")
     @ConditionalOnMissingBean(name = "queryPartitionTaskExecutor")
-    public TaskExecutor queryPartitionTaskExecutor(final PartitioningProperties partitionProps) {
-        final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setThreadNamePrefix("query-partition-");
-        // tie pool size to query grid size to keep it predictable
-        executor.setCorePoolSize(ingestionProperties.getCorePoolSize());
-        executor.setMaxPoolSize(ingestionProperties.getMaxPoolSize());
-        executor.setQueueCapacity(ingestionProperties.getQueueCapacity());
-        executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(30);
-        executor.initialize();
-        return executor;
+    public TaskExecutor queryPartitionTaskExecutor(final PartitioningProperties partitioningProperties) {
+        final ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
+        threadPoolTaskExecutor.setThreadNamePrefix("query-partition-");
+
+        // Slightly biased towards query grid size but still bounded by ingestion defaults.
+        final int corePoolSize = Math.min(
+                ingestionProperties.getCorePoolSize(),
+                Math.max(1, partitioningProperties.queryGridSize())
+        );
+        final int maxPoolSize = Math.min(
+                ingestionProperties.getMaxPoolSize(),
+                Math.max(corePoolSize, partitioningProperties.queryGridSize())
+        );
+
+        threadPoolTaskExecutor.setCorePoolSize(corePoolSize);
+        threadPoolTaskExecutor.setMaxPoolSize(maxPoolSize);
+        threadPoolTaskExecutor.setQueueCapacity(ingestionProperties.getQueueCapacity());
+        threadPoolTaskExecutor.setWaitForTasksToCompleteOnShutdown(true);
+        threadPoolTaskExecutor.setAwaitTerminationSeconds(30);
+        threadPoolTaskExecutor.initialize();
+        return threadPoolTaskExecutor;
     }
 
     @Bean
     public ObjectMapper objectMapper() {
-        final ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        return mapper;
+        final ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        return objectMapper;
     }
 
     @Bean(destroyMethod = "stop")
-    @ConditionalOnProperty(prefix = "cdk.storage.azure", name = "mode", havingValue = AZURITE)
+    @ConditionalOnProperty(prefix = "cdk.storage.azure", name = "mode", havingValue = AZURITE_MODE)
     @ConditionalOnMissingBean(name = "azuriteContainer")
     public GenericContainer<?> azuriteContainer(final StorageProperties storageProperties) {
         final String imageName = storageProperties.azurite() != null
@@ -134,40 +155,44 @@ public class BatchConfig {
                 ? storageProperties.azurite().image()
                 : DEFAULT_AZURITE_IMAGE;
 
-        final GenericContainer<?> container = new GenericContainer<>(DockerImageName.parse(imageName))
-                .withExposedPorts(AZURITE_PORT)
-                .withCommand("azurite-blob --loose --blobHost 0.0.0.0 --blobPort " + AZURITE_PORT)
-                .withStartupTimeout(Duration.ofSeconds(60));
-        container.start();
-        return container;
+        final GenericContainer<?> genericContainer =
+                new GenericContainer<>(DockerImageName.parse(imageName))
+                        .withExposedPorts(AZURITE_PORT)
+                        .withCommand("azurite-blob --loose --blobHost 0.0.0.0 --blobPort " + AZURITE_PORT)
+                        .withStartupTimeout(Duration.ofSeconds(60));
+
+        genericContainer.start();
+        return genericContainer;
     }
 
     @Bean
     @ConditionalOnMissingBean
     public BlobContainerClient blobContainerClient(final StorageProperties storageProperties,
-                                                   @Autowired(required = false)
-                                                   final GenericContainer<?> azuriteContainer) {
-        final String mode = StringUtils.defaultIfBlank(
-                        storageProperties.mode(), CONNECTION_STRING)
+                                                   @Autowired(required = false) final GenericContainer<?> azuriteContainer) {
+
+        final String mode = StringUtils
+                .defaultIfBlank(storageProperties.mode(), CONNECTION_STRING_MODE)
                 .toLowerCase(Locale.ROOT);
 
         final String containerName = requireNonNull(
-                storageProperties.container(), "cdk.storage.azure.container is required");
+                storageProperties.container(),
+                "cdk.storage.azure.container is required"
+        );
 
         return switch (mode) {
-            case CONNECTION_STRING -> {
+            case CONNECTION_STRING_MODE -> {
                 final String connectionString = requireNonNull(
                         storageProperties.connectionString(),
                         "cdk.storage.azure.connection-string is required for connection-string mode"
                 );
-                final BlobContainerClient client = new BlobContainerClientBuilder()
+                final BlobContainerClient blobContainerClient = new BlobContainerClientBuilder()
                         .connectionString(connectionString)
                         .containerName(containerName)
                         .buildClient();
-                createContainerIfMissing(client, containerName);
-                yield client;
+                createContainerIfMissing(blobContainerClient, containerName);
+                yield blobContainerClient;
             }
-            case MANAGED_IDENTITY -> {
+            case MANAGED_IDENTITY_MODE -> {
                 String endpoint = StringUtils.trimToNull(storageProperties.blobEndpoint());
                 if (endpoint == null) {
                     final String accountName = requireNonNull(
@@ -179,50 +204,59 @@ public class BatchConfig {
                 final String userAssignedClientId =
                         StringUtils.trimToNull(storageProperties.managedIdentityClientId());
 
-                final TokenCredential credential = userAssignedClientId != null
-                        ? new ManagedIdentityCredentialBuilder().clientId(userAssignedClientId).build()
-                        : new DefaultAzureCredentialBuilder().build();
+                final TokenCredential tokenCredential =
+                        userAssignedClientId != null
+                                ? new ManagedIdentityCredentialBuilder().clientId(userAssignedClientId).build()
+                                : new DefaultAzureCredentialBuilder().build();
 
-                final BlobContainerClient client = new BlobContainerClientBuilder()
+                final BlobContainerClient blobContainerClient = new BlobContainerClientBuilder()
                         .endpoint(endpoint)
-                        .credential(credential)
+                        .credential(tokenCredential)
                         .containerName(containerName)
                         .buildClient();
-                createContainerIfMissing(client, containerName);
-                yield client;
+                createContainerIfMissing(blobContainerClient, containerName);
+                yield blobContainerClient;
             }
-            case AZURITE -> {
+            case AZURITE_MODE -> {
                 if (azuriteContainer == null) {
                     throw new IllegalStateException(
-                            "Azurite mode selected but azuriteContainer was not started");
+                            "Azurite mode selected but azuriteContainer was not started"
+                    );
                 }
                 final String host = azuriteContainer.getHost();
                 final int mappedPort = azuriteContainer.getMappedPort(AZURITE_PORT);
                 final String blobEndpoint =
                         "http://" + host + ":" + mappedPort + "/" + DEV_ACCOUNT_NAME;
+
                 final String azuriteConnectionString =
-                        "DefaultEndpointsProtocol=http;AccountName=" + DEV_ACCOUNT_NAME
-                                + ";AccountKey=" + DEV_ACCOUNT_KEY
-                                + ";BlobEndpoint=" + blobEndpoint + ";";
-                final BlobContainerClient client = new BlobContainerClientBuilder()
+                        "DefaultEndpointsProtocol=http;"
+                                + "AccountName=" + DEV_ACCOUNT_NAME + ";"
+                                + "AccountKey=" + DEV_ACCOUNT_KEY + ";"
+                                + "BlobEndpoint=" + blobEndpoint + ";";
+
+                final BlobContainerClient blobContainerClient = new BlobContainerClientBuilder()
                         .connectionString(azuriteConnectionString)
                         .containerName(containerName)
                         .buildClient();
-                createContainerIfMissing(client, containerName);
-                yield client;
+                createContainerIfMissing(blobContainerClient, containerName);
+                yield blobContainerClient;
             }
             default -> throw new IllegalArgumentException(
-                    "Unsupported cdk.storage.azure.mode: " + mode);
+                    "Unsupported cdk.storage.azure.mode: " + mode
+            );
         };
     }
 
-    private void createContainerIfMissing(final BlobContainerClient client,
+    private void createContainerIfMissing(final BlobContainerClient blobContainerClient,
                                           final String containerName) {
         try {
-            client.createIfNotExists();
-        } catch (RuntimeException exception) {
-            log.warn("Container creation skipped or failed. container={} reason={}",
-                    containerName, exception.getMessage());
+            blobContainerClient.createIfNotExists();
+        } catch (final RuntimeException runtimeException) {
+            log.warn(
+                    "Container creation skipped or failed. container={} reason={}",
+                    containerName,
+                    runtimeException.getMessage()
+            );
         }
     }
 

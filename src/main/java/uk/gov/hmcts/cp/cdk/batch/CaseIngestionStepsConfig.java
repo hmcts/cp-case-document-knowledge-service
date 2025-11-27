@@ -6,7 +6,6 @@ import uk.gov.hmcts.cp.cdk.batch.tasklet.GenerateAnswersTasklet;
 import uk.gov.hmcts.cp.cdk.batch.tasklet.ReserveAnswerVersionTasklet;
 import uk.gov.hmcts.cp.cdk.batch.tasklet.ResolveMaterialForCaseTasklet;
 import uk.gov.hmcts.cp.cdk.batch.tasklet.UploadAndPersistTasklet;
-import uk.gov.hmcts.cp.cdk.batch.tasklet.VerifyUploadTasklet;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.repository.JobRepository;
@@ -19,65 +18,71 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 
+/**
+ * Declares steps used by ingestion job and answer-generation job.
+ */
 @Configuration
 @RequiredArgsConstructor
 public class CaseIngestionStepsConfig {
 
-    private final PlatformTransactionManager txManager;
+    private final PlatformTransactionManager platformTransactionManager;
     private final RetryTemplate retryTemplate;
 
-    private Step step(final String name, final JobRepository repo, final Tasklet tasklet) {
-        return new StepBuilder(name, repo)
-                .tasklet(new RetryingTasklet(tasklet, retryTemplate), txManager)
+    private Step createRetryingStep(final String stepName,
+                                    final JobRepository jobRepository,
+                                    final Tasklet delegateTasklet) {
+        final RetryingTasklet retryingTasklet = new RetryingTasklet(delegateTasklet, retryTemplate);
+        return new StepBuilder(stepName, jobRepository)
+                .tasklet(retryingTasklet, platformTransactionManager)
                 .build();
     }
 
     @Bean
-    public Step step1FetchHearingsCasesWithSingleDefendant(final JobRepository repo,
+    public Step step1FetchHearingsCasesWithSingleDefendant(final JobRepository jobRepository,
                                                            final FetchHearingsCasesTasklet fetchHearingsCasesTasklet) {
-        return step("step1_fetch_hearings_cases", repo, fetchHearingsCasesTasklet);
+        return createRetryingStep("step1_fetch_hearings_cases", jobRepository, fetchHearingsCasesTasklet);
     }
 
     @Bean
-    public Step step2ResolveEligibleCaseWorker(final JobRepository repo,
-                                               final ResolveMaterialForCaseTasklet tasklet) {
-        return new StepBuilder("step2ResolveEligibleCaseWorker", repo)
-                .tasklet(new RetryingTasklet(tasklet, retryTemplate), txManager)
-                .build();
+    public Step step2ResolveEligibleCaseWorker(final JobRepository jobRepository,
+                                               final ResolveMaterialForCaseTasklet resolveMaterialForCaseTasklet) {
+        return createRetryingStep("step2ResolveEligibleCaseWorker", jobRepository, resolveMaterialForCaseTasklet);
     }
 
     @Bean
-    public Step step3UploadAndPersist(final JobRepository repo,
+    public Step step3UploadAndPersist(final JobRepository jobRepository,
                                       final UploadAndPersistTasklet uploadAndPersistTasklet) {
-        return new StepBuilder("step3_upload_and_persist_perCase", repo)
-                .tasklet(uploadAndPersistTasklet)
-                .transactionManager(new ResourcelessTransactionManager())
+        final ResourcelessTransactionManager resourcelessTransactionManager =
+                new ResourcelessTransactionManager();
+
+        return new StepBuilder("step3_upload_and_persist_perCase", jobRepository)
+                .tasklet(uploadAndPersistTasklet, resourcelessTransactionManager)
+                .build();
+    }
+
+    // Step 5 and 6 are used by Job B (answer-generation job).
+
+    @Bean
+    public Step step5ReserveAnswerVersionPerCase(final JobRepository jobRepository,
+                                                 final ReserveAnswerVersionTasklet reserveAnswerVersionTasklet) {
+        final ResourcelessTransactionManager resourcelessTransactionManager =
+                new ResourcelessTransactionManager();
+
+        return new StepBuilder("step5_reserve_answer_version_perCase", jobRepository)
+                .tasklet(reserveAnswerVersionTasklet, resourcelessTransactionManager)
                 .build();
     }
 
     @Bean
-    public Step step4VerifyUploadPerCase(final JobRepository repo,
-                                         final VerifyUploadTasklet verifyUploadTasklet) {
-        return new StepBuilder("step4_verify_upload_perCase", repo)
-                .tasklet(new RetryingTasklet(verifyUploadTasklet, retryTemplate))
-                .build();
-    }
-
-    @Bean
-    public Step step5ReserveAnswerVersionPerCase(final JobRepository repo,
-                                                 final ReserveAnswerVersionTasklet tasklet) {
-        return new StepBuilder("step5_reserve_answer_version_perCase", repo)
-                .tasklet(tasklet)
-                .transactionManager(new ResourcelessTransactionManager())
-                .build();
-    }
-
-    @Bean
-    public Step step6GenerateAnswerSingleQuery(final JobRepository repo,
+    public Step step6GenerateAnswerSingleQuery(final JobRepository jobRepository,
                                                final GenerateAnswersTasklet generateAnswersTasklet) {
-        return new StepBuilder("step6_generate_answer_single_query", repo)
-                .tasklet(new RetryingTasklet(generateAnswersTasklet, retryTemplate))
-                .transactionManager(new ResourcelessTransactionManager())
+        final ResourcelessTransactionManager resourcelessTransactionManager =
+                new ResourcelessTransactionManager();
+        final RetryingTasklet retryingTasklet =
+                new RetryingTasklet(generateAnswersTasklet, retryTemplate);
+
+        return new StepBuilder("step6_generate_answer_single_query", jobRepository)
+                .tasklet(retryingTasklet, resourcelessTransactionManager)
                 .build();
     }
 }

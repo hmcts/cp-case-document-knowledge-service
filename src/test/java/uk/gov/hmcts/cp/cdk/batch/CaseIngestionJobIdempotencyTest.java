@@ -19,7 +19,11 @@ import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.batch.storage.AzureBlobStorageService;
 import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
 import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
+import uk.gov.hmcts.cp.cdk.batch.verification.DocumentVerificationScheduler;
+import uk.gov.hmcts.cp.cdk.config.VerifySchedulerProperties;
+import uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+import uk.gov.hmcts.cp.cdk.repo.DocumentVerificationTaskRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
@@ -41,6 +45,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
+import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.test.JobOperatorTestUtils;
@@ -73,10 +78,16 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * End-to-end tests that assert the workflow is idempotent:
- *  - 1st run: uploads two docs, verifies ingestion, reserves versions, generates answers (DONE)
- *  - 2nd run (same inputs): NO new upload; NO new answer generation; reservations/versions unchanged
- *  - Partial redo case: only FAILED reservation is regenerated
+ * Pipeline tests across:
+ * <p>
+ * Job A (caseIngestionJob: steps 1–3, upload + enqueue verification)
+ * + DocumentVerificationScheduler
+ * + Job B (answerGenerationJob: steps 5–6)
+ * <p>
+ * Scenarios:
+ * - Full pipeline idempotency.
+ * - Partial redo (FAILED reservation only).
+ * - Failure path (IDPC returns FAILED).
  */
 @SpringBatchTest
 @SpringBootTest(
@@ -86,6 +97,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
                 CdkClientsConfig.class,
                 CaseIngestionJobConfig.class,
                 CaseIngestionStepsConfig.class,
+                AnswerGenerationJobConfig.class,
                 CaseIngestionJobIdempotencyTest.TestOverrides.class
         },
         properties = {
@@ -124,60 +136,91 @@ class CaseIngestionJobIdempotencyTest {
     }
 
     @DynamicPropertySource
-    static void dbProps(final DynamicPropertyRegistry r) {
-        r.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        r.add("spring.datasource.username", POSTGRES::getUsername);
-        r.add("spring.datasource.password", POSTGRES::getPassword);
-        r.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+    static void dbProps(final DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.username", POSTGRES::getUsername);
+        registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
 
-        // DDL + Spring Batch metadata
-        r.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
-        r.add("spring.flyway.enabled", () -> "true");
-        r.add("spring.batch.jdbc.initialize-schema", () -> "always");
+        // DDL + Spring Batch metadata + Flyway
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+        registry.add("spring.flyway.enabled", () -> "true");
+        registry.add("spring.batch.jdbc.initialize-schema", () -> "always");
 
-        // Verify polling
-        r.add("cdk.ingestion.verify.poll-interval-ms", () -> "10");
-        r.add("cdk.ingestion.verify.max-wait-ms", () -> "2000");
+        // New scheduler properties (we drive scheduler manually in tests)
+        registry.add("cdk.ingestion.verify.scheduler.enabled", () -> "false");
+        registry.add("cdk.ingestion.verify.scheduler.delay-ms", () -> "50");
+        registry.add("cdk.ingestion.verify.scheduler.batch-size", () -> "10");
+        registry.add("cdk.ingestion.verify.scheduler.max-attempts", () -> "10");
+        registry.add("cdk.ingestion.verify.scheduler.lock-ttl-ms", () -> "10000");
 
         // required audit prop
-        r.add("audit.http.openapi-rest-spec", () -> "test-openapi-spec.yml");
+        registry.add("audit.http.openapi-rest-spec", () -> "test-openapi-spec.yml");
 
-
-        r.add("cdk.storage.azure.connection-string", () -> "DefaultEndpointsProtocol=http;AccountName=dev;AccountKey=dev;BlobEndpoint=http://localhost:10000/dev;");
-        r.add("cdk.storage.azure.container", () -> "test");
-        r.add("cdk.storage.azure.mode", () -> "connection-string");
+        // Storage
+        registry.add("cdk.storage.azure.connection-string",
+                () -> "DefaultEndpointsProtocol=http;AccountName=dev;AccountKey=dev;BlobEndpoint=http://localhost:10000/dev;");
+        registry.add("cdk.storage.azure.container", () -> "test");
+        registry.add("cdk.storage.azure.mode", () -> "connection-string");
     }
 
     // Real repos
     @Autowired
-    private QueryDefinitionLatestRepository qdlRepo;
+    private QueryDefinitionLatestRepository queryDefinitionLatestRepository;
+
     @Autowired
     private CaseDocumentRepository caseDocumentRepository;
 
-    // External mocks (injected via config)
+    @Autowired
+    private DocumentVerificationTaskRepository documentVerificationTaskRepository;
+
+    // External mocks (via TestOverrides)
     @Autowired
     private HearingClient hearingClient;
+
     @Autowired
     private ProgressionClient progressionClient;
+
     @Autowired
     private DocumentIngestionStatusApi documentIngestionStatusApi;
+
     @Autowired
     private DocumentInformationSummarisedApi documentInformationSummarisedApi;
+
     @Autowired
     private QueryResolver queryResolver;
+
     @Autowired
     private StorageService storageService;
 
-    // Infra
+    // Batch infra / helpers
     @Autowired
     private JobOperatorTestUtils jobOperatorTestUtils;
-    @Autowired
-    private JdbcTemplate jdbc;
 
-    private UUID caseId1, caseId2, materialId1, materialId2, queryId;
+    @Autowired
+    private Job caseIngestionJob;
+
+    @Autowired
+    private Job answerGenerationJob;
+
+    @Autowired
+    private DocumentVerificationScheduler documentVerificationScheduler;
+
+    @Autowired
+    private VerifySchedulerProperties verifySchedulerProperties;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    private UUID caseId1;
+    private UUID caseId2;
+    private UUID materialId1;
+    private UUID materialId2;
+    private UUID queryId;
 
     @BeforeEach
     void setUp() {
+        ensureCaseIngestionStatusViewExists();
         // fresh ids for this test
         caseId1 = UUID.randomUUID();
         caseId2 = UUID.randomUUID();
@@ -186,34 +229,34 @@ class CaseIngestionJobIdempotencyTest {
         queryId = UUID.randomUUID();
 
         // step 1 — hearings & cases
-        HearingSummariesInfo h1 = mock(HearingSummariesInfo.class);
-        HearingSummariesInfo h2 = mock(HearingSummariesInfo.class);
-        when(h1.caseId()).thenReturn(caseId1.toString());
-        when(h2.caseId()).thenReturn(caseId2.toString());
+        final HearingSummariesInfo hearingSummary1 = mock(HearingSummariesInfo.class);
+        final HearingSummariesInfo hearingSummary2 = mock(HearingSummariesInfo.class);
+        when(hearingSummary1.caseId()).thenReturn(caseId1.toString());
+        when(hearingSummary2.caseId()).thenReturn(caseId2.toString());
         when(hearingClient.getHearingsAndCases(anyString(), anyString(), any(LocalDate.class), anyString()))
-                .thenReturn(List.of(h1, h2));
+                .thenReturn(List.of(hearingSummary1, hearingSummary2));
 
         // step 2 — latest material links for each case
-        LatestMaterialInfo lm1 = mock(LatestMaterialInfo.class);
-        LatestMaterialInfo lm2 = mock(LatestMaterialInfo.class);
-        when(lm1.materialName()).thenReturn("IDPC");
-        when(lm2.materialName()).thenReturn("IDPC");
-        when(lm1.materialId()).thenReturn(materialId1.toString());
-        when(lm2.materialId()).thenReturn(materialId2.toString());
+        final LatestMaterialInfo latestMaterialInfo1 = mock(LatestMaterialInfo.class);
+        final LatestMaterialInfo latestMaterialInfo2 = mock(LatestMaterialInfo.class);
+        when(latestMaterialInfo1.materialName()).thenReturn("IDPC");
+        when(latestMaterialInfo2.materialName()).thenReturn("IDPC");
+        when(latestMaterialInfo1.materialId()).thenReturn(materialId1.toString());
+        when(latestMaterialInfo2.materialId()).thenReturn(materialId2.toString());
         when(progressionClient.getCourtDocuments(eq(caseId1), anyString()))
-                .thenReturn(Optional.of(lm1));
+                .thenReturn(Optional.of(latestMaterialInfo1));
         when(progressionClient.getCourtDocuments(eq(caseId2), anyString()))
-                .thenReturn(Optional.of(lm2));
+                .thenReturn(Optional.of(latestMaterialInfo2));
 
         // step 3 — storage interactions (upload once per new doc)
         when(progressionClient.getMaterialDownloadUrl(any(UUID.class), anyString()))
                 .thenReturn(Optional.of("http://example.test/doc.pdf"));
         when(storageService.copyFromUrl(anyString(), anyString(), anyString(), anyMap()))
-                .thenAnswer(inv -> "blob://" + inv.getArgument(1, String.class));
+                .thenAnswer(invocation -> "blob://" + invocation.getArgument(1, String.class));
         when(storageService.getBlobSize(anyString())).thenReturn(1234L);
 
-        // step 4 — ingestion status polling (always success quickly)
-        DocumentIngestionStatusReturnedSuccessfully ok =
+        // scheduler — ingestion status polling (default: always success quickly)
+        final DocumentIngestionStatusReturnedSuccessfully ok =
                 new DocumentIngestionStatusReturnedSuccessfully()
                         .status(DocumentIngestionStatusReturnedSuccessfully.StatusEnum.INGESTION_SUCCESS)
                         .documentId(UUID.randomUUID().toString())
@@ -223,16 +266,16 @@ class CaseIngestionJobIdempotencyTest {
                 .thenReturn(ResponseEntity.ok(ok));
 
         // step 5 — seed one canonical query + definition
-        jdbc.update(
-                "INSERT INTO queries(query_id, label, created_at,display_order) VALUES (?, ?, NOW(),?) " +
-                        "ON CONFLICT (query_id) DO NOTHING",
+        jdbcTemplate.update(
+                "INSERT INTO queries(query_id, label, created_at, display_order) " +
+                        "VALUES (?, ?, NOW(), ?) ON CONFLICT (query_id) DO NOTHING",
                 ps -> {
                     ps.setObject(1, queryId);
                     ps.setString(2, "E2E Query");
                     ps.setInt(3, 100);
                 }
         );
-        jdbc.update(
+        jdbcTemplate.update(
                 "INSERT INTO query_versions(query_id, effective_at, user_query, query_prompt) " +
                         "VALUES (?, NOW(), ?, ?)",
                 ps -> {
@@ -241,35 +284,63 @@ class CaseIngestionJobIdempotencyTest {
                     ps.setString(3, "query-prompt");
                 }
         );
-        when(queryResolver.resolve()).thenReturn(List.of(new uk.gov.hmcts.cp.cdk.domain.Query() {{
-            setQueryId(queryId);
-            setLabel("E2E Query");
-        }}));
+        when(queryResolver.resolve()).thenReturn(
+                List.of(new uk.gov.hmcts.cp.cdk.domain.Query() {{
+                    setQueryId(queryId);
+                    setLabel("E2E Query");
+                }})
+        );
 
         // step 6 — RAG call returns stable answer
-        UserQueryAnswerReturnedSuccessfully rag =
+        final UserQueryAnswerReturnedSuccessfully ragResponse =
                 new UserQueryAnswerReturnedSuccessfully()
                         .llmResponse("answer text")
                         .chunkedEntries(Collections.emptyList());
         when(documentInformationSummarisedApi.answerUserQuery(any(AnswerUserQueryRequest.class)))
-                .thenReturn(ResponseEntity.ok(rag));
+                .thenReturn(ResponseEntity.ok(ragResponse));
     }
 
-    void tearDown() {
+    private void ensureCaseIngestionStatusViewExists() {
+        jdbcTemplate.execute("""
+                CREATE OR REPLACE VIEW v_case_ingestion_status AS
+                SELECT DISTINCT ON (case_id)
+                  case_id,
+                  ingestion_phase     AS phase,
+                  ingestion_phase_at  AS last_updated
+                FROM case_documents
+                ORDER BY case_id, ingestion_phase_at DESC
+                """);
+    }
+
+    private void tearDown() {
+        truncateIfExists("document_verification_task");
         truncateIfExists("answers");
         truncateIfExists("answer_reservations");
-        jdbc.update("DELETE FROM query_versions WHERE query_id = ?", ps -> ps.setObject(1, queryId));
-        jdbc.update("DELETE FROM queries WHERE query_id = ?", ps -> ps.setObject(1, queryId));
-        clearInvocations(storageService, documentInformationSummarisedApi,
-                progressionClient, documentIngestionStatusApi, hearingClient);
+        truncateIfExists("case_documents");
+        jdbcTemplate.update("DELETE FROM query_versions WHERE query_id = ?", ps -> ps.setObject(1, queryId));
+        jdbcTemplate.update("DELETE FROM queries WHERE query_id = ?", ps -> ps.setObject(1, queryId));
+        clearInvocations(
+                storageService,
+                documentInformationSummarisedApi,
+                progressionClient,
+                documentIngestionStatusApi,
+                hearingClient
+        );
     }
 
-    private void truncateIfExists(String table) {
-        String reg = jdbc.queryForObject("SELECT to_regclass(?)", String.class, "public." + table);
-        if (reg != null) jdbc.execute("TRUNCATE TABLE " + table + " CASCADE");
+    private void truncateIfExists(final String tableName) {
+        final String regClass = jdbcTemplate.queryForObject(
+                "SELECT to_regclass(?)",
+                String.class,
+                "public." + tableName
+        );
+        if (regClass != null) {
+            jdbcTemplate.execute("TRUNCATE TABLE " + tableName + " CASCADE");
+        }
     }
 
-    private JobExecution startJobRun() throws Exception {
+    private JobExecution startIngestionJobRun() throws Exception {
+        jobOperatorTestUtils.setJob(caseIngestionJob);
         return jobOperatorTestUtils.startJob(
                 new JobParametersBuilder()
                         .addString("runId", UUID.randomUUID().toString())
@@ -282,137 +353,344 @@ class CaseIngestionJobIdempotencyTest {
         );
     }
 
-    @Test
-    @DisplayName("Idempotency: 2nd run with same inputs does NOT re-upload and does NOT re-generate answers")
-    void secondRunIsIdempotent() throws Exception {
-        tearDown();
-        // ---------- First run ----------
-        JobExecution exec1 = startJobRun();
-        assertThat(exec1.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+    private JobExecution startAnswerGenerationJobRun() throws Exception {
+        jobOperatorTestUtils.setJob(answerGenerationJob);
+        return jobOperatorTestUtils.startJob(
+                new JobParametersBuilder()
+                        .addString("runId", UUID.randomUUID().toString())
+                        .addLong("ts", System.currentTimeMillis())
+                        .addString("courtCentreId", "COURT-1")
+                        .addString("roomId", "ROOM-42")
+                        .addString("cppuid", "userId")
+                        .addString("date", LocalDate.now().toString())
+                        .toJobParameters()
+        );
+    }
 
-        Integer docCountAfter1 = jdbc.queryForObject("SELECT COUNT(*) FROM case_documents", Integer.class);
-        Integer answersAfter1 = jdbc.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
-        Integer doneAfter1 = jdbc.queryForObject("SELECT COUNT(*) FROM answer_reservations WHERE status='DONE'", Integer.class);
+    /**
+     * Helper: drive the scheduler manually until there are no PENDING/IN_PROGRESS tasks
+     * or we hit a small safety iteration cap.
+     */
+    private void runSchedulerToCompletion() {
+        verifySchedulerProperties.setEnabled(true);
+        int safetyCounter = 0;
+        while (documentVerificationTaskRepository.countByStatus(DocumentVerificationStatus.PENDING) > 0
+                || documentVerificationTaskRepository.countByStatus(DocumentVerificationStatus.IN_PROGRESS) > 0) {
+            documentVerificationScheduler.pollPendingDocuments();
+            safetyCounter++;
+            if (safetyCounter > 20) {
+                break;
+            }
+        }
+        verifySchedulerProperties.setEnabled(false);
+    }
+
+    @Test
+    @DisplayName("Full pipeline: second full run is idempotent (no re-upload, no re-generate)")
+    void secondFullPipelineRunIsIdempotent() throws Exception {
+        tearDown();
+
+        // ---------- First full pipeline run: Job A -> scheduler -> Job B ----------
+        final JobExecution ingestionExecution1 = startIngestionJobRun();
+        assertThat(ingestionExecution1.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+        final long tasksAfterIngestion1 =
+                documentVerificationTaskRepository.countByStatus(DocumentVerificationStatus.PENDING);
+        assertThat(tasksAfterIngestion1).isEqualTo(2);
+
+        runSchedulerToCompletion();
+
+        final long succeededTasks =
+                documentVerificationTaskRepository.countByStatus(DocumentVerificationStatus.SUCCEEDED);
+        assertThat(succeededTasks).isEqualTo(2);
+
+        final JobExecution answerExecution1 = startAnswerGenerationJobRun();
+        assertThat(answerExecution1.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+        final Integer docCountAfter1 =
+                jdbcTemplate.queryForObject("SELECT COUNT(*) FROM case_documents", Integer.class);
+        final Integer answersAfter1 =
+                jdbcTemplate.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
+        final Integer doneAfter1 =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM answer_reservations WHERE status='DONE'",
+                        Integer.class
+                );
 
         assertThat(docCountAfter1).isEqualTo(2);
         assertThat(answersAfter1).isEqualTo(2);
         assertThat(doneAfter1).isEqualTo(2);
 
-        // External calls that must have happened once per new doc / per query:
         verify(storageService, times(2)).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
         verify(documentInformationSummarisedApi, times(2)).answerUserQuery(any(AnswerUserQueryRequest.class));
 
-        // clear invocation counts for precise 2nd-run assertions
         clearInvocations(storageService, documentInformationSummarisedApi);
 
-        // ---------- Second run with same parameters (new runId/ts) ----------
-        JobExecution exec2 = startJobRun();
-        assertThat(exec2.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+        // ---------- Second full pipeline run ----------
+        final JobExecution ingestionExecution2 = startIngestionJobRun();
+        assertThat(ingestionExecution2.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 
-        Integer docCountAfter2 = jdbc.queryForObject("SELECT COUNT(*) FROM case_documents", Integer.class);
-        Integer answersAfter2 = jdbc.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
-        Integer doneAfter2 = jdbc.queryForObject("SELECT COUNT(*) FROM answer_reservations WHERE status='DONE'", Integer.class);
+        runSchedulerToCompletion();
 
-        // No new documents, no new answers, reservations unchanged
+        final JobExecution answerExecution2 = startAnswerGenerationJobRun();
+        assertThat(answerExecution2.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+        final Integer docCountAfter2 =
+                jdbcTemplate.queryForObject("SELECT COUNT(*) FROM case_documents", Integer.class);
+        final Integer answersAfter2 =
+                jdbcTemplate.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
+        final Integer doneAfter2 =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM answer_reservations WHERE status='DONE'",
+                        Integer.class
+                );
+
         assertThat(docCountAfter2).isEqualTo(docCountAfter1);
         assertThat(answersAfter2).isEqualTo(answersAfter1);
         assertThat(doneAfter2).isEqualTo(doneAfter1);
 
-        // No extra upload or LLM calls on 2nd run (idempotent)
         verify(storageService, times(0)).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
         verify(documentInformationSummarisedApi, times(0)).answerUserQuery(any(AnswerUserQueryRequest.class));
 
-        // Versions are stable (should all be 1)
-        List<Integer> versions =
-                jdbc.query("SELECT version FROM answer_reservations",
-                        (ResultSet rs, int rowNum) -> rs.getInt(1));
-        assertThat(versions).isNotEmpty().allMatch(v -> v == 1);
+        final List<Integer> versions =
+                jdbcTemplate.query(
+                        "SELECT version FROM answer_reservations",
+                        (ResultSet rs, int rowNum) -> rs.getInt(1)
+                );
+        assertThat(versions).isNotEmpty().allMatch(version -> version == 1);
     }
 
     @Test
-    @DisplayName("Partial redo: if one reservation is FAILED (and answer removed), only that one is regenerated")
-    void onlyFailedIsRegeneratedOnSecondRun() throws Exception {
+    @DisplayName("Partial redo: if one reservation is FAILED (and answer removed), only that one is regenerated by Job B")
+    void onlyFailedReservationIsRegeneratedOnAnswerJob() throws Exception {
         tearDown();
-        // ---------- First run ----------
-        JobExecution exec1 = startJobRun();
-        assertThat(exec1.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 
-        Integer answersAfter1 = jdbc.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
+        // ---------- First full pipeline run ----------
+        final JobExecution ingestionExecution1 = startIngestionJobRun();
+        assertThat(ingestionExecution1.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+        runSchedulerToCompletion();
+
+        final JobExecution answerExecution1 = startAnswerGenerationJobRun();
+        assertThat(answerExecution1.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+        final Integer answersAfter1 =
+                jdbcTemplate.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
+
         assertThat(answersAfter1).isEqualTo(2);
 
-        // Pick caseId1 -> mark its reservation FAILED & remove its answer
-        UUID docId1 = jdbc.queryForObject(
+        final UUID docIdForCase1 = jdbcTemplate.queryForObject(
                 "SELECT doc_id FROM case_documents WHERE case_id = ? ORDER BY uploaded_at DESC LIMIT 1",
-                (rs, row) -> (UUID) rs.getObject(1),
+                (ResultSet rs, int rowNum) -> (UUID) rs.getObject(1),
                 caseId1
         );
-        final int cdFailedForDoc =
-                jdbc.update(
-                        "UPDATE case_documents " +
-                                "   SET ingestion_phase = 'FAILED'::document_ingestion_phase_enum, " +
-                                "       ingestion_phase_at = NOW() " +
-                                " WHERE doc_id = ?",
-                        ps -> ps.setObject(1, docId1)
-                );
-        assertThat(cdFailedForDoc).isEqualTo(1);
-        // fail reservation
-        jdbc.update("UPDATE answer_reservations SET status='FAILED' WHERE case_id=? AND query_id=? AND doc_id=?",
-                ps -> {
-                    ps.setObject(1, caseId1);
-                    ps.setObject(2, queryId);
-                    ps.setObject(3, docId1);
-                });
-        // remove answer so we really need a new generation
-        jdbc.update("DELETE FROM answers WHERE case_id=? AND query_id=?",
-                ps -> {
-                    ps.setObject(1, caseId1);
-                    ps.setObject(2, queryId);
-                });
+        assertThat(docIdForCase1).isNotNull();
 
-        // clear invocation counts so we can assert exactly what the second run does
+        // Mark reservation FAILED & remove answer
+        jdbcTemplate.update(
+                "UPDATE answer_reservations " +
+                        "   SET status='FAILED' " +
+                        " WHERE case_id = ? AND query_id = ? AND doc_id = ?",
+                ps -> {
+                    ps.setObject(1, caseId1);
+                    ps.setObject(2, queryId);
+                    ps.setObject(3, docIdForCase1);
+                }
+        );
+        jdbcTemplate.update(
+                "DELETE FROM answers WHERE case_id = ? AND query_id = ?",
+                ps -> {
+                    ps.setObject(1, caseId1);
+                    ps.setObject(2, queryId);
+                }
+        );
+
+        final String phaseCase1 =
+                jdbcTemplate.queryForObject(
+                        "SELECT ingestion_phase::text FROM case_documents WHERE doc_id = ?",
+                        String.class,
+                        docIdForCase1
+                );
+        assertThat(phaseCase1).isEqualTo("INGESTED");
+
         clearInvocations(storageService, documentInformationSummarisedApi);
 
-        // ---------- Second run ----------
-        JobExecution exec2 = startJobRun();
-        assertThat(exec2.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+        // ---------- Second answer-generation job run ----------
+        final JobExecution answerExecution2 = startAnswerGenerationJobRun();
+        assertThat(answerExecution2.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 
-        // Upload should still not happen (doc already exists)
-        verify(storageService, times(1 )).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
-
-        // LLM should be called exactly once (only the FAILED one is regenerated)
+        verify(storageService, times(0)).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
         verify(documentInformationSummarisedApi, times(1)).answerUserQuery(any(AnswerUserQueryRequest.class));
 
-        // Back to 2 total answers and both reservations DONE
-        Integer answersAfter2 = jdbc.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
-        Integer doneAfter2 = jdbc.queryForObject("SELECT COUNT(*) FROM answer_reservations WHERE status='DONE'", Integer.class);
+        final Integer answersAfter2 =
+                jdbcTemplate.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
+        final Integer doneAfter2 =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM answer_reservations WHERE status='DONE'",
+                        Integer.class
+                );
 
         assertThat(answersAfter2).isEqualTo(2);
         assertThat(doneAfter2).isEqualTo(2);
 
-        // Versions stable (still 1)
-        List<Integer> versions =
-                jdbc.query("SELECT version FROM answer_reservations",
-                        (ResultSet rs, int rowNum) -> rs.getInt(1));
-        assertThat(versions).isNotEmpty().allMatch(v -> v == 1);
+        final List<Integer> versions =
+                jdbcTemplate.query(
+                        "SELECT version FROM answer_reservations",
+                        (ResultSet rs, int rowNum) -> rs.getInt(1)
+                );
+        assertThat(versions).isNotEmpty().allMatch(version -> version == 1);
+    }
+
+    @Test
+    @DisplayName("Scheduler failure path: if IDPC reports ingestion FAILED, tasks and docs are marked FAILED")
+    void schedulerMarksFailedWhenIdpcFails() throws Exception {
+        tearDown();
+
+        final JobExecution ingestionExecution = startIngestionJobRun();
+        assertThat(ingestionExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+        final long pendingTasks =
+                documentVerificationTaskRepository.countByStatus(DocumentVerificationStatus.PENDING);
+        assertThat(pendingTasks).isEqualTo(2);
+
+        final DocumentIngestionStatusReturnedSuccessfully failedBody =
+                new DocumentIngestionStatusReturnedSuccessfully()
+                        .status(DocumentIngestionStatusReturnedSuccessfully.StatusEnum.INGESTION_FAILED)
+                        .documentId(UUID.randomUUID().toString())
+                        .documentName("whatever.pdf")
+                        .lastUpdated(OffsetDateTime.now());
+        when(documentIngestionStatusApi.documentStatus(anyString()))
+                .thenReturn(ResponseEntity.ok(failedBody));
+
+        runSchedulerToCompletion();
+
+        final long failedTasks =
+                documentVerificationTaskRepository.countByStatus(DocumentVerificationStatus.FAILED);
+        assertThat(failedTasks).isEqualTo(2);
+
+        final List<String> phases =
+                jdbcTemplate.query(
+                        "SELECT DISTINCT ingestion_phase::text FROM case_documents",
+                        (ResultSet rs, int rowNum) -> rs.getString(1)
+                );
+        assertThat(phases).containsOnly("FAILED");
+
+        final JobExecution answerExecution = startAnswerGenerationJobRun();
+        assertThat(answerExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+        final Integer answersCount =
+                jdbcTemplate.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
+        assertThat(answersCount).isZero();
+    }
+
+    @Test
+    @DisplayName("Cloudy day: no queries configured -> no reservations, no answers, no RAG calls")
+    void answerJobNoopsWhenNoQueriesConfigured() throws Exception {
+        tearDown();
+
+        // Override default setup: no queries resolved at all
+        when(queryResolver.resolve()).thenReturn(Collections.emptyList());
+
+        // ---------- Ingestion (Job A) ----------
+        final JobExecution ingestionExecution = startIngestionJobRun();
+        assertThat(ingestionExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+        // Scheduler will still mark documents as INGESTED
+        runSchedulerToCompletion();
+
+        // ---------- Answer generation (Job B) ----------
+        final JobExecution answerExecution = startAnswerGenerationJobRun();
+        assertThat(answerExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+        final Integer reservationCount =
+                jdbcTemplate.queryForObject("SELECT COUNT(*) FROM answer_reservations", Integer.class);
+        final Integer answersCount =
+                jdbcTemplate.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
+
+        assertThat(reservationCount).isZero();
+        assertThat(answersCount).isZero();
+
+        // No RAG calls should have been made
+        verify(documentInformationSummarisedApi, times(0))
+                .answerUserQuery(any(AnswerUserQueryRequest.class));
+    }
+    @Test
+    @DisplayName("Cloudy day: RAG returns empty response -> reservations marked FAILED and no answers persisted")
+    void ragEmptyResponseMarksReservationFailed() throws Exception {
+        tearDown();
+
+        // ---------- Ingestion (Job A) ----------
+        final JobExecution ingestionExecution = startIngestionJobRun();
+        assertThat(ingestionExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+        // Scheduler: mark case_documents as INGESTED
+        runSchedulerToCompletion();
+
+        // Override RAG response to simulate a bad (empty) LLM response
+        final UserQueryAnswerReturnedSuccessfully badRagResponse =
+                new UserQueryAnswerReturnedSuccessfully()
+                        .llmResponse("") // or null; both will hit the IllegalStateException path
+                        .chunkedEntries(Collections.emptyList());
+
+        when(documentInformationSummarisedApi.answerUserQuery(any(AnswerUserQueryRequest.class)))
+                .thenReturn(ResponseEntity.ok(badRagResponse));
+
+        // ---------- Answer generation (Job B) ----------
+        final JobExecution answerExecution = startAnswerGenerationJobRun();
+        assertThat(answerExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+        final Integer failedReservations =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM answer_reservations WHERE status='FAILED'",
+                        Integer.class
+                );
+        final Integer doneReservations =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM answer_reservations WHERE status='DONE'",
+                        Integer.class
+                );
+        final Integer answersCount =
+                jdbcTemplate.queryForObject("SELECT COUNT(*) FROM answers", Integer.class);
+
+        // All reservations should have been marked FAILED and no answers persisted
+        assertThat(failedReservations).isEqualTo(2);
+        assertThat(doneReservations).isZero();
+        assertThat(answersCount).isZero();
+
+    }
+    @Test
+    @DisplayName("Scheduler cloudy day: no tasks -> poll is a no-op")
+    void schedulerNoopsWhenNoTasks() {
+        tearDown(); // ensure no tasks in DB
+
+        verifySchedulerProperties.setEnabled(true);
+        documentVerificationScheduler.pollPendingDocuments();
+        verifySchedulerProperties.setEnabled(false);
+
+        // Just assert there are still no tasks in any status
+        final long totalTasks = documentVerificationTaskRepository.count();
+        assertThat(totalTasks).isZero();
     }
 
     @TestConfiguration
     static class TestOverrides {
+
         @Bean
         @Primary
         RetryTemplate retryTemplate() {
-            RetryTemplate t = new RetryTemplate();
-            t.setRetryPolicy(new SimpleRetryPolicy(1)); // no retries to keep tests crisp
-            FixedBackOffPolicy b = new FixedBackOffPolicy();
-            b.setBackOffPeriod(50);
-            t.setBackOffPolicy(b);
-            return t;
+            final RetryTemplate retryTemplate = new RetryTemplate();
+            final SimpleRetryPolicy simpleRetryPolicy = new SimpleRetryPolicy(1);
+            retryTemplate.setRetryPolicy(simpleRetryPolicy);
+            final FixedBackOffPolicy fixedBackOffPolicy = new FixedBackOffPolicy();
+            fixedBackOffPolicy.setBackOffPeriod(50);
+            retryTemplate.setBackOffPolicy(fixedBackOffPolicy);
+            return retryTemplate;
         }
 
         @Bean
         @Primary
-        public PlatformTransactionManager transactionManager(EntityManagerFactory emf) {
-            return new JpaTransactionManager(emf);
+        public PlatformTransactionManager transactionManager(final EntityManagerFactory entityManagerFactory) {
+            return new JpaTransactionManager(entityManagerFactory);
         }
 
         @Bean(name = "ingestionTaskExecutor")
@@ -422,6 +700,7 @@ class CaseIngestionJobIdempotencyTest {
         }
 
         // External systems as mocks
+
         @Bean
         @Primary
         public HearingClient hearingClient() {

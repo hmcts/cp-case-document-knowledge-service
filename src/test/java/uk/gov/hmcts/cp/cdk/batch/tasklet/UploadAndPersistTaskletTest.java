@@ -17,6 +17,7 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CA
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
 import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
+import uk.gov.hmcts.cp.cdk.batch.verification.DocumentVerificationEnqueueService;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 
@@ -65,6 +66,9 @@ class UploadAndPersistTaskletTest {
     private UploadProperties uploadProperties;
 
     @Mock
+    private DocumentVerificationEnqueueService documentVerificationEnqueueService;
+
+    @Mock
     private StepContribution contribution;
 
     @Mock
@@ -97,159 +101,173 @@ class UploadAndPersistTaskletTest {
 
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper();
+        this.objectMapper = new ObjectMapper();
 
-        retryTemplate = new RetryTemplate();
-        final SimpleRetryPolicy policy = new SimpleRetryPolicy(1); // single attempt
-        retryTemplate.setRetryPolicy(policy);
-        retryTemplate.setBackOffPolicy(new NoBackOffPolicy());
+        this.retryTemplate = new RetryTemplate();
+        final SimpleRetryPolicy policy = new SimpleRetryPolicy(1); // single attempt (no retries)
+        this.retryTemplate.setRetryPolicy(policy);
+        this.retryTemplate.setBackOffPolicy(new NoBackOffPolicy());
 
-        tasklet = new UploadAndPersistTasklet(
-                objectMapper,
-                progressionClient,
-                storageService,
-                caseDocumentRepository,
-                uploadProperties,
-                retryTemplate
+        this.tasklet = new UploadAndPersistTasklet(
+                this.objectMapper,
+                this.progressionClient,
+                this.storageService,
+                this.caseDocumentRepository,
+                this.uploadProperties,
+                this.retryTemplate,
+                this.documentVerificationEnqueueService
         );
 
-        stepCtx = new ExecutionContext();
-        jobCtx = new ExecutionContext();
+        this.stepCtx = new ExecutionContext();
+        this.jobCtx = new ExecutionContext();
 
-        when(contribution.getStepExecution()).thenReturn(stepExecution);
-        when(stepExecution.getExecutionContext()).thenReturn(stepCtx);
-        when(stepExecution.getJobExecution()).thenReturn(jobExecution);
-        when(jobExecution.getExecutionContext()).thenReturn(jobCtx);
-        // Note: do not stub uploadProperties in @BeforeEach — only in paths that reach uploads.
+        when(this.contribution.getStepExecution()).thenReturn(this.stepExecution);
+        when(this.stepExecution.getExecutionContext()).thenReturn(this.stepCtx);
+        when(this.stepExecution.getJobExecution()).thenReturn(this.jobExecution);
+        when(this.jobExecution.getExecutionContext()).thenReturn(this.jobCtx);
     }
 
     @Test
     @DisplayName("Missing USERID_FOR_EXTERNAL_CALLS → skip with no external calls")
     void missingUserIdSkips() {
-        stepCtx.putString(CTX_MATERIAL_ID_KEY, UUID.randomUUID().toString());
-        stepCtx.putString(CTX_CASE_ID_KEY, UUID.randomUUID().toString());
-        stepCtx.putString(CTX_DOC_ID_KEY, UUID.randomUUID().toString());
-        stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
-        stepCtx.put(CTX_MATERIAL_NEW_UPLOAD, true);
+        this.stepCtx.putString(CTX_MATERIAL_ID_KEY, UUID.randomUUID().toString());
+        this.stepCtx.putString(CTX_CASE_ID_KEY, UUID.randomUUID().toString());
+        this.stepCtx.putString(CTX_DOC_ID_KEY, UUID.randomUUID().toString());
+        this.stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
+        this.stepCtx.put(CTX_MATERIAL_NEW_UPLOAD, true);
 
-        final RepeatStatus rs = tasklet.execute(contribution, chunkContext);
-        assertThat(rs).isEqualTo(RepeatStatus.FINISHED);
+        final RepeatStatus repeatStatus = this.tasklet.execute(this.contribution, this.chunkContext);
+        assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
 
-        verify(progressionClient, never()).getMaterialDownloadUrl(any(UUID.class), anyString());
-        verify(storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
-        verify(caseDocumentRepository, never()).saveAndFlush(any(CaseDocument.class));
+        verify(this.progressionClient, never()).getMaterialDownloadUrl(any(UUID.class), anyString());
+        verify(this.storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
+        verify(this.caseDocumentRepository, never()).saveAndFlush(any(CaseDocument.class));
+        verify(this.documentVerificationEnqueueService, never())
+                .enqueue(any(UUID.class), any(UUID.class), anyString());
     }
 
     @Test
     @DisplayName("Invalid/missing UUIDs → skip")
     void badUuidsSkip() {
-        jobCtx.putString(USERID_FOR_EXTERNAL_CALLS, "user-1");
-        stepCtx.putString(CTX_CASE_ID_KEY, UUID.randomUUID().toString());
-        stepCtx.putString(CTX_DOC_ID_KEY, "bad-uuid"); // invalid
-        stepCtx.put(CTX_MATERIAL_NEW_UPLOAD, true);
+        this.jobCtx.putString(USERID_FOR_EXTERNAL_CALLS, "user-1");
+        this.stepCtx.putString(CTX_CASE_ID_KEY, UUID.randomUUID().toString());
+        this.stepCtx.putString(CTX_DOC_ID_KEY, "bad-uuid"); // invalid
+        this.stepCtx.put(CTX_MATERIAL_NEW_UPLOAD, true);
 
-        final RepeatStatus rs = tasklet.execute(contribution, chunkContext);
-        assertThat(rs).isEqualTo(RepeatStatus.FINISHED);
+        final RepeatStatus repeatStatus = this.tasklet.execute(this.contribution, this.chunkContext);
+        assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
 
-        verify(progressionClient, never()).getMaterialDownloadUrl(any(UUID.class), anyString());
-        verify(caseDocumentRepository, never()).saveAndFlush(any(CaseDocument.class));
+        verify(this.progressionClient, never()).getMaterialDownloadUrl(any(UUID.class), anyString());
+        verify(this.caseDocumentRepository, never()).saveAndFlush(any(CaseDocument.class));
+        verify(this.documentVerificationEnqueueService, never())
+                .enqueue(any(UUID.class), any(UUID.class), anyString());
     }
 
     @Test
     @DisplayName("Existing upload (newUpload=false) → skip all IO")
     void existingDocSkipsUpload() {
-        jobCtx.putString(USERID_FOR_EXTERNAL_CALLS, "user-1");
-        stepCtx.putString(CTX_MATERIAL_ID_KEY, UUID.randomUUID().toString());
-        stepCtx.putString(CTX_CASE_ID_KEY, UUID.randomUUID().toString());
-        stepCtx.putString(CTX_DOC_ID_KEY, UUID.randomUUID().toString());
-        stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
-        stepCtx.put(CTX_MATERIAL_NEW_UPLOAD, false);
+        this.jobCtx.putString(USERID_FOR_EXTERNAL_CALLS, "user-1");
+        this.stepCtx.putString(CTX_MATERIAL_ID_KEY, UUID.randomUUID().toString());
+        this.stepCtx.putString(CTX_CASE_ID_KEY, UUID.randomUUID().toString());
+        this.stepCtx.putString(CTX_DOC_ID_KEY, UUID.randomUUID().toString());
+        this.stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
+        this.stepCtx.put(CTX_MATERIAL_NEW_UPLOAD, false);
 
-        final RepeatStatus rs = tasklet.execute(contribution, chunkContext);
-        assertThat(rs).isEqualTo(RepeatStatus.FINISHED);
+        final RepeatStatus repeatStatus = this.tasklet.execute(this.contribution, this.chunkContext);
+        assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
 
-        verify(progressionClient, never()).getMaterialDownloadUrl(any(UUID.class), anyString());
-        verify(storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
-        verify(caseDocumentRepository, never()).saveAndFlush(any(CaseDocument.class));
+        verify(this.progressionClient, never()).getMaterialDownloadUrl(any(UUID.class), anyString());
+        verify(this.storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
+        verify(this.caseDocumentRepository, never()).saveAndFlush(any(CaseDocument.class));
+        verify(this.documentVerificationEnqueueService, never())
+                .enqueue(any(UUID.class), any(UUID.class), anyString());
     }
 
     @Test
     @DisplayName("Progression returns empty URL → skip persist and storage")
     void emptyDownloadUrlSkips() {
-        jobCtx.putString(USERID_FOR_EXTERNAL_CALLS, "user-1");
+        this.jobCtx.putString(USERID_FOR_EXTERNAL_CALLS, "user-1");
         final UUID materialId = UUID.randomUUID();
-        stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
-        stepCtx.putString(CTX_CASE_ID_KEY, UUID.randomUUID().toString());
-        stepCtx.putString(CTX_DOC_ID_KEY, UUID.randomUUID().toString());
-        stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
-        stepCtx.put(CTX_MATERIAL_NEW_UPLOAD, true);
+        this.stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
+        this.stepCtx.putString(CTX_CASE_ID_KEY, UUID.randomUUID().toString());
+        this.stepCtx.putString(CTX_DOC_ID_KEY, UUID.randomUUID().toString());
+        this.stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
+        this.stepCtx.put(CTX_MATERIAL_NEW_UPLOAD, true);
 
-        when(progressionClient.getMaterialDownloadUrl(materialId, "user-1")).thenReturn(Optional.empty());
+        when(this.progressionClient.getMaterialDownloadUrl(materialId, "user-1")).thenReturn(Optional.empty());
 
-        final RepeatStatus rs = tasklet.execute(contribution, chunkContext);
-        assertThat(rs).isEqualTo(RepeatStatus.FINISHED);
+        final RepeatStatus repeatStatus = this.tasklet.execute(this.contribution, this.chunkContext);
+        assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
 
-        verify(storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
-        verify(caseDocumentRepository, never()).saveAndFlush(any(CaseDocument.class));
+        verify(this.storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
+        verify(this.caseDocumentRepository, never()).saveAndFlush(any(CaseDocument.class));
+        verify(this.documentVerificationEnqueueService, never())
+                .enqueue(any(UUID.class), any(UUID.class), anyString());
     }
 
     @Test
-    @DisplayName("copyFromUrl fails (returns null) → skip persist")
+    @DisplayName("copyFromUrl fails (returns null) → skip persist and enqueue")
     void storageCopyFailsSkipsPersist() {
-        jobCtx.putString(USERID_FOR_EXTERNAL_CALLS, "user-1");
-        when(uploadProperties.contentType()).thenReturn(CONTENT_TYPE);
-        when(uploadProperties.datePattern()).thenReturn(DATE_PATTERN);
-        when(uploadProperties.fileExtension()).thenReturn(EXT);
+        this.jobCtx.putString(USERID_FOR_EXTERNAL_CALLS, "user-1");
+        when(this.uploadProperties.contentType()).thenReturn(CONTENT_TYPE);
+        when(this.uploadProperties.datePattern()).thenReturn(DATE_PATTERN);
+        when(this.uploadProperties.fileExtension()).thenReturn(EXT);
 
         final UUID materialId = UUID.randomUUID();
         final UUID caseId = UUID.randomUUID();
         final UUID docId = UUID.randomUUID();
-        stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
-        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
-        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
-        stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
-        stepCtx.put(CTX_MATERIAL_NEW_UPLOAD, true);
+        this.stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
+        this.stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
+        this.stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
+        this.stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
+        this.stepCtx.put(CTX_MATERIAL_NEW_UPLOAD, true);
 
-        when(progressionClient.getMaterialDownloadUrl(materialId, "user-1"))
+        when(this.progressionClient.getMaterialDownloadUrl(materialId, "user-1"))
                 .thenReturn(Optional.of("http://example.test/doc.pdf"));
-        when(storageService.copyFromUrl(anyString(), anyString(), anyString(), anyMap()))
+        when(this.storageService.copyFromUrl(anyString(), anyString(), anyString(), anyMap()))
                 .thenReturn(null);
 
-        final RepeatStatus rs = tasklet.execute(contribution, chunkContext);
-        assertThat(rs).isEqualTo(RepeatStatus.FINISHED);
+        final RepeatStatus repeatStatus = this.tasklet.execute(this.contribution, this.chunkContext);
+        assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
 
-        verify(caseDocumentRepository, never()).saveAndFlush(any(CaseDocument.class));
+        verify(this.caseDocumentRepository, never()).saveAndFlush(any(CaseDocument.class));
+        verify(this.documentVerificationEnqueueService, never())
+                .enqueue(any(UUID.class), any(UUID.class), anyString());
     }
 
     @Test
-    @DisplayName("getBlobSize throws → persists with size -1 via recovery")
+    @DisplayName("getBlobSize throws → persists with size -1 and enqueues verification task")
     void blobSizeThrowsStillPersistsWithMinusOne() {
-        jobCtx.putString(USERID_FOR_EXTERNAL_CALLS, "user-1");
-        when(uploadProperties.contentType()).thenReturn(CONTENT_TYPE);
-        when(uploadProperties.datePattern()).thenReturn(DATE_PATTERN);
-        when(uploadProperties.fileExtension()).thenReturn(EXT);
+        this.jobCtx.putString(USERID_FOR_EXTERNAL_CALLS, "user-1");
+        when(this.uploadProperties.contentType()).thenReturn(CONTENT_TYPE);
+        when(this.uploadProperties.datePattern()).thenReturn(DATE_PATTERN);
+        when(this.uploadProperties.fileExtension()).thenReturn(EXT);
 
         final UUID materialId = UUID.randomUUID();
         final UUID caseId = UUID.randomUUID();
         final UUID docId = UUID.randomUUID();
-        stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
-        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
-        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
-        stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
-        stepCtx.put(CTX_MATERIAL_NEW_UPLOAD, true);
+        this.stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
+        this.stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
+        this.stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
+        this.stepCtx.putString(CTX_MATERIAL_NAME, "IDPC");
+        this.stepCtx.put(CTX_MATERIAL_NEW_UPLOAD, true);
 
-        when(progressionClient.getMaterialDownloadUrl(materialId, "user-1"))
+        when(this.progressionClient.getMaterialDownloadUrl(materialId, "user-1"))
                 .thenReturn(Optional.of("http://example.test/doc.pdf"));
-        when(storageService.copyFromUrl(srcCap.capture(), destCap.capture(), contentTypeCap.capture(), metaCap.capture()))
-                .thenReturn("blob://somewhere/path.pdf");
-        // Simulate failure by throwing (cannot return null for primitive long)
-        when(storageService.getBlobSize(anyString())).thenThrow(new RuntimeException("boom"));
+        when(this.storageService.copyFromUrl(
+                this.srcCap.capture(),
+                this.destCap.capture(),
+                this.contentTypeCap.capture(),
+                this.metaCap.capture())
+        ).thenReturn("blob://somewhere/path.pdf");
+        when(this.storageService.getBlobSize(anyString()))
+                .thenThrow(new RuntimeException("boom"));
 
-        final RepeatStatus rs = tasklet.execute(contribution, chunkContext);
-        assertThat(rs).isEqualTo(RepeatStatus.FINISHED);
+        final RepeatStatus repeatStatus = this.tasklet.execute(this.contribution, this.chunkContext);
+        assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
 
         final ArgumentCaptor<CaseDocument> docCap = ArgumentCaptor.forClass(CaseDocument.class);
-        verify(caseDocumentRepository).saveAndFlush(docCap.capture());
+        verify(this.caseDocumentRepository).saveAndFlush(docCap.capture());
         final CaseDocument saved = docCap.getValue();
 
         assertThat(saved.getDocId()).isEqualTo(docId);
@@ -257,49 +275,56 @@ class UploadAndPersistTaskletTest {
         assertThat(saved.getMaterialId()).isEqualTo(materialId);
         assertThat(saved.getBlobUri()).isEqualTo("blob://somewhere/path.pdf");
         assertThat(saved.getContentType()).isEqualTo(CONTENT_TYPE);
-        assertThat(saved.getSizeBytes()).isEqualTo(-1L); // recovery sentinel
+        assertThat(saved.getSizeBytes()).isEqualTo(-1L);
         assertThat(saved.getDocName()).endsWith(EXT);
         assertThat(saved.getIngestionPhase().name()).isEqualTo("UPLOADED");
         assertThat(saved.getUploadedAt()).isNotNull();
         assertThat(saved.getIngestionPhaseAt()).isNotNull();
+
+        verify(this.documentVerificationEnqueueService)
+                .enqueue(caseId, docId, saved.getDocName());
     }
 
     @Test
     @SneakyThrows
-    @DisplayName("Happy path → copy, size, persist; metadata is correct JSON")
+    @DisplayName("Happy path → copy, size, persist; metadata correct; enqueues verification task")
     void happyPathPersistsOnce() {
-        jobCtx.putString(USERID_FOR_EXTERNAL_CALLS, "user-1");
-        when(uploadProperties.contentType()).thenReturn(CONTENT_TYPE);
-        when(uploadProperties.datePattern()).thenReturn(DATE_PATTERN);
-        when(uploadProperties.fileExtension()).thenReturn(EXT);
+        this.jobCtx.putString(USERID_FOR_EXTERNAL_CALLS, "user-1");
+        when(this.uploadProperties.contentType()).thenReturn(CONTENT_TYPE);
+        when(this.uploadProperties.datePattern()).thenReturn(DATE_PATTERN);
+        when(this.uploadProperties.fileExtension()).thenReturn(EXT);
 
         final UUID materialId = UUID.randomUUID();
         final UUID caseId = UUID.randomUUID();
         final UUID docId = UUID.randomUUID();
         final String materialName = "IDPC";
 
-        stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
-        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
-        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
-        stepCtx.putString(CTX_MATERIAL_NAME, materialName);
-        stepCtx.put(CTX_MATERIAL_NEW_UPLOAD, true);
+        this.stepCtx.putString(CTX_MATERIAL_ID_KEY, materialId.toString());
+        this.stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
+        this.stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
+        this.stepCtx.putString(CTX_MATERIAL_NAME, materialName);
+        this.stepCtx.put(CTX_MATERIAL_NEW_UPLOAD, true);
 
-        when(progressionClient.getMaterialDownloadUrl(materialId, "user-1"))
+        when(this.progressionClient.getMaterialDownloadUrl(materialId, "user-1"))
                 .thenReturn(Optional.of("http://example.test/doc.pdf"));
 
-        when(storageService.copyFromUrl(srcCap.capture(), destCap.capture(), contentTypeCap.capture(), metaCap.capture()))
-                .thenReturn("blob://container/" + docId + "_20250101.pdf");
-        when(storageService.getBlobSize(anyString())).thenReturn(1234L);
+        when(this.storageService.copyFromUrl(
+                this.srcCap.capture(),
+                this.destCap.capture(),
+                this.contentTypeCap.capture(),
+                this.metaCap.capture())
+        ).thenReturn("blob://container/" + docId + "_20250101.pdf");
+        when(this.storageService.getBlobSize(anyString())).thenReturn(1234L);
 
-        final RepeatStatus rs = tasklet.execute(contribution, chunkContext);
-        assertThat(rs).isEqualTo(RepeatStatus.FINISHED);
+        final RepeatStatus repeatStatus = this.tasklet.execute(this.contribution, this.chunkContext);
+        assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
 
-        final Map<String, String> meta = metaCap.getValue();
+        final Map<String, String> meta = this.metaCap.getValue();
         assertThat(meta).containsKeys("document_id", "metadata");
         assertThat(meta.get("document_id")).isEqualTo(docId.toString());
 
         final Map<String, Object> metaJson =
-                objectMapper.readValue(meta.get("metadata"), new TypeReference<Map<String, Object>>() {
+                this.objectMapper.readValue(meta.get("metadata"), new TypeReference<Map<String, Object>>() {
                 });
         assertThat(metaJson).containsKeys("case_id", "material_id", "material_name", "uploaded_at");
         assertThat(metaJson.get("case_id")).isEqualTo(caseId.toString());
@@ -307,12 +332,13 @@ class UploadAndPersistTaskletTest {
         assertThat(metaJson.get("material_name")).isEqualTo(materialName);
         assertThat(metaJson.get("uploaded_at")).isInstanceOf(String.class);
 
-        final String dest = destCap.getValue();
+        final String dest = this.destCap.getValue();
         assertThat(dest).startsWith(docId.toString() + "_").endsWith(EXT);
 
         final ArgumentCaptor<CaseDocument> docCap = ArgumentCaptor.forClass(CaseDocument.class);
-        verify(caseDocumentRepository).saveAndFlush(docCap.capture());
+        verify(this.caseDocumentRepository).saveAndFlush(docCap.capture());
         final CaseDocument saved = docCap.getValue();
+
         assertThat(saved.getDocId()).isEqualTo(docId);
         assertThat(saved.getCaseId()).isEqualTo(caseId);
         assertThat(saved.getMaterialId()).isEqualTo(materialId);
@@ -323,5 +349,8 @@ class UploadAndPersistTaskletTest {
         assertThat(saved.getIngestionPhase().name()).isEqualTo("UPLOADED");
         assertThat(saved.getUploadedAt()).isNotNull();
         assertThat(saved.getIngestionPhaseAt()).isNotNull();
+
+        verify(this.documentVerificationEnqueueService)
+                .enqueue(caseId, docId, saved.getDocName());
     }
 }

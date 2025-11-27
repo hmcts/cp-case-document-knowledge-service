@@ -13,6 +13,7 @@ import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
 import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
+import uk.gov.hmcts.cp.cdk.batch.verification.DocumentVerificationEnqueueService;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
@@ -57,6 +58,7 @@ public class UploadAndPersistTasklet implements Tasklet {
     private final CaseDocumentRepository caseDocumentRepository;
     private final UploadProperties uploadProperties;
     private final RetryTemplate retryTemplate;
+    private final DocumentVerificationEnqueueService documentVerificationEnqueueService;
 
     @Override
     public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) {
@@ -144,13 +146,13 @@ public class UploadAndPersistTasklet implements Tasklet {
                     entity.setIngestionPhaseAt(utcNow());
 
                     caseDocumentRepository.saveAndFlush(entity);
+                    documentVerificationEnqueueService.enqueue(caseId, documentId, blobName);
 
                     log.info("jobId={} Saved CaseDocument docId={}, caseId={}, materialId={}, sizeBytes={}, blobUri={}",
                             jobId, documentId, caseId, materialId, sizeBytes, blobUrl);
                 }
             }
         }
-
         return RepeatStatus.FINISHED;
     }
 

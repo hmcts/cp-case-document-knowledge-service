@@ -3,7 +3,6 @@ package uk.gov.hmcts.cp.cdk.batch.tasklet;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_UPLOAD_VERIFIED_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.buildAnswerParams;
 import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.buildReservationParams;
 import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.parseUuidOrNull;
@@ -135,15 +134,6 @@ public class GenerateAnswersTasklet implements Tasklet {
         } else {
             caseId = null;
             docId = null;
-        }
-
-        final String verifiedKey = proceed ? CTX_UPLOAD_VERIFIED_KEY + ":" + docId : null;
-        if (proceed) {
-            final Boolean jobVerified = (Boolean) jobCtx.get(verifiedKey);
-            if (!Boolean.TRUE.equals(jobVerified)) {
-                log.info("GenerateAnswersTasklet: ingestion not verified as SUCCESS for docId={}; skipping.", docId);
-                proceed = false;
-            }
         }
 
         final List<Query> resolvedQueries;
