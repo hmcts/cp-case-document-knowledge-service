@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -18,7 +17,6 @@ import com.azure.core.util.polling.SyncPoller;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobCopyInfo;
-import com.azure.storage.blob.models.BlobHttpHeaders;
 import com.azure.storage.blob.models.BlobProperties;
 import com.azure.storage.blob.models.CopyStatusType;
 import com.azure.storage.blob.options.BlobBeginCopyOptions;
@@ -136,8 +134,8 @@ class AzureBlobStorageServiceTest {
 
         service.copyFromUrl(src, path, null, null);
         /**
-        verify(mockBlob).setHttpHeaders(argThat((BlobHttpHeaders h) ->
-                "application/octet-stream".equals(h.getContentType())));
+         verify(mockBlob).setHttpHeaders(argThat((BlobHttpHeaders h) ->
+         "application/octet-stream".equals(h.getContentType())));
          **/
     }
 

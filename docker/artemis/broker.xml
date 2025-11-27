@@ -76,10 +76,14 @@
 
         <addresses>
             <address name="jms.queue.DLQ">
-                <anycast><queue name="jms.queue.DLQ"/></anycast>
+                <anycast>
+                    <queue name="jms.queue.DLQ"/>
+                </anycast>
             </address>
             <address name="jms.queue.ExpiryQueue">
-                <anycast><queue name="jms.queue.ExpiryQueue"/></anycast>
+                <anycast>
+                    <queue name="jms.queue.ExpiryQueue"/>
+                </anycast>
             </address>
             <address name="jms.topic.auditing.event">
                 <multicast/>

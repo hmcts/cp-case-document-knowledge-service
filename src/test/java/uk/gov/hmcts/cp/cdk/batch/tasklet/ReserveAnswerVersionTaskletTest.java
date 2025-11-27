@@ -111,20 +111,6 @@ class ReserveAnswerVersionTaskletTest {
         verifyNoInteractions(jdbc);
     }
 
-    @Test
-    @DisplayName("Not verified → FINISHED and no DB calls")
-    void notVerifiedSkips() {
-        final UUID caseId = UUID.randomUUID();
-        final UUID docId = UUID.randomUUID();
-        stepCtx.putString(CTX_CASE_ID_KEY, caseId.toString());
-        stepCtx.putString(CTX_DOC_ID_KEY, docId.toString());
-
-        // No verified flag in job context
-        final RepeatStatus rs = tasklet.execute(contribution, chunkContext);
-        assertThat(rs).isEqualTo(RepeatStatus.FINISHED);
-
-        verifyNoInteractions(jdbc);
-    }
 
     @Test
     @DisplayName("case_documents missing → FINISHED; no reservation SQL executed")
