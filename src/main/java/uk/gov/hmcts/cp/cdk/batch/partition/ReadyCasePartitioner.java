@@ -28,7 +28,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Partitions ready cases (documents whose ingestion_phase is INGESTED) for Job B.
+ * Partitions ready cases (documents whose ingestion_phase is INGESTED) for Answer Generation Job.
  *
  * <p>We derive readiness directly from {@code case_documents}:
  *

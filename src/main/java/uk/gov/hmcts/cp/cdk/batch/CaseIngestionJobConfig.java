@@ -23,14 +23,14 @@ import org.springframework.core.task.TaskExecutor;
 /**
  * Defines the ingestion job structure and partitioning flows.
  *
- * <p>Job A:
+ * <p>Case Ingestion Job:
  * <ul>
  *   <li>Step 1: fetch hearings / cases</li>
  *   <li>Step 2: filter eligible cases (partitioned)</li>
  *   <li>Step 3: upload &amp; persist documents (partitioned per case/material)</li>
  * </ul>
  *
- * <p>Answer generation is handled by Job B once documents are fully INGESTED.</p>
+ * <p>Answer generation is handled by Answer Generation Job once documents are fully INGESTED.</p>
  */
 @Configuration
 public class CaseIngestionJobConfig {
@@ -110,7 +110,7 @@ public class CaseIngestionJobConfig {
     }
 
     /**
-     * Job A – uploads documents and enqueues verification, but does not wait for it.
+     * Case Ingestion Job – uploads documents and enqueues verification, but does not wait for it.
      */
     @Bean
     public Job caseIngestionJob(final JobRepository jobRepository,

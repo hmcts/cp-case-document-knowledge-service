@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
 
 /**
- * Answer-generation job (Job B), runs only on cases whose documents are already INGESTED.
+ * Answer-generation job (Answer Generation Job), runs only on cases whose documents are already INGESTED.
  *
  * <p>When triggered by {@link DocumentVerificationScheduler}, it is restricted
  * to the caseIds that were passed in the {@code caseIds} job parameter.</p>
@@ -38,7 +38,7 @@ public class AnswerGenerationJobConfig {
             "step6_generate_answer_single_query";
 
     /**
-     * Per-case flow for Job B:
+     * Per-case flow for Answer Generation Job:
      * <ol>
      *   <li>Reserve answer version (step 5)</li>
      *   <li>Generate answers (step 6, partitioned by query)</li>
@@ -63,7 +63,7 @@ public class AnswerGenerationJobConfig {
     }
 
     /**
-     * Case-level partitioning for Job B on ready cases.
+     * Case-level partitioning for Answer Generation Job on ready cases.
      *
      * <p>Uses {@link ReadyCasePartitioner}, which looks at job parameter {@code caseIds}
      * (if present) and selects INGESTED documents from {@code case_documents}.</p>
@@ -86,7 +86,7 @@ public class AnswerGenerationJobConfig {
     }
 
     /**
-     * Query-level partitioning for step 6 in Job B.
+     * Query-level partitioning for step 6 in Answer Generation Job.
      * Reuses {@code step6GenerateAnswerSingleQuery} and {@link QueryIdPartitioner}.
      */
     @Bean

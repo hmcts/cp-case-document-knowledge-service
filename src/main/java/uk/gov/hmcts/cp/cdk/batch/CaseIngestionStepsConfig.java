@@ -60,7 +60,7 @@ public class CaseIngestionStepsConfig {
                 .build();
     }
 
-    // Step 5 and 6 are used by Job B (answer-generation job).
+    // Step 5 and 6 are used by Answer Generation Job (answer-generation job).
 
     @Bean
     public Step step5ReserveAnswerVersionPerCase(final JobRepository jobRepository,
