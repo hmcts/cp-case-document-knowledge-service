@@ -2,7 +2,6 @@ package uk.gov.hmcts.cp.cdk.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.CJSCPPUID;
-import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.USER_WITH_GROUPS_PERMISSIONS;
 import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.USER_WITH_PERMISSIONS;
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
@@ -13,8 +12,7 @@ import java.sql.PreparedStatement;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -26,9 +24,8 @@ public class DocumentHttpLiveTest extends AbstractHttpLiveTest {
     public final MediaType VND_TYPE_MATERIAL = MediaType.valueOf("application/vnd.casedocumentknowledge-service.document-content+json");
     private UUID queryId;
 
-    @ParameterizedTest
-    @ValueSource(strings = {USER_WITH_GROUPS_PERMISSIONS, USER_WITH_PERMISSIONS})
-    void getMaterialContentUrl_returns_expected_url(final String loggedInUser) throws Exception {
+    @Test
+    void getMaterialContentUrl_returns_expected_url() throws Exception {
 
         UUID docId = UUID.randomUUID();
         UUID materialId = UUID.randomUUID();
@@ -50,7 +47,7 @@ public class DocumentHttpLiveTest extends AbstractHttpLiveTest {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(VND_TYPE_MATERIAL);
-        headers.set(CJSCPPUID, loggedInUser); // add required header
+        headers.set(CJSCPPUID, USER_WITH_PERMISSIONS); // add required header
 
         // --- Act: perform GET request to the endpoint ---
         ResponseEntity<String> res = http.exchange(

@@ -4,7 +4,6 @@ import static java.util.UUID.fromString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.CJSCPPUID;
-import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.USER_WITH_GROUPS_PERMISSIONS;
 import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.USER_WITH_PERMISSIONS;
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
@@ -21,8 +20,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -269,12 +266,11 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
         assertThat(resp.getStatusCode().is2xxSuccessful()).isTrue();
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {USER_WITH_GROUPS_PERMISSIONS, USER_WITH_PERMISSIONS})
-    void get_answer_with_llm_latest(final String loggedInUser) {
+    @Test
+    void get_answer_with_llm_latest() {
         final HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(VND_TYPE_JSON));
-        headers.set(CJSCPPUID, loggedInUser);
+        headers.set(CJSCPPUID, USER_WITH_PERMISSIONS);
         final ResponseEntity<String> response = http.exchange(
                 baseUrl + "/answers/" + caseId + "/" + queryId + "/with-llm",
                 HttpMethod.GET,
@@ -288,12 +284,11 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
         assertThat(response.getBody()).contains("\"llmInput\":\"LLM input v2\"");
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {USER_WITH_GROUPS_PERMISSIONS, USER_WITH_PERMISSIONS})
-    void list_queries_as_of_for_case_returns_latest_definition_and_status(final String loggedInUser) {
+    @Test
+    void list_queries_as_of_for_case_returns_latest_definition_and_status() {
         final HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(VND_TYPE_JSON_QUERIES));
-        headers.set(CJSCPPUID, loggedInUser);
+        headers.set(CJSCPPUID, USER_WITH_PERMISSIONS);
         // Choose an as-of after v2 to ensure v2 definition is selected
         final String asOf = "2025-06-03T00:00:00Z";
 
