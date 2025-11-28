@@ -1,8 +1,9 @@
 package uk.gov.hmcts.cp.cdk.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_NAME;
-import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.HEADER_VALUE;
+import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.CJSCPPUID;
+import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.USER_WITH_GROUPS_PERMISSIONS;
+import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.USER_WITH_PERMISSIONS;
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 
@@ -20,6 +21,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -92,7 +95,7 @@ public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(VND_TYPE_JSON);
         // Add your custom header
-        headers.set(HEADER_NAME, HEADER_VALUE);
+        headers.set(CJSCPPUID, USER_WITH_GROUPS_PERMISSIONS);
 
         return http.postForEntity(baseUrl + "/queries", new HttpEntity<>(body, headers), String.class);
     }
@@ -126,12 +129,13 @@ public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
     }
 
 
-    @Test
-    void queries_without_at_returns_latest_version() {
+    @ParameterizedTest
+    @ValueSource(strings = {USER_WITH_GROUPS_PERMISSIONS, USER_WITH_PERMISSIONS})
+    void queries_without_at_returns_latest_version(final String loggedInUser) {
         HttpHeaders h = new HttpHeaders();
         h.setAccept(List.of(VND_TYPE_JSON));
         // Add your custom header
-        h.set(HEADER_NAME, HEADER_VALUE);
+        h.set(CJSCPPUID, loggedInUser);
 
         ResponseEntity<String> res = http.exchange(
                 baseUrl + "/queries?caseId=e9987338-ebae-480c-825e-aad78da3ef4f",
@@ -146,15 +150,16 @@ public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
         assertThat(res.getBody()).contains("\"queryPrompt\":\"Prompt for Q1 @ t2\"");
     }
 
-    @Test
-    void queries_with_at_returns_as_of_version() {
+    @ParameterizedTest
+    @ValueSource(strings = {USER_WITH_GROUPS_PERMISSIONS, USER_WITH_PERMISSIONS})
+    void queries_with_at_returns_as_of_version(final String loggedInUser) {
         String at = "2025-05-15T00:00:00Z";
 
 
         HttpHeaders h = new HttpHeaders();
         h.setAccept(List.of(VND_TYPE_JSON));
         // Add your custom header
-        h.set(HEADER_NAME, HEADER_VALUE);
+        h.set(CJSCPPUID, loggedInUser);
 
         ResponseEntity<String> res = http.exchange(
                 baseUrl + "/queries?caseId=e9987338-ebae-480c-825e-aad78da3ef4f&at=" + at,
@@ -170,13 +175,14 @@ public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
         assertThat(res.getBody()).contains("\"queryPrompt\":\"Prompt for Q1 @ t1\"");
     }
 
-    @Test
-    void queries_are_returned_in_ascending_order() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {USER_WITH_GROUPS_PERMISSIONS, USER_WITH_PERMISSIONS})
+    void queries_are_returned_in_ascending_order(final String loggedInUser) throws Exception {
 
 
         HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(VND_TYPE_JSON));
-        headers.set(HEADER_NAME, HEADER_VALUE);
+        headers.set(CJSCPPUID, loggedInUser);
 
         ResponseEntity<String> res = http.exchange(
                 baseUrl + "/queries?caseId=e9987338-ebae-480c-825e-aad78da3ef4f",
