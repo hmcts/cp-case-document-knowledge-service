@@ -6,7 +6,6 @@ import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import uk.gov.hmcts.cp.cdk.config.VerifySchedulerProperties;
 import uk.gov.hmcts.cp.cdk.domain.DocumentVerificationTask;
 import uk.gov.hmcts.cp.cdk.repo.DocumentVerificationTaskRepository;
-import uk.gov.hmcts.cp.cdk.util.TimeUtils;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;

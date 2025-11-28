@@ -7,7 +7,6 @@ import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.repo.AnswerRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryVersionRepository;
 import uk.gov.hmcts.cp.cdk.services.mapper.AnswerMapper;
-import uk.gov.hmcts.cp.cdk.util.TimeUtils;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerResponse;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerWithLlmResponse;
 

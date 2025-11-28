@@ -11,7 +11,6 @@ import uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus;
 import uk.gov.hmcts.cp.cdk.domain.DocumentVerificationTask;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentVerificationTaskRepository;
-import uk.gov.hmcts.cp.cdk.util.TimeUtils;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully.StatusEnum;
