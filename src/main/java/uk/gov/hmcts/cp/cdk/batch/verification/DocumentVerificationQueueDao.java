@@ -109,6 +109,9 @@ public class DocumentVerificationQueueDao {
 
         private static OffsetDateTime getOffsetDateTime(final ResultSet resultSet,
                                                         final String columnLabel) throws SQLException {
+            if (columnLabel == null) {
+                return null;
+            }
             return resultSet.getObject(columnLabel, OffsetDateTime.class);
         }
     }
