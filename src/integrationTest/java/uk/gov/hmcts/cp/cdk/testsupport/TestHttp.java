@@ -20,7 +20,7 @@ public final class TestHttp {
             HttpHeaders headers = request.getHeaders();
             List<String> existing = headers.get(TestConstants.CJSCPPUID);
             if (existing == null || existing.isEmpty()) {
-                headers.add(TestConstants.CJSCPPUID, TestConstants.USER_WITH_GROUPS_PERMISSIONS);
+                headers.add(TestConstants.CJSCPPUID, TestConstants.USER_WITH_PERMISSIONS);
             }
             return execution.execute(request, body);
         });
