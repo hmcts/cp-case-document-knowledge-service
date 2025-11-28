@@ -4,10 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class PermissionConstants {
-    static final String INTELLIGENCE_ACCESS = "Intelligence";
-    static final String OBJECT_STR = "object";
-    static final String ACTION_STR = "action";
-    static final String ACTION = "View";
+    private static final String INTELLIGENCE_ACCESS = "Intelligence";
+    private static final String OBJECT_STR = "object";
+    private static final String ACTION_STR = "action";
+    private static final String ACTION = "View";
 
     private PermissionConstants() {
     }
