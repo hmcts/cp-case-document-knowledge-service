@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
-import uk.gov.hmcts.cp.cdk.util.TimeUtils;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+
 import uk.gov.hmcts.cp.openapi.model.cdk.ErrorResponse;
 
 import java.util.Objects;
@@ -44,7 +45,7 @@ public class GlobalExceptionHandler {
         return new ErrorResponse()
                 .error(code)
                 .message(message)
-                .timestamp(TimeUtils.utcNow())
+                .timestamp(utcNow())
                 .traceId(traceId());
     }
 

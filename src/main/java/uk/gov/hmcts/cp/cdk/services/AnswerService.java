@@ -1,11 +1,12 @@
 package uk.gov.hmcts.cp.cdk.services;
 
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+
 import uk.gov.hmcts.cp.cdk.domain.Answer;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.repo.AnswerRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryVersionRepository;
 import uk.gov.hmcts.cp.cdk.services.mapper.AnswerMapper;
-import uk.gov.hmcts.cp.cdk.util.TimeUtils;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerResponse;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerWithLlmResponse;
 
@@ -66,7 +67,7 @@ public class AnswerService {
             final Integer versionOrNull,
             final OffsetDateTime asOfOrNull
     ) {
-        final OffsetDateTime asOf = Optional.ofNullable(asOfOrNull).orElse(TimeUtils.utcNow());
+        final OffsetDateTime asOf = Optional.ofNullable(asOfOrNull).orElse(utcNow());
 
         final Optional<Answer> maybeAnswer;
         if (caseIdOrNull != null && versionOrNull != null) {

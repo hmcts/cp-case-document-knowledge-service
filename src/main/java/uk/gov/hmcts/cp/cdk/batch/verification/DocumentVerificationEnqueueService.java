@@ -1,11 +1,11 @@
 package uk.gov.hmcts.cp.cdk.batch.verification;
 
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.PENDING;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import uk.gov.hmcts.cp.cdk.config.VerifySchedulerProperties;
 import uk.gov.hmcts.cp.cdk.domain.DocumentVerificationTask;
 import uk.gov.hmcts.cp.cdk.repo.DocumentVerificationTaskRepository;
-import uk.gov.hmcts.cp.cdk.util.TimeUtils;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -38,7 +38,7 @@ public class DocumentVerificationEnqueueService {
      * @param blobName blob name in storage
      */
     public void enqueue(final UUID caseId, final UUID docId, final String blobName) {
-        final OffsetDateTime now = TimeUtils.utcNow();
+        final OffsetDateTime now = utcNow();
 
         final DocumentVerificationTask task = new DocumentVerificationTask();
         task.setDocId(docId);
@@ -60,7 +60,7 @@ public class DocumentVerificationEnqueueService {
         task.setCreatedAt(now);
         task.setUpdatedAt(now);
 
-        this.documentVerificationTaskRepository.save(task);
+        this.documentVerificationTaskRepository.saveAndFlush(task);
 
         log.info(
                 "Enqueued document verification task: id={}, caseId={}, docId={}, blobName={}, maxAttempts={}",
