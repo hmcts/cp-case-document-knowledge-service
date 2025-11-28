@@ -18,9 +18,9 @@ public final class TestHttp {
 
         rt.getInterceptors().add((request, body, execution) -> {
             HttpHeaders headers = request.getHeaders();
-            List<String> existing = headers.get(TestConstants.HEADER_NAME);
+            List<String> existing = headers.get(TestConstants.CJSCPPUID);
             if (existing == null || existing.isEmpty()) {
-                headers.add(TestConstants.HEADER_NAME, TestConstants.HEADER_VALUE);
+                headers.add(TestConstants.CJSCPPUID, TestConstants.USER_WITH_GROUPS_PERMISSIONS);
             }
             return execution.execute(request, body);
         });
