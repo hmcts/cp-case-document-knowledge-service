@@ -3,6 +3,7 @@ package uk.gov.hmcts.cp.cdk.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -21,7 +22,7 @@ class TimeUtilsTest {
     @Test
     @DisplayName("Utc Now returns Time With Utc Offset")
     void utcNow_returnsTimeWithUtcOffset() {
-        final OffsetDateTime nowUtc = TimeUtils.utcNow();
+        final OffsetDateTime nowUtc = utcNow();
         assertThat(nowUtc.getOffset()).isEqualTo(ZoneOffset.UTC);
     }
 

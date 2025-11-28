@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.batch.verification;
 
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.FAILED;
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.SUCCEEDED;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import uk.gov.hmcts.cp.cdk.config.VerifySchedulerProperties;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
@@ -264,16 +265,16 @@ public class DocumentVerificationScheduler {
         task.setLastStatus(normaliseStatus(lastStatus));
         task.setLastReason(normaliseReason(lastReason));
         task.setLastStatusTimestamp(
-                lastUpdated != null ? lastUpdated : TimeUtils.utcNow()
+                lastUpdated != null ? lastUpdated : utcNow()
         );
 
         if (nextAttemptCount >= maxAttempts) {
             task.setStatus(DocumentVerificationStatus.FAILED);
-            task.setNextAttemptAt(TimeUtils.utcNow());
+            task.setNextAttemptAt(utcNow());
             task.setLockOwner(null);
             task.setLockAcquiredAt(null);
             ensureTimestamps(task);
-            this.documentVerificationTaskRepository.save(task);
+            this.documentVerificationTaskRepository.saveAndFlush(task);
 
             log.warn(
                     LOG_PREFIX + "giving up after {} attempt(s) for docId={} (lastStatus={})",
@@ -283,7 +284,7 @@ public class DocumentVerificationScheduler {
             );
         } else {
             final OffsetDateTime nextAttemptAt =
-                    TimeUtils.utcNow().plus(
+                    utcNow().plus(
                             Duration.ofMillis(this.verifySchedulerProperties.getDelayMs())
                     );
 
@@ -292,7 +293,7 @@ public class DocumentVerificationScheduler {
             task.setLockOwner(null);
             task.setLockAcquiredAt(null);
             ensureTimestamps(task);
-            this.documentVerificationTaskRepository.save(task);
+            this.documentVerificationTaskRepository.saveAndFlush(task);
         }
     }
 
@@ -303,17 +304,18 @@ public class DocumentVerificationScheduler {
             final OffsetDateTime lastUpdated
     ) {
         task.setStatus(SUCCEEDED);
+
         task.setLastStatus(normaliseStatus(lastStatus));
         task.setLastReason(normaliseReason(lastReason));
         task.setLastStatusTimestamp(
-                lastUpdated != null ? lastUpdated : TimeUtils.utcNow()
+                lastUpdated != null ? lastUpdated : utcNow()
         );
-        task.setNextAttemptAt(TimeUtils.utcNow());
+        task.setNextAttemptAt(utcNow());
         task.setLockOwner(null);
         task.setLockAcquiredAt(null);
 
         ensureTimestamps(task);
-        this.documentVerificationTaskRepository.save(task);
+        this.documentVerificationTaskRepository.saveAndFlush(task);
     }
 
     private void markFailed(
@@ -326,14 +328,14 @@ public class DocumentVerificationScheduler {
         task.setLastStatus(normaliseStatus(lastStatus));
         task.setLastReason(normaliseReason(lastReason));
         task.setLastStatusTimestamp(
-                lastUpdated != null ? lastUpdated : TimeUtils.utcNow()
+                lastUpdated != null ? lastUpdated : utcNow()
         );
-        task.setNextAttemptAt(TimeUtils.utcNow());
+        task.setNextAttemptAt(utcNow());
         task.setLockOwner(null);
         task.setLockAcquiredAt(null);
 
         ensureTimestamps(task);
-        this.documentVerificationTaskRepository.save(task);
+        this.documentVerificationTaskRepository.saveAndFlush(task);
     }
 
     private void handleSchedulerFailure(
@@ -361,7 +363,7 @@ public class DocumentVerificationScheduler {
 
                 caseDocumentOptional.ifPresent(caseDocument -> {
                     caseDocument.setIngestionPhase(targetPhase);
-                    caseDocument.setIngestionPhaseAt(TimeUtils.utcNow());
+                    caseDocument.setIngestionPhaseAt(utcNow());
                     this.caseDocumentRepository.saveAndFlush(caseDocument);
                     log.info(
                             LOG_PREFIX + "updated ingestion phase to {} for docId={}",
@@ -433,7 +435,7 @@ public class DocumentVerificationScheduler {
     // ---------- helpers ----------
 
     private void ensureTimestamps(final DocumentVerificationTask task) {
-        final OffsetDateTime now = TimeUtils.utcNow();
+        final OffsetDateTime now = utcNow();
         if (task.getCreatedAt() == null) {
             task.setCreatedAt(now);
         }

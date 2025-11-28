@@ -109,11 +109,7 @@ public class DocumentVerificationQueueDao {
 
         private static OffsetDateTime getOffsetDateTime(final ResultSet resultSet,
                                                         final String columnLabel) throws SQLException {
-            final Object value = resultSet.getObject(columnLabel);
-            if (value instanceof OffsetDateTime) {
-                return (OffsetDateTime) value;
-            }
-            return null;
+            return resultSet.getObject(columnLabel, OffsetDateTime.class);
         }
     }
 }

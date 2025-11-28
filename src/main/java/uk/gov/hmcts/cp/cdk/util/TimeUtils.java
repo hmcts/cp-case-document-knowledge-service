@@ -1,5 +1,7 @@
 package uk.gov.hmcts.cp.cdk.util;
 
+import static java.time.ZoneOffset.UTC;
+
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -19,7 +21,7 @@ public final class TimeUtils {
      * @return current time in UTC
      */
     public static OffsetDateTime utcNow() {
-        return OffsetDateTime.now(ZoneOffset.UTC);
+        return OffsetDateTime.now(UTC);
     }
 
     /**
@@ -28,10 +30,10 @@ public final class TimeUtils {
     public static OffsetDateTime toUtc(final Object temporal) {
         return switch (temporal) {
             case null -> null;
-            case OffsetDateTime odt -> odt.withOffsetSameInstant(ZoneOffset.UTC);
-            case Instant instant -> instant.atOffset(ZoneOffset.UTC);
-            case LocalDateTime localDateTime -> localDateTime.atOffset(ZoneOffset.UTC);
-            case Timestamp timestamp -> timestamp.toInstant().atOffset(ZoneOffset.UTC);
+            case OffsetDateTime odt -> odt.withOffsetSameInstant(UTC);
+            case Instant instant -> instant.atOffset(UTC);
+            case LocalDateTime localDateTime -> localDateTime.atOffset(UTC);
+            case Timestamp timestamp -> timestamp.toInstant().atOffset(UTC);
             default -> throw new IllegalArgumentException(
                     "Unsupported temporal type: " + temporal.getClass().getName()
             );
