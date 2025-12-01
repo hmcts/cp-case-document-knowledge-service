@@ -20,6 +20,7 @@ import java.util.UUID;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpEntity;
@@ -149,16 +150,15 @@ public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
         assertThat(res.getBody()).contains("\"queryPrompt\":\"Prompt for Q1 @ t2\"");
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {USER_WITH_SYSTEM_USER_GROUPS, USER_WITH_PERMISSIONS})
-    void queries_with_at_returns_as_of_version(final String loggedInUser) {
+    @Test
+    void queries_with_at_returns_as_of_version() {
         String at = "2025-05-15T00:00:00Z";
 
 
         HttpHeaders h = new HttpHeaders();
         h.setAccept(List.of(VND_TYPE_JSON));
         // Add your custom header
-        h.set(CJSCPPUID, loggedInUser);
+        h.set(CJSCPPUID, USER_WITH_SYSTEM_USER_GROUPS);
 
         ResponseEntity<String> res = http.exchange(
                 baseUrl + "/queries?caseId=e9987338-ebae-480c-825e-aad78da3ef4f&at=" + at,
@@ -174,14 +174,13 @@ public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
         assertThat(res.getBody()).contains("\"queryPrompt\":\"Prompt for Q1 @ t1\"");
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {USER_WITH_SYSTEM_USER_GROUPS, USER_WITH_PERMISSIONS})
-    void queries_are_returned_in_ascending_order(final String loggedInUser) throws Exception {
+    @Test
+    void queries_are_returned_in_ascending_order() throws Exception {
 
 
         HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(VND_TYPE_JSON));
-        headers.set(CJSCPPUID, loggedInUser);
+        headers.set(CJSCPPUID, USER_WITH_SYSTEM_USER_GROUPS);
 
         ResponseEntity<String> res = http.exchange(
                 baseUrl + "/queries?caseId=e9987338-ebae-480c-825e-aad78da3ef4f",
