@@ -8,7 +8,7 @@
         "contains": "application/vnd.usersgroups.get-logged-in-user-permissions+json"
       },
       "CJSCPPUID": {
-        "equalTo": "a085e359-6069-4694-8820-7810e7dfe762"
+        "equalTo": "49e00ac7-47b3-44a2-bc8a-a0e584a0a1c4"
       }
     }
   },
@@ -17,6 +17,6 @@
     "headers": {
       "Content-Type": "application/vnd.usersgroups.get-logged-in-user-permissions+json"
     },
-    "bodyFileName": "user_group_query_api_response.json"
+    "bodyFileName": "user_group_query_api_response_permissions.json"
   }
 }

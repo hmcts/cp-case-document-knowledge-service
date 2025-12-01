@@ -1,0 +1,18 @@
+{
+  "groups": [],
+  "switchableRoles": [],
+  "permissions": [
+    {
+      "permissionId": "3874ea8f-4e7c-4f1a-9211-90b90b9d05d6",
+      "object": "Court Scheduler",
+      "action": "Home page link",
+      "description": "Link for Create CourtSchedule Sessions"
+    },
+    {
+      "permissionId": "44971159-aab8-4ca2-a56d-e31e01792801",
+      "object": "Intelligence",
+      "action": "View",
+      "description": "Grant access to Intelligence"
+    }
+  ]
+}

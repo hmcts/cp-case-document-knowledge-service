@@ -3,6 +3,7 @@ package uk.gov.hmcts.cp.cdk.http;
 import static org.assertj.core.api.Assertions.assertThat;
 import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.CJSCPPUID;
 import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.USER_WITH_PERMISSIONS;
+import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.USER_WITH_SYSTEM_USERS_GROUPS;
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 
@@ -20,6 +21,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -126,12 +129,13 @@ public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
     }
 
 
-    @Test
-    void queries_without_at_returns_latest_version() {
+    @ParameterizedTest
+    @ValueSource(strings = {USER_WITH_SYSTEM_USERS_GROUPS, USER_WITH_PERMISSIONS})
+    void queries_without_at_returns_latest_version(final String loggedInUser) {
         HttpHeaders h = new HttpHeaders();
         h.setAccept(List.of(VND_TYPE_JSON));
         // Add your custom header
-        h.set(CJSCPPUID, USER_WITH_PERMISSIONS);
+        h.set(CJSCPPUID, loggedInUser);
 
         ResponseEntity<String> res = http.exchange(
                 baseUrl + "/queries?caseId=e9987338-ebae-480c-825e-aad78da3ef4f",
@@ -154,7 +158,7 @@ public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
         HttpHeaders h = new HttpHeaders();
         h.setAccept(List.of(VND_TYPE_JSON));
         // Add your custom header
-        h.set(CJSCPPUID, USER_WITH_PERMISSIONS);
+        h.set(CJSCPPUID, USER_WITH_SYSTEM_USERS_GROUPS);
 
         ResponseEntity<String> res = http.exchange(
                 baseUrl + "/queries?caseId=e9987338-ebae-480c-825e-aad78da3ef4f&at=" + at,
@@ -176,7 +180,7 @@ public class QueriesHttpLiveTest extends AbstractHttpLiveTest {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(VND_TYPE_JSON));
-        headers.set(CJSCPPUID, USER_WITH_PERMISSIONS);
+        headers.set(CJSCPPUID, USER_WITH_SYSTEM_USERS_GROUPS);
 
         ResponseEntity<String> res = http.exchange(
                 baseUrl + "/queries?caseId=e9987338-ebae-480c-825e-aad78da3ef4f",

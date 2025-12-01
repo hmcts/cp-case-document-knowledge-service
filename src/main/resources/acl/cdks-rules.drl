@@ -17,6 +17,7 @@ rule "Allow LA – queries"
 when
   $o: Outcome()
   $a: Action(name == "casedocumentknowledge-service.queries")
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "System Users")) or
   eval(userAndGroupProvider.hasPermission($a, PermissionConstants.accessToIntelligencePermissions()))
 then
   $o.setSuccess(true);
@@ -35,6 +36,7 @@ rule "Allow LA – query-catalogue"
 when
   $o: Outcome()
   $a: Action(name == "casedocumentknowledge-service.query-catalogue")
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "System Users")) or
   eval(userAndGroupProvider.hasPermission($a, PermissionConstants.accessToIntelligencePermissions()))
 then
   $o.setSuccess(true);
