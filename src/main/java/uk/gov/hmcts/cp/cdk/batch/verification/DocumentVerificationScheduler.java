@@ -113,14 +113,12 @@ public class DocumentVerificationScheduler {
                 owner
         );
 
-        final Set<UUID> succeededCaseIds = new LinkedHashSet<>();
-
+        final Set<DocumentVerificationTask> succeededTasks = new LinkedHashSet<>();
         for (final DocumentVerificationTask task : tasks) {
             try {
                 final boolean succeeded = processTask(task);
                 if (succeeded) {
-                    // Only remember caseIds where a document just moved to INGESTION_SUCCESS
-                    succeededCaseIds.add(task.getCaseId());
+                    succeededTasks.add(task);
                 }
             } catch (final RuntimeException exception) {
                 log.warn(
@@ -134,8 +132,8 @@ public class DocumentVerificationScheduler {
             }
         }
 
-        if (!succeededCaseIds.isEmpty()) {
-            triggerAnswerGenerationJob(succeededCaseIds);
+        if (!succeededTasks.isEmpty()) {
+            triggerAnswerGenerationJob(succeededTasks);
         }
     }
 
@@ -390,8 +388,8 @@ public class DocumentVerificationScheduler {
      * reads that parameter and still filters by {@code ingestion_phase = 'INGESTED'}
      * in {@code case_documents}.
      */
-    private void triggerAnswerGenerationJob(final Set<UUID> succeededCaseIds) {
-        final JobParameters parameters = buildJobParameters(succeededCaseIds);
+    private void triggerAnswerGenerationJob(final Set<DocumentVerificationTask> succeededTasks) {
+        final JobParameters parameters = buildJobParameters(succeededTasks);
         final String caseIdsParameter = parameters.getString("caseIds", "");
 
         try {
@@ -413,21 +411,40 @@ public class DocumentVerificationScheduler {
                     exception.getMessage(),
                     exception
             );
+            for (DocumentVerificationTask task : succeededTasks) {
+                scheduleRetry(
+                        task,
+                        DocumentVerificationStatus.IN_PROGRESS.name(),
+                        exception.getMessage(),
+                        utcNow()
+                );
+            }
         }
     }
 
-    private JobParameters buildJobParameters(final Set<UUID> succeededCaseIds) {
-        final String runId = UUID.randomUUID().toString();
-        final long nowMillis = System.currentTimeMillis();
-        final String caseIdsParameter = succeededCaseIds.stream()
-                .map(UUID::toString)
-                .collect(Collectors.joining(","));
+    private JobParameters buildJobParameters(final Set<DocumentVerificationTask> succeededTasks) {
+        final String triggerId = UUID.randomUUID().toString();
 
+        final String caseIdsParameter = succeededTasks.stream()
+                .map(DocumentVerificationTask::getCaseId)
+                .filter(java.util.Objects::nonNull)
+                .map(UUID::toString)
+                .distinct()
+                .collect(Collectors.joining(","));
+        log.info(
+                LOG_PREFIX + "triggerId {} with caseIds={}: {}",
+                ANSWER_GENERATION_JOB_NAME,
+                triggerId,
+                caseIdsParameter
+        );
         return new JobParametersBuilder()
-                .addString("runId", runId)
-                .addString("ts", Long.toString(nowMillis))
-                .addString("trigger", "DocumentVerificationScheduler")
-                .addString("caseIds", caseIdsParameter)
+                // IDENTIFYING parameters -> define the JobInstance
+                .addString("triggerId", triggerId, true)
+                .addString("caseIds", caseIdsParameter, true)
+
+                // NON-IDENTIFYING parameters -> metadata only
+                .addLong("ts", System.currentTimeMillis(), false)
+                .addString("trigger", "DocumentVerificationScheduler", false)
                 .toJobParameters();
     }
 
