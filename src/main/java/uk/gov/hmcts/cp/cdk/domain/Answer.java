@@ -3,7 +3,6 @@ package uk.gov.hmcts.cp.cdk.domain;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import java.time.OffsetDateTime;
-import java.util.Objects;
 import java.util.UUID;
 
 import jakarta.persistence.AttributeOverride;
