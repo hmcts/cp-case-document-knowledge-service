@@ -92,4 +92,37 @@ class QueryCatalogueControllerTest {
                 .andExpect(jsonPath("$.queryId").value(id.toString()))
                 .andExpect(jsonPath("$.label").value("New Label"));
     }
+
+    @Test
+    @DisplayName("BadRequest When Set Query Catalogue Label null request")
+    void setQueryCatalogueLabel_returns_badRequest_whenNullRequest() throws Exception {
+        final QueryCatalogueService service = Mockito.mock(QueryCatalogueService.class);
+        final QueryCatalogueController controller = new QueryCatalogueController(service);
+        final MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        final UUID id = UUID.fromString("11111111-1111-1111-1111-111111111111");
+
+        mvc.perform(
+                        put("/query-catalogue/{queryId}/label", id)
+                                .contentType(VND_TYPE_JSON)
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("BadRequest When Set Query Catalogue Label No order")
+    void setQueryCatalogueLabel_returns_badRequest_whenNoOrderInTheRequest() throws Exception {
+        final QueryCatalogueService service = Mockito.mock(QueryCatalogueService.class);
+        final QueryCatalogueController controller = new QueryCatalogueController(service);
+        final MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        final UUID id = UUID.fromString("11111111-1111-1111-1111-111111111111");
+
+        mvc.perform(
+                        put("/query-catalogue/{queryId}/label", id)
+                                .contentType(VND_TYPE_JSON)
+                                .content("{\"label\":\"New Label\"}")
+                )
+                .andExpect(status().isBadRequest());
+    }
 }
