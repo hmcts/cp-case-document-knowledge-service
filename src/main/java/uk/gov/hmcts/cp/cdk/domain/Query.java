@@ -9,7 +9,15 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "queries")
 public class Query {
@@ -26,38 +34,4 @@ public class Query {
 
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder;
-
-
-    public UUID getQueryId() {
-        return queryId;
-    }
-
-    public void setQueryId(final UUID queryId) {
-        this.queryId = queryId;
-    }
-
-    public String getLabel() {
-        return label;
-    }
-
-    public void setLabel(final String label) {
-        this.label = label;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-
-    public Integer getDisplayOrder() {
-        return displayOrder;
-    }
-
-    public void setDisplayOrder(final Integer displayOrder) {
-        this.displayOrder = displayOrder;
-    }
-
-    public void setCreatedAt(final OffsetDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
 }

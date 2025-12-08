@@ -3,7 +3,6 @@ package uk.gov.hmcts.cp.cdk.domain;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import java.time.OffsetDateTime;
-import java.util.Objects;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -13,9 +12,15 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+@Getter
+@Setter
+@EqualsAndHashCode
 @Entity
 @Table(
         name = "case_documents",
@@ -69,116 +74,4 @@ public class CaseDocument {
 
     @Column(name = "ingestion_phase_at", nullable = false)
     private OffsetDateTime ingestionPhaseAt = utcNow();
-
-    public UUID getDocId() {
-        return docId;
-    }
-
-    public void setDocId(final UUID docId) {
-        this.docId = docId;
-    }
-
-    public UUID getCaseId() {
-        return caseId;
-    }
-
-    public void setCaseId(final UUID caseId) {
-        this.caseId = caseId;
-    }
-
-    public UUID getMaterialId() {
-        return materialId;
-    }
-
-    public void setMaterialId(final UUID materialId) {
-        this.materialId = materialId;
-    }
-
-    public String getSource() {
-        return source;
-    }
-
-    public void setSource(final String source) {
-        this.source = source;
-    }
-
-    public String getBlobUri() {
-        return blobUri;
-    }
-
-    public void setBlobUri(final String blobUri) {
-        this.blobUri = blobUri;
-    }
-
-    public String getContentType() {
-        return contentType;
-    }
-
-    public void setContentType(final String contentType) {
-        this.contentType = contentType;
-    }
-
-    public Long getSizeBytes() {
-        return sizeBytes;
-    }
-
-    public void setSizeBytes(final Long sizeBytes) {
-        this.sizeBytes = sizeBytes;
-    }
-
-    public String getSha256Hex() {
-        return sha256Hex;
-    }
-
-    public void setSha256Hex(final String sha256Hex) {
-        this.sha256Hex = sha256Hex;
-    }
-
-    public OffsetDateTime getUploadedAt() {
-        return uploadedAt;
-    }
-
-    public void setUploadedAt(final OffsetDateTime uploadedAt) {
-        this.uploadedAt = uploadedAt;
-    }
-
-    public DocumentIngestionPhase getIngestionPhase() {
-        return ingestionPhase;
-    }
-
-    public void setIngestionPhase(final DocumentIngestionPhase ingestionPhase) {
-        this.ingestionPhase = ingestionPhase;
-    }
-
-    public OffsetDateTime getIngestionPhaseAt() {
-        return ingestionPhaseAt;
-    }
-
-    public void setIngestionPhaseAt(final OffsetDateTime ingestionPhaseAt) {
-        this.ingestionPhaseAt = ingestionPhaseAt;
-    }
-
-    public String getDocName() {
-        return docName;
-    }
-
-    public void setDocName(final String docName) {
-        this.docName = docName;
-    }
-
-    @Override
-    public boolean equals(final Object other) {
-        boolean equal = false;
-        if (this == other) {
-            equal = true;
-        } else if (other instanceof CaseDocument that) {
-            equal = Objects.equals(docId, that.docId);
-        }
-        return equal;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(docId);
-    }
 }

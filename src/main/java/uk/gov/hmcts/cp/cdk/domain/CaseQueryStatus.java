@@ -12,9 +12,13 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+@Getter
+@Setter
 @Entity
 @Table(
         name = "case_query_status",
@@ -69,53 +73,5 @@ public class CaseQueryStatus {
             this.caseQueryStatusId = new CaseQueryStatusId();
         }
         this.caseQueryStatusId.setQueryId(queryId);
-    }
-
-    public CaseQueryStatusId getCaseQueryStatusId() {
-        return caseQueryStatusId;
-    }
-
-    public void setCaseQueryStatusId(final CaseQueryStatusId caseQueryStatusId) {
-        this.caseQueryStatusId = caseQueryStatusId;
-    }
-
-    public QueryLifecycleStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(final QueryLifecycleStatus status) {
-        this.status = status;
-    }
-
-    public OffsetDateTime getStatusAt() {
-        return statusAt;
-    }
-
-    public void setStatusAt(final OffsetDateTime statusAt) {
-        this.statusAt = statusAt;
-    }
-
-    public UUID getDocId() {
-        return docId;
-    }
-
-    public void setDocId(final UUID docId) {
-        this.docId = docId;
-    }
-
-    public Integer getLastAnswerVersion() {
-        return lastAnswerVersion;
-    }
-
-    public void setLastAnswerVersion(final Integer lastAnswerVersion) {
-        this.lastAnswerVersion = lastAnswerVersion;
-    }
-
-    public OffsetDateTime getLastAnswerAt() {
-        return lastAnswerAt;
-    }
-
-    public void setLastAnswerAt(final OffsetDateTime lastAnswerAt) {
-        this.lastAnswerAt = lastAnswerAt;
     }
 }
