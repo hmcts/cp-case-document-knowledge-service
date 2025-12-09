@@ -71,27 +71,16 @@ class QueryVersionRepositoryTest {
     @BeforeEach
     void seed() {
         qid = UUID.randomUUID();
-        final Query q = new Query();
-        q.setQueryId(qid);
-        q.setLabel("Case Summary (All Witnesses)");
-        q.setDisplayOrder(200);
-        queryRepo.saveAndFlush(q);
-
         final OffsetDateTime t1 = OffsetDateTime.parse("2025-05-01T11:58:00Z");
         final OffsetDateTime t2 = OffsetDateTime.parse("2025-05-01T11:59:00Z");
 
-        final QueryVersion v1 = new QueryVersion();
-        v1.setQuery(q);
-        v1.setQueryVersionId(new QueryVersionId(qid, t1));
-        v1.setUserQuery("UQ v1");
-        v1.setQueryPrompt("QP v1");
+        final Query q = new Query(qid, "Case Summary (All Witnesses)", OffsetDateTime.now(), 200);
+        queryRepo.saveAndFlush(q);
+
+        final QueryVersion v1 = new QueryVersion(new QueryVersionId(qid, t1), q, "UQ v1", "QP v1");
         repo.save(v1);
 
-        final QueryVersion v2 = new QueryVersion();
-        v2.setQuery(q);
-        v2.setQueryVersionId(new QueryVersionId(qid, t2));
-        v2.setUserQuery("UQ v2");
-        v2.setQueryPrompt("QP v2");
+        final QueryVersion v2 = new QueryVersion(new QueryVersionId(qid, t2), q, "UQ v2", "QP v2");
         repo.saveAndFlush(v2);
     }
 
@@ -99,21 +88,24 @@ class QueryVersionRepositoryTest {
     @DisplayName("Snapshot Definitions As Of returns latest not after cutoff")
     void snapshotDefinitionsAsOf_returns_latest_not_after_cutoff() {
         final OffsetDateTime asOf = OffsetDateTime.parse("2025-05-01T11:58:30Z");
-        final List<Object[]> rows = repo.snapshotDefinitionsAsOf(asOf);
+
+        final List<QueryVersionRepository.SnapshotDefinition> rows = repo.snapshotDefinitionsAsOf(asOf);
 
         assertNotNull(rows);
         assertEquals(1, rows.size());
-        final Object[] r = rows.get(0);
-        assertEquals(qid, r[0]);
-        assertEquals("Case Summary (All Witnesses)", r[1]); // label
-        assertEquals("UQ v1", r[2]);
-        assertEquals("QP v1", r[3]);
+        final QueryVersionRepository.SnapshotDefinition r = rows.get(0);
+        assertEquals(qid, r.queryId());
+        assertEquals("Case Summary (All Witnesses)", r.label());
+        assertEquals("UQ v1", r.userQuery());
+        assertEquals("QP v1", r.queryPrompt());
+        assertEquals(OffsetDateTime.parse("2025-05-01T11:58:00Z").toInstant(), r.effectiveAt());
     }
 
     @Test
     @DisplayName("Find All Versions returns ascending effective at")
     void findAllVersions_returns_ascending_effective_at() {
         final List<QueryVersion> versions = repo.findAllVersions(qid);
+
         assertEquals(2, versions.size());
         assertEquals("UQ v1", versions.get(0).getUserQuery());
         assertEquals("UQ v2", versions.get(1).getUserQuery());

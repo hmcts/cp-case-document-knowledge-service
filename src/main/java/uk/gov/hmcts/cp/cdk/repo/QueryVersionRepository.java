@@ -3,13 +3,16 @@ package uk.gov.hmcts.cp.cdk.repo;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
 
+@Repository
 public interface QueryVersionRepository extends JpaRepository<QueryVersion, QueryVersionId> {
 
     @Query(value = """
@@ -29,7 +32,7 @@ public interface QueryVersionRepository extends JpaRepository<QueryVersion, Quer
               ) v ON TRUE
              ORDER BY q.query_id
             """, nativeQuery = true)
-    List<Object[]> snapshotDefinitionsAsOf(OffsetDateTime asOf);
+    List<SnapshotDefinition> snapshotDefinitionsAsOf(OffsetDateTime asOf);
 
     @Query(value = """
             SELECT v.*
@@ -38,4 +41,12 @@ public interface QueryVersionRepository extends JpaRepository<QueryVersion, Quer
              ORDER BY v.effective_at ASC
             """, nativeQuery = true)
     List<QueryVersion> findAllVersions(UUID queryId);
+
+    record SnapshotDefinition(
+            UUID queryId,
+            String label,
+            String userQuery,
+            String queryPrompt,
+            Instant effectiveAt) {
+    }
 }
