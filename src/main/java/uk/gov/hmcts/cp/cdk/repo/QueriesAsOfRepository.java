@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public interface QueriesAsOfRepository extends JpaRepository<uk.gov.hmcts.cp.cdk.domain.Query, UUID> {
 
-    @org.springframework.data.jpa.repository.Query(value = """
+    @Query(value = """
             WITH latest_def AS (
                   SELECT
                     qv.query_id,
