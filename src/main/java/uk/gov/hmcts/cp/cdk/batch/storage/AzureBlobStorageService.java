@@ -94,13 +94,7 @@ public class AzureBlobStorageService implements StorageService {
 
                     if (copyStatus == CopyStatusType.SUCCESS) {
                         final String finalContentType = StringUtils.defaultIfBlank(contentType, DEFAULT_CONTENT_TYPE);
-                        try {
-                            // blobClient.setHttpHeaders(new BlobHttpHeaders().setContentType(finalContentType));
-                            log.info("not required Content-Type set on blob. blob={}, contentType={}", blobName, finalContentType);
-                        } catch (final RuntimeException headerException) {
-                            log.warn("Failed to set content-type (continuing). blob={}, contentType={}",
-                                    blobName, finalContentType, headerException);
-                        }
+                        log.info("not required Content-Type set on blob. blob={}, contentType={}", blobName, finalContentType);
                     }
 
                     blobUrl = blobClient.getBlobUrl();

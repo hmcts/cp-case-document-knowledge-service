@@ -2,15 +2,18 @@ package uk.gov.hmcts.cp.cdk.batch.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import com.azure.core.util.polling.PollResponse;
 import com.azure.core.util.polling.SyncPoller;
@@ -137,6 +140,46 @@ class AzureBlobStorageServiceTest {
          verify(mockBlob).setHttpHeaders(argThat((BlobHttpHeaders h) ->
          "application/octet-stream".equals(h.getContentType())));
          **/
+    }
+
+    @Test
+    @DisplayName("copyFromUrl: accepts dest as full URL and copy status aborted")
+    void copyFromUrl_acceptsDestUrl_copyStatusAborted() {
+        final String src = "https://source.blob.core.windows.net/c/src.pdf?sv=...";
+        // %2F ensures we exercise URL-decoding logic
+        final String destUrl = "https://account.blob.core.windows.net/documents/cases%2F123%2Fidpc.pdf";
+
+        when(mockBlobContainerClient.getBlobClient(anyString())).thenReturn(mockBlob);
+        when(mockBlob.getBlobUrl()).thenReturn("https://account.blob.core.windows.net/documents/cases/123/idpc.pdf");
+        when(mockBlob.beginCopy(any(BlobBeginCopyOptions.class))).thenReturn(mockSyncPoller);
+        when(mockSyncPoller.waitForCompletion(any(Duration.class))).thenReturn(mockPollResponse);
+        when(mockPollResponse.getValue()).thenReturn(new BlobCopyInfo("", "", CopyStatusType.ABORTED, "", null, null, null));
+
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class, () -> service.copyFromUrl(src, destUrl, "application/pdf", null)
+        );
+
+        assertThat(ex.getMessage()).isEqualTo("Blob copy failed: aborted");
+    }
+
+    @Test
+    @DisplayName("copyFromUrl: accepts dest as full URL and poller timeout")
+    void copyFromUrl_acceptsDestUrl_copyTimeout() {
+        final String src = "https://source.blob.core.windows.net/c/src.pdf?sv=...";
+        // %2F ensures we exercise URL-decoding logic
+        final String destUrl = "https://account.blob.core.windows.net/documents/cases%2F123%2Fidpc.pdf";
+
+        when(mockBlobContainerClient.getBlobClient(anyString())).thenReturn(mockBlob);
+        when(mockBlob.getBlobUrl()).thenReturn("https://account.blob.core.windows.net/documents/cases/123/idpc.pdf");
+        when(mockBlob.beginCopy(any(BlobBeginCopyOptions.class))).thenReturn(mockSyncPoller);
+        doThrow(new RuntimeException(new TimeoutException("copy timed out"))).when(mockSyncPoller).waitForCompletion(any(Duration.class));
+        when(mockPollResponse.getValue()).thenReturn(new BlobCopyInfo("", "", CopyStatusType.ABORTED, "", null, null, null));
+
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class, () -> service.copyFromUrl(src, destUrl, "application/pdf", null)
+        );
+
+        assertThat(ex.getMessage()).isEqualTo("Timed out after 120s waiting for blob copy to succeed");
     }
 
     @Test

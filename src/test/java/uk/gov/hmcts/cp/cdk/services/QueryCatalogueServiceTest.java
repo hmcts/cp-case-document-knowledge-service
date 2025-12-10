@@ -151,11 +151,11 @@ class QueryCatalogueServiceTest {
         final LabelUpdateRequest blankLabel = new LabelUpdateRequest();
         blankLabel.setLabel("  ");
 
-        ResponseStatusException ex1 = assertThrows(ResponseStatusException.class,
+        final ResponseStatusException ex1 = assertThrows(ResponseStatusException.class,
                 () -> service.updateLabel(queryId, nullBody));
         assertThat(ex1.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
 
-        ResponseStatusException ex2 = assertThrows(ResponseStatusException.class,
+        final ResponseStatusException ex2 = assertThrows(ResponseStatusException.class,
                 () -> service.updateLabel(queryId, blankLabel));
         assertThat(ex2.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
 
