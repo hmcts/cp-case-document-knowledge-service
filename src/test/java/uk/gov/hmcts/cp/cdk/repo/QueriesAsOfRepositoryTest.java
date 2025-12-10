@@ -1,5 +1,6 @@
 package uk.gov.hmcts.cp.cdk.repo;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -22,7 +23,6 @@ import org.junit.jupiter.api.TestInstance;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -40,7 +40,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DisplayName("Queries As Of Repository tests")
-@Import(QueriesAsOfRepository.class)
 class QueriesAsOfRepositoryTest {
 
 
@@ -80,28 +79,16 @@ class QueriesAsOfRepositoryTest {
     void seed() {
         caseId = UUID.randomUUID();
         qid = UUID.randomUUID();
-
-        final Query q = new Query();
-        q.setQueryId(qid);
-        q.setLabel("Defendant Position");
-        q.setDisplayOrder(200);
-        queryRepo.saveAndFlush(q);
-
         final OffsetDateTime t1 = OffsetDateTime.parse("2025-05-01T11:58:00Z");
         final OffsetDateTime t2 = OffsetDateTime.parse("2025-05-01T11:59:00Z");
 
-        final QueryVersion v1 = new QueryVersion();
-        v1.setQuery(q);
-        v1.setQueryVersionId(new QueryVersionId(qid, t1));
-        v1.setUserQuery("def v1");
-        v1.setQueryPrompt("prompt v1");
+        final Query q = new Query(qid, "Defendant Position", OffsetDateTime.now(), 200);
+        queryRepo.saveAndFlush(q);
+
+        final QueryVersion v1 = new QueryVersion(new QueryVersionId(qid, t1), q, "def v1", "prompt v1");
         versionRepo.save(v1);
 
-        final QueryVersion v2 = new QueryVersion();
-        v2.setQuery(q);
-        v2.setQueryVersionId(new QueryVersionId(qid, t2));
-        v2.setUserQuery("def v2");
-        v2.setQueryPrompt("prompt v2");
+        final QueryVersion v2 = new QueryVersion(new QueryVersionId(qid, t2), q, "def v2", "prompt v2");
         versionRepo.saveAndFlush(v2);
 
         final CaseQueryStatus cqs = new CaseQueryStatus();
@@ -116,26 +103,29 @@ class QueriesAsOfRepositoryTest {
     @DisplayName("List For Case As Of returns definition and status")
     void listForCaseAsOf_returns_definition_and_status() {
         final OffsetDateTime asOf = OffsetDateTime.parse("2025-05-01T12:00:00Z");
-        final List<Object[]> rows = repo.listForCaseAsOf(caseId, asOf);
+        final List<QueriesAsOfRepository.QueryAsOfView> queryAsOfViews = repo.listForCaseAsOf(caseId, asOf);
 
-        assertNotNull(rows);
-        assertEquals(1, rows.size());
-        final Object[] r = rows.get(0);
-        assertEquals(qid, r[0]);
-        assertEquals(caseId, r[1]);
-        assertEquals("Defendant Position", r[2]);
-        assertEquals("def v2", r[3]);
-        assertEquals("prompt v2", r[4]);
-        assertEquals("ANSWER_NOT_AVAILABLE", r[6]);
+        assertNotNull(queryAsOfViews);
+        assertThat(queryAsOfViews.isEmpty()).isFalse();
+        final QueriesAsOfRepository.QueryAsOfView r = queryAsOfViews.get(0);
+        assertEquals(qid, r.queryId());
+        assertEquals(caseId, r.caseId());
+        assertEquals("Defendant Position", r.label());
+        assertEquals("def v2", r.userQuery());
+        assertEquals("prompt v2", r.queryPrompt());
+        assertEquals("ANSWER_NOT_AVAILABLE", r.status());
+        assertThat(r.statusAt()).isNotNull();
+        assertEquals(200, r.displayOrder());
+        assertEquals(OffsetDateTime.parse("2025-05-01T11:59:00Z").toInstant(), r.effectiveAt());
     }
 
     @Test
     @DisplayName("Get One For Case As Of retrieves single row")
     void getOneForCaseAsOf_retrieves_single_row() {
         final OffsetDateTime asOf = OffsetDateTime.parse("2025-05-01T12:00:00Z");
-        final Object[] r = repo.getOneForCaseAsOf(caseId, qid, asOf);
-        assertNotNull(r);
-        assertEquals(qid, r[0]);
-        assertEquals(caseId, r[1]);
+        final QueriesAsOfRepository.QueryAsOfView oneForCaseAsOf = repo.getOneForCaseAsOf(caseId, qid, asOf);
+        assertNotNull(oneForCaseAsOf);
+        assertEquals(qid, oneForCaseAsOf.queryId());
+        assertEquals(caseId, oneForCaseAsOf.caseId());
     }
 }

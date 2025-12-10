@@ -1,5 +1,8 @@
 package uk.gov.hmcts.cp.cdk.services;
 
+import static java.util.Objects.isNull;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.toUtc;
+
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.Query;
@@ -39,24 +42,6 @@ import org.springframework.web.server.ResponseStatusException;
 @Slf4j
 public class QueryService {
 
-    // ---------- Definition snapshot (no case) ----------
-    private static final int DEF_COL_QUERY_ID = 0;
-    private static final int DEF_COL_LABEL = 1;
-    private static final int DEF_COL_USER_QUERY = 2;
-    private static final int DEF_COL_PROMPT = 3;
-    private static final int DEF_COL_EFFECTIVE_AT = 4;
-
-    // ---------- Case-scoped (has extra case_id at index 1) ----------
-    private static final int CASE_COL_QUERY_ID = 0;
-    private static final int CASE_COL_CASE_ID = 1;
-    private static final int CASE_COL_LABEL = 2;
-    private static final int CASE_COL_USER_QUERY = 3;
-    private static final int CASE_COL_PROMPT = 4;
-    private static final int CASE_COL_EFFECTIVE_AT = 5;
-    private static final int CASE_COL_STATUS_TXT = 6;
-    private static final String IDPC_DOC_NAME = "IDPC";
-
-
     private final QueryRepository queryRepository;
     private final QueryVersionRepository queryVersionRepository;
     private final QueriesAsOfRepository queriesAsOfRepository;
@@ -82,41 +67,39 @@ public class QueryService {
 
     /* ---------- helpers (use util) ---------- */
 
-    private static QuerySummary mapDefinitionRowToSummary(final Object... row) {
+    private static QuerySummary mapDefinitionRowToSummary(final QueryVersionRepository.SnapshotDefinition row) {
         final QuerySummary querySummary = new QuerySummary();
-        querySummary.setQueryId((UUID) row[DEF_COL_QUERY_ID]);
-        querySummary.setLabel((String) row[DEF_COL_LABEL]);
-        querySummary.setUserQuery((String) row[DEF_COL_USER_QUERY]);
-        querySummary.setQueryPrompt((String) row[DEF_COL_PROMPT]);
-        querySummary.setEffectiveAt(TimeUtils.toUtc(row[DEF_COL_EFFECTIVE_AT]));
+        querySummary.setQueryId(row.queryId());
+        querySummary.setLabel(row.label());
+        querySummary.setUserQuery(row.userQuery());
+        querySummary.setQueryPrompt(row.queryPrompt());
+        querySummary.setEffectiveAt(toUtc(row.effectiveAt()));
         return querySummary;
     }
 
-    private static QuerySummary mapCaseRowToSummary(final Object... row) {
+    private static QuerySummary mapCaseRowToSummary(final QueriesAsOfRepository.QueryAsOfView row) {
         final QuerySummary querySummary = new QuerySummary();
-        querySummary.setQueryId((UUID) row[CASE_COL_QUERY_ID]);
-        querySummary.setCaseId((UUID) row[CASE_COL_CASE_ID]);
-        querySummary.setLabel((String) row[CASE_COL_LABEL]);
-        querySummary.setUserQuery((String) row[CASE_COL_USER_QUERY]);
-        querySummary.setQueryPrompt((String) row[CASE_COL_PROMPT]);
-        querySummary.setEffectiveAt(TimeUtils.toUtc(row[CASE_COL_EFFECTIVE_AT]));
+        querySummary.setQueryId(row.queryId());
+        querySummary.setCaseId(row.caseId());
+        querySummary.setLabel(row.label());
+        querySummary.setUserQuery(row.userQuery());
+        querySummary.setQueryPrompt(row.queryPrompt());
+        querySummary.setEffectiveAt(toUtc(row.effectiveAt()));
 
         // status can be null; default it safely
-        final Object statusObj = row[CASE_COL_STATUS_TXT];
-        final String statusText = (statusObj == null) ? null : statusObj.toString();
-        querySummary.setStatus(statusText == null
+        querySummary.setStatus(isNull(row.status())
                 ? QueryLifecycleStatus.ANSWER_NOT_AVAILABLE
-                : QueryLifecycleStatus.fromValue(statusText));
+                : QueryLifecycleStatus.fromValue(row.status()));
         return querySummary;
     }
 
-    private static QueryVersionSummary mapDefinitionRowToVersionSummary(final Object... row) {
+    private static QueryVersionSummary mapDefinitionRowToVersionSummary(final QueryVersionRepository.SnapshotDefinition row) {
         final QueryVersionSummary summary = new QueryVersionSummary();
-        summary.setQueryId((UUID) row[DEF_COL_QUERY_ID]);
-        summary.setLabel((String) row[DEF_COL_LABEL]);
-        summary.setUserQuery((String) row[DEF_COL_USER_QUERY]);
-        summary.setQueryPrompt((String) row[DEF_COL_PROMPT]);
-        summary.setEffectiveAt(TimeUtils.toUtc(row[DEF_COL_EFFECTIVE_AT]));
+        summary.setQueryId(row.queryId());
+        summary.setLabel(row.label());
+        summary.setUserQuery(row.userQuery());
+        summary.setQueryPrompt(row.queryPrompt());
+        summary.setEffectiveAt(toUtc(row.effectiveAt()));
         return summary;
     }
 
@@ -129,11 +112,11 @@ public class QueryService {
 
         final List<QuerySummary> summaries;
         if (caseId == null) {
-            final List<Object[]> rows = queryVersionRepository.snapshotDefinitionsAsOf(asOf);
+            final List<QueryVersionRepository.SnapshotDefinition> rows = queryVersionRepository.snapshotDefinitionsAsOf(asOf);
             summaries = rows.stream().map(QueryService::mapDefinitionRowToSummary).toList();
         } else {
-            final List<Object[]> rows = queriesAsOfRepository.listForCaseAsOf(caseId, asOf);
-            summaries = rows.stream().map(QueryService::mapCaseRowToSummary).toList();
+            final List<QueriesAsOfRepository.QueryAsOfView> queryAsOfViewRows = queriesAsOfRepository.listForCaseAsOf(caseId, asOf);
+            summaries = queryAsOfViewRows.stream().map(QueryService::mapCaseRowToSummary).toList();
 
             //Retrieval of casedocument to populate isIdpcAvailable info as part of DD-40778
             final Optional<LatestMaterialInfo> courtDocuments = progressionClient.getCourtDocuments(caseId, userId);
@@ -162,16 +145,16 @@ public class QueryService {
         final OffsetDateTime asOf = Optional.ofNullable(asOfParam).orElseGet(TimeUtils::utcNow);
 
         try {
-            final Object[] row = queriesAsOfRepository.getOneForCaseAsOf(caseId, queryId, asOf);
+            final QueriesAsOfRepository.QueryAsOfView oneForCaseAsOf = queriesAsOfRepository.getOneForCaseAsOf(caseId, queryId, asOf);
 
-            if (row == null || row.length == 0 || row[0] == null) {
+            if (oneForCaseAsOf == null) {
                 throw new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Query not found for case=" + caseId + ", queryId=" + queryId
                 );
             }
 
-            return mapCaseRowToSummary(row);
+            return mapCaseRowToSummary(oneForCaseAsOf);
         } catch (IncorrectResultSizeDataAccessException e) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
@@ -220,7 +203,7 @@ public class QueryService {
             queryVersionRepository.save(version);
         });
 
-        final List<Object[]> rows = queryVersionRepository.snapshotDefinitionsAsOf(effectiveAt);
+        final List<QueryVersionRepository.SnapshotDefinition> rows = queryVersionRepository.snapshotDefinitionsAsOf(effectiveAt);
         final List<QueryVersionSummary> versions = rows.stream()
                 .map(QueryService::mapDefinitionRowToVersionSummary)
                 .toList();

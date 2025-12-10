@@ -1,12 +1,13 @@
 package uk.gov.hmcts.cp.cdk.repo;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.Query;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,15 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Repository
 @Transactional(readOnly = true)
-public class QueriesAsOfRepository {
+public interface QueriesAsOfRepository extends JpaRepository<uk.gov.hmcts.cp.cdk.domain.Query, UUID> {
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
-    @SuppressWarnings("unchecked")
-    public List<Object[]> listForCaseAsOf(final UUID caseId, final OffsetDateTime asOf) {
-        final String sql = """
-                WITH latest_def AS (
+    @Query(value = """
+            WITH latest_def AS (
                   SELECT
                     qv.query_id,
                     qv.user_query,
@@ -34,32 +30,28 @@ public class QueriesAsOfRepository {
                   WHERE qv.effective_at <= :asOf
                 )
                 SELECT
-                  q.query_id,
-                  :caseId AS case_id,
-                  q.label,
-                  ld.user_query,
-                  ld.query_prompt,
-                  ld.effective_at,
-                  cqs.status::text AS status,
-                  cqs.status_at,
-                  q.display_order
+                  q.query_id            AS queryId,
+                  :caseId               AS caseId,
+                  q.label               AS label,
+                  ld.user_query         AS userQuery,
+                  ld.query_prompt       AS queryPrompt,
+                  ld.effective_at       AS effectiveAt,
+                  cqs.status::text      AS status,
+                  cqs.status_at         AS statusAt,
+                  q.display_order       AS displayOrder
                 FROM queries q
                 JOIN latest_def ld
                   ON ld.query_id = q.query_id AND ld.rn = 1
                 LEFT JOIN case_query_status cqs
                   ON cqs.query_id = q.query_id AND cqs.case_id = :caseId
                 ORDER BY q.display_order ASC, q.query_id
-                """;
+            """,
+            nativeQuery = true)
+    List<QueriesAsOfRepository.QueryAsOfView> listForCaseAsOf(@Param("caseId") UUID caseId,
+                                                              @Param("asOf") OffsetDateTime asOf);
 
-        final Query nativeQuery = entityManager.createNativeQuery(sql);
-        nativeQuery.setParameter("caseId", caseId);
-        nativeQuery.setParameter("asOf", asOf);
-        return (List<Object[]>) nativeQuery.getResultList();
-    }
-
-    public Object[] getOneForCaseAsOf(final UUID caseId, final UUID queryId, final OffsetDateTime asOf) {
-        final String sql = """
-                WITH latest_def AS (
+    @Query(value = """
+            WITH latest_def AS (
                   SELECT
                     qv.query_id,
                     qv.user_query,
@@ -71,28 +63,36 @@ public class QueriesAsOfRepository {
                     AND qv.effective_at <= :asOf
                 )
                 SELECT
-                  q.query_id,
-                  :caseId AS case_id,
-                  q.label,
-                  ld.user_query,
-                  ld.query_prompt,
-                  ld.effective_at,
-                  cqs.status::text AS status,
-                  cqs.status_at
+                  q.query_id            AS queryId,
+                  :caseId               AS caseId,
+                  q.label               AS label,
+                  ld.user_query         AS userQuery,
+                  ld.query_prompt       AS queryPrompt,
+                  ld.effective_at       AS effectiveAt,
+                  cqs.status::text      AS status,
+                  cqs.status_at         AS statusAt,
+                  q.display_order       AS displayOrder
                 FROM queries q
                 JOIN latest_def ld
                   ON ld.query_id = q.query_id AND ld.rn = 1
                 LEFT JOIN case_query_status cqs
                   ON cqs.query_id = q.query_id AND cqs.case_id = :caseId
                 WHERE q.query_id = :queryId
-                """;
+            """,
+            nativeQuery = true)
+    QueriesAsOfRepository.QueryAsOfView getOneForCaseAsOf(@Param("caseId") UUID caseId,
+                                                          @Param("queryId") UUID queryId,
+                                                          @Param("asOf") OffsetDateTime asOf);
 
-        final Query nativeQuery = entityManager.createNativeQuery(sql);
-        nativeQuery.setParameter("caseId", caseId);
-        nativeQuery.setParameter("queryId", queryId);
-        nativeQuery.setParameter("asOf", asOf);
-
-        @SuppressWarnings("unchecked") final List<Object[]> resultRows = nativeQuery.getResultList();
-        return resultRows.isEmpty() ? null : resultRows.get(0);
+    record QueryAsOfView(
+            UUID queryId,
+            UUID caseId,
+            String label,
+            String userQuery,
+            String queryPrompt,
+            Instant effectiveAt,
+            String status,
+            Instant statusAt,
+            Integer displayOrder) {
     }
 }

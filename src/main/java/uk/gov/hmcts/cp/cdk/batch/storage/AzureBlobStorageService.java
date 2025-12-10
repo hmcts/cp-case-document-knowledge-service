@@ -57,7 +57,6 @@ public class AzureBlobStorageService implements StorageService {
         if (StringUtils.isBlank(sourceUrl)) {
             throw new IllegalArgumentException("sourceUrl must not be blank");
         }
-        boolean existsFlag;
         String blobUrl = "";
         final String blobName = normalizeToBlobName(destBlobPath);
         final BlobClient blobClient = blobContainerClient.getBlobClient(blobName);
@@ -76,7 +75,7 @@ public class AzureBlobStorageService implements StorageService {
         }
         try {
 
-            existsFlag = blobClient.exists();
+            final boolean existsFlag = blobClient.exists();
             if (existsFlag) {
                 log.debug("Blob already exists before copy. blob={}", blobName);
             } else {
@@ -90,17 +89,6 @@ public class AzureBlobStorageService implements StorageService {
 
                     if (copyStatus == CopyStatusType.ABORTED || copyStatus == CopyStatusType.FAILED) {
                         throw new IllegalStateException("Blob copy failed: " + copyStatus);
-                    }
-
-                    if (copyStatus == CopyStatusType.SUCCESS) {
-                        final String finalContentType = StringUtils.defaultIfBlank(contentType, DEFAULT_CONTENT_TYPE);
-                        try {
-                            // blobClient.setHttpHeaders(new BlobHttpHeaders().setContentType(finalContentType));
-                            log.info("not required Content-Type set on blob. blob={}, contentType={}", blobName, finalContentType);
-                        } catch (final RuntimeException headerException) {
-                            log.warn("Failed to set content-type (continuing). blob={}, contentType={}",
-                                    blobName, finalContentType, headerException);
-                        }
                     }
 
                     blobUrl = blobClient.getBlobUrl();
