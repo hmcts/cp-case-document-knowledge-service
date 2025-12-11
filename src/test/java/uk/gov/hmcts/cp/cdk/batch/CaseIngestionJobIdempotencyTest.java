@@ -53,7 +53,6 @@ import org.springframework.batch.test.context.SpringBatchTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -102,10 +101,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
         },
         properties = {
                 "spring.main.allow-bean-definition-overriding=true",
-                "cp.audit.enabled=false"
+                "cp.audit.enabled=false",
+                "spring.test.database.replace=none"
         }
 )
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+//@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class CaseIngestionJobIdempotencyTest {
@@ -636,6 +636,7 @@ class CaseIngestionJobIdempotencyTest {
         @Primary
         RetryTemplate retryTemplate() {
             final RetryTemplate retryTemplate = new RetryTemplate();
+
             final SimpleRetryPolicy simpleRetryPolicy = new SimpleRetryPolicy(1);
             retryTemplate.setRetryPolicy(simpleRetryPolicy);
             final FixedBackOffPolicy fixedBackOffPolicy = new FixedBackOffPolicy();

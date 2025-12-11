@@ -16,27 +16,30 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-@WebMvcTest
-@AutoConfigureMockMvc(addFilters = false)
+//@WebMvcTest
+//@AutoConfigureMockMvc(addFilters = false)
+@SpringBootTest
 @Import({
         TracingIntegrationTest.TestTracingConfig.class,
         TracingIntegrationTest.TracingProbeController.class
@@ -53,8 +56,15 @@ class TracingIntegrationTest {
     private final PrintStream originalStdOut = System.out;
     @Autowired
     private MockMvc mockMvc;
+    @Autowired
+    private WebApplicationContext wac;
     @Value("${spring.application.name}")
     private String springApplicationName;
+
+    @BeforeEach
+    void setup() {
+        mockMvc = MockMvcBuilders.webAppContextSetup(wac).build();
+    }
 
     private static Map<String, Object> parseLastJsonLine(ByteArrayOutputStream buf) throws Exception {
         String[] lines = buf.toString().split("\\R");

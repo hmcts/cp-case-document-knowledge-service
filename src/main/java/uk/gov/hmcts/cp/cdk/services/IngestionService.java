@@ -18,11 +18,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
-import org.springframework.batch.core.job.parameters.JobParametersInvalidException;
+import org.springframework.batch.core.launch.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.launch.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.launch.JobOperator;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
-import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
-import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.batch.core.launch.JobRestartException;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,8 +76,7 @@ public class IngestionService {
                 log.info("Ingestion job submitted asynchronously. requestId={}, cppuid={}", requestId, cppuid);
             } catch (JobExecutionAlreadyRunningException
                      | JobRestartException
-                     | JobInstanceAlreadyCompleteException
-                     | JobParametersInvalidException e) {
+                     | JobInstanceAlreadyCompleteException e) {
                 log.error("Failed to start ingestion job asynchronously. requestId={}, cppuid={}, error={}",
                         requestId, cppuid, e.getMessage(), e);
             } catch (Exception e) {

@@ -2,7 +2,7 @@ plugins {
     id 'application'
     id 'java'
 
-    id 'org.springframework.boot' version '4.0.0-M3'
+    id 'org.springframework.boot' version '4.0.0'
     id 'io.spring.dependency-management' version '1.1.7'
 
     id 'jacoco'
@@ -99,7 +99,7 @@ ext.vers = [
 ]
 
 /* ---- Import Spring Boot BOM explicitly (helps with milestone builds) ---- */
-def springBootVersion = '4.0.0-M3'
+def springBootVersion = '4.0.0'
 dependencyManagement {
     imports {
         mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
@@ -131,7 +131,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-batch'
-    implementation 'org.springframework.batch:spring-batch-core'
+//    implementation 'org.springframework.batch:spring-batch-core'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
@@ -178,8 +178,8 @@ dependencies {
 
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.boot:spring-boot-test'
-    testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
+//    testImplementation 'org.springframework.boot:spring-boot-test'
+//    testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
     testImplementation 'org.springframework.batch:spring-batch-test'
     testImplementation "com.squareup.okhttp3:mockwebserver:${vers.mockwebserver}"
     testImplementation "org.assertj:assertj-core:${vers.assertj}"

@@ -20,24 +20,34 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+//import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+//import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
+//import org.springframework.boot.test.autoconfigure.data.jpa.DataJpaTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@DataJpaTest(
+//@DataJpaTest(
+//        properties = {
+//                "spring.jpa.hibernate.ddl-auto=create-drop",
+//                "spring.flyway.enabled=true",
+//                "spring.jpa.properties.hibernate.connection.provider_disables_autocommit=false"
+//        }
+//)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.NONE,
         properties = {
                 "spring.jpa.hibernate.ddl-auto=create-drop",
                 "spring.flyway.enabled=true",
-                "spring.jpa.properties.hibernate.connection.provider_disables_autocommit=false"
+                "spring.jpa.properties.hibernate.connection.provider_disables_autocommit=false",
+                "spring.test.database.replace=none"
         }
 )
 @Testcontainers
-@AutoConfigureTestDatabase(replace = Replace.NONE)
+//@AutoConfigureTestDatabase(replace = Replace.NONE)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DisplayName("Queries As Of Repository tests")
 class QueriesAsOfRepositoryTest {
