@@ -1,4 +1,3 @@
-// src/test/java/uk/gov/hmcts/cp/cdk/repo/IngestionStatusViewRepositoryTest.java
 package uk.gov.hmcts.cp.cdk.repo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -10,59 +9,33 @@ import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-//import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-//import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
-//import org.springframework.boot.test.autoconfigure.data.jpa.DataJpaTest;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-//@DataJpaTest(
-//        properties = {
-//                "spring.jpa.hibernate.ddl-auto=create-drop",
-//                "spring.flyway.enabled=true",
-//                "spring.jpa.properties.hibernate.connection.provider_disables_autocommit=false"
-//        }
-//)
-
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.NONE,
-        properties = {
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.flyway.enabled=true",
-                "spring.jpa.properties.hibernate.connection.provider_disables_autocommit=false",
-                "spring.test.database.replace=none"
-        }
-)
+@DataJpaTest
 @Testcontainers
-//@AutoConfigureTestDatabase(replace = Replace.NONE)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DisplayName("Ingestion Status View Repository tests")
 @Import(IngestionStatusViewRepository.class)
 class IngestionStatusViewRepositoryTest {
 
     @Container
+    @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>("postgres:16-alpine")
                     .withDatabaseName("cdk")
                     .withUsername("postgres")
                     .withPassword("postgres");
-
-    static {
-        POSTGRES.start();
-    }
 
     @jakarta.annotation.Resource
     private IngestionStatusViewRepository repo;
@@ -74,18 +47,6 @@ class IngestionStatusViewRepositoryTest {
     private EntityManager em;
 
     private UUID caseId;
-
-    @DynamicPropertySource
-    static void dbProps(final DynamicPropertyRegistry r) {
-        r.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        r.add("spring.datasource.username", POSTGRES::getUsername);
-        r.add("spring.datasource.password", POSTGRES::getPassword);
-        r.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-        r.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
-        // belt-and-braces; harmless if not needed
-        r.add("spring.jpa.properties.hibernate.hbm2ddl.auto", () -> "create-drop");
-        r.add("spring.sql.init.mode", () -> "never");
-    }
 
     @BeforeEach
     void initViewAndData() {
@@ -144,20 +105,6 @@ class IngestionStatusViewRepositoryTest {
                 OffsetDateTime.parse("2025-05-01T12:05:00Z"),
                 OffsetDateTime.parse("2025-05-01T12:05:00Z")
         );
-    }
-
-    @AfterEach
-    void cleanup() {
-        // Clean view & table so each test starts fresh (drops view if exists; truncates table if exists)
-        jdbc.execute("DROP VIEW IF EXISTS v_case_ingestion_status");
-        jdbc.execute("""
-                    DO $$
-                    BEGIN
-                      IF to_regclass('public.case_documents') IS NOT NULL THEN
-                        TRUNCATE TABLE public.case_documents;
-                      END IF;
-                    END $$;
-                """);
     }
 
     @Test
