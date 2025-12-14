@@ -42,16 +42,12 @@ class QueriesAsOfRepositoryTest {
 
     @jakarta.annotation.Resource
     private QueriesAsOfRepository repo;
-
     @jakarta.annotation.Resource
     private QueryVersionRepository versionRepo;
-
     @jakarta.annotation.Resource
     private QueryRepository queryRepo;
-
     @PersistenceContext
     private EntityManager em;
-
     private UUID caseId;
     private UUID qid;
 
