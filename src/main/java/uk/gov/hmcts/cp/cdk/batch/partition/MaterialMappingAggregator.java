@@ -1,5 +1,6 @@
 package uk.gov.hmcts.cp.cdk.batch.partition;
 
+import static java.util.Objects.isNull;
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_CASE_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_RESULT_MATERIAL_ID;
@@ -41,7 +42,7 @@ public class MaterialMappingAggregator implements StepExecutionAggregator {
             final String materialIdStr = executionContext.getString(PARTITION_RESULT_MATERIAL_ID, null);
             final String materialName = executionContext.getString(PARTITION_RESULT_MATERIAL_NAME, null);
 
-            if (caseIdStr == null || materialIdStr == null || materialName == null) {
+            if (isNull(caseIdStr) || isNull(materialIdStr) || isNull(materialName)) {
                 log.warn("Skipping partition result due to missing data: caseId='{}', materialId='{}', name='{}'",
                         caseIdStr, materialIdStr, materialName);
                 continue;

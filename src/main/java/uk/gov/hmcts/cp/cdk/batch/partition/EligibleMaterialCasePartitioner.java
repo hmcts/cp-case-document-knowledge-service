@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
 public class EligibleMaterialCasePartitioner implements Partitioner {
 
     @Value("#{jobExecutionContext['" + CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY + "']}")
-    private Map<String, MaterialDocumentMapping> materialToCaseMap;
+    Map<String, MaterialDocumentMapping> materialToCaseMap;
 
     @Override
     public Map<String, ExecutionContext> partition(final int gridSize) {

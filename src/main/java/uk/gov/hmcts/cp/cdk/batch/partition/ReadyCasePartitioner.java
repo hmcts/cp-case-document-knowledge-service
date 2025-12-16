@@ -162,7 +162,7 @@ public class ReadyCasePartitioner implements Partitioner {
         return result;
     }
 
-    private record CaseStatusRow(
+    record CaseStatusRow(
             UUID caseId,
             UUID docId,
             UUID materialId,
@@ -170,7 +170,7 @@ public class ReadyCasePartitioner implements Partitioner {
     ) {
     }
 
-    private static final class CaseStatusRowMapper implements RowMapper<CaseStatusRow> {
+    static final class CaseStatusRowMapper implements RowMapper<CaseStatusRow> {
 
         @Override
         public CaseStatusRow mapRow(final ResultSet rs, final int rowNum) throws SQLException {
