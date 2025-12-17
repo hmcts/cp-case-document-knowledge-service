@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.partition.Partitioner;
-import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -162,7 +162,7 @@ public class ReadyCasePartitioner implements Partitioner {
         return result;
     }
 
-    private record CaseStatusRow(
+    record CaseStatusRow(
             UUID caseId,
             UUID docId,
             UUID materialId,
@@ -170,7 +170,7 @@ public class ReadyCasePartitioner implements Partitioner {
     ) {
     }
 
-    private static final class CaseStatusRowMapper implements RowMapper<CaseStatusRow> {
+    static final class CaseStatusRowMapper implements RowMapper<CaseStatusRow> {
 
         @Override
         public CaseStatusRow mapRow(final ResultSet rs, final int rowNum) throws SQLException {

@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DocumentIdResolver {
 
-    private static final String SQL_FIND_EXISTING_DOC = """
+    static final String SQL_FIND_EXISTING_DOC = """
             SELECT doc_id
               FROM case_documents
              WHERE case_id = :case_id

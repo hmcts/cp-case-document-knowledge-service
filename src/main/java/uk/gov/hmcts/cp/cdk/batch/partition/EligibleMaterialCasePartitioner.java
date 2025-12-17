@@ -15,7 +15,7 @@ import java.util.Map;
 
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.partition.Partitioner;
-import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
 public class EligibleMaterialCasePartitioner implements Partitioner {
 
     @Value("#{jobExecutionContext['" + CONTEXT_KEY_MATERIAL_TO_CASE_MAP_KEY + "']}")
-    private Map<String, MaterialDocumentMapping> materialToCaseMap;
+    Map<String, MaterialDocumentMapping> materialToCaseMap;
 
     @Override
     public Map<String, ExecutionContext> partition(final int gridSize) {

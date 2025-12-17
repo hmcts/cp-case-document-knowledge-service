@@ -31,7 +31,7 @@ import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.launch.JobOperator;
-import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.batch.core.launch.JobRestartException;
 import org.springframework.core.task.SyncTaskExecutor;
 
 @DisplayName("Ingestion Service tests (asynchronous start)")

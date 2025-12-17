@@ -31,8 +31,8 @@ import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.StepExecution;
-import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 
 /**
  * Tests for {@link ResolveMaterialForCaseTasklet}.
