@@ -9,10 +9,10 @@ plugins {
     id 'pmd'
     id 'maven-publish'
     id 'com.github.ben-manes.versions' version '0.53.0'
-    id 'org.cyclonedx.bom' version '3.0.1'
-    id 'au.com.dius.pact' version '4.6.17'
-    id 'com.gorylenko.gradle-git-properties' version '2.5.3'
-    id 'com.avast.gradle.docker-compose' version '0.17.19'
+    id 'org.cyclonedx.bom' version '3.1.0'
+    id 'au.com.dius.pact' version '4.6.19'
+    id 'com.gorylenko.gradle-git-properties' version '2.5.4'
+    id 'com.avast.gradle.docker-compose' version '0.17.20'
 }
 
 group = 'uk.gov.hmcts.cp'
