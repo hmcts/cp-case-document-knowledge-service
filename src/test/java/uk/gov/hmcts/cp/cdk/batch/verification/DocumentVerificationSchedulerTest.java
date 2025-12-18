@@ -28,6 +28,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.core.job.Job;
@@ -66,6 +68,8 @@ class DocumentVerificationSchedulerTest {
     private Job answerGenerationJob;
 
     private DocumentVerificationScheduler scheduler;
+    @Captor
+    private ArgumentCaptor<JobParameters> jobParamsCaptor;
 
     @BeforeEach
     void setup() {
@@ -131,6 +135,41 @@ class DocumentVerificationSchedulerTest {
         // Task should be marked SUCCEEDED
         assertThat(task.getStatus()).isEqualTo(DocumentVerificationStatus.SUCCEEDED);
         verify(documentVerificationTaskRepository).saveAndFlush(task);
+    }
+
+    @Test
+    void givenTaskSucceededForIngestion_shouldAnswerGenerationJobWithUniqueRunId() throws Exception {
+        when(verifySchedulerProperties.isEnabled()).thenReturn(true);
+        when(verifySchedulerProperties.getBatchSize()).thenReturn(10);
+
+        final DocumentVerificationTask task = new DocumentVerificationTask();
+        task.setDocId(randomUUID());
+        task.setCaseId(randomUUID());
+        task.setBlobName("test-blob");
+
+        final DocumentIngestionStatusReturnedSuccessfully body = new DocumentIngestionStatusReturnedSuccessfully();
+        body.setStatus(DocumentIngestionStatusReturnedSuccessfully.StatusEnum.INGESTION_SUCCESS);
+        body.setLastUpdated(OffsetDateTime.now());
+
+        when(documentVerificationQueueDao.claimBatch(anyString(), anyInt())).thenReturn(List.of(task));
+        when(documentIngestionStatusApi.documentStatus(anyString())).thenReturn(ResponseEntity.ok(body));
+
+        // Mock jobOperator
+        final JobExecution jobExecution = mock(JobExecution.class);
+        when(jobExecution.getId()).thenReturn(123L);
+        when(jobOperator.start(any(Job.class), jobParamsCaptor.capture())).thenReturn(jobExecution);
+
+        scheduler.pollPendingDocuments();
+
+        // Task should be marked SUCCEEDED
+        assertThat(task.getStatus()).isEqualTo(DocumentVerificationStatus.SUCCEEDED);
+        verify(documentVerificationTaskRepository).saveAndFlush(task);
+        assertThat(jobParamsCaptor.getValue().getLong("run.id")).isNotNull();
+        assertThat(jobParamsCaptor.getValue().getParameter("run.id").identifying()).isTrue();
+        assertThat(jobParamsCaptor.getValue().getString("triggerId")).isNotNull();
+        assertThat(jobParamsCaptor.getValue().getParameter("triggerId").identifying()).isTrue();
+        assertThat(jobParamsCaptor.getValue().getString("caseIds")).isNotNull();
+        assertThat(jobParamsCaptor.getValue().getParameter("caseIds").identifying()).isTrue();
     }
 
     @Test
