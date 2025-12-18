@@ -441,6 +441,7 @@ public class DocumentVerificationScheduler {
                 // IDENTIFYING parameters -> define the JobInstance
                 .addString("triggerId", triggerId, true)
                 .addString("caseIds", caseIdsParameter, true)
+                .addLong("run.id", System.currentTimeMillis(), true)
 
                 // NON-IDENTIFYING parameters -> metadata only
                 .addLong("ts", System.currentTimeMillis(), false)
