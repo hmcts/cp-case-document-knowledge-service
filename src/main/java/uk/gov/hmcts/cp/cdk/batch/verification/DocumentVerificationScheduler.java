@@ -1,5 +1,10 @@
 package uk.gov.hmcts.cp.cdk.batch.verification;
 
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.COURT_CENTRE_ID;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.CPPUID;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.DATE;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.ROOM_ID;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.RUN_ID;
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.FAILED;
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.SUCCEEDED;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
@@ -439,9 +444,9 @@ public class DocumentVerificationScheduler {
         );
         return new JobParametersBuilder()
                 // IDENTIFYING parameters -> define the JobInstance
+                .addLong(RUN_ID, System.currentTimeMillis(), true)
                 .addString("triggerId", triggerId, true)
                 .addString("caseIds", caseIdsParameter, true)
-                .addLong("run.id", System.currentTimeMillis(), true)
 
                 // NON-IDENTIFYING parameters -> metadata only
                 .addLong("ts", System.currentTimeMillis(), false)

@@ -77,7 +77,7 @@ class IngestionServiceTest {
         assertThat(p.getString("roomId")).isEqualTo("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         assertThat(p.getString("date")).isEqualTo("2025-10-01");
         assertThat(p.getString("cppuid")).isEqualTo("u-123");
-        assertThat(p.getLong("run")).isNotNull();
+        assertThat(p.getLong("run.id")).isNotNull();
         assertThat(p.getString("requestId")).isNotBlank();
 
         // response is immediate and contains a requestId (not executionId)
