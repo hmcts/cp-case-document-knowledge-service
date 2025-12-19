@@ -1,9 +1,5 @@
 package uk.gov.hmcts.cp.cdk.batch.verification;
 
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.COURT_CENTRE_ID;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.CPPUID;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.DATE;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.ROOM_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.RUN_ID;
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.FAILED;
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.SUCCEEDED;
