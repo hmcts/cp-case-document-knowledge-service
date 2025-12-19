@@ -31,11 +31,11 @@ public final class IngestionJobParams {
         final LocalDate date = Objects.requireNonNull(request.getDate(), "date must not be null");
 
         return new JobParametersBuilder()
-                .addString(COURT_CENTRE_ID, courtCentreId.toString())
-                .addString(ROOM_ID, roomId.toString())
-                .addString(DATE, date.toString())
+                .addLong(RUN_ID, clock.millis(), true)
+                .addString(COURT_CENTRE_ID, courtCentreId.toString(), true)
+                .addString(ROOM_ID, roomId.toString(), true)
+                .addString(DATE, date.toString(), true)
                 .addString(CPPUID, cppuid)
-                .addLong(RUN_ID, clock.millis())
                 .toJobParameters();
     }
 }
