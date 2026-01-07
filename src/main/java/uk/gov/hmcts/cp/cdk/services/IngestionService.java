@@ -10,9 +10,16 @@ import uk.gov.hmcts.cp.openapi.model.cdk.IngestionStatusResponse;
 import uk.gov.hmcts.cp.openapi.model.cdk.Scope;
 
 import java.time.Clock;
+import java.time.ZonedDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.taskmanager.domain.ExecutionInfo;
+import com.taskmanager.domain.ExecutionStatus;
+import com.taskmanager.service.ExecutionService;
+
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
@@ -35,7 +42,9 @@ public class IngestionService {
     private final IngestionStatusViewRepository repo;
     private final JobOperator jobOperator;
     private final Job caseIngestionJob;
-    private final TaskExecutor ingestionStarterExecutor; // injected executor
+    private final TaskExecutor ingestionStarterExecutor;
+
+    private final ExecutionService workflowExecutor;// injected executor
 
     @Transactional(readOnly = true)
     public IngestionStatusResponse getStatus(final UUID caseId) {
@@ -88,6 +97,48 @@ public class IngestionService {
         final IngestionProcessResponse response = new IngestionProcessResponse();
         response.setPhase(IngestionProcessPhase.STARTED);
         response.setMessage("Ingestion request accepted; job will start asynchronously (requestId=%s)".formatted(requestId));
+        return response;
+    }
+
+    // -------------------------
+    // New TaskManager method
+    // -------------------------
+    public IngestionProcessResponse startIngestionProcessThroughJobManager(final String cppuid,
+                                                                           final IngestionProcessRequest request) {
+        Objects.requireNonNull(request, "request must not be null");
+
+        final String requestId = UUID.randomUUID().toString();
+        log.info("starting startIngestionProcessThroughJobManager ");
+        // Build JSON job data
+        final JsonObject jobData = Json.createObjectBuilder()
+                .add("cppuid", cppuid)
+                .add("requestId", requestId)
+                .add("courtCentreId", request.getCourtCentreId().toString())
+                .add("roomId", request.getRoomId().toString())
+                .add("date", request.getDate().toString())
+                .build();
+
+        // Submit asynchronously via workflowExecutor
+        ingestionStarterExecutor.execute(() -> {
+            try {
+                ExecutionInfo executionInfo = ExecutionInfo.executionInfo()
+                        .withAssignedTaskName("FETCH_HEARINGS_CASES_TASK")
+                        .withAssignedTaskStartTime(ZonedDateTime.now())
+                        .withJobData(jobData)
+                        .withExecutionStatus(ExecutionStatus.STARTED)
+                        .build();
+
+
+                workflowExecutor.executeWith(executionInfo);
+                log.info("Case ingestion workflow started asynchronously via JobManager. requestId={}, cppuid={}", requestId, cppuid);
+            } catch (Exception e) {
+                log.error("Failed to start case ingestion workflow via JobManager. requestId={}, cppuid={}", requestId, cppuid, e);
+            }
+        });
+
+        final IngestionProcessResponse response = new IngestionProcessResponse();
+        response.setPhase(IngestionProcessPhase.STARTED);
+        response.setMessage("Ingestion workflow request accepted; task submitted via JobManager (requestId=%s)".formatted(requestId));
         return response;
     }
 }

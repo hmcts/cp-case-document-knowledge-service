@@ -2,8 +2,19 @@ package uk.gov.hmcts.cp.cdk;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.persistence.autoconfigure.EntityScan;
+import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
+@ComponentScan(basePackages = {
+        "uk.gov.hmcts.cp.cdk",            // your main service package
+        "com.taskmanager"              // task manager core packages
+
+})
+@EntityScan(basePackages = {
+        "uk.gov.hmcts.cp.cdk.domain",
+        "com.taskmanager.persistence.entity" // Job entity for TaskManager
+})
 @SuppressWarnings("HideUtilityClassConstructor")
 public class Application {
 

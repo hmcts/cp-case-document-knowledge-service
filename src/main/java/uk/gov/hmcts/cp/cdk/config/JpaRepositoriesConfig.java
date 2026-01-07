@@ -9,7 +9,9 @@ import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryVersionRepository;
 
+import com.taskmanager.persistence.repository.JobRepository;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FullyQualifiedAnnotationBeanNameGenerator;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /**
@@ -26,7 +28,9 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
         QueriesAsOfRepository.class,
         QueryDefinitionLatestRepository.class,
         QueryRepository.class,
-        QueryVersionRepository.class
-})
+        QueryVersionRepository.class,
+        JobRepository.class
+
+},nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class)
 public class JpaRepositoriesConfig {
 }

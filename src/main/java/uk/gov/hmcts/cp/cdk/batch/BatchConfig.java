@@ -139,6 +139,7 @@ public class BatchConfig {
     }
 
     @Bean
+    @Primary
     public ObjectMapper objectMapper() {
         final ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
