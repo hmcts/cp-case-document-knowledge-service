@@ -10,11 +10,11 @@ import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.safeGetCourtDocumen
 
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
+import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
+import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
+import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
+import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
-import com.taskmanager.domain.ExecutionInfo;
-import com.taskmanager.domain.ExecutionStatus;
-import com.taskmanager.service.task.ExecutableTask;
-import com.taskmanager.service.task.Task;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;

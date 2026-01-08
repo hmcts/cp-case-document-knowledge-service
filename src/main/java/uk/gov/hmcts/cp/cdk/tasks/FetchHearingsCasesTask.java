@@ -9,11 +9,11 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.ROOM_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_CASE_ID;
 
-import com.taskmanager.domain.ExecutionInfo;
-import com.taskmanager.domain.ExecutionStatus;
-import com.taskmanager.service.ExecutionService;
-import com.taskmanager.service.task.ExecutableTask;
-import com.taskmanager.service.task.Task;
+import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
+import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
+import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
+import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
+import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
 import edu.umd.cs.findbugs.annotations.Priority;
 import jakarta.json.Json;

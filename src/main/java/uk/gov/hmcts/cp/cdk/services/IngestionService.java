@@ -8,15 +8,15 @@ import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionStatusResponse;
 import uk.gov.hmcts.cp.openapi.model.cdk.Scope;
+import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
+import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
+import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 
 import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-import com.taskmanager.domain.ExecutionInfo;
-import com.taskmanager.domain.ExecutionStatus;
-import com.taskmanager.service.ExecutionService;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;

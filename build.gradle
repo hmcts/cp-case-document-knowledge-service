@@ -166,7 +166,7 @@ dependencies {
     implementation "com.azure:azure-identity:${vers.azureIdentity}"
 
     //jobManager
-    implementation "com.jobscheduler:task-manager-service:${vers.jobManager}"
+    implementation "uk.gov.hmcts.cp:task-manager-service:${vers.jobManager}"
 
 
     // Testcontainers (BOM)

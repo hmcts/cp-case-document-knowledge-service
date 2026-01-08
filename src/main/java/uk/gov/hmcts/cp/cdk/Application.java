@@ -8,12 +8,12 @@ import org.springframework.context.annotation.ComponentScan;
 @SpringBootApplication
 @ComponentScan(basePackages = {
         "uk.gov.hmcts.cp.cdk",            // your main service package
-        "com.taskmanager"              // task manager core packages
+        "uk.gov.hmcts.cp.taskmanager"              // task manager core packages
 
 })
 @EntityScan(basePackages = {
         "uk.gov.hmcts.cp.cdk.domain",
-        "com.taskmanager.persistence.entity" // Job entity for TaskManager
+        "uk.gov.hmcts.cp.taskmanager.persistence.entity" // Job entity for TaskManager
 })
 @SuppressWarnings("HideUtilityClassConstructor")
 public class Application {
