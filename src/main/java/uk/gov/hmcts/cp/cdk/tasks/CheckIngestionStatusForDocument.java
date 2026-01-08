@@ -8,10 +8,10 @@ import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully.StatusEnum;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 
-import com.taskmanager.domain.ExecutionInfo;
-import com.taskmanager.domain.ExecutionStatus;
-import com.taskmanager.service.task.ExecutableTask;
-import com.taskmanager.service.task.Task;
+import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
+import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
+import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
+import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
 import jakarta.json.JsonObject;
 import lombok.RequiredArgsConstructor;
