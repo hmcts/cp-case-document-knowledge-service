@@ -73,17 +73,11 @@ public class RetrieveFromMaterialAndUpload implements ExecutableTask {
             proceed = false;
         }
 
-        if (proceed && !jobData.getBoolean(CTX_MATERIAL_NEW_UPLOAD, false)) {
-            log.info("Skipping upload: existing docId={} reused for caseId={}, materialId={}, requestId={}",
-                    documentId, caseId, materialId, requestId);
-            proceed = false;
-        }
-
 
         try {
             if (proceed) {
                 final String downloadUrl = fetchDownloadUrl(materialId, userIdForExternalCalls, requestId);
-
+                log.info("downloadUrl generated :{} ", downloadUrl);
                 final DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern(uploadProperties.datePattern());
                 final String today = utcNow().format(dateFmt);
                 final String blobName = documentId + "_" + today + uploadProperties.fileExtension();
