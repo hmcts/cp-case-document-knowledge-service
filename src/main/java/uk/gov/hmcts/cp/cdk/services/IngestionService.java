@@ -118,8 +118,6 @@ public class IngestionService {
                 .add("date", request.getDate().toString())
                 .build();
 
-        // Submit asynchronously via workflowExecutor
-        ingestionStarterExecutor.execute(() -> {
             try {
                 ExecutionInfo executionInfo = ExecutionInfo.executionInfo()
                         .withAssignedTaskName("FETCH_HEARINGS_CASES_TASK")
@@ -128,13 +126,12 @@ public class IngestionService {
                         .withExecutionStatus(ExecutionStatus.STARTED)
                         .build();
 
-
                 workflowExecutor.executeWith(executionInfo);
-                log.info("Case ingestion workflow started asynchronously via JobManager. requestId={}, cppuid={}", requestId, cppuid);
+                log.info("Case ingestion workflow started via JobManager. requestId={}, cppuid={}", requestId, cppuid);
             } catch (Exception e) {
                 log.error("Failed to start case ingestion workflow via JobManager. requestId={}, cppuid={}", requestId, cppuid, e);
             }
-        });
+
 
         final IngestionProcessResponse response = new IngestionProcessResponse();
         response.setPhase(IngestionProcessPhase.STARTED);
