@@ -15,7 +15,6 @@ import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
 import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
-import edu.umd.cs.findbugs.annotations.Priority;
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
@@ -23,7 +22,6 @@ import jakarta.json.JsonObjectBuilder;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
@@ -39,8 +37,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Task("FETCH_HEARINGS_CASES_TASK")
-public class FetchHearingsCasesTask implements ExecutableTask {
+@Task("GET_CASES_FOR_HEARING")
+public class GetCasesForHearingTask implements ExecutableTask {
 
     private static final List<String> EMPTY_CASE_IDS = List.of();
 
@@ -99,7 +97,7 @@ public class FetchHearingsCasesTask implements ExecutableTask {
 
                      ExecutionInfo newTask = new ExecutionInfo(
                              singleCaseJobData.build(),
-                             "RESOLVE_MATERIAL_FOR_CASE_TASK",
+                             "CHECK_IDPC_AVAILABILITY",
                              ZonedDateTime.now(),
                              ExecutionStatus.STARTED,
                             false
@@ -111,7 +109,7 @@ public class FetchHearingsCasesTask implements ExecutableTask {
                    taskExecutionService.executeWith(newTask);
 
                     log.info(
-                            "Created RESOLVE_MATERIAL_FOR_CASE_TASK for caseId={} requestId={}",
+                            "Created CHECK_IDPC_AVAILABILITY for caseId={} requestId={}",
                             caseId, requestId
                     );
                 }

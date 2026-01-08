@@ -120,7 +120,7 @@ public class IngestionService {
 
             try {
                 ExecutionInfo executionInfo = ExecutionInfo.executionInfo()
-                        .withAssignedTaskName("FETCH_HEARINGS_CASES_TASK")
+                        .withAssignedTaskName("GET_CASES_FOR_HEARING")
                         .withAssignedTaskStartTime(ZonedDateTime.now())
                         .withJobData(jobData)
                         .withExecutionStatus(ExecutionStatus.STARTED)

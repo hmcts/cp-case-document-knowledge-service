@@ -31,8 +31,8 @@ import java.util.UUID;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Task("RESOLVE_MATERIAL_FOR_CASE_TASK")
-public class ResolveMaterialForCaseTask implements ExecutableTask {
+@Task("CHECK_IDPC_AVAILABILITY")
+public class CheckIdpcAvailabilityTask implements ExecutableTask {
 
     private final ProgressionClient progressionClient;
 
@@ -96,15 +96,17 @@ public class ResolveMaterialForCaseTask implements ExecutableTask {
                 });
             }
 
+
             return ExecutionInfo.executionInfo()
                     .from(executionInfo)
+                    .withAssignedTaskName("RETRIEVE_FROM_MATERIAL")
                     .withJobData(updatedJobData.build())
-                    .withExecutionStatus(ExecutionStatus.COMPLETED)
+                    .withExecutionStatus(ExecutionStatus.STARTED)
                     .build();
 
         } catch (Exception ex) {
             log.error(
-                    "RESOLVE_MATERIAL_FOR_CASE_TASK failed. caseId={}, requestId={}",
+                    "CHECK_IDPC_AVAILABILITY failed. caseId={}, requestId={}",
                     caseIdString, requestId, ex
             );
 
