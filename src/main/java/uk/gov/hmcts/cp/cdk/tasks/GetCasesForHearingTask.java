@@ -95,14 +95,12 @@ public class GetCasesForHearingTask implements ExecutableTask {
                     JsonObjectBuilder singleCaseJobData = Json.createObjectBuilder(updatedJobData.build());
                     singleCaseJobData.add(PARTITION_CASE_ID, caseId);
 
-                     ExecutionInfo newTask = new ExecutionInfo(
-                             singleCaseJobData.build(),
-                             "CHECK_IDPC_AVAILABILITY",
-                             ZonedDateTime.now(),
-                             ExecutionStatus.STARTED,
-                            false
-                             );
-
+                    ExecutionInfo newTask = ExecutionInfo.executionInfo()
+                            .from(executionInfo)
+                            .withAssignedTaskName("CHECK_IDPC_AVAILABILITY")
+                            .withJobData(singleCaseJobData.build())
+                            .withExecutionStatus(ExecutionStatus.STARTED)
+                            .build();
 
 
                     // Persist the new execution (fan-out)

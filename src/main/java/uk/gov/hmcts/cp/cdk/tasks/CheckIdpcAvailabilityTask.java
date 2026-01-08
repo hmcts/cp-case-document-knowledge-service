@@ -12,6 +12,7 @@ import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
+import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
 import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
@@ -35,6 +36,7 @@ import java.util.UUID;
 public class CheckIdpcAvailabilityTask implements ExecutableTask {
 
     private final ProgressionClient progressionClient;
+    private final ExecutionService taskExecutionService;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -86,6 +88,19 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                     updatedJobData.add(PARTITION_RESULT_MATERIAL_ID, info.materialId());
                     updatedJobData.add(PARTITION_RESULT_MATERIAL_NAME, info.materialName());
 
+                    JsonObjectBuilder singleCaseJobData = Json.createObjectBuilder(updatedJobData.build());
+
+                    ExecutionInfo newTask = ExecutionInfo.executionInfo()
+                            .from(executionInfo)
+                            .withAssignedTaskName("RETRIEVE_FROM_MATERIAL")
+                            .withJobData(singleCaseJobData.build())
+                            .withExecutionStatus(ExecutionStatus.STARTED)
+                            .build();
+
+
+                    // Persist the new execution (fan-out)
+                    taskExecutionService.executeWith(newTask);
+
                     log.debug(
                             "Resolved material for caseId {} → id={}, name={}, requestId={}",
                             caseIdString,
@@ -97,11 +112,11 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
             }
 
 
+
             return ExecutionInfo.executionInfo()
                     .from(executionInfo)
-                    .withAssignedTaskName("RETRIEVE_FROM_MATERIAL")
+                    .withExecutionStatus(ExecutionStatus.COMPLETED)
                     .withJobData(updatedJobData.build())
-                    .withExecutionStatus(ExecutionStatus.STARTED)
                     .build();
 
         } catch (Exception ex) {
