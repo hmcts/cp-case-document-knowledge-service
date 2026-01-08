@@ -1,6 +1,9 @@
 package uk.gov.hmcts.cp.cdk.tasks;
 
 import static org.springframework.util.StringUtils.hasText;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_CASE_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_RESULT_MATERIAL_ID;
@@ -43,7 +46,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
 
         final JsonObject jobData = executionInfo.getJobData();
 
-        final String caseIdString = jobData.getString(PARTITION_CASE_ID, null);
+        final String caseIdString = jobData.getString(CTX_CASE_ID_KEY, null);
         final String userId = jobData.getString(USERID_FOR_EXTERNAL_CALLS, null);
         final String requestId = jobData.getString("requestId", "unknown");
 
@@ -52,7 +55,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
         if (!hasText(caseIdString)) {
             log.warn(
                     "Missing '{}' in jobData → skipping. requestId={}",
-                    PARTITION_CASE_ID, requestId
+                    CTX_CASE_ID_KEY, requestId
             );
             proceed = false;
         }
@@ -80,25 +83,20 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
             JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
 
             if (proceed) {
-                log.info("calling progression for case");
                 final Optional<LatestMaterialInfo> latest =
                         safeGetCourtDocuments(progressionClient, caseIdUuidOptional.get(), userId);
                 log.info("finished progression for case");
                 latest.ifPresent(info -> {
-                    updatedJobData.add(PARTITION_RESULT_MATERIAL_ID, info.materialId());
-                    updatedJobData.add(PARTITION_RESULT_MATERIAL_NAME, info.materialName());
-
-                    JsonObjectBuilder singleCaseJobData = Json.createObjectBuilder(updatedJobData.build());
+                    updatedJobData.add(CTX_MATERIAL_ID_KEY, info.materialId());
+                    updatedJobData.add(CTX_MATERIAL_NAME, info.materialName());
 
                     ExecutionInfo newTask = ExecutionInfo.executionInfo()
                             .from(executionInfo)
                             .withAssignedTaskName("RETRIEVE_FROM_MATERIAL")
-                            .withJobData(singleCaseJobData.build())
+                            .withJobData(updatedJobData.build())
                             .withExecutionStatus(ExecutionStatus.STARTED)
                             .build();
 
-
-                    // Persist the new execution (fan-out)
                     taskExecutionService.executeWith(newTask);
 
                     log.debug(

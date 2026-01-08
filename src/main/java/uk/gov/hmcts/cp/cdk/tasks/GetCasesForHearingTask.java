@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.tasks;
 
 import static org.springframework.util.StringUtils.hasText;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_IDS_KEY;
+import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.COURT_CENTRE_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.CPPUID;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.DATE;
@@ -80,20 +81,22 @@ public class GetCasesForHearingTask implements ExecutableTask {
             }
 
             JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
+            /**
             if (hasText(cppuid)) {
                 updatedJobData.add(USERID_FOR_EXTERNAL_CALLS, cppuid);
             }
-
             JsonArrayBuilder caseIdsArray = Json.createArrayBuilder();
             caseIds.forEach(caseIdsArray::add);
             updatedJobData.add(CTX_CASE_IDS_KEY, caseIdsArray);
+             **/
 
             if (!caseIds.isEmpty()) {
 
                 // ==== LOOP TO CREATE TASK FOR EACH CASE ====
                 for (String caseId : caseIds) {
                     JsonObjectBuilder singleCaseJobData = Json.createObjectBuilder(updatedJobData.build());
-                    singleCaseJobData.add(PARTITION_CASE_ID, caseId);
+                    singleCaseJobData.add(USERID_FOR_EXTERNAL_CALLS, cppuid);
+                    singleCaseJobData.add(CTX_CASE_ID_KEY, caseId);
 
                     ExecutionInfo newTask = ExecutionInfo.executionInfo()
                             .from(executionInfo)
