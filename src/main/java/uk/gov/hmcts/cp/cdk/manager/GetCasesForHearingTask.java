@@ -1,14 +1,12 @@
-package uk.gov.hmcts.cp.cdk.tasks;
+package uk.gov.hmcts.cp.cdk.manager;
 
 import static org.springframework.util.StringUtils.hasText;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_IDS_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.COURT_CENTRE_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.CPPUID;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.DATE;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.ROOM_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
-import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_CASE_ID;
 
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
@@ -17,7 +15,6 @@ import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
 import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
 import jakarta.json.Json;
-import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 
