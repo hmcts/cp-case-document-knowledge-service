@@ -1,4 +1,4 @@
-package uk.gov.hmcts.cp.cdk.manager;
+package uk.gov.hmcts.cp.cdk.jobmanager;
 
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
