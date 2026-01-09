@@ -5,6 +5,7 @@ public final class BatchKeys {
     public static final String CTX_CASE_ID_KEY = "caseId";
     public static final String CTX_CASE_IDS_KEY = "caseIds";
     public static final String CTX_DOC_ID_KEY = "docId";
+    public static final String CTX_BLOB_NAME_KEY  ="blobName";
     public static final String CTX_MATERIAL_ID_KEY = "materialId";
     public static final String CTX_MATERIAL_NAME = "materialName";
     public static final String CTX_MATERIAL_NEW_UPLOAD = "materialNewUpload";

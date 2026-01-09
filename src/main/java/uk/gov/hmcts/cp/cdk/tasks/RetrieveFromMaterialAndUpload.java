@@ -13,12 +13,15 @@ import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
+import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
 import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
+import jakarta.json.JsonObjectBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -49,6 +52,7 @@ public class RetrieveFromMaterialAndUpload implements ExecutableTask {
     private final StorageService storageService;
     private final CaseDocumentRepository caseDocumentRepository;
     private final UploadProperties uploadProperties;
+    private final ExecutionService taskExecutionService;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -72,7 +76,6 @@ public class RetrieveFromMaterialAndUpload implements ExecutableTask {
         if (materialId == null || caseId == null || documentId == null) {
             proceed = false;
         }
-
 
         try {
             if (proceed) {
@@ -104,6 +107,20 @@ public class RetrieveFromMaterialAndUpload implements ExecutableTask {
 
                 log.info("Saved CaseDocument docId={}, caseId={}, materialId={}, sizeBytes={}, blobUri={}, requestId={}",
                         documentId, caseId, materialId, sizeBytes, blobUrl, requestId);
+
+                JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
+
+                updatedJobData.add(CTX_DOC_ID_KEY, documentId.toString());
+                updatedJobData.add(CTX_BLOB_NAME_KEY, blobName);
+
+                ExecutionInfo newTask = ExecutionInfo.executionInfo()
+                        .from(executionInfo)
+                        .withAssignedTaskName("CHECK_INGESTION_STATUS_FOR_DOCUMENT")
+                        .withJobData(updatedJobData.build())
+                        .withExecutionStatus(ExecutionStatus.STARTED)
+                        .build();
+
+                taskExecutionService.executeWith(newTask);
             }
 
             return ExecutionInfo.executionInfo()

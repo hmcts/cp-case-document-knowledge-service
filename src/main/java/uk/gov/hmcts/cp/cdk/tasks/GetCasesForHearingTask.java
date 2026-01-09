@@ -71,7 +71,6 @@ public class GetCasesForHearingTask implements ExecutableTask {
                     final List<HearingSummariesInfo> summaries =
                             hearingClient.getHearingsAndCases(courtCentreId, roomId, date, cppuid);
 
-
                     caseIds = summaries == null
                             ? EMPTY_CASE_IDS
                             : summaries.stream()
@@ -81,32 +80,28 @@ public class GetCasesForHearingTask implements ExecutableTask {
             }
 
             JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
-            /**
-            if (hasText(cppuid)) {
-                updatedJobData.add(USERID_FOR_EXTERNAL_CALLS, cppuid);
-            }
-            JsonArrayBuilder caseIdsArray = Json.createArrayBuilder();
-            caseIds.forEach(caseIdsArray::add);
-            updatedJobData.add(CTX_CASE_IDS_KEY, caseIdsArray);
-             **/
-
             if (!caseIds.isEmpty()) {
-
-                // ==== LOOP TO CREATE TASK FOR EACH CASE ====
                 for (String caseId : caseIds) {
                     JsonObjectBuilder singleCaseJobData = Json.createObjectBuilder(updatedJobData.build());
                     singleCaseJobData.add(USERID_FOR_EXTERNAL_CALLS, cppuid);
                     singleCaseJobData.add(CTX_CASE_ID_KEY, caseId);
-
+                /**
                     ExecutionInfo newTask = ExecutionInfo.executionInfo()
                             .from(executionInfo)
                             .withAssignedTaskName("CHECK_IDPC_AVAILABILITY")
                             .withJobData(singleCaseJobData.build())
                             .withExecutionStatus(ExecutionStatus.STARTED)
                             .build();
+                 **/
 
+                    ExecutionInfo newTask = new ExecutionInfo(
+                            singleCaseJobData.build(),
+                            "CHECK_IDPC_AVAILABILITY",
+                            ZonedDateTime.now(),
+                            ExecutionStatus.STARTED,
+                            false
+                    );
 
-                    // Persist the new execution (fan-out)
                    taskExecutionService.executeWith(newTask);
 
                     log.info(

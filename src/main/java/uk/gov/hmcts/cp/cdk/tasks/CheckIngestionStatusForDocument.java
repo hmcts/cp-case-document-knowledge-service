@@ -45,13 +45,13 @@ public class CheckIngestionStatusForDocument implements ExecutableTask {
             return failNoRetry(executionInfo);
         }
 
-        log.debug("Polling ingestion status for identifier='{}', docId={}", blobName, documentId);
+        log.info("Polling ingestion status for identifier='{}', docId={}", blobName, documentId);
 
         final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> response =
                 documentIngestionStatusApi.documentStatus(blobName);
 
         if (response == null || !response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-            log.debug("Status not available yet for identifier='{}' → retrying", blobName);
+            log.info("Status not available yet for identifier='{}' → retrying", blobName);
             return retry(executionInfo);
         }
 
