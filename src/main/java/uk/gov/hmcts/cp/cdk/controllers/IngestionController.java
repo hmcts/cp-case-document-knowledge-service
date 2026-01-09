@@ -1,7 +1,9 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
+import uk.gov.hmcts.cp.cdk.batch.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.services.IngestionService;
+import uk.gov.hmcts.cp.cdk.services.JobManagerService;
 import uk.gov.hmcts.cp.cdk.util.RequestUtils;
 import uk.gov.hmcts.cp.openapi.api.cdk.IngestionApi;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
@@ -32,7 +34,9 @@ public class IngestionController implements IngestionApi {
             new MediaType("application", "vnd.casedocumentknowledge-service.ingestion-process+json");
 
     private final IngestionService service;
+    private final JobManagerService jobManagerService;
     private final CQRSClientProperties cqrsClientProperties;
+    private final IngestionProperties ingestionProperties;
 
     @Override
     public ResponseEntity<IngestionStatusResponse> getIngestionStatus(final UUID caseId) {
@@ -48,10 +52,19 @@ public class IngestionController implements IngestionApi {
         final String headerName = cqrsClientProperties.headers().cjsCppuid();
         final String cppuid = RequestUtils.requireHeader(headerName);
 
-        log.info("startIngestionProcess {}={}, payloadCaseId={}", headerName, cppuid,
-                ingestionProcessRequest != null ? ingestionProcessRequest : null);
+        final IngestionProcessResponse resp;
 
-        final IngestionProcessResponse resp = service.startIngestionProcessThroughJobManager(cppuid, ingestionProcessRequest);
+        if (ingestionProperties.getFeature().isUseJobManager()) {
+            log.info("startIngestionProcess through JobManager {}={}, payloadCaseId={}", headerName, cppuid,
+                    ingestionProcessRequest);
+            resp = jobManagerService.startIngestionProcessThroughJobManager(cppuid, ingestionProcessRequest);
+        } else {
+            log.info("startIngestionProcess through existing Spring Batch {}={}, payloadCaseId={}", headerName, cppuid,
+                    ingestionProcessRequest);
+            resp = service.startIngestionProcess(cppuid, ingestionProcessRequest);
+        }
+
+
         return ResponseEntity.status(HttpStatus.ACCEPTED).contentType(VND_INGESTION).body(resp);
     }
 }

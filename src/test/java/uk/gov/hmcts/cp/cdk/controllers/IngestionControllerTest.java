@@ -14,9 +14,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import uk.gov.hmcts.cp.cdk.batch.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.controllers.exception.IngestionExceptionHandler;
 import uk.gov.hmcts.cp.cdk.services.IngestionService;
+import uk.gov.hmcts.cp.cdk.services.JobManagerService;
 import uk.gov.hmcts.cp.openapi.model.cdk.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
@@ -44,12 +46,13 @@ class IngestionControllerTest {
     private static final String HEADER_NAME = "CJSCPPUID";
     private static final String HEADER_VALUE = "u-123";
 
-    private MockMvc mvc(final IngestionService service) {
+    private MockMvc mvc(final IngestionService service, final JobManagerService jobService) {
         final CQRSClientProperties props = mock(CQRSClientProperties.class, Mockito.RETURNS_DEEP_STUBS);
+        final IngestionProperties ingestionProps = mock(IngestionProperties.class, Mockito.RETURNS_DEEP_STUBS);
         when(props.headers().cjsCppuid()).thenReturn(HEADER_NAME);
 
         return MockMvcBuilders
-                .standaloneSetup(new IngestionController(service, props))
+                .standaloneSetup(new IngestionController(service, jobService,props,ingestionProps))
                 .setControllerAdvice(new IngestionExceptionHandler())
                 .build();
     }
@@ -58,10 +61,11 @@ class IngestionControllerTest {
     @DisplayName("Get Ingestion Status returns payload")
     void getIngestionStatus_returns_payload() throws Exception {
         final IngestionService service = mock(IngestionService.class);
-
+        final JobManagerService jobService = mock(JobManagerService.class);
+        final IngestionProperties ingestionProps = mock(IngestionProperties.class, Mockito.RETURNS_DEEP_STUBS);
         final CQRSClientProperties props = mock(CQRSClientProperties.class, Mockito.RETURNS_DEEP_STUBS);
         when(props.headers().cjsCppuid()).thenReturn(HEADER_NAME);
-        final IngestionController controller = new IngestionController(service, props);
+        final IngestionController controller = new IngestionController(service, jobService,props,ingestionProps);
 
         final MockMvc mvc = MockMvcBuilders
                 .standaloneSetup(controller)
@@ -90,7 +94,8 @@ class IngestionControllerTest {
     @DisplayName("POST /ingestions/start returns 202 with STARTED payload and requestId")
     void start_success() throws Exception {
         IngestionService service = mock(IngestionService.class);
-        MockMvc mvc = mvc(service);
+        final JobManagerService jobService = mock(JobManagerService.class);
+        MockMvc mvc = mvc(service,jobService);
 
         IngestionProcessResponse response = new IngestionProcessResponse();
         response.setPhase(IngestionProcessPhase.STARTED);
@@ -121,7 +126,8 @@ class IngestionControllerTest {
     @DisplayName("ResponseStatusException NOT_FOUND -> 404 vendor error")
     void start_notFound_404() throws Exception {
         IngestionService service = mock(IngestionService.class);
-        MockMvc mvc = mvc(service);
+        JobManagerService jobService = mock(JobManagerService.class);
+        MockMvc mvc = mvc(service,jobService);
 
         when(service.startIngestionProcess(anyString(), any(IngestionProcessRequest.class)))
                 .thenThrow(new ResponseStatusException(NOT_FOUND, "caseIngestionJob"));
@@ -147,7 +153,8 @@ class IngestionControllerTest {
     @DisplayName("ResponseStatusException BAD_REQUEST -> 400 vendor error")
     void start_invalidParams_400() throws Exception {
         IngestionService service = mock(IngestionService.class);
-        MockMvc mvc = mvc(service);
+        JobManagerService jobService = mock(JobManagerService.class);
+        MockMvc mvc = mvc(service,jobService);
 
         when(service.startIngestionProcess(anyString(), any(IngestionProcessRequest.class)))
                 .thenThrow(new ResponseStatusException(BAD_REQUEST, "invalid parameters"));
@@ -173,7 +180,8 @@ class IngestionControllerTest {
     @DisplayName("ResponseStatusException CONFLICT -> 409 vendor error")
     void start_conflict_409() throws Exception {
         IngestionService service = mock(IngestionService.class);
-        MockMvc mvc = mvc(service);
+        JobManagerService jobService = mock(JobManagerService.class);
+        MockMvc mvc = mvc(service,jobService);
 
         when(service.startIngestionProcess(anyString(), any(IngestionProcessRequest.class)))
                 .thenThrow(new ResponseStatusException(CONFLICT, "already running"));

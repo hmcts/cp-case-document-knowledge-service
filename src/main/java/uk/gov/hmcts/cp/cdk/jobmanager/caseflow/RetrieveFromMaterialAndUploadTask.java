@@ -1,4 +1,4 @@
-package uk.gov.hmcts.cp.cdk.jobmanager;
+package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.*;
 import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.parseUuidOrNull;
@@ -36,7 +36,7 @@ import java.util.UUID;
 @Component
 @RequiredArgsConstructor
 @Task("RETRIEVE_FROM_MATERIAL")
-public class RetrieveFromMaterialAndUpload implements ExecutableTask {
+public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
 
     private static final String META_CASE_ID = "case_id";
     private static final String META_MATERIAL_ID = "material_id";

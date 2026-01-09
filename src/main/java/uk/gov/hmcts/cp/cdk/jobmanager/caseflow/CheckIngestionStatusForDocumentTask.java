@@ -1,4 +1,4 @@
-package uk.gov.hmcts.cp.cdk.jobmanager;
+package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
@@ -27,7 +27,7 @@ import java.util.UUID;
 @Component
 @RequiredArgsConstructor
 @Task("CHECK_INGESTION_STATUS_FOR_DOCUMENT")
-public class CheckIngestionStatusForDocument implements ExecutableTask {
+public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
 
     private final DocumentIngestionStatusApi documentIngestionStatusApi;
     private final CaseDocumentRepository caseDocumentRepository;

@@ -1,4 +1,4 @@
-package uk.gov.hmcts.cp.cdk.jobmanager;
+package uk.gov.hmcts.cp.cdk.jobmanager.hearing;
 
 import static org.springframework.util.StringUtils.hasText;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_ID_KEY;

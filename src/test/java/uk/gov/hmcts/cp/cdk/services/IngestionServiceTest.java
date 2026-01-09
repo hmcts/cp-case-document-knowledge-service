@@ -20,7 +20,6 @@ import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
-import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,8 +59,7 @@ class IngestionServiceTest {
 
         // Use a synchronous executor so the async Runnable executes immediately in the test thread
         final var syncExecutor = new SyncTaskExecutor();
-        ExecutionService workflowExecutor = mock(ExecutionService.class);
-        final IngestionService svc = new IngestionService(repo, operator, job, syncExecutor,workflowExecutor);
+        final IngestionService svc = new IngestionService(repo, operator, job, syncExecutor);
 
         final IngestionProcessRequest req = new IngestionProcessRequest();
         req.setCourtCentreId(UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
@@ -92,8 +90,7 @@ class IngestionServiceTest {
     void doNothing_whenJobExecutionThrowsException() throws Exception {
         // given
         final String cppuid = "u-123";
-        ExecutionService workflowExecutor = mock(ExecutionService.class);
-        final IngestionService svc = new IngestionService(repo, operator, job, new SyncTaskExecutor(),workflowExecutor);
+        final IngestionService svc = new IngestionService(repo, operator, job, new SyncTaskExecutor());
 
         final IngestionProcessRequest req = new IngestionProcessRequest();
         req.setCourtCentreId(UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
@@ -112,8 +109,7 @@ class IngestionServiceTest {
     @Test
     @DisplayName("getStatus valid row found for the caseId")
     void getStatus() {
-        ExecutionService workflowExecutor = mock(ExecutionService.class);
-        final IngestionService service = new IngestionService(repo, operator, job, new SyncTaskExecutor(),workflowExecutor);
+        final IngestionService service = new IngestionService(repo, operator, job, new SyncTaskExecutor());
         final UUID caseId = UUID.randomUUID();
         final OffsetDateTime lastUpdated = OffsetDateTime.now();
 
@@ -135,8 +131,8 @@ class IngestionServiceTest {
         final JobOperator operator = mock(JobOperator.class);
         final Job job = mock(Job.class);
         final IngestionStatusViewRepository repo = mock(IngestionStatusViewRepository.class);
-        ExecutionService workflowExecutor = mock(ExecutionService.class);
-        final IngestionService service = new IngestionService(repo, operator, job, new SyncTaskExecutor(),workflowExecutor);
+
+        final IngestionService service = new IngestionService(repo, operator, job, new SyncTaskExecutor());
         final UUID caseId = UUID.randomUUID();
         final OffsetDateTime lastUpdated = OffsetDateTime.now();
 
