@@ -16,6 +16,7 @@ import jakarta.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GET_CASES_FOR_HEARING;
 
 @Service
 @RequiredArgsConstructor
@@ -41,7 +42,7 @@ public class JobManagerService {
 
         try {
             ExecutionInfo executionInfo = ExecutionInfo.executionInfo()
-                    .withAssignedTaskName("GET_CASES_FOR_HEARING")
+                    .withAssignedTaskName(GET_CASES_FOR_HEARING)
                     .withAssignedTaskStartTime(ZonedDateTime.now())
                     .withJobData(jobData)
                     .withExecutionStatus(ExecutionStatus.STARTED)

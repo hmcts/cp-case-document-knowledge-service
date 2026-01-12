@@ -27,15 +27,17 @@ import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
 import uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils;
 
 import java.time.LocalDate;
-import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_CASE_ELIGIBILITY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GET_CASES_FOR_HEARING;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Task("GET_CASES_FOR_HEARING")
+@Task(GET_CASES_FOR_HEARING)
 public class GetCasesForHearingTask implements ExecutableTask {
 
     private static final List<String> EMPTY_CASE_IDS = List.of();
@@ -76,28 +78,20 @@ public class GetCasesForHearingTask implements ExecutableTask {
                 }
             }
 
-            JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
+
             if (!caseIds.isEmpty()) {
                 for (String caseId : caseIds) {
-                    JsonObjectBuilder singleCaseJobData = Json.createObjectBuilder(updatedJobData.build());
+                    JsonObjectBuilder singleCaseJobData = Json.createObjectBuilder(jobData);
                     singleCaseJobData.add(USERID_FOR_EXTERNAL_CALLS, cppuid);
                     singleCaseJobData.add(CTX_CASE_ID_KEY, caseId);
-                /**
+
                     ExecutionInfo newTask = ExecutionInfo.executionInfo()
                             .from(executionInfo)
-                            .withAssignedTaskName("CHECK_IDPC_AVAILABILITY")
+                            .withAssignedTaskName(CHECK_CASE_ELIGIBILITY)
                             .withJobData(singleCaseJobData.build())
                             .withExecutionStatus(ExecutionStatus.STARTED)
                             .build();
-                 **/
 
-                    ExecutionInfo newTask = new ExecutionInfo(
-                            singleCaseJobData.build(),
-                            "CHECK_IDPC_AVAILABILITY",
-                            ZonedDateTime.now(),
-                            ExecutionStatus.STARTED,
-                            false
-                    );
 
                    taskExecutionService.executeWith(newTask);
 
@@ -111,11 +105,9 @@ public class GetCasesForHearingTask implements ExecutableTask {
                 return ExecutionInfo.executionInfo()
                         .from(executionInfo)
                         .withExecutionStatus(ExecutionStatus.COMPLETED)
-                        .withJobData(updatedJobData.build())
                         .build();
             }
 
-            // No cases → finish
             log.info(
                     "No cases found. FETCH_HEARINGS_CASES_TASK completed. requestId={}",
                     requestId
@@ -123,7 +115,6 @@ public class GetCasesForHearingTask implements ExecutableTask {
 
             return ExecutionInfo.executionInfo()
                     .from(executionInfo)
-                    .withJobData(updatedJobData.build())
                     .withExecutionStatus(ExecutionStatus.COMPLETED)
                     .build();
 

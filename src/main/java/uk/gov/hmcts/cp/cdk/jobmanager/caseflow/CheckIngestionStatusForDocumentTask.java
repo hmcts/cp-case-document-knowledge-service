@@ -22,11 +22,12 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Task("CHECK_INGESTION_STATUS_FOR_DOCUMENT")
+@Task(CHECK_INGESTION_STATUS_FOR_DOCUMENT)
 public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
 
     private final DocumentIngestionStatusApi documentIngestionStatusApi;

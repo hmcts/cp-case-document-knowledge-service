@@ -30,11 +30,13 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Task("CHECK_IDPC_AVAILABILITY")
+@Task(CHECK_IDPC_AVAILABILITY)
 public class CheckIdpcAvailabilityTask implements ExecutableTask {
 
     private final ProgressionClient progressionClient;
@@ -87,7 +89,6 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
             if (proceed) {
                 final Optional<LatestMaterialInfo> latest =
                         safeGetCourtDocuments(progressionClient, caseIdUuidOptional.get(), userId);
-                log.info("finished progression for case");
                 latest.ifPresent(info -> {
                     updatedJobData.add(CTX_MATERIAL_ID_KEY, info.materialId());
                     updatedJobData.add(CTX_MATERIAL_NAME, info.materialName());
@@ -111,7 +112,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
 
                         ExecutionInfo newTask = ExecutionInfo.executionInfo()
                                 .from(executionInfo)
-                                .withAssignedTaskName("RETRIEVE_FROM_MATERIAL")
+                                .withAssignedTaskName(RETRIEVE_FROM_MATERIAL)
                                 .withJobData(updatedJobData.build())
                                 .withExecutionStatus(ExecutionStatus.STARTED)
                                 .build();
@@ -152,7 +153,6 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        // mirrors RetryingTasklet behaviour
         return Optional.of(List.of(10L, 30L, 60L));
     }
 }

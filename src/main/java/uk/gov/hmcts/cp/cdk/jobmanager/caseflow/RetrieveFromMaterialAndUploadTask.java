@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.*;
 import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.parseUuidOrNull;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
@@ -31,11 +32,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Task("RETRIEVE_FROM_MATERIAL")
+@Task(RETRIEVE_FROM_MATERIAL)
 public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
 
     private static final String META_CASE_ID = "case_id";
@@ -115,7 +117,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
 
                 ExecutionInfo newTask = ExecutionInfo.executionInfo()
                         .from(executionInfo)
-                        .withAssignedTaskName("CHECK_INGESTION_STATUS_FOR_DOCUMENT")
+                        .withAssignedTaskName(CHECK_INGESTION_STATUS_FOR_DOCUMENT)
                         .withJobData(updatedJobData.build())
                         .withExecutionStatus(ExecutionStatus.STARTED)
                         .build();
