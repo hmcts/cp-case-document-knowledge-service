@@ -3,11 +3,13 @@ package uk.gov.hmcts.cp.cdk.batch.clients.hearing;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import uk.gov.hmcts.cp.cdk.batch.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
 import uk.gov.hmcts.cp.cdk.batch.clients.hearing.mapper.HearingDtoMapper;
@@ -18,6 +20,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -55,7 +58,8 @@ class HearingClientImplTest {
                 "application/vnd.hearing.get.hearings+json",
                 "/hearing-query-api/query/api/rest/hearing/hearings"
         );
-        final var client = new HearingClientImpl(restClient, rootProps, hearingCfg, new HearingDtoMapper());
+        final IngestionProperties ingestionProps = mock(IngestionProperties.class, Mockito.RETURNS_DEEP_STUBS);
+        final var client = new HearingClientImpl(restClient, rootProps, hearingCfg, new HearingDtoMapper(ingestionProps));
 
         final String headerName = rootProps.headers().cjsCppuid(); // <-- use configured name
         final String responseBody = """
@@ -103,7 +107,8 @@ class HearingClientImplTest {
                 "application/vnd.hearing.get.hearings+json",
                 "/hearing-query-api/query/api/rest/hearing/hearings"
         );
-        final var client = new HearingClientImpl(restClient, rootProps, hearingCfg, new HearingDtoMapper());
+        final IngestionProperties ingestionProps = mock(IngestionProperties.class, Mockito.RETURNS_DEEP_STUBS);
+        final var client = new HearingClientImpl(restClient, rootProps, hearingCfg, new HearingDtoMapper(ingestionProps));
 
         final String headerName = rootProps.headers().cjsCppuid(); // <-- use configured name
 
@@ -135,7 +140,8 @@ class HearingClientImplTest {
                 "application/vnd.hearing.get.hearings+json",
                 "/hearing-query-api/query/api/rest/hearing/hearings"
         );
-        final var client = new HearingClientImpl(restClient, rootProps, hearingCfg, new HearingDtoMapper());
+        final IngestionProperties ingestionProps = mock(IngestionProperties.class, Mockito.RETURNS_DEEP_STUBS);
+        final var client = new HearingClientImpl(restClient, rootProps, hearingCfg, new HearingDtoMapper(ingestionProps));
 
         final String headerName = rootProps.headers().cjsCppuid();
 
