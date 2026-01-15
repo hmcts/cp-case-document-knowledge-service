@@ -1,5 +1,7 @@
 package uk.gov.hmcts.cp.cdk.services;
 
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GET_CASES_FOR_HEARING;
+
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
@@ -7,6 +9,7 @@ import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
 import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 
+import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.Objects;
 import java.util.UUID;
@@ -16,18 +19,17 @@ import jakarta.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GET_CASES_FOR_HEARING;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class JobManagerService {
+public class JobManagerService implements IngestionProcessor {
 
+    private final ExecutionService executor;
 
-    private final ExecutionService workflowExecutor;
-
-    public IngestionProcessResponse startIngestionProcessThroughJobManager(final String cppuid,
-                                                                           final IngestionProcessRequest request) {
+    @Override
+    public IngestionProcessResponse startIngestionProcess(final String cppuid,
+                                                          final IngestionProcessRequest request) {
         Objects.requireNonNull(request, "request must not be null");
 
         final String requestId = UUID.randomUUID().toString();
@@ -40,6 +42,9 @@ public class JobManagerService {
                 .add("date", request.getDate().toString())
                 .build();
 
+        final IngestionProcessResponse response = new IngestionProcessResponse();
+        response.setLastUpdated(OffsetDateTime.now());
+
         try {
             ExecutionInfo executionInfo = ExecutionInfo.executionInfo()
                     .withAssignedTaskName(GET_CASES_FOR_HEARING)
@@ -48,16 +53,24 @@ public class JobManagerService {
                     .withExecutionStatus(ExecutionStatus.STARTED)
                     .build();
 
-            workflowExecutor.executeWith(executionInfo);
-            log.info("Case ingestion workflow started via JobManager. requestId={}, cppuid={}", requestId, cppuid);
+            executor.executeWith(executionInfo);
+            log.info("Case ingestion process started via JobManager. requestId={}, cppuid={}", requestId, cppuid);
+
+            response.setPhase(IngestionProcessPhase.STARTED);
+            response.setMessage(
+                    "Ingestion workflow request accepted; task submitted via JobManager (requestId=%s)".formatted(requestId)
+            );
+
         } catch (Exception e) {
             log.error("Failed to start case ingestion workflow via JobManager. requestId={}, cppuid={}", requestId, cppuid, e);
+
+            response.setPhase(IngestionProcessPhase.FAILED);
+            response.setMessage(
+                    "Failed to submit ingestion workflow via JobManager (requestId=%s): %s"
+                            .formatted(requestId, e.getMessage())
+            );
         }
 
-
-        final IngestionProcessResponse response = new IngestionProcessResponse();
-        response.setPhase(IngestionProcessPhase.STARTED);
-        response.setMessage("Ingestion workflow request accepted; task submitted via JobManager (requestId=%s)".formatted(requestId));
         return response;
     }
 }

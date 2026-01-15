@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import uk.gov.hmcts.cp.cdk.batch.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.controllers.exception.IngestionExceptionHandler;
+import uk.gov.hmcts.cp.cdk.services.IngestionProcessor;
 import uk.gov.hmcts.cp.cdk.services.IngestionService;
 import uk.gov.hmcts.cp.cdk.services.JobManagerService;
 import uk.gov.hmcts.cp.openapi.model.cdk.DocumentIngestionPhase;
@@ -49,10 +50,11 @@ class IngestionControllerTest {
     private MockMvc mvc(final IngestionService service, final JobManagerService jobService) {
         final CQRSClientProperties props = mock(CQRSClientProperties.class, Mockito.RETURNS_DEEP_STUBS);
         final IngestionProperties ingestionProps = mock(IngestionProperties.class, Mockito.RETURNS_DEEP_STUBS);
+        final IngestionProcessor ingestionProcessor = mock(IngestionProcessor.class, Mockito.RETURNS_DEEP_STUBS);
         when(props.headers().cjsCppuid()).thenReturn(HEADER_NAME);
 
         return MockMvcBuilders
-                .standaloneSetup(new IngestionController(service, jobService,props,ingestionProps))
+                .standaloneSetup(new IngestionController(service, ingestionProcessor,props))
                 .setControllerAdvice(new IngestionExceptionHandler())
                 .build();
     }
@@ -63,9 +65,10 @@ class IngestionControllerTest {
         final IngestionService service = mock(IngestionService.class);
         final JobManagerService jobService = mock(JobManagerService.class);
         final IngestionProperties ingestionProps = mock(IngestionProperties.class, Mockito.RETURNS_DEEP_STUBS);
+        final IngestionProcessor ingestionProcessor = mock(IngestionProcessor.class, Mockito.RETURNS_DEEP_STUBS);
         final CQRSClientProperties props = mock(CQRSClientProperties.class, Mockito.RETURNS_DEEP_STUBS);
         when(props.headers().cjsCppuid()).thenReturn(HEADER_NAME);
-        final IngestionController controller = new IngestionController(service, jobService,props,ingestionProps);
+        final IngestionController controller = new IngestionController(service, ingestionProcessor,props);
 
         final MockMvc mvc = MockMvcBuilders
                 .standaloneSetup(controller)

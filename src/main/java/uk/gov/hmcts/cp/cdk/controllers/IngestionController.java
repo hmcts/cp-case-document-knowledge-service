@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.controllers;
 
 import uk.gov.hmcts.cp.cdk.batch.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
+import uk.gov.hmcts.cp.cdk.services.IngestionProcessor;
 import uk.gov.hmcts.cp.cdk.services.IngestionService;
 import uk.gov.hmcts.cp.cdk.services.JobManagerService;
 import uk.gov.hmcts.cp.cdk.util.RequestUtils;
@@ -34,9 +35,9 @@ public class IngestionController implements IngestionApi {
             new MediaType("application", "vnd.casedocumentknowledge-service.ingestion-process+json");
 
     private final IngestionService service;
-    private final JobManagerService jobManagerService;
+    private final IngestionProcessor ingestionProcessor;
     private final CQRSClientProperties cqrsClientProperties;
-    private final IngestionProperties ingestionProperties;
+
 
     @Override
     public ResponseEntity<IngestionStatusResponse> getIngestionStatus(final UUID caseId) {
@@ -52,18 +53,7 @@ public class IngestionController implements IngestionApi {
         final String headerName = cqrsClientProperties.headers().cjsCppuid();
         final String cppuid = RequestUtils.requireHeader(headerName);
 
-        final IngestionProcessResponse resp;
-
-        if (ingestionProperties.getFeature().isUseJobManager()) {
-            log.info("startIngestionProcess through JobManager {}={}, payloadCaseId={}", headerName, cppuid,
-                    ingestionProcessRequest);
-            resp = jobManagerService.startIngestionProcessThroughJobManager(cppuid, ingestionProcessRequest);
-        } else {
-            log.info("startIngestionProcess through existing Spring Batch {}={}, payloadCaseId={}", headerName, cppuid,
-                    ingestionProcessRequest);
-            resp = service.startIngestionProcess(cppuid, ingestionProcessRequest);
-        }
-
+        IngestionProcessResponse resp = ingestionProcessor.startIngestionProcess(cppuid, ingestionProcessRequest);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED).contentType(VND_INGESTION).body(resp);
     }
