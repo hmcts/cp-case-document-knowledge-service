@@ -43,8 +43,8 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
         final String blobName = jobData.getString("blobName", null);
 
         if (documentId == null || blobName == null) {
-            log.error("VERIFY_DOCUMENT_INGESTION_TASK missing required data docId={} blobName={}", documentId, blobName);
-            return failNoRetry(executionInfo);
+            log.error("{} missing required data docId={} blobName={}", CHECK_INGESTION_STATUS_FOR_DOCUMENT,documentId, blobName);
+            return complete(executionInfo);
         }
 
         log.info("Polling ingestion status for identifier='{}', docId={}", blobName, documentId);
@@ -72,7 +72,6 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
             return complete(executionInfo);
         }
 
-        // If status is anything other than INGESTED, keep retrying
         log.debug("Ingestion status not complete for identifier='{}': {} → retrying", blobName, status);
         return retry(executionInfo);
     }
@@ -82,7 +81,6 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
         return Optional.of(List.of(5L, 10L, 30L, 60L, 120L));
     }
 
-    // --------------------------- helper methods ---------------------------
 
     private void updateIngestionPhase(final UUID documentId, final DocumentIngestionPhase phase) {
         caseDocumentRepository.findById(documentId).ifPresent(doc -> {
@@ -104,14 +102,6 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
         return ExecutionInfo.executionInfo()
                 .from(executionInfo)
                 .withExecutionStatus(ExecutionStatus.COMPLETED)
-                .build();
-    }
-
-    private ExecutionInfo failNoRetry(final ExecutionInfo executionInfo) {
-        return ExecutionInfo.executionInfo()
-                .from(executionInfo)
-                .withExecutionStatus(ExecutionStatus.INPROGRESS)
-                .withShouldRetry(false)
                 .build();
     }
 

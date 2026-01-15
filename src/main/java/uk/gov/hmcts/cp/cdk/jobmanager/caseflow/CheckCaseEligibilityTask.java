@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_CASE_ELIGIBILITY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GET_CASES_FOR_HEARING;
 
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
@@ -36,11 +37,6 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
                 .build();
 
         executionService.executeWith(nextTask);
-
-        log.info(
-                "Chained CHECK_CASE_ELIGIBILITY → CHECK_IDPC_AVAILABILITY for caseId={}",
-                executionInfo.getJobData().getString("caseId", "unknown")
-        );
 
         return ExecutionInfo.executionInfo()
                 .from(executionInfo)
