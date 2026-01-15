@@ -30,3 +30,5 @@ cqrs:
       material-content-path: "/progression-query-api/query/api/rest/progression/material/{materialId}/content"
       accept-for-court-doc-search: "application/vnd.progression.query.courtdocuments+json"
       accept-for-material-content: "application/vnd.progression.query.material-content+json"
+      accept-for-prosecution-case: "application/vnd.progression.query.prosecutioncase+json"
+      prosecution-case-path: "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"

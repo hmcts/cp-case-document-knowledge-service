@@ -24,7 +24,10 @@ class ProgressionDtoMapperTest {
                 "/x",
                 "/y/{materialId}",
                 "a",
-                "b"
+                "b",
+                "application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
+
         );
         final var mapper = new ProgressionDtoMapper(cfg);
 
@@ -47,7 +50,8 @@ class ProgressionDtoMapperTest {
                 "/x",
                 "/y/{materialId}",
                 "a",
-                "b"
+                "b","application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
         );
         final var mapper = new ProgressionDtoMapper(cfg);
 
@@ -68,7 +72,8 @@ class ProgressionDtoMapperTest {
                 "/x",
                 "/y/{materialId}",
                 "a",
-                "b"
+                "b","application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
         );
         final var mapper = new ProgressionDtoMapper(cfg);
 
@@ -91,7 +96,8 @@ class ProgressionDtoMapperTest {
                 "/x",
                 "/y/{materialId}",
                 "a",
-                "b"
+                "b","application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
         );
         final var mapper = new ProgressionDtoMapper(cfg);
 

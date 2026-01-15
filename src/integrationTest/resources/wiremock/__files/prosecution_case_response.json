@@ -1,0 +1,225 @@
+
+{
+  "prosecutionCase": {
+    "cpsOrganisation": "A30AB00",
+    "defendants": [
+      {
+        "courtProceedingsInitiated": "2026-01-13T10:59:00.932Z",
+        "id": "60255272-f621-43d8-86e4-e0acaae8d634",
+        "initiationCode": "C",
+        "masterDefendantId": "60255272-f621-43d8-86e4-e0acaae8d634",
+        "offences": [
+          {
+            "arrestDate": "2025-12-29",
+            "chargeDate": "2026-01-03",
+            "count": 0,
+            "endorsableFlag": false,
+            "id": "28e739c6-1ace-461f-b99c-7521f7576682",
+            "listingNumber": 1,
+            "maxPenalty": "EW:6M &/or Ultd Fine",
+            "modeOfTrial": "Either Way",
+            "offenceCode": "OF61131",
+            "offenceDateCode": 1,
+            "offenceDefinitionId": "c46a0c83-8be4-3931-9c64-19d50a964c00",
+            "offenceFacts": {
+              "alcoholReadingAmount": 500,
+              "alcoholReadingMethodCode": "A",
+              "alcoholReadingMethodDescription": "Blood"
+            },
+            "offenceLegislation": "Contrary to section 20 of the Offences Against the Person Act 1861.",
+            "offenceLegislationWelsh": "Yn groes i adran 20 Deddf Troseddau Corfforol 1861.",
+            "offenceTitle": "Wound / inflict grievous bodily harm without intent",
+            "offenceTitleWelsh": "Clwyfo / peri niwed corfforol difrifol heb fwriadu",
+            "orderIndex": 1,
+            "startDate": "2025-11-14",
+            "wording": "Attempt theft to vehicle"
+          }
+        ],
+        "personDefendant": {
+          "arrestSummonsNumber": "2391NX0000862472773D",
+          "bailStatus": {
+            "code": "C",
+            "description": "Custody",
+            "id": "12e69486-4d01-3403-a50a-7419ca040635"
+          },
+          "driverNumber": "VANFL002222OW9PH",
+          "personDetails": {
+            "address": {
+              "address1": "30 Church Street",
+              "address2": "Church Street",
+              "address3": "Edinburgh",
+              "address4": "City of Edinburgh",
+              "postcode": "NW1 5BR"
+            },
+            "contact": {
+              "home": "0612284498",
+              "mobile": "05713555849",
+              "primaryEmail": "genevive.moore@example.com"
+            },
+            "dateOfBirth": "1988-01-13",
+            "documentationLanguageNeeds": "ENGLISH",
+            "ethnicity": {
+              "observedEthnicityCode": "1",
+              "observedEthnicityDescription": "White",
+              "observedEthnicityId": "c4ca4238-a0b9-3382-8dcc-509a6f75849b",
+              "selfDefinedEthnicityCode": "W1",
+              "selfDefinedEthnicityDescription": "British",
+              "selfDefinedEthnicityId": "c4ca4238-a0b9-3382-8dcc-509a6f75849b"
+            },
+            "firstName": "Genevive",
+            "gender": "MALE",
+            "hearingLanguageNeeds": "ENGLISH",
+            "lastName": "Moore",
+            "title": "Mr"
+          },
+          "policeBailStatus": {
+            "code": "C",
+            "description": "Custody",
+            "id": "12e69486-4d01-3403-a50a-7419ca040635"
+          }
+        },
+        "prosecutionAuthorityReference": "2391NX0000862472773D",
+        "prosecutionCaseId": "5748578c-7f2c-4509-8f27-c23caf686212"
+      }
+    ],
+    "id": "5748578c-7f2c-4509-8f27-c23caf686212",
+    "initiationCode": "C",
+    "originatingOrganisation": "0480000",
+    "prosecutionCaseIdentifier": {
+      "address": {
+        "address1": "Bishopsgate police station",
+        "address2": "182, Bishopsgate",
+        "address5": "London",
+        "postcode": "EC2M 4NP"
+      },
+      "contact": {
+        "primaryEmail": "casebuilderscpsmemos@cityoflondon.police.uk"
+      },
+      "majorCreditorCode": "COLP",
+      "prosecutionAuthorityCode": "CITYPF",
+      "prosecutionAuthorityId": "baa2ec52-296b-3f38-922a-9e641c1f94d3",
+      "prosecutionAuthorityName": "City of London Police",
+      "prosecutionAuthorityOUCode": "0480000",
+      "caseURN": "PY140222453"
+    },
+    "caseStatus": "ACTIVE"
+  },
+  "hearingsAtAGlance": {
+    "courtApplications": [],
+    "defendantHearings": [
+      {
+        "defendantId": "60255272-f621-43d8-86e4-e0acaae8d634",
+        "defendantName": "Genevive Moore",
+        "hearingIds": [
+          "c06fc36d-b7df-4278-aa46-272784511035"
+        ],
+        "masterDefendantId": "60255272-f621-43d8-86e4-e0acaae8d634"
+      }
+    ],
+    "hearings": [
+      {
+        "courtCentre": {
+          "address": {
+            "address1": "176A Lavender Hill",
+            "address2": "London",
+            "address3": "",
+            "address4": "",
+            "address5": "",
+            "postcode": "SW11 1JU"
+          },
+          "code": "B01LY00",
+          "courtHearingLocation": "B01LY01",
+          "id": "f8254db1-1683-483e-afb3-b87fde5a0a26",
+          "lja": {
+            "ljaCode": "2577",
+            "ljaName": "South West London Magistrates' Court"
+          },
+          "name": "Lavender Hill Magistrates' Court",
+          "roomId": "9e4932f7-97b2-3010-b942-ddd2624e4dd8",
+          "roomName": "Courtroom 01"
+        },
+        "defendants": [
+          {
+            "address": {
+              "address1": "30 Church Street",
+              "address2": "Church Street",
+              "address3": "Edinburgh",
+              "address4": "City of Edinburgh",
+              "postcode": "NW1 5BR"
+            },
+            "age": "38",
+            "courtApplications": [],
+            "dateOfBirth": "1988-01-13",
+            "defenceOrganisation": {
+              "defenceCounsels": [],
+              "defendantId": "60255272-f621-43d8-86e4-e0acaae8d634"
+            },
+            "id": "60255272-f621-43d8-86e4-e0acaae8d634",
+            "judicialResults": [],
+            "masterDefendantId": "60255272-f621-43d8-86e4-e0acaae8d634",
+            "name": "Genevive Moore",
+            "offences": [
+              {
+                "count": 0,
+                "id": "28e739c6-1ace-461f-b99c-7521f7576682",
+                "judicialResults": [],
+                "offenceCode": "OF61131",
+                "offenceDefinitionId": "c46a0c83-8be4-3931-9c64-19d50a964c00",
+                "offenceLegislation": "Contrary to section 20 of the Offences Against the Person Act 1861.",
+                "offenceLegislationWelsh": "Yn groes i adran 20 Deddf Troseddau Corfforol 1861.",
+                "offenceTitle": "Wound / inflict grievous bodily harm without intent",
+                "offenceTitleWelsh": "Clwyfo / peri niwed corfforol difrifol heb fwriadu",
+                "orderIndex": 1,
+                "pleas": [],
+                "startDate": "2025-11-14",
+                "verdicts": [],
+                "wording": "Attempt theft to vehicle"
+              }
+            ]
+          }
+        ],
+        "hasResultAmended": false,
+        "hearingDays": [
+          {
+            "courtCentreId": "f8254db1-1683-483e-afb3-b87fde5a0a26",
+            "courtRoomId": "9e4932f7-97b2-3010-b942-ddd2624e4dd8",
+            "isCancelled": false,
+            "listedDurationMinutes": 20,
+            "listingSequence": 12,
+            "sittingDay": "2026-01-15T09:30:00.000Z"
+          }
+        ],
+        "hearingListingStatus": "HEARING_INITIALISED",
+        "id": "c06fc36d-b7df-4278-aa46-272784511035",
+        "isApplicationHearing": false,
+        "jurisdictionType": "MAGISTRATES",
+        "type": {
+          "description": "First hearing",
+          "id": "4a0e892d-c0c5-3c51-95b8-704d8c781776"
+        }
+      }
+    ],
+    "id": "5748578c-7f2c-4509-8f27-c23caf686212",
+    "latestHearingJurisdictionType": "MAGISTRATES",
+    "prosecutionCaseIdentifier": {
+      "address": {
+        "address1": "Bishopsgate police station",
+        "address2": "182, Bishopsgate",
+        "address5": "London",
+        "postcode": "EC2M 4NP"
+      },
+      "contact": {
+        "primaryEmail": "casebuilderscpsmemos@cityoflondon.police.uk"
+      },
+      "majorCreditorCode": "COLP",
+      "prosecutionAuthorityCode": "CITYPF",
+      "prosecutionAuthorityId": "baa2ec52-296b-3f38-922a-9e641c1f94d3",
+      "prosecutionAuthorityName": "City of London Police",
+      "prosecutionAuthorityOUCode": "0480000",
+      "caseURN": "PY140222453"
+    }
+  },
+  "appealsLodgedInfo": {
+    "appealsLodged": false
+  }
+}
