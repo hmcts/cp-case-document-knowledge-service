@@ -6,13 +6,13 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_NEW_UPLOAD;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.getBooleanFromContext;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.parseUuidOrNull;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.getBooleanFromContext;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
-import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.storage.StorageService;
+import uk.gov.hmcts.cp.cdk.storage.UploadProperties;
 import uk.gov.hmcts.cp.cdk.batch.verification.DocumentVerificationEnqueueService;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;

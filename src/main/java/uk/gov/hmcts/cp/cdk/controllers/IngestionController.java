@@ -1,7 +1,7 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
 import uk.gov.hmcts.cp.cdk.batch.IngestionProperties;
-import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.services.IngestionService;
 import uk.gov.hmcts.cp.cdk.services.JobManagerService;
 import uk.gov.hmcts.cp.cdk.util.RequestUtils;

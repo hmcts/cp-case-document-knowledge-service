@@ -3,8 +3,8 @@ package uk.gov.hmcts.cp.cdk.services;
 import static java.util.Objects.isNull;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.toUtc;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;

@@ -5,6 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
+import uk.gov.hmcts.cp.cdk.clients.common.AzureTokenService;
+import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
+
 import java.util.HashMap;
 import java.util.Map;
 

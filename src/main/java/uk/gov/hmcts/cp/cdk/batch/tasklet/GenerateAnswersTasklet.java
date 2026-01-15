@@ -3,9 +3,9 @@ package uk.gov.hmcts.cp.cdk.batch.tasklet;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.buildAnswerParams;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.buildReservationParams;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.parseUuidOrNull;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.buildAnswerParams;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.buildReservationParams;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 
 import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.Query;

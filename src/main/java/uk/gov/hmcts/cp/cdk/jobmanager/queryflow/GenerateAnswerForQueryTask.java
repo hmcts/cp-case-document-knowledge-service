@@ -1,7 +1,7 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.queryflow;
 
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_STATUS_OF_ANSWER_GENERATION;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
 
@@ -15,9 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
-import uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils;
 import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
 import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
+import uk.gov.hmcts.cp.cdk.util.TaskUtils;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
 import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
@@ -51,11 +51,11 @@ public class GenerateAnswerForQueryTask implements ExecutableTask {
         final JsonObject jobData = executionInfo.getJobData();
 
         final UUID caseId =
-                TaskletUtils.parseUuidOrNull(jobData.getString(CTX_CASE_ID_KEY, null));
+                TaskUtils.parseUuidOrNull(jobData.getString(CTX_CASE_ID_KEY, null));
         final UUID docId =
-                TaskletUtils.parseUuidOrNull(jobData.getString(CTX_DOC_ID_KEY, null));
+                TaskUtils.parseUuidOrNull(jobData.getString(CTX_DOC_ID_KEY, null));
         final UUID queryId =
-                TaskletUtils.parseUuidOrNull(jobData.getString(CTX_SINGLE_QUERY_ID, null));
+                TaskUtils.parseUuidOrNull(jobData.getString(CTX_SINGLE_QUERY_ID, null));
 
         if (caseId == null || docId == null || queryId == null) {
             log.warn(

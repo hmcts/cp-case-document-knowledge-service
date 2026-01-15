@@ -2,8 +2,9 @@ package uk.gov.hmcts.cp.cdk.batch.clients.progression.mapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClientConfig;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.CourtDocumentSearchResponse;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClientConfig;
+import uk.gov.hmcts.cp.cdk.clients.progression.dto.CourtDocumentSearchResponse;
+import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
 
 import java.time.ZonedDateTime;
 import java.util.List;

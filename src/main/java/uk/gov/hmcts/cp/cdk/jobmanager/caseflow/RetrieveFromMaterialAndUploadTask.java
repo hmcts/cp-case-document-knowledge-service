@@ -1,13 +1,13 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.*;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.parseUuidOrNull;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.*;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
-import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.storage.StorageService;
+import uk.gov.hmcts.cp.cdk.storage.UploadProperties;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
@@ -91,7 +91,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
 
                 final String blobUrl = storageService.copyFromUrl(downloadUrl, blobName, uploadProperties.contentType(), metadata);
 
-                final long sizeBytes = Optional.ofNullable(storageService.getBlobSize(blobName)).orElse(UNKNOWN_SIZE_BYTES);
+                final long sizeBytes = Optional.of(storageService.getBlobSize(blobName)).orElse(UNKNOWN_SIZE_BYTES);
 
                 final CaseDocument entity = new CaseDocument();
                 entity.setDocId(documentId);

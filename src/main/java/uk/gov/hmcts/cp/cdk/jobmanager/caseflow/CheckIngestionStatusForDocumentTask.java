@@ -16,6 +16,7 @@ import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 import jakarta.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
@@ -48,7 +49,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
 
         log.info("Polling ingestion status for identifier='{}', docId={}", blobName, documentId);
 
-        final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> response =
+        final ResponseEntity<@NotNull DocumentIngestionStatusReturnedSuccessfully> response =
                 documentIngestionStatusApi.documentStatus(blobName);
 
         if (response == null || !response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {

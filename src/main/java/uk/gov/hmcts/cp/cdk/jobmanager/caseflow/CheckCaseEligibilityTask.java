@@ -19,10 +19,15 @@ import org.springframework.stereotype.Component;
 @Task(CHECK_CASE_ELIGIBILITY)
 public class CheckCaseEligibilityTask implements ExecutableTask {
 
-    private final ExecutionService taskExecutionService;
+    private final ExecutionService executionService;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
+
+        /**
+         * call progression endpoint application/vnd.progression.query.prosecutioncase+json
+         * and assess eligibility criteria - defendant number)
+         */
 
         ExecutionInfo nextTask = ExecutionInfo.executionInfo()
                 .from(executionInfo)
@@ -30,7 +35,7 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
                 .withExecutionStatus(ExecutionStatus.STARTED)
                 .build();
 
-        taskExecutionService.executeWith(nextTask);
+        executionService.executeWith(nextTask);
 
         log.info(
                 "Chained CHECK_CASE_ELIGIBILITY → CHECK_IDPC_AVAILABILITY for caseId={}",

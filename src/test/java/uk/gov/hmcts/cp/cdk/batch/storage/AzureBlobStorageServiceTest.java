@@ -11,6 +11,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import uk.gov.hmcts.cp.cdk.storage.AzureBlobStorageService;
+import uk.gov.hmcts.cp.cdk.storage.StorageProperties;
+
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;

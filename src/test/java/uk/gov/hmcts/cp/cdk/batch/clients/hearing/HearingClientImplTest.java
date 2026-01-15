@@ -10,9 +10,11 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import uk.gov.hmcts.cp.cdk.batch.IngestionProperties;
-import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.mapper.HearingDtoMapper;
+import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClientConfig;
+import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClientImpl;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
+import uk.gov.hmcts.cp.cdk.clients.hearing.mapper.HearingDtoMapper;
 
 import java.time.LocalDate;
 import java.util.List;

@@ -6,7 +6,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.hmcts.cp.cdk.batch.http.CorrelationIdInterceptor.HEADER;
+import static uk.gov.hmcts.cp.cdk.http.CorrelationIdInterceptor.HEADER;
+
+import uk.gov.hmcts.cp.cdk.http.CorrelationIdInterceptor;
 
 import java.io.IOException;
 

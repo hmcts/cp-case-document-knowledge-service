@@ -5,6 +5,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import uk.gov.hmcts.cp.cdk.http.DebugLoggingInterceptor;
+
 import java.io.IOException;
 
 import org.junit.jupiter.api.BeforeEach;

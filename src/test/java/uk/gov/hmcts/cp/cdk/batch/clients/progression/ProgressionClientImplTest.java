@@ -6,8 +6,10 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.mapper.ProgressionDtoMapper;
+import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClientConfig;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClientImpl;
+import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
 
 import java.util.UUID;
 

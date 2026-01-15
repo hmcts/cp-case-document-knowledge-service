@@ -1,16 +1,15 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
 import static org.springframework.util.StringUtils.hasText;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_DOC_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_NAME;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.parseUuid;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.safeGetCourtDocuments;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.USERID_FOR_EXTERNAL_CALLS;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
+
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
@@ -32,6 +31,8 @@ import java.util.Optional;
 import java.util.UUID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuid;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.safeGetCourtDocuments;
 
 @Slf4j
 @Component
@@ -40,7 +41,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
 public class CheckIdpcAvailabilityTask implements ExecutableTask {
 
     private final ProgressionClient progressionClient;
-    private final ExecutionService taskExecutionService;
+    private final ExecutionService executionService;
     private final DocumentIdResolver documentIdResolver;
 
     @Override
@@ -117,7 +118,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                                 .withExecutionStatus(ExecutionStatus.STARTED)
                                 .build();
 
-                        taskExecutionService.executeWith(newTask);
+                        executionService.executeWith(newTask);
 
                     }
 

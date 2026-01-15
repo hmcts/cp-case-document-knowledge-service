@@ -1,13 +1,13 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.hearing;
 
 import static org.springframework.util.StringUtils.hasText;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_CASE_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.COURT_CENTRE_ID;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.CPPUID;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.DATE;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.ROOM_ID;
-import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.COURT_CENTRE_ID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.DATE;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.ROOM_ID;
 
+import uk.gov.hmcts.cp.cdk.util.TaskUtils;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
 import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
@@ -22,17 +22,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
-import uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils;
+import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
+
 
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_CASE_ELIGIBILITY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GET_CASES_FOR_HEARING;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.USERID_FOR_EXTERNAL_CALLS;
 
 @Slf4j
 @Component
@@ -43,7 +43,7 @@ public class GetCasesForHearingTask implements ExecutableTask {
     private static final List<String> EMPTY_CASE_IDS = List.of();
 
     private final HearingClient hearingClient;
-    private final  ExecutionService taskExecutionService; // <-- service to create tasks
+    private final  ExecutionService executionService; // <-- service to create tasks
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -65,16 +65,16 @@ public class GetCasesForHearingTask implements ExecutableTask {
             List<String> caseIds = EMPTY_CASE_IDS;
 
             if (hasText(courtCentreId) && hasText(roomId) && hasText(hearingDate)) {
-                final LocalDate date = TaskletUtils.parseIsoDateOrNull(hearingDate);
+                final LocalDate date = TaskUtils.parseIsoDateOrNull(hearingDate);
                 if (date != null) {
                     final List<HearingSummariesInfo> summaries =
                             hearingClient.getHearingsAndCases(courtCentreId, roomId, date, cppuid);
 
-                    caseIds = summaries == null
+                    caseIds = (summaries == null)
                             ? EMPTY_CASE_IDS
                             : summaries.stream()
                             .map(HearingSummariesInfo::caseId)
-                            .collect(Collectors.toList());
+                            .toList();
                 }
             }
 
@@ -93,10 +93,10 @@ public class GetCasesForHearingTask implements ExecutableTask {
                             .build();
 
 
-                   taskExecutionService.executeWith(newTask);
+                   executionService.executeWith(newTask);
 
                     log.info(
-                            "Created CHECK_IDPC_AVAILABILITY for caseId={} requestId={}",
+                            "Created CHECK_CASE_ELIGIBILITY for caseId={} requestId={}",
                             caseId, requestId
                     );
                 }
@@ -109,8 +109,8 @@ public class GetCasesForHearingTask implements ExecutableTask {
             }
 
             log.info(
-                    "No cases found. FETCH_HEARINGS_CASES_TASK completed. requestId={}",
-                    requestId
+                    "No cases found {} completed. requestId={}",
+                    CHECK_CASE_ELIGIBILITY,requestId
             );
 
             return ExecutionInfo.executionInfo()

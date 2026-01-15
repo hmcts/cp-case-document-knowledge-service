@@ -15,7 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import uk.gov.hmcts.cp.cdk.batch.IngestionProperties;
-import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.controllers.exception.IngestionExceptionHandler;
 import uk.gov.hmcts.cp.cdk.services.IngestionService;
 import uk.gov.hmcts.cp.cdk.services.JobManagerService;

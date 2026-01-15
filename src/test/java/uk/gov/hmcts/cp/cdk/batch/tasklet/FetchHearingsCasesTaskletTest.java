@@ -11,8 +11,8 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.DATE;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.ROOM_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
+import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
 
 import java.time.LocalDate;
 import java.util.List;

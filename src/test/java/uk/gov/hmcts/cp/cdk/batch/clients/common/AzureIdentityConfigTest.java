@@ -3,6 +3,9 @@ package uk.gov.hmcts.cp.cdk.batch.clients.common;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.when;
 
+import uk.gov.hmcts.cp.cdk.clients.common.AzureIdentityConfig;
+import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
+
 import com.azure.core.credential.TokenCredential;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

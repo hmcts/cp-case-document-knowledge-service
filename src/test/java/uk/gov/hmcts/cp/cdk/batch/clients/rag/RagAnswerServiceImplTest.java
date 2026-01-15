@@ -6,8 +6,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.common.ApimAuthHeaderService;
-import uk.gov.hmcts.cp.cdk.batch.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
+import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.rag.RagAnswerServiceImpl;
+import uk.gov.hmcts.cp.cdk.clients.rag.RagClientException;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQuery500Response;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
