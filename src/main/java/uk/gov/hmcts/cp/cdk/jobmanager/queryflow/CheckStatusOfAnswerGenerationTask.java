@@ -10,7 +10,6 @@ import uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullyAsynchronously;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
-import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
 import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
@@ -31,7 +30,6 @@ import org.springframework.stereotype.Component;
 @Task(CHECK_STATUS_OF_ANSWER_GENERATION)
 public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
 
-    private final ExecutionService taskExecutionService;
     private final DocumentInformationSummarisedAsynchronouslyApi documentInformationSummarisedAsynchronouslyApi;
 
     @Override
@@ -40,21 +38,29 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
         final JsonObject jobData = executionInfo.getJobData();
         final UUID transactionId = parseUuidOrNull(jobData.getString(CTX_RAG_TRANSACTION_ID, null));
 
-        final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> userQueryAnswerResponse = documentInformationSummarisedAsynchronouslyApi.answerUserQueryStatus(transactionId.toString());
+        try {
+            final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> userQueryAnswerResponse = documentInformationSummarisedAsynchronouslyApi.answerUserQueryStatus(transactionId.toString());
 
-        if (isNull(userQueryAnswerResponse)
-                || !userQueryAnswerResponse.getStatusCode().is2xxSuccessful()
-                || isNull(userQueryAnswerResponse.getBody())
-                || userQueryAnswerResponse.getBody().getStatus() == AnswerGenerationStatus.ANSWER_GENERATION_PENDING) {
+            if (isNull(userQueryAnswerResponse)
+                    || !userQueryAnswerResponse.getStatusCode().is2xxSuccessful()
+                    || isNull(userQueryAnswerResponse.getBody())
+                    || userQueryAnswerResponse.getBody().getStatus() == AnswerGenerationStatus.ANSWER_GENERATION_PENDING) {
 
-            log.info("Answer Generation in progress for the transactionId={} → retrying", transactionId);
+                log.info("Answer Generation in progress for the transactionId={} → retrying", transactionId);
+                return retry(executionInfo);
+            }
+
+            return ExecutionInfo.executionInfo()
+                    .from(executionInfo)
+                    .withExecutionStatus(ExecutionStatus.COMPLETED)
+                    .build();
+
+        } catch (final Exception ex) {
+            log.error("Failed to check answer generation status RAG for transactionId={}", transactionId, ex);
             return retry(executionInfo);
         }
 
-        return ExecutionInfo.executionInfo()
-                .from(executionInfo)
-                .withExecutionStatus(ExecutionStatus.COMPLETED)
-                .build();
+
     }
 
     @Override
