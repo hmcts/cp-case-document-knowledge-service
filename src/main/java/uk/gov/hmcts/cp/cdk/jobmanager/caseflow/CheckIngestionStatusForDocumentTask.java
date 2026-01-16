@@ -1,17 +1,21 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SUCCESS;
 
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
-import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully.StatusEnum;
-import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
-
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
 import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
 import uk.gov.hmcts.cp.taskmanager.service.task.Task;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import jakarta.json.JsonObject;
 import lombok.RequiredArgsConstructor;
@@ -19,11 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
 
 @Slf4j
 @Component
@@ -43,7 +42,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
         final String blobName = jobData.getString("blobName", null);
 
         if (documentId == null || blobName == null) {
-            log.error("{} missing required data docId={} blobName={}", CHECK_INGESTION_STATUS_FOR_DOCUMENT,documentId, blobName);
+            log.error("{} missing required data docId={} blobName={}", CHECK_INGESTION_STATUS_FOR_DOCUMENT, documentId, blobName);
             return complete(executionInfo);
         }
 
@@ -66,7 +65,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
 
         final String status = normalise(rawStatus, 255);
 
-        if (StatusEnum.INGESTION_SUCCESS.name().equalsIgnoreCase(status)) {
+        if (INGESTION_SUCCESS.name().equalsIgnoreCase(status)) {
             updateIngestionPhase(documentId, DocumentIngestionPhase.INGESTED);
             log.info("INGESTION SUCCESS identifier='{}', docId={}", blobName, documentId);
             return complete(executionInfo);

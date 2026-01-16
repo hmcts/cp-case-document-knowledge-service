@@ -4,6 +4,9 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.RUN_ID;
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.FAILED;
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.SUCCEEDED;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_FAILED;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SUCCESS;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INVALID_METADATA;
 
 import uk.gov.hmcts.cp.cdk.config.VerifySchedulerProperties;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
@@ -14,7 +17,6 @@ import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentVerificationTaskRepository;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
-import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully.StatusEnum;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -217,7 +219,7 @@ public class DocumentVerificationScheduler {
         final String statusValue = normaliseStatus(rawStatus);
         final String reasonValue = normaliseReason(rawReason);
 
-        if (StatusEnum.INGESTION_SUCCESS.name().equalsIgnoreCase(statusValue)) {
+        if (INGESTION_SUCCESS.name().equalsIgnoreCase(statusValue)) {
             updateIngestionPhaseInSeparateTransaction(documentId, DocumentIngestionPhase.INGESTED);
             markSucceeded(task, statusValue, reasonValue, lastUpdated);
             log.info(
@@ -229,8 +231,8 @@ public class DocumentVerificationScheduler {
             return true;
         }
 
-        if (StatusEnum.INGESTION_FAILED.name().equalsIgnoreCase(statusValue)
-                || StatusEnum.INVALID_METADATA.name().equalsIgnoreCase(statusValue)) {
+        if (INGESTION_FAILED.name().equalsIgnoreCase(statusValue)
+                || INVALID_METADATA.name().equalsIgnoreCase(statusValue)) {
 
             updateIngestionPhaseInSeparateTransaction(documentId, DocumentIngestionPhase.FAILED);
             markFailed(task, statusValue, reasonValue, lastUpdated);

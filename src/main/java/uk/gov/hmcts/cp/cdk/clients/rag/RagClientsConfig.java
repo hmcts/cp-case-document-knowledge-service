@@ -2,7 +2,8 @@ package uk.gov.hmcts.cp.cdk.clients.rag;
 
 import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
-import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
+import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
+import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedSynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
 
 import lombok.extern.slf4j.Slf4j;
@@ -19,15 +20,28 @@ import org.springframework.web.client.RestClient;
 public class RagClientsConfig {
 
     @Bean
-    @ConditionalOnMissingBean(DocumentInformationSummarisedApi.class)
-    public DocumentInformationSummarisedApi ragAnswerService(
+    @ConditionalOnMissingBean(DocumentInformationSummarisedSynchronouslyApi.class)
+    public DocumentInformationSummarisedSynchronouslyApi ragAnswerService(
             @Qualifier("ragRestClient") final RestClient ragRestClient,
             final RagClientProperties ragClientProperties,
             final ApimAuthHeaderService apimAuthHeaderService) {
 
-        log.info("Creating DocumentInformationSummarisedApi client (RAG Answer Service) with auth mode={}",
+        log.info("Creating DocumentInformationSummarisedSynchronouslyApi client (RAG Answer Service) with auth mode={}",
                 ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : "subscription-key");
         return new RagAnswerServiceImpl(ragRestClient, ragClientProperties, apimAuthHeaderService);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(DocumentInformationSummarisedAsynchronouslyApi.class)
+    public DocumentInformationSummarisedAsynchronouslyApi ragAnswerServiceAsync(
+            @Qualifier("ragRestClient") final RestClient ragRestClient,
+            final RagClientProperties ragClientProperties,
+            final ApimAuthHeaderService apimAuthHeaderService) {
+
+        log.info("Creating DocumentInformationSummarisedAsynchronouslyApi client (RAG Async Answer Service) with auth mode={}",
+                ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : "subscription-key");
+
+        return new RagAnswerAsyncServiceImpl(ragRestClient, ragClientProperties, apimAuthHeaderService);
     }
 
     @Bean

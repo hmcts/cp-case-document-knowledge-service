@@ -11,10 +11,10 @@ import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
 import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
-import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
+import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedSynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
 import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
-import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
+import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullySynchronously;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -98,7 +98,7 @@ public class GenerateAnswersTasklet implements Tasklet {
     private final NamedParameterJdbcTemplate jdbc;
     private final PlatformTransactionManager txManager;
     private final ObjectMapper objectMapper;
-    private final DocumentInformationSummarisedApi documentInformationSummarisedApi;
+    private final DocumentInformationSummarisedSynchronouslyApi documentInformationSummarisedSynchronouslyApi;
     private final RetryTemplate retryTemplate;
 
     @Override
@@ -235,20 +235,20 @@ public class GenerateAnswersTasklet implements Tasklet {
                 reusableRequest.userQuery(userQuery).queryPrompt(queryPrompt);
 
                 final long started = System.currentTimeMillis();
-                final UserQueryAnswerReturnedSuccessfully resp =
+                final UserQueryAnswerReturnedSuccessfullySynchronously resp =
                         retryTemplate.execute((RetryContext retryCtx) -> {
                             if (retryCtx.getRetryCount() > 0) {
                                 log.warn("Retrying RAG call (attempt #{}) caseId={}, docId={}, queryId={}",
                                         retryCtx.getRetryCount() + 1, caseId, docId, queryId);
                             }
 
-                            final ResponseEntity<UserQueryAnswerReturnedSuccessfully> responseEntity =
-                                    documentInformationSummarisedApi.answerUserQuery(reusableRequest);
+                            final ResponseEntity<UserQueryAnswerReturnedSuccessfullySynchronously> responseEntity =
+                                    documentInformationSummarisedSynchronouslyApi.answerUserQuery(reusableRequest);
 
                             if (responseEntity == null || responseEntity.getBody() == null) {
                                 throw new IllegalStateException("Empty response body from RAG");
                             }
-                            final UserQueryAnswerReturnedSuccessfully body = responseEntity.getBody();
+                            final UserQueryAnswerReturnedSuccessfullySynchronously body = responseEntity.getBody();
                             final String llmResponse = body.getLlmResponse();
                             if (llmResponse == null || llmResponse.isBlank()) {
                                 throw new IllegalStateException("Empty llmResponse from RAG");
