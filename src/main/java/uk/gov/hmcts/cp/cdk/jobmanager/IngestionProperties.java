@@ -1,4 +1,4 @@
-package uk.gov.hmcts.cp.cdk.batch;
+package uk.gov.hmcts.cp.cdk.jobmanager;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

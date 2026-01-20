@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.batch;
 
 import static java.util.Objects.requireNonNull;
 
+import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.storage.AzureBlobStorageService;
 import uk.gov.hmcts.cp.cdk.storage.StorageProperties;
 import uk.gov.hmcts.cp.cdk.storage.StorageService;

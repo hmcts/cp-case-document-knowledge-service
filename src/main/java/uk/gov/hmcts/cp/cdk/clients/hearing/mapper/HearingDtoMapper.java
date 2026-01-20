@@ -1,7 +1,7 @@
 package uk.gov.hmcts.cp.cdk.clients.hearing.mapper;
 
 
-import uk.gov.hmcts.cp.cdk.batch.IngestionProperties;
+import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummaries;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.ProsecutionCaseSummaries;

@@ -1,6 +1,6 @@
 package uk.gov.hmcts.cp.cdk.config;
 
-import uk.gov.hmcts.cp.cdk.batch.IngestionProperties;
+import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.services.IngestionProcessor;
 import uk.gov.hmcts.cp.cdk.services.IngestionService;
 import uk.gov.hmcts.cp.cdk.services.JobManagerService;
