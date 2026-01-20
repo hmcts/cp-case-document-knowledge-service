@@ -57,7 +57,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
     private final StorageService storageService;
     private final CaseDocumentRepository caseDocumentRepository;
     private final UploadProperties uploadProperties;
-    private final ExecutionService taskExecutionService;
+    private final ExecutionService executionService;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -137,7 +137,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
                     .withExecutionStatus(ExecutionStatus.STARTED)
                     .build();
 
-            taskExecutionService.executeWith(newTask);
+            executionService.executeWith(newTask);
 
             return ExecutionInfo.executionInfo()
                     .from(executionInfo)
