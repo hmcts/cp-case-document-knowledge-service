@@ -36,7 +36,7 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
 
 
     @Override
-    public ResponseEntity<@NotNull UserQueryAnswerRequestAccepted> answerUserQueryAsync(@Valid final AnswerUserQueryRequest answerUserQueryRequest) {
+    public ResponseEntity<@NotNull UserQueryAnswerRequestAccepted> answerUserQueryAsync( final AnswerUserQueryRequest answerUserQueryRequest) {
         try {
             if (answerUserQueryRequest.getMetadataFilter() == null) {
                 answerUserQueryRequest.setMetadataFilter(List.of());
@@ -76,15 +76,14 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
     }
 
     @Override
-    public ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> answerUserQueryStatus(@Valid final String transactionId) {
+    public ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> answerUserQueryStatus( final String transactionId) {
         try {
 
             UserQueryAnswerReturnedSuccessfullyAsynchronously response = ragRestClient
                     .get()
                     .uri(uriBuilder -> uriBuilder
-                            .path(PATH_ANSWER_USER_QUERY_STATUS)
-                            .queryParam("transactionId", transactionId)
-                            .build())
+                            .path(PATH_ANSWER_USER_QUERY_STATUS + "/{transactionId}")
+                            .build(transactionId))
                     .accept(MediaType.APPLICATION_JSON)
                     .headers(httpHeaders -> {
                         apimAuthHeaderService.applyCommonHeaders(httpHeaders, ragClientProperties.getHeaders());

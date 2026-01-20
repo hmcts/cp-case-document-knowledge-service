@@ -8,6 +8,8 @@ public final class JobManagerKeys {
     public static final String CTX_MATERIAL_ID_KEY = "materialId";
     public static final String CTX_MATERIAL_NAME = "materialName";
     public static final String USERID_FOR_EXTERNAL_CALLS = "userIdForExternalCalls";
+    public static final String CTX_SINGLE_QUERY_ID = "CTX_SINGLE_QUERY_ID";
+
 
     public static final class Params {
 
