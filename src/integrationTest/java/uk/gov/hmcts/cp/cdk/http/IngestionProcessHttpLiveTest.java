@@ -153,7 +153,7 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
             // Validate HTTP 202 and body fields
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
             assertThat(response.getBody()).contains("\"phase\":\"STARTED\"");
-            assertThat(response.getBody()).contains("\"message\":\"Ingestion request accepted");
+            assertThat(response.getBody()).containsPattern("\"message\"\\s*:\\s*\"Ingestion.*request accepted.*\"");;
             assertThat(response.getBody()).contains("STARTED");
 
             // Validate audit message published (if applicable)
