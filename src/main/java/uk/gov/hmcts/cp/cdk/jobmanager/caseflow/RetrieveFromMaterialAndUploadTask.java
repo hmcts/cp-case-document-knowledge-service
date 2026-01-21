@@ -7,7 +7,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.USERID_FOR_EXTERNAL_CALLS;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
@@ -66,11 +66,11 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
         final String requestId = jobData.getString("requestId", "unknown");
 
 
-        final String userIdForExternalCalls = jobData.getString(USERID_FOR_EXTERNAL_CALLS, null);
+        final String userIdForExternalCalls = jobData.getString(CPPUID, null);
         if (userIdForExternalCalls == null || userIdForExternalCalls.isBlank()) {
             log.warn(
                     "Missing '{}' in jobData; downstream call may fail, Hence closing currentTask{} requestId={}",
-                    USERID_FOR_EXTERNAL_CALLS, RETRIEVE_FROM_MATERIAL, requestId
+                    CPPUID, RETRIEVE_FROM_MATERIAL, requestId
             );
             return ExecutionInfo.executionInfo()
                     .from(executionInfo)

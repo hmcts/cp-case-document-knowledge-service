@@ -8,7 +8,6 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.COURT
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.DATE;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.ROOM_ID;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.USERID_FOR_EXTERNAL_CALLS;
 
 import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
@@ -94,7 +93,6 @@ public class GetCasesForHearingTask implements ExecutableTask {
 
             for (String caseId : caseIds) {
                 JsonObject singleCaseJobData = Json.createObjectBuilder(jobData)
-                        .add(USERID_FOR_EXTERNAL_CALLS, cppuid)
                         .add(CTX_CASE_ID_KEY, caseId)
                         .build();
 

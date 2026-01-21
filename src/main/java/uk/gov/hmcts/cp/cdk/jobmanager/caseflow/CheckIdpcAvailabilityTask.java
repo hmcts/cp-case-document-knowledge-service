@@ -7,7 +7,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.USERID_FOR_EXTERNAL_CALLS;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuid;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.safeGetCourtDocuments;
 
@@ -47,7 +47,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
         final JsonObject jobData = executionInfo.getJobData();
 
         final String caseIdString = jobData.getString(CTX_CASE_ID_KEY, null);
-        final String userId = jobData.getString(USERID_FOR_EXTERNAL_CALLS, null);
+        final String userId = jobData.getString(CPPUID, null);
         final String requestId = jobData.getString("requestId", "unknown");
 
         if (!hasText(caseIdString)) {
@@ -64,7 +64,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
         if (!hasText(userId)) {
             log.warn(
                     "Missing '{}' in jobData; downstream call may fail, Hence closing currentTask{} requestId={}",
-                    USERID_FOR_EXTERNAL_CALLS, CHECK_IDPC_AVAILABILITY,requestId
+                    CPPUID, CHECK_IDPC_AVAILABILITY, requestId
             );
             return ExecutionInfo.executionInfo()
                     .from(executionInfo)
