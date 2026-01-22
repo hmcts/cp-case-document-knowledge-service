@@ -4,6 +4,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FO
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_BLOB_NAME_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_COURTDOCUMENT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
@@ -81,7 +82,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
 
         final UUID materialId = readUuid(jobData, CTX_MATERIAL_ID_KEY, "materialId", requestId);
         final UUID defendantId = readUuid(jobData, CTX_DEFENDANT_ID_KEY, "defendantId", requestId);
-        final UUID courtDocumentId = readUuid(jobData, CTX_DEFENDANT_ID_KEY, "courtDocumentId", requestId);
+        final UUID courtDocumentId = readUuid(jobData, CTX_COURTDOCUMENT_ID_KEY, "courtDocumentId", requestId);
         final UUID caseId = readUuid(jobData, CTX_CASE_ID_KEY, "caseId", requestId);
         final UUID documentId = readUuid(jobData, CTX_DOC_ID_KEY, "docId", requestId);
         final String materialName = jobData.getString(CTX_MATERIAL_NAME, "");
@@ -123,7 +124,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
             entity.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
             entity.setIngestionPhaseAt(utcNow());
             entity.setDefendantId(defendantId);
-            entity.setDefendantId(courtDocumentId);
+            entity.setCourtdocId(courtDocumentId);
 
             caseDocumentRepository.saveAndFlush(entity);
 
