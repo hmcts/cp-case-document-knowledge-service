@@ -107,7 +107,7 @@ class RetrieveFromMaterialAndUploadTaskTest {
         when(uploadProperties.contentType()).thenReturn("application/pdf");
         when(progressionClient.getMaterialDownloadUrl(any(), any()))
                 .thenReturn(Optional.of("https://progression/download/url"));
-        when(storageService.copyFromUrl(any(), any(), any(), any())).thenReturn("https://storage.blob/blob1");
+        when(storageService.copyFromUrl(any(), any(), any())).thenReturn("https://storage.blob/blob1");
         when(storageService.getBlobSize(any())).thenReturn(12345L);
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"dummy\":\"metadata\"}");
 

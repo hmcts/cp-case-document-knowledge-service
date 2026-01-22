@@ -52,7 +52,6 @@ public class AzureBlobStorageService implements StorageService {
     @Override
     public String copyFromUrl(final String sourceUrl,
                               final String destBlobPath,
-                              final String contentType,
                               final Map<String, String> metadata) {
         if (StringUtils.isBlank(sourceUrl)) {
             throw new IllegalArgumentException("sourceUrl must not be blank");

@@ -140,7 +140,7 @@ class UploadAndPersistTaskletTest {
         assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
 
         verify(this.progressionClient, never()).getMaterialDownloadUrl(any(UUID.class), anyString());
-        verify(this.storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
+        verify(this.storageService, never()).copyFromUrl(anyString(), anyString(), anyMap());
         verify(this.caseDocumentRepository, never()).saveAndFlush(any(CaseDocument.class));
         verify(this.documentVerificationEnqueueService, never())
                 .enqueue(any(UUID.class), any(UUID.class), anyString());
@@ -177,7 +177,7 @@ class UploadAndPersistTaskletTest {
         assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
 
         verify(this.progressionClient, never()).getMaterialDownloadUrl(any(UUID.class), anyString());
-        verify(this.storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
+        verify(this.storageService, never()).copyFromUrl(anyString(), anyString(),anyMap());
         verify(this.caseDocumentRepository, never()).saveAndFlush(any(CaseDocument.class));
         verify(this.documentVerificationEnqueueService, never())
                 .enqueue(any(UUID.class), any(UUID.class), anyString());
@@ -199,7 +199,7 @@ class UploadAndPersistTaskletTest {
         final RepeatStatus repeatStatus = this.tasklet.execute(this.contribution, this.chunkContext);
         assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
 
-        verify(this.storageService, never()).copyFromUrl(anyString(), anyString(), anyString(), anyMap());
+        verify(this.storageService, never()).copyFromUrl(anyString(), anyString(),anyMap());
         verify(this.caseDocumentRepository, never()).saveAndFlush(any(CaseDocument.class));
         verify(this.documentVerificationEnqueueService, never())
                 .enqueue(any(UUID.class), any(UUID.class), anyString());
@@ -224,7 +224,7 @@ class UploadAndPersistTaskletTest {
 
         when(this.progressionClient.getMaterialDownloadUrl(materialId, "user-1"))
                 .thenReturn(Optional.of("http://example.test/doc.pdf"));
-        when(this.storageService.copyFromUrl(anyString(), anyString(), anyString(), anyMap()))
+        when(this.storageService.copyFromUrl(anyString(), anyString(), anyMap()))
                 .thenReturn(null);
 
         final RepeatStatus repeatStatus = this.tasklet.execute(this.contribution, this.chunkContext);
@@ -257,7 +257,6 @@ class UploadAndPersistTaskletTest {
         when(this.storageService.copyFromUrl(
                 this.srcCap.capture(),
                 this.destCap.capture(),
-                this.contentTypeCap.capture(),
                 this.metaCap.capture())
         ).thenReturn("blob://somewhere/path.pdf");
         when(this.storageService.getBlobSize(anyString()))
@@ -311,7 +310,6 @@ class UploadAndPersistTaskletTest {
         when(this.storageService.copyFromUrl(
                 this.srcCap.capture(),
                 this.destCap.capture(),
-                this.contentTypeCap.capture(),
                 this.metaCap.capture())
         ).thenReturn("blob://container/" + docId + "_20250101.pdf");
         when(this.storageService.getBlobSize(anyString())).thenReturn(1234L);

@@ -4,7 +4,7 @@ import java.util.Map;
 
 public interface StorageService {
 
-    String copyFromUrl(String sourceUrl, String destBlobPath, String contentType, Map<String, String> metadata);
+    String copyFromUrl(String sourceUrl, String destBlobPath, Map<String, String> metadata);
 
     boolean exists(String blobPath);
 

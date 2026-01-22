@@ -2,6 +2,12 @@ package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_CASE_ID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_DOCUMENT_ID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_MATERIAL_ID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_MATERIAL_NAME;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_METADATA;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_UPLOADED_AT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_BLOB_NAME_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_COURTDOCUMENT_ID_KEY;
@@ -46,13 +52,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @Task(RETRIEVE_FROM_MATERIAL)
 public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
-
-    private static final String META_CASE_ID = "case_id";
-    private static final String META_MATERIAL_ID = "material_id";
-    private static final String META_MATERIAL_NAME = "material_name";
-    private static final String META_UPLOADED_AT = "uploaded_at";
-    private static final String META_DOCUMENT_ID = "document_id";
-    private static final String META_METADATA = "metadata";
 
     private static final long UNKNOWN_SIZE_BYTES = -1L;
 
@@ -111,7 +110,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
 
             final Map<String, String> metadata = createBlobMetadata(documentId, materialId, caseId.toString(), today, materialName);
 
-            final String blobUrl = storageService.copyFromUrl(downloadUrl, blobName, uploadProperties.contentType(), metadata);
+            final String blobUrl = storageService.copyFromUrl(downloadUrl, blobName, metadata);
 
             final long sizeBytes = Optional.of(storageService.getBlobSize(blobName)).orElse(UNKNOWN_SIZE_BYTES);
 
