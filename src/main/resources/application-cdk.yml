@@ -30,7 +30,7 @@ cdk:
     queue-capacity: ${CP_CDK_INGESTION_QUEUE_CAPACITY:200}
 
     feature:
-      use-job-manager: ${CP_CDK_FEATURE_USE_JOB_MANAGER:true}
+      use-job-manager: ${CP_CDK_FEATURE_USE_JOB_MANAGER:false}
 
     batch:
       partition:

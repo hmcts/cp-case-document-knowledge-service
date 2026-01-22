@@ -9,9 +9,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_STATUS_OF_ANSWER_GENERATION;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.queryflow.GenerateAnswerForQueryTask.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_RAG_TRANSACTION_ID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
@@ -124,7 +125,7 @@ class GenerateAnswerForQueryTaskTest {
 
         assertThat(nextTask.getAssignedTaskName()).isEqualTo(CHECK_STATUS_OF_ANSWER_GENERATION);
         assertThat(nextTask.getExecutionStatus()).isEqualTo(ExecutionStatus.STARTED);
-        assertThat(nextTask.getJobData().getString(GenerateAnswerForQueryTask.CTX_RAG_TRANSACTION_ID)).isEqualTo("txn-123");
+        assertThat(nextTask.getJobData().getString(CTX_RAG_TRANSACTION_ID)).isEqualTo("txn-123");
     }
 
     @Test

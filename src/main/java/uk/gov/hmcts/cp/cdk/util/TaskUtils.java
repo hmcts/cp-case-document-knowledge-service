@@ -19,6 +19,8 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 @UtilityClass
 public class TaskUtils {
 
+    public static final String EMPTY_STRING = "";
+
     // ---------- UUID helpers ----------
 
     public static Optional<UUID> parseUuid(final String uuidString) {

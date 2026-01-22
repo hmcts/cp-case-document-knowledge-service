@@ -7,6 +7,8 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_STATUS_OF_ANSWER_GE
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_RAG_TRANSACTION_ID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 
 import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
@@ -37,9 +39,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @Task(GENERATE_ANSWER_FOR_QUERY)
 public class GenerateAnswerForQueryTask implements ExecutableTask {
-
-    public static final String CTX_SINGLE_QUERY_ID = "CTX_SINGLE_QUERY_ID";
-    public static final String CTX_RAG_TRANSACTION_ID = "ragTransactionId";
 
     private final QueryDefinitionLatestRepository queryDefinitionLatestRepository;
     private final DocumentInformationSummarisedAsynchronouslyApi documentInformationSummarisedAsynchronouslyApi;
