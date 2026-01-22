@@ -11,6 +11,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.ROOM_
 
 import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
+import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.util.TaskUtils;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
@@ -21,6 +22,7 @@ import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -38,6 +40,7 @@ public class GetCasesForHearingTask implements ExecutableTask {
 
     private final HearingClient hearingClient;
     private final ExecutionService executionService;
+    private final JobManagerRetryProperties retryProperties;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -126,6 +129,12 @@ public class GetCasesForHearingTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        return Optional.of(List.of(10L, 30L, 60L));
+        var retry = retryProperties.getDefaultRetry();
+        return Optional.of(
+                IntStream.range(0, retry.getMaxAttempts())
+                        .mapToLong(i -> retry.getDelaySeconds())
+                        .boxed()
+                        .toList()
+        );
     }
 }

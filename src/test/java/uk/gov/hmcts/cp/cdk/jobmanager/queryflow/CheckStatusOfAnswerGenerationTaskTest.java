@@ -16,6 +16,7 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.COMPLETED;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.INPROGRESS;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.STARTED;
 
+import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullyAsynchronously;
@@ -51,6 +52,9 @@ class CheckStatusOfAnswerGenerationTaskTest {
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @Mock
+    private JobManagerRetryProperties retryProperties;
+
+    @Mock
     private UserQueryAnswerReturnedSuccessfullyAsynchronously body;
 
     @Captor
@@ -70,7 +74,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @BeforeEach
     void setUp() {
-        task = new CheckStatusOfAnswerGenerationTask(jdbc, api, objectMapper);
+        task = new CheckStatusOfAnswerGenerationTask(jdbc, api, objectMapper,retryProperties);
         transactionId = UUID.randomUUID();
         caseId = UUID.randomUUID();
         queryId = UUID.randomUUID();

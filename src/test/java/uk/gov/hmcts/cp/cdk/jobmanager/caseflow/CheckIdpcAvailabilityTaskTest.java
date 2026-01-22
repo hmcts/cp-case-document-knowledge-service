@@ -17,6 +17,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUI
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
@@ -47,6 +48,8 @@ class CheckIdpcAvailabilityTaskTest {
     private ExecutionService executionService;
     @Mock
     private DocumentIdResolver documentIdResolver;
+    @Mock
+    private JobManagerRetryProperties retryProperties;
     @Captor
     private ArgumentCaptor<ExecutionInfo> captor;
 
@@ -56,7 +59,7 @@ class CheckIdpcAvailabilityTaskTest {
 
     @BeforeEach
     void setUp() {
-        task = new CheckIdpcAvailabilityTask(progressionClient, executionService, documentIdResolver);
+        task = new CheckIdpcAvailabilityTask(progressionClient, executionService, documentIdResolver,retryProperties);
 
         caseId = UUID.randomUUID().toString();
         userId = "cppuid-123";

@@ -19,6 +19,7 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
+import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
 import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
@@ -51,9 +52,12 @@ class GetCasesForHearingTaskTest {
 
     private ExecutionInfo executionInfo;
 
+    @Mock
+    private JobManagerRetryProperties retryProperties;
+
     @BeforeEach
     void setUp() {
-        task = new GetCasesForHearingTask(hearingClient, executionService);
+        task = new GetCasesForHearingTask(hearingClient, executionService,retryProperties);
 
         JsonObject jobData = createObjectBuilder()
                 .add(COURT_CENTRE_ID, "court-1")

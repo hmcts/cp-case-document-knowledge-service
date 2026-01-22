@@ -58,3 +58,15 @@ cdk:
       date-pattern: ${CDK_UPLOAD_DATE_PATTERN:yyyyMMdd}
       file-extension: ${CDK_UPLOAD_FILE_EXTENSION:.pdf}
       content-type: ${CDK_UPLOAD_CONTENT_TYPE:application/pdf}
+
+  jobmanager:
+    retry:
+      default:
+        max-attempts: ${CDK_JOBMANAGER_RETRY_DEFAULT_MAX_ATTEMPTS:3}
+        delay-seconds: ${CDK_JOBMANAGER_RETRY_DEFAULT_DELAY_SECONDS:20}
+      verify-document-status:
+        max-attempts: ${CDK_JOBMANAGER_RETRY_VERIFY_DOC_MAX_ATTEMPTS:50}
+        delay-seconds: ${CDK_JOBMANAGER_RETRY_VERIFY_DOC_DELAY_SECONDS:5}
+      questions-retry:
+        max-attempts: ${CDK_JOBMANAGER_RETRY_QUESTIONS_MAX_ATTEMPTS:100}
+        delay-seconds: ${CDK_JOBMANAGER_RETRY_QUESTIONS_DELAY_SECONDS:10}

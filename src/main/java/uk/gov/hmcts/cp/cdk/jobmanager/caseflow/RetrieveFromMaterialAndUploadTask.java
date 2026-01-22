@@ -16,6 +16,7 @@ import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.storage.StorageService;
 import uk.gov.hmcts.cp.cdk.storage.UploadProperties;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.Json;
@@ -59,6 +61,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
     private final StorageService storageService;
     private final CaseDocumentRepository caseDocumentRepository;
     private final UploadProperties uploadProperties;
+    private final JobManagerRetryProperties retryProperties;
     private final ExecutionService executionService;
 
     @Override
@@ -163,7 +166,13 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        return Optional.of(List.of(10L, 30L, 60L));
+        var retry = retryProperties.getDefaultRetry();
+        return Optional.of(
+                IntStream.range(0, retry.getMaxAttempts())
+                        .mapToLong(i -> retry.getDelaySeconds())
+                        .boxed()
+                        .toList()
+        );
     }
 
     private UUID readUuid(final JsonObject jobData, final String key, final String label, final String requestId) {

@@ -16,6 +16,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUI
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
+import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.storage.StorageService;
 import uk.gov.hmcts.cp.cdk.storage.UploadProperties;
@@ -51,6 +52,8 @@ class RetrieveFromMaterialAndUploadTaskTest {
     private UploadProperties uploadProperties;
     @Mock
     private ExecutionService executionService;
+    @Mock
+    private JobManagerRetryProperties retryProperties;
 
     @Captor
     private ArgumentCaptor<ExecutionInfo> executionInfoCaptor;
@@ -72,6 +75,7 @@ class RetrieveFromMaterialAndUploadTaskTest {
                 storageService,
                 caseDocumentRepository,
                 uploadProperties,
+                retryProperties,
                 executionService
         );
 

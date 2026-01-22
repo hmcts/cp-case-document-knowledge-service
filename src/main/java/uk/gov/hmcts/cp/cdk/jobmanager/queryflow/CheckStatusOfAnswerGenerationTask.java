@@ -14,6 +14,7 @@ import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERA
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATION_FAILED;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATION_PENDING;
 
+import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullyAsynchronously;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.JsonObject;
@@ -48,6 +50,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
     private final NamedParameterJdbcTemplate jdbc;
     private final DocumentInformationSummarisedAsynchronouslyApi documentInformationSummarisedAsynchronouslyApi;
     private final ObjectMapper objectMapper;
+    private final JobManagerRetryProperties retryProperties;
 
     static final String SQL_CREATE_OR_GET_VERSION =
             "SELECT get_or_create_answer_version(:case_id,:query_id,:doc_id)";
@@ -111,7 +114,13 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        return Optional.of(List.of(5L, 10L, 30L, 60L, 120L));
+        var retry = retryProperties.getQuestionsRetry();
+        return Optional.of(
+                IntStream.range(0, retry.getMaxAttempts())
+                        .mapToLong(i -> retry.getDelaySeconds())
+                        .boxed()
+                        .toList()
+        );
     }
 
     private ExecutionInfo retry(final ExecutionInfo executionInfo) {

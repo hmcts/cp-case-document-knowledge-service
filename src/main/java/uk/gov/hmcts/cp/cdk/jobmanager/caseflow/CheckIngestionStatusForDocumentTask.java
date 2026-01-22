@@ -9,6 +9,7 @@ import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SU
 import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -44,6 +46,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
     private final CaseDocumentRepository caseDocumentRepository;
     private final QueryResolver queryResolver;
     private final ExecutionService executionService;
+    private final JobManagerRetryProperties retryProperties;
 
     private static UUID parseUuid(final String raw) {
         try {
@@ -135,7 +138,13 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        return Optional.of(List.of(5L, 10L, 30L, 60L, 120L));
+        var retry = retryProperties.getVerifyDocumentStatus();
+        return Optional.of(
+                IntStream.range(0, retry.getMaxAttempts())
+                        .mapToLong(i -> retry.getDelaySeconds())
+                        .boxed()
+                        .toList()
+        );
     }
 
     private void updateIngestionPhase(final UUID documentId, final DocumentIngestionPhase phase) {
