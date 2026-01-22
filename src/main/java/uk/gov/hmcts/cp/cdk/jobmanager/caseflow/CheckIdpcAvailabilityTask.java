@@ -4,6 +4,7 @@ import static org.springframework.util.StringUtils.hasText;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_COURTDOCUMENT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
@@ -83,6 +84,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                 JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
                 updatedJobData.add(CTX_MATERIAL_ID_KEY, info.materialId());
                 updatedJobData.add(CTX_MATERIAL_NAME, info.materialName());
+                updatedJobData.add(CTX_COURTDOCUMENT_ID_KEY, info.courtDocumentId());
 
 
                 final Optional<UUID> existingDocUuid =

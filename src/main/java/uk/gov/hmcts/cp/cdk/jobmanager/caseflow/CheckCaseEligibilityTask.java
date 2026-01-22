@@ -3,6 +3,7 @@ package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_CASE_ELIGIBILITY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
@@ -16,6 +17,8 @@ import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.json.Json;
+import jakarta.json.JsonObjectBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -69,10 +72,13 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
                 caseId, CHECK_IDPC_AVAILABILITY
         );
 
+        JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
+        updatedJobData.add(CTX_DEFENDANT_ID_KEY, info.defendantIds().getFirst());
 
         ExecutionInfo nextTask = ExecutionInfo.executionInfo()
                 .from(executionInfo)
                 .withAssignedTaskName(CHECK_IDPC_AVAILABILITY)
+                .withJobData(updatedJobData.build())
                 .withExecutionStatus(ExecutionStatus.STARTED)
                 .build();
 
