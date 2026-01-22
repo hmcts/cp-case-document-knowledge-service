@@ -115,7 +115,8 @@ class CheckIdpcAvailabilityTaskTest {
                 "Document Type Description",
                 materialId.toString(),
                 "Material A",
-                ZonedDateTime.now()
+                ZonedDateTime.now(),
+                UUID.randomUUID().toString()
         );
         when(progressionClient.getCourtDocuments(any(), any())).thenReturn(Optional.of(materialInfo));
         when(documentIdResolver.resolveExistingDocId(any(), any())).thenReturn(Optional.of(UUID.randomUUID()));
@@ -135,7 +136,8 @@ class CheckIdpcAvailabilityTaskTest {
                 "Document Type Description",
                 materialId.toString(),
                 "Material A",
-                ZonedDateTime.now()
+                ZonedDateTime.now(),
+                UUID.randomUUID().toString()
         );
         when(progressionClient.getCourtDocuments(any(), any())).thenReturn(Optional.of(materialInfo));
         when(documentIdResolver.resolveExistingDocId(any(), any())).thenReturn(Optional.empty());

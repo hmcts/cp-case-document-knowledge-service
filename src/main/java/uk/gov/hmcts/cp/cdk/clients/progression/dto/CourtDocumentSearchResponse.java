@@ -17,6 +17,7 @@ public record CourtDocumentSearchResponse(
             String documentTypeId,
             String documentTypeDescription,
             String name,
+            String courtDocumentId,
             List<Material> materials
     ) {
     }

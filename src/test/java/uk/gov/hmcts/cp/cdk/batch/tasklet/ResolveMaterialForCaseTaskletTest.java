@@ -117,7 +117,8 @@ class ResolveMaterialForCaseTaskletTest {
                 "IDPC Document",
                 materialId,
                 materialName,
-                ZonedDateTime.now()
+                ZonedDateTime.now(),
+                UUID.randomUUID().toString()
         );
 
         when(progressionClient.getCourtDocuments(caseId, userId)).thenReturn(Optional.of(info));

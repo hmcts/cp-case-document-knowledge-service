@@ -9,6 +9,7 @@ public record LatestMaterialInfo(
         String documentTypeDescription,
         String materialId,
         String materialName,
-        ZonedDateTime uploadDateTime
+        ZonedDateTime uploadDateTime,
+        String courtDocumentId
 ) {
 }

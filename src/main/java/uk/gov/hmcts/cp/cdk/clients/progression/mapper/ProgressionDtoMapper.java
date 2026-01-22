@@ -60,6 +60,12 @@ public class ProgressionDtoMapper {
         }
 
         final CourtDocumentSearchResponse.Material latestMaterial = latestMaterialOptional.get();
+        final String courtDocumentId = document.courtDocumentId();
+
+        if (courtDocumentId == null) {
+            log.debug("courtDocumentId is null for documentTypeId={} caseIds={}",
+                    documentTypeId, documentIndex.caseIds());
+        }
 
         final LatestMaterialInfo latestMaterialInfo = new LatestMaterialInfo(
                 documentIndex.caseIds(),
@@ -67,7 +73,8 @@ public class ProgressionDtoMapper {
                 document.documentTypeDescription(),
                 latestMaterial.id(),
                 resolvedDocumentName,
-                latestMaterial.uploadDateTime()
+                latestMaterial.uploadDateTime(),
+                courtDocumentId
         );
 
         log.info("Resolved latest material. caseIds={} documentTypeId={} materialId={} uploadedAt={}",
