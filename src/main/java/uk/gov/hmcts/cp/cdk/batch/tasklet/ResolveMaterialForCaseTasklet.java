@@ -6,7 +6,7 @@ import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_CASE_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_RESULT_MATERIAL_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_RESULT_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuid;
-import static uk.gov.hmcts.cp.cdk.util.TaskUtils.safeGetCourtDocuments;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.getCourtDocuments;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
@@ -61,7 +61,7 @@ public class ResolveMaterialForCaseTasklet implements Tasklet {
 
         if (proceed) {
             final Optional<LatestMaterialInfo> latest =
-                    safeGetCourtDocuments(progressionClient, caseIdUuidOptional.get(), userId);
+                    getCourtDocuments(progressionClient, caseIdUuidOptional.get(), userId);
             latest.ifPresent(info -> {
                 stepContext.putString(PARTITION_RESULT_MATERIAL_ID, info.materialId());
                 stepContext.putString(PARTITION_RESULT_MATERIAL_NAME, info.materialName());

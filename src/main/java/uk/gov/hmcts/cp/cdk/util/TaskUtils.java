@@ -133,9 +133,9 @@ public class TaskUtils {
 
     // ---------- Safe external lookups ----------
 
-    public static Optional<LatestMaterialInfo> safeGetCourtDocuments(final ProgressionClient progressionClient,
-                                                                     final UUID caseId,
-                                                                     final String userId) {
+    public static Optional<LatestMaterialInfo> getCourtDocuments(final ProgressionClient progressionClient,
+                                                                 final UUID caseId,
+                                                                 final String userId) {
         Optional<LatestMaterialInfo> result;
         try {
             result = progressionClient.getCourtDocuments(caseId, userId);

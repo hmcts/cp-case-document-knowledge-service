@@ -9,7 +9,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuid;
-import static uk.gov.hmcts.cp.cdk.util.TaskUtils.safeGetCourtDocuments;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.getCourtDocuments;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
@@ -78,7 +78,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
             caseIdUuidOptional = parseUuid(caseIdString);
 
             final Optional<LatestMaterialInfo> latest =
-                    safeGetCourtDocuments(progressionClient, caseIdUuidOptional.get(), userId);
+                    getCourtDocuments(progressionClient, caseIdUuidOptional.get(), userId);
             latest.ifPresent(info -> {
                 JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
                 updatedJobData.add(CTX_MATERIAL_ID_KEY, info.materialId());
