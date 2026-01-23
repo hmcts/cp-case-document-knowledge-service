@@ -22,7 +22,6 @@ import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
 import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
 import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -92,9 +91,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                 final Integer version = getVersionNumber(caseId, queryId, documentId);
                 final String llmInputJson = getLlmJson(answerResponseBody.getChunkedEntries(), caseId, documentId, queryId);
 
-                final List<MapSqlParameterSource> params = new ArrayList<>();
-                params.add(buildAnswerParams(caseId, queryId, version, answerResponseBody.getLlmResponse(), llmInputJson, documentId));
-                jdbc.batchUpdate(SQL_UPSERT_ANSWER, params.toArray(new MapSqlParameterSource[0]));
+                final MapSqlParameterSource params = buildAnswerParams(caseId, queryId, version, answerResponseBody.getLlmResponse(), llmInputJson, documentId);
+                jdbc.update(SQL_UPSERT_ANSWER, params);
             }
 
             if (ANSWER_GENERATION_FAILED == answerResponseBody.getStatus()) {

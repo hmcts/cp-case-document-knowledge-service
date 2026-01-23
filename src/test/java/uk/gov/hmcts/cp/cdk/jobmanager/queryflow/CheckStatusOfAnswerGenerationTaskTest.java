@@ -64,7 +64,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
     private ArgumentCaptor<String> sqlCaptor;
 
     @Captor
-    private ArgumentCaptor<SqlParameterSource[]> paramCaptor;
+    private ArgumentCaptor<SqlParameterSource> paramCaptor;
 
 
     private CheckStatusOfAnswerGenerationTask task;
@@ -162,9 +162,9 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
         final ExecutionInfo result = task.execute(executionInfo);
 
-        verify(jdbc).batchUpdate(sqlCaptor.capture(), paramCaptor.capture());
+        verify(jdbc).update(sqlCaptor.capture(), paramCaptor.capture());
         assertThat(sqlCaptor.getValue()).isEqualTo(SQL_UPSERT_ANSWER);
-        assertThat(paramCaptor.getValue()[0]).isNotNull();
+        assertThat(paramCaptor.getValue()).isNotNull();
 
         assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
         assertThat(result.isShouldRetry()).isFalse();
