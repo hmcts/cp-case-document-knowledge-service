@@ -3,7 +3,9 @@ package uk.gov.hmcts.cp.cdk.jobmanager.queryflow;
 import static jakarta.json.Json.createObjectBuilder;
 import static java.time.ZonedDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_STATUS_OF_ANSWER_GENERATION;
 import static uk.gov.hmcts.cp.cdk.jobmanager.queryflow.CheckStatusOfAnswerGenerationTask.SQL_UPSERT_ANSWER;
@@ -12,6 +14,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_K
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_RAG_TRANSACTION_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATED;
+import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATION_FAILED;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.COMPLETED;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.INPROGRESS;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.STARTED;
@@ -74,7 +77,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @BeforeEach
     void setUp() {
-        task = new CheckStatusOfAnswerGenerationTask(jdbc, api, objectMapper,retryProperties);
+        task = new CheckStatusOfAnswerGenerationTask(jdbc, api, objectMapper, retryProperties);
         transactionId = UUID.randomUUID();
         caseId = UUID.randomUUID();
         queryId = UUID.randomUUID();
@@ -92,6 +95,15 @@ class CheckStatusOfAnswerGenerationTaskTest {
                 .withExecutionStatus(STARTED)
                 .withAssignedTaskStartTime(now())
                 .build();
+    }
+
+    @Test
+    void shouldRetry_whenExceptionCallingRagApi() {
+        doThrow(new IllegalStateException()).when(api).answerUserQueryStatus(transactionId.toString());
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        assertRetry(result);
     }
 
     @Test
@@ -154,6 +166,21 @@ class CheckStatusOfAnswerGenerationTaskTest {
         assertThat(sqlCaptor.getValue()).isEqualTo(SQL_UPSERT_ANSWER);
         assertThat(paramCaptor.getValue()[0]).isNotNull();
 
+        assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
+        assertThat(result.isShouldRetry()).isFalse();
+    }
+
+    @Test
+    void shouldNotSaveAnswerToCdkDatabase_andCompleteJob_whenAnswerGenerationFailed() {
+        when(body.getStatus()).thenReturn(ANSWER_GENERATION_FAILED);
+
+        final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.ok(body);
+
+        when(api.answerUserQueryStatus(transactionId.toString())).thenReturn(response);
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        verifyNoInteractions(jdbc);
         assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
         assertThat(result.isShouldRetry()).isFalse();
     }

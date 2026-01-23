@@ -5,6 +5,7 @@ import static java.util.Objects.isNull;
 import static java.util.Optional.ofNullable;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_STATUS_OF_ANSWER_GENERATION;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_DOCUMENT_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_RAG_TRANSACTION_ID;
@@ -68,7 +69,7 @@ public class GenerateAnswerForQueryTask implements ExecutableTask {
                 .userQuery(ofNullable(qdl.getUserQuery()).orElse(""))
                 .queryPrompt(ofNullable(qdl.getQueryPrompt()).orElse(""))
                 .metadataFilter(List.of(new MetadataFilter()
-                        .key("document_id")
+                        .key(META_DOCUMENT_ID)
                         .value(docId.toString()))
                 );
 

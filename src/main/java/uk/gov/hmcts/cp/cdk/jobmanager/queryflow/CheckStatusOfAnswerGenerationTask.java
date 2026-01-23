@@ -47,6 +47,7 @@ import org.springframework.stereotype.Component;
 @Task(CHECK_STATUS_OF_ANSWER_GENERATION)
 public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
 
+    private static final String PROVENANCE_CHUNKS_SAMPLE = "provenanceChunksSample";
     private final NamedParameterJdbcTemplate jdbc;
     private final DocumentInformationSummarisedAsynchronouslyApi documentInformationSummarisedAsynchronouslyApi;
     private final ObjectMapper objectMapper;
@@ -136,7 +137,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
         final Map<String, Object> chunkSampleMap = new LinkedHashMap<>();
         try {
             final List<Object> chunks = Optional.ofNullable(chunkedEntries).orElseGet(Collections::emptyList);
-            chunkSampleMap.put("provenanceChunksSample", chunks);
+            chunkSampleMap.put(PROVENANCE_CHUNKS_SAMPLE, chunks);
             return objectMapper.writeValueAsString(chunkSampleMap);
         } catch (final Exception e) {
             log.warn("Failed to build llm_input JSON for caseId={}, docId={}, queryId={}: {}",
