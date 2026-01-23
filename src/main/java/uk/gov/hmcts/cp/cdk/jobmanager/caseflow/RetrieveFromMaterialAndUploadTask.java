@@ -71,16 +71,6 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
 
 
         final String userIdForExternalCalls = jobData.getString(CPPUID, null);
-        if (userIdForExternalCalls == null || userIdForExternalCalls.isBlank()) {
-            log.warn(
-                    "Missing '{}' in jobData; downstream call may fail, Hence closing currentTask{} requestId={}",
-                    CPPUID, RETRIEVE_FROM_MATERIAL, requestId
-            );
-            return ExecutionInfo.executionInfo()
-                    .from(executionInfo)
-                    .withExecutionStatus(ExecutionStatus.COMPLETED)
-                    .build();
-        }
 
         final UUID materialId = readUuid(jobData, CTX_MATERIAL_ID_KEY, "materialId", requestId);
         final UUID defendantId = readUuid(jobData, CTX_DEFENDANT_ID_KEY, "defendantId", requestId);

@@ -54,28 +54,6 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
         final String userId = jobData.getString(CPPUID, null);
         final String requestId = jobData.getString("requestId", "unknown");
 
-        if (!hasText(caseIdString)) {
-            log.warn(
-                    "Missing '{}' in jobData → skipping. requestId={}",
-                    CTX_CASE_ID_KEY, requestId
-            );
-            return ExecutionInfo.executionInfo()
-                    .from(executionInfo)
-                    .withExecutionStatus(ExecutionStatus.COMPLETED)
-                    .build();
-        }
-
-        if (!hasText(userId)) {
-            log.warn(
-                    "Missing '{}' in jobData; downstream call may fail, Hence closing currentTask{} requestId={}",
-                    CPPUID, CHECK_IDPC_AVAILABILITY, requestId
-            );
-            return ExecutionInfo.executionInfo()
-                    .from(executionInfo)
-                    .withExecutionStatus(ExecutionStatus.COMPLETED)
-                    .build();
-        }
-
         Optional<UUID> caseIdUuidOptional;
 
         try {
