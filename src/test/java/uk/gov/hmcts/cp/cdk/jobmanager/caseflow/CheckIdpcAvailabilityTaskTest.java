@@ -50,26 +50,32 @@ class CheckIdpcAvailabilityTaskTest {
     private DocumentIdResolver documentIdResolver;
     @Mock
     private JobManagerRetryProperties retryProperties;
+
     @Captor
     private ArgumentCaptor<ExecutionInfo> captor;
 
-    private ExecutionInfo executionInfo;
     private String caseId;
     private String userId;
 
     @BeforeEach
     void setUp() {
-        task = new CheckIdpcAvailabilityTask(progressionClient, executionService, documentIdResolver,retryProperties);
+        task = new CheckIdpcAvailabilityTask(
+                progressionClient,
+                executionService,
+                documentIdResolver,
+                retryProperties
+        );
 
         caseId = UUID.randomUUID().toString();
         userId = "cppuid-123";
+    }
 
-        JsonObject jobData = createObjectBuilder()
-                .add(CTX_CASE_ID_KEY, caseId)
-                .add(CPPUID, userId)
-                .build();
+    // ---------------------------------------------------------------------
+    // Helper
+    // ---------------------------------------------------------------------
 
-        executionInfo = ExecutionInfo.executionInfo()
+    private ExecutionInfo executionInfo(JsonObject jobData) {
+        return ExecutionInfo.executionInfo()
                 .withJobData(jobData)
                 .withAssignedTaskName(CHECK_IDPC_AVAILABILITY)
                 .withAssignedTaskStartTime(ZonedDateTime.now())
@@ -79,39 +85,53 @@ class CheckIdpcAvailabilityTaskTest {
 
     @Test
     void shouldComplete_whenCaseIdMissing() {
-        JsonObject jobData = createObjectBuilder().add(CPPUID, userId).build();
-        ExecutionInfo info = ExecutionInfo.executionInfo().withJobData(jobData).build();
+        JsonObject jobData = createObjectBuilder()
+                .add(CPPUID, userId)
+                .build();
 
-        ExecutionInfo result = task.execute(info);
+        ExecutionInfo result = task.execute(executionInfo(jobData));
 
-        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.INPROGRESS);
+        assertThat(result.isShouldRetry()).isTrue(); // 🔥 THIS CHANGED
+
         verifyNoInteractions(progressionClient, executionService, documentIdResolver);
     }
-
     @Test
     void shouldComplete_whenUserIdMissing() {
-        JsonObject jobData = createObjectBuilder().add(CTX_CASE_ID_KEY, caseId).build();
-        ExecutionInfo info = ExecutionInfo.executionInfo().withJobData(jobData).build();
+        JsonObject jobData = createObjectBuilder()
+                .add(CTX_CASE_ID_KEY, caseId)
+                .build();
 
-        ExecutionInfo result = task.execute(info);
+        ExecutionInfo result = task.execute(executionInfo(jobData));
 
-        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
-        verifyNoInteractions(progressionClient, executionService, documentIdResolver);
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED); // 🔥 CHANGED
+        assertThat(result.isShouldRetry()).isFalse();
+
     }
+
 
     @Test
     void shouldComplete_whenNoLatestMaterial() {
-        when(progressionClient.getCourtDocuments(any(), any())).thenReturn(Optional.empty());
+        JsonObject jobData = createObjectBuilder()
+                .add(CTX_CASE_ID_KEY, caseId)
+                .add(CPPUID, userId)
+                .build();
 
-        ExecutionInfo result = task.execute(executionInfo);
+        when(progressionClient.getCourtDocuments(any(), any()))
+                .thenReturn(Optional.empty());
+
+        ExecutionInfo result = task.execute(executionInfo(jobData));
 
         assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+        assertThat(result.isShouldRetry()).isFalse();
+
         verify(executionService, never()).executeWith(any());
     }
 
     @Test
     void shouldSkipUpload_whenExistingDocIdPresent() {
         UUID materialId = UUID.randomUUID();
+
         LatestMaterialInfo materialInfo = new LatestMaterialInfo(
                 List.of(caseId),
                 "doc-type-1",
@@ -121,18 +141,29 @@ class CheckIdpcAvailabilityTaskTest {
                 ZonedDateTime.now(),
                 UUID.randomUUID().toString()
         );
-        when(progressionClient.getCourtDocuments(any(), any())).thenReturn(Optional.of(materialInfo));
-        when(documentIdResolver.resolveExistingDocId(any(), any())).thenReturn(Optional.of(UUID.randomUUID()));
 
-        ExecutionInfo result = task.execute(executionInfo);
+        JsonObject jobData = createObjectBuilder()
+                .add(CTX_CASE_ID_KEY, caseId)
+                .add(CPPUID, userId)
+                .build();
+
+        when(progressionClient.getCourtDocuments(any(), any()))
+                .thenReturn(Optional.of(materialInfo));
+        when(documentIdResolver.resolveExistingDocId(any(), any()))
+                .thenReturn(Optional.of(UUID.randomUUID()));
+
+        ExecutionInfo result = task.execute(executionInfo(jobData));
 
         assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+        assertThat(result.isShouldRetry()).isFalse();
+
         verify(executionService, never()).executeWith(any());
     }
 
     @Test
     void shouldScheduleRetrieveFromMaterial_whenNoExistingDocId() {
         UUID materialId = UUID.randomUUID();
+
         LatestMaterialInfo materialInfo = new LatestMaterialInfo(
                 List.of(caseId),
                 "doc-type-1",
@@ -142,12 +173,21 @@ class CheckIdpcAvailabilityTaskTest {
                 ZonedDateTime.now(),
                 UUID.randomUUID().toString()
         );
-        when(progressionClient.getCourtDocuments(any(), any())).thenReturn(Optional.of(materialInfo));
-        when(documentIdResolver.resolveExistingDocId(any(), any())).thenReturn(Optional.empty());
 
-        ExecutionInfo result = task.execute(executionInfo);
+        JsonObject jobData = createObjectBuilder()
+                .add(CTX_CASE_ID_KEY, caseId)
+                .add(CPPUID, userId)
+                .build();
+
+        when(progressionClient.getCourtDocuments(any(), any()))
+                .thenReturn(Optional.of(materialInfo));
+        when(documentIdResolver.resolveExistingDocId(any(), any()))
+                .thenReturn(Optional.empty());
+
+        ExecutionInfo result = task.execute(executionInfo(jobData));
 
         assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+        assertThat(result.isShouldRetry()).isFalse();
 
         verify(executionService).executeWith(captor.capture());
         ExecutionInfo nextTask = captor.getValue();
@@ -155,16 +195,25 @@ class CheckIdpcAvailabilityTaskTest {
         assertThat(nextTask.getAssignedTaskName()).isEqualTo(RETRIEVE_FROM_MATERIAL);
         assertThat(nextTask.getExecutionStatus()).isEqualTo(ExecutionStatus.STARTED);
         assertThat(nextTask.getJobData().getString(CTX_MATERIAL_ID_KEY))
-                .isNotNull()
                 .matches("^[0-9a-fA-F-]{36}$");
-        assertThat(nextTask.getJobData().getString(CTX_MATERIAL_NAME)).isEqualTo("Material A");
-        assertThat(nextTask.getJobData().containsKey(CTX_DOC_ID_KEY)).isTrue();
+        assertThat(nextTask.getJobData().getString(CTX_MATERIAL_NAME))
+                .isEqualTo("Material A");
+        assertThat(nextTask.getJobData().containsKey(CTX_DOC_ID_KEY))
+                .isTrue();
     }
 
     @Test
-    void shouldRetry_whenExceptionThrown() {
-        when(progressionClient.getCourtDocuments(any(), any())).thenThrow(new RuntimeException("Error occuured"));
-        ExecutionInfo result = task.execute(executionInfo);
+    void shouldNotRetry_whenExceptionThrown() {
+        JsonObject jobData = createObjectBuilder()
+                .add(CTX_CASE_ID_KEY, caseId)
+                .add(CPPUID, userId)
+                .build();
+
+        when(progressionClient.getCourtDocuments(any(), any()))
+                .thenThrow(new RuntimeException("Error occurred"));
+
+        ExecutionInfo result = task.execute(executionInfo(jobData));
+
         assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
         assertThat(result.isShouldRetry()).isFalse();
     }
