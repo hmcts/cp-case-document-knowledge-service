@@ -75,14 +75,14 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
         JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
         updatedJobData.add(CTX_DEFENDANT_ID_KEY, info.defendantIds().getFirst());
 
-        ExecutionInfo nextTask = ExecutionInfo.executionInfo()
+        ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
                 .from(executionInfo)
                 .withAssignedTaskName(CHECK_IDPC_AVAILABILITY)
                 .withJobData(updatedJobData.build())
                 .withExecutionStatus(ExecutionStatus.STARTED)
                 .build();
 
-        executionService.executeWith(nextTask);
+        executionService.executeWith(executionInfoNew);
 
         return complete(executionInfo);
     }

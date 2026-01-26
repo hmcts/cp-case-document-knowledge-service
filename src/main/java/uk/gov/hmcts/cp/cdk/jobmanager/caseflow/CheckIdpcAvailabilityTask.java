@@ -85,14 +85,14 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                 if (newDocId != null) {
                     updatedJobData.add(CTX_DOC_ID_KEY, newDocId);
 
-                    ExecutionInfo newTask = ExecutionInfo.executionInfo()
+                    ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
                             .from(executionInfo)
                             .withAssignedTaskName(RETRIEVE_FROM_MATERIAL)
                             .withJobData(updatedJobData.build())
                             .withExecutionStatus(ExecutionStatus.STARTED)
                             .build();
 
-                    executionService.executeWith(newTask);
+                    executionService.executeWith(executionInfoNew);
 
                 }
 

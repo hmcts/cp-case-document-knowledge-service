@@ -138,14 +138,14 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
             updatedJobData.add(CTX_DOC_ID_KEY, documentId.toString());
             updatedJobData.add(CTX_BLOB_NAME_KEY, blobName);
 
-            ExecutionInfo newTask = ExecutionInfo.executionInfo()
+            ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
                     .from(executionInfo)
                     .withAssignedTaskName(CHECK_INGESTION_STATUS_FOR_DOCUMENT)
                     .withJobData(updatedJobData.build())
                     .withExecutionStatus(ExecutionStatus.STARTED)
                     .build();
 
-            executionService.executeWith(newTask);
+            executionService.executeWith(executionInfoNew);
 
             return ExecutionInfo.executionInfo()
                     .from(executionInfo)

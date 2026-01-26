@@ -99,14 +99,14 @@ public class GetCasesForHearingTask implements ExecutableTask {
                         .add(CTX_CASE_ID_KEY, caseId)
                         .build();
 
-                ExecutionInfo newTask = ExecutionInfo.executionInfo()
+                ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
                         .from(executionInfo)
                         .withAssignedTaskName(CHECK_CASE_ELIGIBILITY)
                         .withJobData(singleCaseJobData)
                         .withExecutionStatus(ExecutionStatus.STARTED)
                         .build();
 
-                executionService.executeWith(newTask);
+                executionService.executeWith(executionInfoNew);
 
                 log.info("Created {} for caseId={} requestId={}", CHECK_CASE_ELIGIBILITY, caseId, requestId);
             }

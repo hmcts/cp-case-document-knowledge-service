@@ -117,14 +117,14 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
                         .add(CTX_SINGLE_QUERY_ID, questionId.toString())
                         .build();
 
-                ExecutionInfo newTask = ExecutionInfo.executionInfo()
+                ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
                         .from(executionInfo)
                         .withAssignedTaskName(GENERATE_ANSWER_FOR_QUERY)
                         .withJobData(singleCaseJobData)
                         .withExecutionStatus(ExecutionStatus.STARTED)
                         .build();
 
-                executionService.executeWith(newTask);
+                executionService.executeWith(executionInfoNew);
 
                 log.info("Created {} for docId={} questionId={}", GENERATE_ANSWER_FOR_QUERY, documentId, questionId);
             }
