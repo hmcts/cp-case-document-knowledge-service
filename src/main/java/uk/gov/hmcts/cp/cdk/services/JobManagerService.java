@@ -44,6 +44,7 @@ public class JobManagerService implements IngestionProcessor {
 
         final IngestionProcessResponse response = new IngestionProcessResponse();
         response.setLastUpdated(OffsetDateTime.now());
+        final String safeCppuid = sanitizeForLog(cppuid);
 
         try {
             ExecutionInfo executionInfo = ExecutionInfo.executionInfo()
@@ -54,7 +55,6 @@ public class JobManagerService implements IngestionProcessor {
                     .build();
 
             executor.executeWith(executionInfo);
-            final String safeCppuid = sanitizeForLog(cppuid);
             log.info("Case ingestion process started via JobManager. requestId={}, cppuid={}", requestId, safeCppuid);
 
             response.setPhase(IngestionProcessPhase.STARTED);
@@ -63,8 +63,7 @@ public class JobManagerService implements IngestionProcessor {
             );
 
         } catch (Exception e) {
-            log.error("Failed to start case ingestion workflow via JobManager. requestId={}, cppuid={}", requestId, cppuid, e);
-
+            log.error("Failed to start case ingestion workflow via JobManager. requestId={}, cppuid={}", requestId, safeCppuid, e);
             response.setPhase(IngestionProcessPhase.FAILED);
             response.setMessage(
                     "Failed to submit ingestion workflow via JobManager (requestId=%s): %s"

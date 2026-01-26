@@ -97,7 +97,9 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
 
             String safeTransactionIdForLog = transactionId == null
                     ? "null"
-                    : transactionId.replaceAll("[\\r\\n]", "_");
+                    : transactionId
+                    .replace('\n', '_')
+                    .replace('\r', '_');
             log.info("RAG Async answer status completed successfully for the transactionId: {}", safeTransactionIdForLog);
             return ResponseEntity.ok(response);
 
