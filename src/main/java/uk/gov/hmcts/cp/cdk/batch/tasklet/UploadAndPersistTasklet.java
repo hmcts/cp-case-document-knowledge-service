@@ -6,13 +6,13 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_NEW_UPLOAD;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.getBooleanFromContext;
-import static uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils.parseUuidOrNull;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.getBooleanFromContext;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
-import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.storage.StorageService;
+import uk.gov.hmcts.cp.cdk.storage.UploadProperties;
 import uk.gov.hmcts.cp.cdk.batch.verification.DocumentVerificationEnqueueService;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
@@ -126,7 +126,7 @@ public class UploadAndPersistTasklet implements Tasklet {
                 final Map<String, String> metadata =
                         createBlobMetadata(documentId, materialId, caseId.toString(), today, materialName);
 
-                final String blobUrl = copyToBlobWithRetry(jobId, downloadUrl, destinationPath, contentType, metadata, materialId);
+                final String blobUrl = copyToBlobWithRetry(jobId, downloadUrl, destinationPath, metadata, materialId);
                 if (blobUrl == null) {
                     log.warn("jobId={} Blob copy returned null URL; destinationPath={}, materialId={}, contentType={}. Skipping persist.",
                             jobId, destinationPath, materialId, contentType);
@@ -182,7 +182,6 @@ public class UploadAndPersistTasklet implements Tasklet {
     private String copyToBlobWithRetry(final String jobId,
                                        final String downloadUrl,
                                        final String destinationPath,
-                                       final String contentType,
                                        final Map<String, String> metadata,
                                        final UUID materialId) {
         return retryTemplate.execute((RetryContext retryContext) -> {
@@ -191,7 +190,7 @@ public class UploadAndPersistTasklet implements Tasklet {
                 log.warn("jobId={} Retrying copyFromUrl attempt #{} path={}, materialId={}",
                         jobId, attempt, destinationPath, materialId);
             }
-            return storageService.copyFromUrl(downloadUrl, destinationPath, contentType, metadata);
+            return storageService.copyFromUrl(downloadUrl, destinationPath, metadata);
         }, (RetryContext recovery) -> {
             final Throwable last = recovery.getLastThrowable();
             final String cause = last != null ? last.getMessage() : "n/a";

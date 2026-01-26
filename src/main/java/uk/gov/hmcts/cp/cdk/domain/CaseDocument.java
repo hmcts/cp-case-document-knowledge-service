@@ -74,4 +74,10 @@ public class CaseDocument {
 
     @Column(name = "ingestion_phase_at", nullable = false)
     private OffsetDateTime ingestionPhaseAt = utcNow();
+
+    @Column(name = "defendant_id")
+    private UUID defendantId;
+
+    @Column(name = "courtdoc_id")
+    private UUID courtdocId;
 }

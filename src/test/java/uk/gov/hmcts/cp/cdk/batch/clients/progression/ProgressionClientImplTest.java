@@ -6,8 +6,10 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.mapper.ProgressionDtoMapper;
+import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClientConfig;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClientImpl;
+import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
 
 import java.util.UUID;
 
@@ -54,7 +56,10 @@ class ProgressionClientImplTest {
                 "/progression-query-api/query/api/rest/progression/courtdocumentsearch",
                 "/progression-query-api/query/api/rest/progression/material/{materialId}/content",
                 "application/vnd.progression.query.courtdocuments+json",
-                "application/vnd.progression.query.material-content+json"
+                "application/vnd.progression.query.material-content+json",
+                "application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
+
         );
         final var client = new ProgressionClientImpl(restClient, rootProps, cfg, new ProgressionDtoMapper(cfg));
 
@@ -87,7 +92,8 @@ class ProgressionClientImplTest {
                 "/progression-query-api/query/api/rest/progression/courtdocumentsearch",
                 "/progression-query-api/query/api/rest/progression/material/{materialId}/content",
                 "application/vnd.progression.query.courtdocuments+json",
-                "application/vnd.progression.query.material-content+json"
+                "application/vnd.progression.query.material-content+json", "application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
         );
         final var client = new ProgressionClientImpl(restClient, rootProps, cfg, new ProgressionDtoMapper(cfg));
 
@@ -120,7 +126,8 @@ class ProgressionClientImplTest {
                 "/progression-query-api/query/api/rest/progression/courtdocumentsearch",
                 "/progression-query-api/query/api/rest/progression/material/{materialId}/content",
                 "application/vnd.progression.query.courtdocuments+json",
-                "application/vnd.progression.query.material-content+json"
+                "application/vnd.progression.query.material-content+json", "application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
         );
         final var client = new ProgressionClientImpl(restClient, rootProps, cfg, new ProgressionDtoMapper(cfg));
 
@@ -172,7 +179,8 @@ class ProgressionClientImplTest {
                 "/progression-query-api/query/api/rest/progression/courtdocumentsearch",
                 "/progression-query-api/query/api/rest/progression/material/{materialId}/content",
                 "application/vnd.progression.query.courtdocuments+json",
-                "application/vnd.progression.query.material-content+json"
+                "application/vnd.progression.query.material-content+json", "application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
         );
         final var client = new ProgressionClientImpl(restClient, rootProps, cfg, new ProgressionDtoMapper(cfg));
 
@@ -207,7 +215,8 @@ class ProgressionClientImplTest {
                 "/progression-query-api/query/api/rest/progression/courtdocumentsearch",
                 "/progression-query-api/query/api/rest/progression/material/{materialId}/content",
                 "application/vnd.progression.query.courtdocuments+json",
-                "application/vnd.progression.query.material-content+json"
+                "application/vnd.progression.query.material-content+json", "application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
         );
         final var client = new ProgressionClientImpl(restClient, rootProps, cfg, new ProgressionDtoMapper(cfg));
 
@@ -242,7 +251,8 @@ class ProgressionClientImplTest {
                 "/progression-query-api/query/api/rest/progression/courtdocumentsearch",
                 "/progression-query-api/query/api/rest/progression/material/{materialId}/content",
                 "application/vnd.progression.query.courtdocuments+json",
-                "application/vnd.progression.query.material-content+json"
+                "application/vnd.progression.query.material-content+json", "application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
         );
         final var client = new ProgressionClientImpl(restClient, rootProps, cfg, new ProgressionDtoMapper(cfg));
 
@@ -288,7 +298,8 @@ class ProgressionClientImplTest {
                 "/progression-query-api/query/api/rest/progression/courtdocumentsearch",
                 "/progression-query-api/query/api/rest/progression/material/{materialId}/content",
                 "application/vnd.progression.query.courtdocuments+json",
-                "application/vnd.progression.query.material-content+json"
+                "application/vnd.progression.query.material-content+json", "application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
         );
         final var client = new ProgressionClientImpl(restClient, rootProps, cfg, new ProgressionDtoMapper(cfg));
 

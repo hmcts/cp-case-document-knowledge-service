@@ -7,6 +7,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import uk.gov.hmcts.cp.cdk.clients.common.AzureTokenService;
+
 import java.time.OffsetDateTime;
 
 import com.azure.core.credential.AccessToken;

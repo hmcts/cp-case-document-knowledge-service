@@ -1,0 +1,215 @@
+package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
+
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_CASE_ID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_DOCUMENT_ID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_MATERIAL_ID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_MATERIAL_NAME;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_METADATA;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_UPLOADED_AT;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_BLOB_NAME_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_COURTDOCUMENT_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
+import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+import uk.gov.hmcts.cp.cdk.storage.StorageService;
+import uk.gov.hmcts.cp.cdk.storage.UploadProperties;
+import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
+import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
+import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
+import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
+import uk.gov.hmcts.cp.taskmanager.service.task.Task;
+
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.IntStream;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+@Slf4j
+@Component
+@RequiredArgsConstructor
+@Task(RETRIEVE_FROM_MATERIAL)
+public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
+
+    private static final long UNKNOWN_SIZE_BYTES = -1L;
+
+    private final ObjectMapper objectMapper;
+    private final ProgressionClient progressionClient;
+    private final StorageService storageService;
+    private final CaseDocumentRepository caseDocumentRepository;
+    private final UploadProperties uploadProperties;
+    private final JobManagerRetryProperties retryProperties;
+    private final ExecutionService executionService;
+
+    @Override
+    public ExecutionInfo execute(final ExecutionInfo executionInfo) {
+
+        final JsonObject jobData = executionInfo.getJobData();
+        final String requestId = jobData.getString("requestId", "unknown");
+
+
+        final String userIdForExternalCalls = jobData.getString(CPPUID, null);
+        if (userIdForExternalCalls == null || userIdForExternalCalls.isBlank()) {
+            log.warn(
+                    "Missing '{}' in jobData; downstream call may fail, Hence closing currentTask{} requestId={}",
+                    CPPUID, RETRIEVE_FROM_MATERIAL, requestId
+            );
+            return ExecutionInfo.executionInfo()
+                    .from(executionInfo)
+                    .withExecutionStatus(ExecutionStatus.COMPLETED)
+                    .build();
+        }
+
+        final UUID materialId = readUuid(jobData, CTX_MATERIAL_ID_KEY, "materialId", requestId);
+        final UUID defendantId = readUuid(jobData, CTX_DEFENDANT_ID_KEY, "defendantId", requestId);
+        final UUID courtDocumentId = readUuid(jobData, CTX_COURTDOCUMENT_ID_KEY, "courtDocumentId", requestId);
+        final UUID caseId = readUuid(jobData, CTX_CASE_ID_KEY, "caseId", requestId);
+        final UUID documentId = readUuid(jobData, CTX_DOC_ID_KEY, "docId", requestId);
+        final String materialName = jobData.getString(CTX_MATERIAL_NAME, "");
+
+        if (materialId == null || caseId == null || documentId == null) {
+            log.warn(
+                    "Missing '{}' , {}, {} in jobData; downstream call may fail, Hence closing currentTask{} requestId={}",
+                    CTX_MATERIAL_ID_KEY, CTX_CASE_ID_KEY, CTX_DOC_ID_KEY, RETRIEVE_FROM_MATERIAL, requestId
+            );
+            return ExecutionInfo.executionInfo()
+                    .from(executionInfo)
+                    .withExecutionStatus(ExecutionStatus.COMPLETED)
+                    .build();
+        }
+
+        try {
+
+            final String downloadUrl = fetchDownloadUrl(materialId, userIdForExternalCalls, requestId);
+            log.info("downloadUrl generated :{} ", downloadUrl);
+            final DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern(uploadProperties.datePattern());
+            final String today = utcNow().format(dateFmt);
+            final String blobName = documentId + "_" + today + uploadProperties.fileExtension();
+
+            final Map<String, String> metadata = createBlobMetadata(documentId, materialId, caseId.toString(), today, materialName);
+
+            final String blobUrl = storageService.copyFromUrl(downloadUrl, blobName, metadata);
+
+            final long sizeBytes = Optional.of(storageService.getBlobSize(blobName)).orElse(UNKNOWN_SIZE_BYTES);
+
+            final CaseDocument entity = new CaseDocument();
+            entity.setDocId(documentId);
+            entity.setCaseId(caseId);
+            entity.setMaterialId(materialId);
+            entity.setDocName(blobName);
+            entity.setBlobUri(blobUrl);
+            entity.setContentType(uploadProperties.contentType());
+            entity.setSizeBytes(sizeBytes);
+            entity.setUploadedAt(utcNow());
+            entity.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
+            entity.setIngestionPhaseAt(utcNow());
+            entity.setDefendantId(defendantId);
+            entity.setCourtdocId(courtDocumentId);
+
+            caseDocumentRepository.saveAndFlush(entity);
+
+            log.info("Saved CaseDocument docId={}, caseId={}, materialId={}, sizeBytes={}, blobUri={}, requestId={}",
+                    documentId, caseId, materialId, sizeBytes, blobUrl, requestId);
+
+            JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
+
+            updatedJobData.add(CTX_DOC_ID_KEY, documentId.toString());
+            updatedJobData.add(CTX_BLOB_NAME_KEY, blobName);
+
+            ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
+                    .from(executionInfo)
+                    .withAssignedTaskName(CHECK_INGESTION_STATUS_FOR_DOCUMENT)
+                    .withJobData(updatedJobData.build())
+                    .withExecutionStatus(ExecutionStatus.STARTED)
+                    .build();
+
+            executionService.executeWith(executionInfoNew);
+
+            return ExecutionInfo.executionInfo()
+                    .from(executionInfo)
+                    .withExecutionStatus(ExecutionStatus.COMPLETED)
+                    .build();
+
+        } catch (Exception ex) {
+            log.error("{} failed. requestId={}", RETRIEVE_FROM_MATERIAL, requestId, ex);
+
+            return ExecutionInfo.executionInfo()
+                    .from(executionInfo)
+                    .withExecutionStatus(ExecutionStatus.INPROGRESS)
+                    .withShouldRetry(true)
+                    .build();
+        }
+    }
+
+    @Override
+    public Optional<List<Long>> getRetryDurationsInSecs() {
+        var retry = retryProperties.getDefaultRetry();
+        return Optional.of(
+                IntStream.range(0, retry.getMaxAttempts())
+                        .mapToLong(i -> retry.getDelaySeconds())
+                        .boxed()
+                        .toList()
+        );
+    }
+
+    private UUID readUuid(final JsonObject jobData, final String key, final String label, final String requestId) {
+        final String raw = jobData.getString(key, null);
+        final UUID parsed = parseUuidOrNull(raw);
+
+        if (raw == null) {
+            log.warn("Missing required key '{}' in jobData; requestId={}", key, requestId);
+        } else if (parsed == null) {
+            log.warn("Invalid UUID for {} (key='{}'): '{}'; requestId={}", label, key, raw, requestId);
+        }
+        return parsed;
+    }
+
+    private String fetchDownloadUrl(final UUID materialId, final String userId, final String requestId) {
+        return progressionClient.getMaterialDownloadUrl(materialId, userId)
+                .filter(url -> !url.isBlank())
+                .orElseThrow(() ->
+                        new IllegalStateException("Empty download URL from Progression for materialId=" + materialId + "; requestId=" + requestId)
+                );
+    }
+
+    private Map<String, String> createBlobMetadata(final UUID documentId, final UUID materialId, final String caseId,
+                                                   final String uploadedDate, final String materialName) {
+        try {
+            final Map<String, Object> metadataJson = Map.of(
+                    META_CASE_ID, caseId,
+                    META_MATERIAL_ID, materialId.toString(),
+                    META_MATERIAL_NAME, materialName,
+                    META_UPLOADED_AT, uploadedDate
+            );
+
+            return Map.of(
+                    META_DOCUMENT_ID, documentId.toString(),
+                    META_METADATA, objectMapper.writeValueAsString(metadataJson)
+            );
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to create blob metadata", e);
+        }
+    }
+}

@@ -15,10 +15,10 @@ import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
 import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
-import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedApi;
+import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedSynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
 import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
-import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
+import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullySynchronously;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -68,7 +68,7 @@ class GenerateAnswersTaskletTest {
     private NamedParameterJdbcTemplate jdbc;
 
     @Mock
-    private DocumentInformationSummarisedApi documentInformationSummarisedApi;
+    private DocumentInformationSummarisedSynchronouslyApi documentInformationSummarisedSynchronouslyApi;
 
     @Mock
     private StepContribution contribution;
@@ -106,7 +106,7 @@ class GenerateAnswersTaskletTest {
                 jdbc,
                 txManager,
                 objectMapper,
-                documentInformationSummarisedApi,
+                documentInformationSummarisedSynchronouslyApi,
                 retryTemplate
         );
 
@@ -186,11 +186,11 @@ class GenerateAnswersTaskletTest {
         when(qdlRepo.findByQueryId(queryId)).thenReturn(Optional.of(def));
 
         // API success
-        final UserQueryAnswerReturnedSuccessfully rag =
-                new UserQueryAnswerReturnedSuccessfully()
+        final UserQueryAnswerReturnedSuccessfullySynchronously rag =
+                new UserQueryAnswerReturnedSuccessfullySynchronously()
                         .llmResponse("answer-1")
                         .chunkedEntries(new ArrayList<>());
-        when(documentInformationSummarisedApi.answerUserQuery(any(AnswerUserQueryRequest.class)))
+        when(documentInformationSummarisedSynchronouslyApi.answerUserQuery(any(AnswerUserQueryRequest.class)))
                 .thenReturn(ResponseEntity.ok(rag));
 
         // Batch updates for UPSERT and DONE
@@ -209,7 +209,7 @@ class GenerateAnswersTaskletTest {
 
         // Verify API called with metadata filter on document_id
         final ArgumentCaptor<AnswerUserQueryRequest> reqCap = ArgumentCaptor.forClass(AnswerUserQueryRequest.class);
-        verify(documentInformationSummarisedApi).answerUserQuery(reqCap.capture());
+        verify(documentInformationSummarisedSynchronouslyApi).answerUserQuery(reqCap.capture());
         final AnswerUserQueryRequest sent = reqCap.getValue();
         final List<MetadataFilter> filters = sent.getMetadataFilter();
         assertThat(filters).isNotNull();
@@ -271,7 +271,7 @@ class GenerateAnswersTaskletTest {
         )).thenReturn(1);
 
         // Make API fail (empty body triggers IllegalStateException handling path in tasklet via RetryTemplate recovery)
-        when(documentInformationSummarisedApi.answerUserQuery(any(AnswerUserQueryRequest.class)))
+        when(documentInformationSummarisedSynchronouslyApi.answerUserQuery(any(AnswerUserQueryRequest.class)))
                 .thenReturn(ResponseEntity.ok(null));
 
         when(jdbc.batchUpdate(
@@ -338,11 +338,11 @@ class GenerateAnswersTaskletTest {
 
         // qdl + API minimal stubs to let it proceed
         when(qdlRepo.findByQueryId(any(UUID.class))).thenReturn(Optional.empty());
-        final UserQueryAnswerReturnedSuccessfully rag =
-                new UserQueryAnswerReturnedSuccessfully()
+        final UserQueryAnswerReturnedSuccessfullySynchronously rag =
+                new UserQueryAnswerReturnedSuccessfullySynchronously()
                         .llmResponse("ok")
                         .chunkedEntries(Collections.emptyList());
-        when(documentInformationSummarisedApi.answerUserQuery(any(AnswerUserQueryRequest.class)))
+        when(documentInformationSummarisedSynchronouslyApi.answerUserQuery(any(AnswerUserQueryRequest.class)))
                 .thenReturn(ResponseEntity.ok(rag));
 
         when(jdbc.batchUpdate(

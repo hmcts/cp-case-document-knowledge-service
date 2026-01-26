@@ -95,7 +95,9 @@ ext.vers = [
         jacoco            : findProperty('version.jacoco'),
         commonsCollections: findProperty('version.commonsCollections'),
         cpAuthFilter      : findProperty('version.cpAuthFilter'),
-        cpAuditFilter     : findProperty('version.cpAuditFilter')
+        cpAuditFilter     : findProperty('version.cpAuditFilter'),
+        jobManager        : findProperty('version.jobManager')
+
 ]
 
 /* ---- Import Spring Boot BOM explicitly (helps with milestone builds) ---- */
@@ -162,6 +164,10 @@ dependencies {
     // Azure
     implementation "com.azure:azure-storage-blob:${vers.azureBlob}"
     implementation "com.azure:azure-identity:${vers.azureIdentity}"
+
+    //jobManager
+    implementation "uk.gov.hmcts.cp:task-manager-service:${vers.jobManager}"
+
 
     // Testcontainers (BOM)
     testImplementation platform("org.testcontainers:testcontainers-bom:${vers.testcontainersBom}")

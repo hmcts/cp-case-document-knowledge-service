@@ -10,8 +10,9 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.OK;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.common.ApimAuthHeaderService;
-import uk.gov.hmcts.cp.cdk.batch.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
+import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.rag.ApimDocumentIngestionStatusClient;
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
 
 import java.util.function.Function;

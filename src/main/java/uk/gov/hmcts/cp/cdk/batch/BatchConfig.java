@@ -2,10 +2,11 @@ package uk.gov.hmcts.cp.cdk.batch;
 
 import static java.util.Objects.requireNonNull;
 
-import uk.gov.hmcts.cp.cdk.batch.storage.AzureBlobStorageService;
-import uk.gov.hmcts.cp.cdk.batch.storage.StorageProperties;
-import uk.gov.hmcts.cp.cdk.batch.storage.StorageService;
-import uk.gov.hmcts.cp.cdk.batch.storage.UploadProperties;
+import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
+import uk.gov.hmcts.cp.cdk.storage.AzureBlobStorageService;
+import uk.gov.hmcts.cp.cdk.storage.StorageProperties;
+import uk.gov.hmcts.cp.cdk.storage.StorageService;
+import uk.gov.hmcts.cp.cdk.storage.UploadProperties;
 import uk.gov.hmcts.cp.cdk.config.VerifySchedulerProperties;
 
 import java.time.Duration;
@@ -139,6 +140,7 @@ public class BatchConfig {
     }
 
     @Bean
+    @Primary
     public ObjectMapper objectMapper() {
         final ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());

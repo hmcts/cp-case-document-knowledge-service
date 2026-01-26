@@ -6,11 +6,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.common.ApimAuthHeaderService;
-import uk.gov.hmcts.cp.cdk.batch.clients.common.RagClientProperties;
-import uk.gov.hmcts.cp.openapi.model.AnswerUserQuery500Response;
+import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
+import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.rag.RagAnswerServiceImpl;
+import uk.gov.hmcts.cp.cdk.clients.rag.RagClientException;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
-import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfully;
+import uk.gov.hmcts.cp.openapi.model.RequestErrored;
+import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullySynchronously;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,11 +63,11 @@ class RagAnswerServiceImplTest {
         // given
         final AnswerUserQueryRequest request = new AnswerUserQueryRequest("uq", "qp");
 
-        final UserQueryAnswerReturnedSuccessfully apiResponse = new UserQueryAnswerReturnedSuccessfully();
+        final UserQueryAnswerReturnedSuccessfullySynchronously apiResponse = new UserQueryAnswerReturnedSuccessfullySynchronously();
         apiResponse.setUserQuery("xxx");
         apiResponse.setQueryPrompt("yyy");
 
-        when(bodySpec.retrieve().body(UserQueryAnswerReturnedSuccessfully.class))
+        when(bodySpec.retrieve().body(UserQueryAnswerReturnedSuccessfullySynchronously.class))
                 .thenReturn(apiResponse);
 
         // when
@@ -83,8 +85,8 @@ class RagAnswerServiceImplTest {
         final AnswerUserQueryRequest req = new AnswerUserQueryRequest();
         req.setMetadataFilter(null);
 
-        when(bodySpec.retrieve().body(UserQueryAnswerReturnedSuccessfully.class))
-                .thenReturn(new UserQueryAnswerReturnedSuccessfully());
+        when(bodySpec.retrieve().body(UserQueryAnswerReturnedSuccessfullySynchronously.class))
+                .thenReturn(new UserQueryAnswerReturnedSuccessfullySynchronously());
         // when
         service.answerUserQuery(req);
 
@@ -97,8 +99,8 @@ class RagAnswerServiceImplTest {
     void shouldFillMissingFieldsFromRequest() {
         final AnswerUserQueryRequest req = new AnswerUserQueryRequest("query A", "prompt B");
 
-        when(bodySpec.retrieve().body(UserQueryAnswerReturnedSuccessfully.class))
-                .thenReturn(new UserQueryAnswerReturnedSuccessfully());
+        when(bodySpec.retrieve().body(UserQueryAnswerReturnedSuccessfullySynchronously.class))
+                .thenReturn(new UserQueryAnswerReturnedSuccessfullySynchronously());
 
         final var result = service.answerUserQuery(req);
 
@@ -110,7 +112,7 @@ class RagAnswerServiceImplTest {
     void shouldReturnNewResponseWhenNull() {
         final AnswerUserQueryRequest req = new AnswerUserQueryRequest("query A1", null);
 
-        when(bodySpec.retrieve().body(UserQueryAnswerReturnedSuccessfully.class))
+        when(bodySpec.retrieve().body(UserQueryAnswerReturnedSuccessfullySynchronously.class))
                 .thenReturn(null);
 
         final var result = service.answerUserQuery(req);
@@ -145,7 +147,7 @@ class RagAnswerServiceImplTest {
 
         final RagClientException ex = new RagClientException("Boom!", null);
 
-        final ResponseEntity<AnswerUserQuery500Response> response = service.onRagClient(ex);
+        final ResponseEntity<RequestErrored> response = service.onRagClient(ex);
 
         assertThat(response.getStatusCode().value()).isEqualTo(500);
         assertThat(response.getBody().getErrorMessage()).isEqualTo("Boom!");
@@ -158,7 +160,7 @@ class RagAnswerServiceImplTest {
 
         final Exception ex = new RuntimeException("We don't care about msg");
 
-        final ResponseEntity<AnswerUserQuery500Response> response = service.onGeneric(ex);
+        final ResponseEntity<RequestErrored> response = service.onGeneric(ex);
 
         assertThat(response.getStatusCode().value()).isEqualTo(500);
         assertThat(response.getBody().getErrorMessage()).isEqualTo("Internal server error");

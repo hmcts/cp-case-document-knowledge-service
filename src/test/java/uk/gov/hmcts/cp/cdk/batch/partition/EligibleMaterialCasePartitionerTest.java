@@ -7,7 +7,7 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.CTX_MATERIAL_NEW_UPLOAD;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.MaterialDocumentMapping;
+import uk.gov.hmcts.cp.cdk.clients.progression.dto.MaterialDocumentMapping;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

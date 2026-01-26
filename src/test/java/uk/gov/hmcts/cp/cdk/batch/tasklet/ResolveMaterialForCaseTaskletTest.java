@@ -12,8 +12,8 @@ import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_CASE_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_RESULT_MATERIAL_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.PartitionKeys.PARTITION_RESULT_MATERIAL_NAME;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -117,7 +117,8 @@ class ResolveMaterialForCaseTaskletTest {
                 "IDPC Document",
                 materialId,
                 materialName,
-                ZonedDateTime.now()
+                ZonedDateTime.now(),
+                UUID.randomUUID().toString()
         );
 
         when(progressionClient.getCourtDocuments(caseId, userId)).thenReturn(Optional.of(info));

@@ -2,11 +2,13 @@ package uk.gov.hmcts.cp.cdk.batch.clients.progression.mapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.ProgressionClientConfig;
-import uk.gov.hmcts.cp.cdk.batch.clients.progression.dto.CourtDocumentSearchResponse;
+import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClientConfig;
+import uk.gov.hmcts.cp.cdk.clients.progression.dto.CourtDocumentSearchResponse;
+import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
 
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,13 +25,16 @@ class ProgressionDtoMapperTest {
                 "/x",
                 "/y/{materialId}",
                 "a",
-                "b"
+                "b",
+                "application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
+
         );
         final var mapper = new ProgressionDtoMapper(cfg);
 
         final var m1 = new CourtDocumentSearchResponse.Material("m1", ZonedDateTime.parse("2024-01-01T10:15:30Z"));
         final var m2 = new CourtDocumentSearchResponse.Material("m2", ZonedDateTime.parse("2024-03-01T10:15:30Z"));
-        final var doc = new CourtDocumentSearchResponse.Document("DOC-41", "Some Doc", "IDPC", List.of(m1, m2));
+        final var doc = new CourtDocumentSearchResponse.Document("DOC-41", "Some Doc", "IDPC", UUID.randomUUID().toString(),List.of(m1, m2));
         final var idx = new CourtDocumentSearchResponse.DocumentIndex(List.of("CASE-1"), doc);
 
         final var latest = mapper.mapToLatestMaterialInfo(idx);
@@ -46,12 +51,13 @@ class ProgressionDtoMapperTest {
                 "/x",
                 "/y/{materialId}",
                 "a",
-                "b"
+                "b","application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
         );
         final var mapper = new ProgressionDtoMapper(cfg);
 
         final var m1 = new CourtDocumentSearchResponse.Material("m1", ZonedDateTime.parse("2024-01-01T10:15:30Z"));
-        final var doc = new CourtDocumentSearchResponse.Document("DOC-41", "Some Doc", "IDPC", List.of(m1));
+        final var doc = new CourtDocumentSearchResponse.Document("DOC-41", "Some Doc", "IDPC", UUID.randomUUID().toString(),List.of(m1));
         final var idx = new CourtDocumentSearchResponse.DocumentIndex(List.of("CASE-1"), doc);
 
         assertThat(mapper.mapToLatestMaterialInfo(idx)).isEmpty();
@@ -67,7 +73,8 @@ class ProgressionDtoMapperTest {
                 "/x",
                 "/y/{materialId}",
                 "a",
-                "b"
+                "b","application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
         );
         final var mapper = new ProgressionDtoMapper(cfg);
 
@@ -75,7 +82,7 @@ class ProgressionDtoMapperTest {
                 "m1",
                 null
         );
-        final var doc = new CourtDocumentSearchResponse.Document("41be14e8-9df5-4b08-80b0-1e670bc80a5b", "Some Doc", null, List.of(m1));
+        final var doc = new CourtDocumentSearchResponse.Document("41be14e8-9df5-4b08-80b0-1e670bc80a5b", "Some Doc", null, UUID.randomUUID().toString(),List.of(m1));
         final var idx = new CourtDocumentSearchResponse.DocumentIndex(List.of("CASE-1"), doc);
 
         assertThat(mapper.mapToLatestMaterialInfo(idx)).isEmpty();
@@ -90,7 +97,8 @@ class ProgressionDtoMapperTest {
                 "/x",
                 "/y/{materialId}",
                 "a",
-                "b"
+                "b","application/vnd.progression.query.prosecutioncase+json",
+                "progression-query-api/query/api/rest/progression/prosecutioncases/{caseId}"
         );
         final var mapper = new ProgressionDtoMapper(cfg);
 

@@ -11,6 +11,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import uk.gov.hmcts.cp.cdk.storage.AzureBlobStorageService;
+import uk.gov.hmcts.cp.cdk.storage.StorageProperties;
+
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
@@ -84,7 +87,6 @@ class AzureBlobStorageServiceTest {
         final String out = service.copyFromUrl(
                 src,
                 path,
-                "application/pdf",
                 Map.of("Document_ID", "123", "X-Tag", "alpha") // keys should be normalized to lower-case
         );
 
@@ -116,7 +118,7 @@ class AzureBlobStorageServiceTest {
         when(mockSyncPoller.waitForCompletion(any(Duration.class))).thenReturn(mockPollResponse);
         when(mockPollResponse.getValue()).thenReturn(new BlobCopyInfo("", "", CopyStatusType.SUCCESS, "", null, null, null));
 
-        service.copyFromUrl(src, destUrl, "application/pdf", null);
+        service.copyFromUrl(src, destUrl, null);
 
         final ArgumentCaptor<String> nameCaptor = ArgumentCaptor.forClass(String.class);
         verify(mockBlobContainerClient).getBlobClient(nameCaptor.capture());
@@ -135,7 +137,7 @@ class AzureBlobStorageServiceTest {
         when(mockSyncPoller.waitForCompletion(any(Duration.class))).thenReturn(mockPollResponse);
         when(mockPollResponse.getValue()).thenReturn(new BlobCopyInfo("", "", CopyStatusType.SUCCESS, "", null, null, null));
 
-        service.copyFromUrl(src, path, null, null);
+        service.copyFromUrl(src, path,  null);
         /**
          verify(mockBlob).setHttpHeaders(argThat((BlobHttpHeaders h) ->
          "application/octet-stream".equals(h.getContentType())));
@@ -156,7 +158,7 @@ class AzureBlobStorageServiceTest {
         when(mockPollResponse.getValue()).thenReturn(new BlobCopyInfo("", "", CopyStatusType.ABORTED, "", null, null, null));
 
         IllegalStateException ex = assertThrows(
-                IllegalStateException.class, () -> service.copyFromUrl(src, destUrl, "application/pdf", null)
+                IllegalStateException.class, () -> service.copyFromUrl(src, destUrl, null)
         );
 
         assertThat(ex.getMessage()).isEqualTo("Blob copy failed: aborted");
@@ -176,7 +178,7 @@ class AzureBlobStorageServiceTest {
         when(mockPollResponse.getValue()).thenReturn(new BlobCopyInfo("", "", CopyStatusType.ABORTED, "", null, null, null));
 
         IllegalStateException ex = assertThrows(
-                IllegalStateException.class, () -> service.copyFromUrl(src, destUrl, "application/pdf", null)
+                IllegalStateException.class, () -> service.copyFromUrl(src, destUrl, null)
         );
 
         assertThat(ex.getMessage()).isEqualTo("Timed out after 120s waiting for blob copy to succeed");

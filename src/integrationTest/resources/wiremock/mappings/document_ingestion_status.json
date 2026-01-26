@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/document-status",
+    "queryParameters": {
+      "document-name": {
+        "matches": ".*"
+      }
+    }
+
+  },
+  "response": {
+    "status": 202,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "document_status_response.json"
+  }
+}

@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.common.CQRSClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
+import uk.gov.hmcts.cp.cdk.services.IngestionProcessor;
 import uk.gov.hmcts.cp.cdk.services.IngestionService;
 import uk.gov.hmcts.cp.cdk.util.RequestUtils;
 import uk.gov.hmcts.cp.openapi.api.cdk.IngestionApi;
@@ -32,7 +33,9 @@ public class IngestionController implements IngestionApi {
             new MediaType("application", "vnd.casedocumentknowledge-service.ingestion-process+json");
 
     private final IngestionService service;
+    private final IngestionProcessor ingestionProcessor;
     private final CQRSClientProperties cqrsClientProperties;
+
 
     @Override
     public ResponseEntity<IngestionStatusResponse> getIngestionStatus(final UUID caseId) {
@@ -48,10 +51,8 @@ public class IngestionController implements IngestionApi {
         final String headerName = cqrsClientProperties.headers().cjsCppuid();
         final String cppuid = RequestUtils.requireHeader(headerName);
 
-        log.debug("startIngestionProcess {}={}, payloadCaseId={}", headerName, cppuid,
-                ingestionProcessRequest != null ? ingestionProcessRequest : null);
+        IngestionProcessResponse resp = ingestionProcessor.startIngestionProcess(cppuid, ingestionProcessRequest);
 
-        final IngestionProcessResponse resp = service.startIngestionProcess(cppuid, ingestionProcessRequest);
         return ResponseEntity.status(HttpStatus.ACCEPTED).contentType(VND_INGESTION).body(resp);
     }
 }

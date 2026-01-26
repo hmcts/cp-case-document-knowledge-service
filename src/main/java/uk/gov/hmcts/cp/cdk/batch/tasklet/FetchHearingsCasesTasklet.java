@@ -8,9 +8,9 @@ import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.DATE;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.Params.ROOM_ID;
 import static uk.gov.hmcts.cp.cdk.batch.support.BatchKeys.USERID_FOR_EXTERNAL_CALLS;
 
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.HearingClient;
-import uk.gov.hmcts.cp.cdk.batch.clients.hearing.dto.HearingSummariesInfo;
-import uk.gov.hmcts.cp.cdk.batch.support.TaskletUtils;
+import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
+import uk.gov.hmcts.cp.cdk.util.TaskUtils;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -53,7 +53,7 @@ public class FetchHearingsCasesTasklet implements Tasklet {
         List<String> caseIds = EMPTY_CASE_IDS;
 
         if (hasText(courtCentreId) && hasText(roomId) && hasText(hearingDate)) {
-            final LocalDate date = TaskletUtils.parseIsoDateOrNull(hearingDate);
+            final LocalDate date = TaskUtils.parseIsoDateOrNull(hearingDate);
             if (date != null) {
                 final List<HearingSummariesInfo> summaries =
                         hearingClient.getHearingsAndCases(courtCentreId, roomId, date, cppuid);

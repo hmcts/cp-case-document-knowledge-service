@@ -2,6 +2,8 @@ package uk.gov.hmcts.cp.cdk.batch.clients.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
+
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;

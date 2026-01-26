@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class IngestionService {
+public class IngestionService implements IngestionProcessor {
 
     private final IngestionStatusViewRepository repo;
     private final JobOperator jobOperator;
@@ -59,6 +59,7 @@ public class IngestionService {
                 });
     }
 
+    @Override
     public IngestionProcessResponse startIngestionProcess(final String cppuid,
                                                           final IngestionProcessRequest request) {
         Objects.requireNonNull(request, "request must not be null");

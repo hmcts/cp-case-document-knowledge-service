@@ -5,8 +5,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import uk.gov.hmcts.cp.cdk.controllers.GlobalExceptionHandler;
-
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.Map;
@@ -20,24 +18,21 @@ import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.FilterType;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 
 @TestPropertySource(properties = {
         "spring.application.name=case-document-knowledge-service",
-        "jwt.filter.enabled=false",
-        "spring.main.lazy-initialization=true",
-        "server.servlet.context-path="
+        "jwt.filter.enabled=false"
 })
-@WebMvcTest(controllers = TracingProbeController.class,
-        excludeFilters = {@ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = GlobalExceptionHandler.class)}
-)
-@Import(TestTracingConfig.class)
+@WebMvcTest(controllers = TracingProbeController.class)
+@ContextConfiguration(classes = {
+        TracingProbeController.class,
+        TestTracingConfig.class
+})
 @Slf4j
 class TracingIntegrationTest {
 

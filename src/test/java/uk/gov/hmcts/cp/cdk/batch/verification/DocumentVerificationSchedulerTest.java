@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.FAILED;
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.IN_PROGRESS;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SUCCESS;
 
 import uk.gov.hmcts.cp.cdk.config.VerifySchedulerProperties;
 import uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus;
@@ -119,7 +120,7 @@ class DocumentVerificationSchedulerTest {
         task.setBlobName("test-blob");
 
         final DocumentIngestionStatusReturnedSuccessfully body = new DocumentIngestionStatusReturnedSuccessfully();
-        body.setStatus(DocumentIngestionStatusReturnedSuccessfully.StatusEnum.INGESTION_SUCCESS);
+        body.setStatus(INGESTION_SUCCESS);
         body.setLastUpdated(OffsetDateTime.now());
 
         when(documentVerificationQueueDao.claimBatch(anyString(), anyInt())).thenReturn(List.of(task));
@@ -148,7 +149,7 @@ class DocumentVerificationSchedulerTest {
         task.setBlobName("test-blob");
 
         final DocumentIngestionStatusReturnedSuccessfully body = new DocumentIngestionStatusReturnedSuccessfully();
-        body.setStatus(DocumentIngestionStatusReturnedSuccessfully.StatusEnum.INGESTION_SUCCESS);
+        body.setStatus(INGESTION_SUCCESS);
         body.setLastUpdated(OffsetDateTime.now());
 
         when(documentVerificationQueueDao.claimBatch(anyString(), anyInt())).thenReturn(List.of(task));
