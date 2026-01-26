@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -36,7 +35,7 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
 
 
     @Override
-    public ResponseEntity<@NotNull UserQueryAnswerRequestAccepted> answerUserQueryAsync( final AnswerUserQueryRequest answerUserQueryRequest) {
+    public ResponseEntity<@NotNull UserQueryAnswerRequestAccepted> answerUserQueryAsync(final AnswerUserQueryRequest answerUserQueryRequest) {
         try {
             if (answerUserQueryRequest.getMetadataFilter() == null) {
                 answerUserQueryRequest.setMetadataFilter(List.of());
@@ -76,7 +75,7 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
     }
 
     @Override
-    public ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> answerUserQueryStatus( final String transactionId) {
+    public ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> answerUserQueryStatus(final String transactionId) {
         try {
 
             UserQueryAnswerReturnedSuccessfullyAsynchronously response = ragRestClient
@@ -96,7 +95,10 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
                 response = new UserQueryAnswerReturnedSuccessfullyAsynchronously();
             }
 
-            log.info("RAG Async answer status completed successfully for the transactionId: {}", transactionId);
+            String safeTransactionIdForLog = transactionId == null
+                    ? "null"
+                    : transactionId.replaceAll("[\\r\\n]", "_");
+            log.info("RAG Async answer status completed successfully for the transactionId: {}", safeTransactionIdForLog);
             return ResponseEntity.ok(response);
 
         } catch (final HttpStatusCodeException exception) {

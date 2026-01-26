@@ -54,7 +54,8 @@ public class JobManagerService implements IngestionProcessor {
                     .build();
 
             executor.executeWith(executionInfo);
-            log.info("Case ingestion process started via JobManager. requestId={}, cppuid={}", requestId, cppuid);
+            final String safeCppuid = sanitizeForLog(cppuid);
+            log.info("Case ingestion process started via JobManager. requestId={}, cppuid={}", requestId, safeCppuid);
 
             response.setPhase(IngestionProcessPhase.STARTED);
             response.setMessage(
@@ -71,6 +72,22 @@ public class JobManagerService implements IngestionProcessor {
             );
         }
 
+
         return response;
+    }
+
+    private static String sanitizeForLog(final String value) {
+        if (value == null) {
+            return null;
+        }
+        StringBuilder sanitized = new StringBuilder(value.length());
+        value.codePoints().forEach(cp -> {
+            if (Character.isISOControl(cp)) {
+                sanitized.append('?');
+            } else {
+                sanitized.appendCodePoint(cp);
+            }
+        });
+        return sanitized.toString();
     }
 }
