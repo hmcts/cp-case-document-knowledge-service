@@ -19,7 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.batch.infrastructure.item.ExecutionContext;
+import org.springframework.batch.item.ExecutionContext;
 
 @ExtendWith(MockitoExtension.class)
 class QueryIdPartitionerTest {

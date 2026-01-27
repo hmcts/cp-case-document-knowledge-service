@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.FAILED;
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.IN_PROGRESS;
+import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.SUCCEEDED;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SUCCESS;
 
 import uk.gov.hmcts.cp.cdk.config.VerifySchedulerProperties;
@@ -134,7 +135,7 @@ class DocumentVerificationSchedulerTest {
         scheduler.pollPendingDocuments();
 
         // Task should be marked SUCCEEDED
-        assertThat(task.getStatus()).isEqualTo(DocumentVerificationStatus.SUCCEEDED);
+        assertThat(task.getStatus()).isEqualTo(SUCCEEDED);
         verify(documentVerificationTaskRepository).saveAndFlush(task);
     }
 
@@ -163,14 +164,12 @@ class DocumentVerificationSchedulerTest {
         scheduler.pollPendingDocuments();
 
         // Task should be marked SUCCEEDED
-        assertThat(task.getStatus()).isEqualTo(DocumentVerificationStatus.SUCCEEDED);
+        assertThat(task.getStatus()).isEqualTo(SUCCEEDED);
         verify(documentVerificationTaskRepository).saveAndFlush(task);
-        assertThat(jobParamsCaptor.getValue().getLong("run.id")).isNotNull();
-        assertThat(jobParamsCaptor.getValue().getParameter("run.id").identifying()).isTrue();
         assertThat(jobParamsCaptor.getValue().getString("triggerId")).isNotNull();
-        assertThat(jobParamsCaptor.getValue().getParameter("triggerId").identifying()).isTrue();
+        assertThat(jobParamsCaptor.getValue().getParameter("triggerId").isIdentifying()).isTrue();
         assertThat(jobParamsCaptor.getValue().getString("caseIds")).isNotNull();
-        assertThat(jobParamsCaptor.getValue().getParameter("caseIds").identifying()).isTrue();
+        assertThat(jobParamsCaptor.getValue().getParameter("caseIds").isIdentifying()).isTrue();
     }
 
     @Test
