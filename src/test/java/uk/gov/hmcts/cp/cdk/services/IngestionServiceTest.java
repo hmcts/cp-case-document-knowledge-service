@@ -31,7 +31,7 @@ import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.launch.JobOperator;
-import org.springframework.batch.core.launch.JobRestartException;
+import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.core.task.SyncTaskExecutor;
 
 @DisplayName("Ingestion Service tests (asynchronous start)")
@@ -77,7 +77,7 @@ class IngestionServiceTest {
         assertThat(p.getString("roomId")).isEqualTo("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         assertThat(p.getString("date")).isEqualTo("2025-10-01");
         assertThat(p.getString("cppuid")).isEqualTo("u-123");
-        assertThat(p.getLong("run.id")).isNotNull();
+        assertThat(p.getLong("run")).isNotNull();
         assertThat(p.getString("requestId")).isNotBlank();
 
         // response is immediate and contains a requestId (not executionId)

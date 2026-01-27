@@ -12,7 +12,7 @@ import java.util.UUID;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.infrastructure.item.ExecutionContext;
+import org.springframework.batch.item.ExecutionContext;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 @Slf4j

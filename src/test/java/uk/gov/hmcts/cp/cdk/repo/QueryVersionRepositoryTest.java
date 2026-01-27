@@ -17,25 +17,39 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@DataJpaTest
+@DataJpaTest(
+        properties = {
+                "spring.jpa.hibernate.ddl-auto=create-drop",
+                "spring.flyway.enabled=true",
+                "spring.jpa.properties.hibernate.connection.provider_disables_autocommit=false"
+        }
+)
 @Testcontainers
+@AutoConfigureTestDatabase(replace = Replace.NONE)
 @DisplayName("Query Version Repository tests")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class QueryVersionRepositoryTest {
 
     @Container
-    @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>("postgres:16-alpine")
                     .withDatabaseName("cdk")
                     .withUsername("postgres")
                     .withPassword("postgres");
+
+    // Ensure container is started BEFORE DynamicPropertySource is evaluated.
+    static {
+        POSTGRES.start();
+    }
 
     @jakarta.annotation.Resource
     private QueryVersionRepository repo;
@@ -44,6 +58,15 @@ class QueryVersionRepositoryTest {
     @PersistenceContext
     private EntityManager em;
     private UUID qid;
+
+    @DynamicPropertySource
+    static void dbProps(final DynamicPropertyRegistry r) {
+        r.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+        r.add("spring.datasource.username", POSTGRES::getUsername);
+        r.add("spring.datasource.password", POSTGRES::getPassword);
+        r.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+        r.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+    }
 
     @BeforeEach
     void seed() {

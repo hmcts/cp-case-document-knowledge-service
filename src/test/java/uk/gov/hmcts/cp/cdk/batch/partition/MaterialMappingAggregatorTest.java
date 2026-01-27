@@ -22,20 +22,23 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.step.StepExecution;
-import org.springframework.batch.infrastructure.item.ExecutionContext;
+import org.springframework.batch.item.ExecutionContext;
 
 @ExtendWith(MockitoExtension.class)
 class MaterialMappingAggregatorTest {
 
     @Mock
     private DocumentIdResolver documentIdResolver;
+    @Mock
+    private JobExecution jobExecution;
     @InjectMocks
     private MaterialMappingAggregator aggregator;
 
     @Test
     void aggregate_withEmptyExecutions_createsEmptyMap() {
-        final StepExecution mainStepExecution = new StepExecution(1L, "mainStep", null);
+        final StepExecution mainStepExecution = new StepExecution("mainStep", jobExecution, 1L);
 
         aggregator.aggregate(mainStepExecution, Collections.emptyList());
 
@@ -47,7 +50,7 @@ class MaterialMappingAggregatorTest {
 
     @Test
     void aggregate_skipsPartitionsWithMissingData() {
-        StepExecution mainStepExecution = new StepExecution(1L, "mainStep", null);
+        StepExecution mainStepExecution = new StepExecution("mainStep", jobExecution, 1L);
 
         StepExecution invalid1 = createPartitionExecution(null, "mat1", "Material 1");
         StepExecution invalid2 = createPartitionExecution("case1", null, "Material 2");
@@ -61,7 +64,7 @@ class MaterialMappingAggregatorTest {
 
     @Test
     void aggregate_skipsPartitionsWithInvalidUUIDs() {
-        final StepExecution mainStepExecution = new StepExecution(1L, "mainStep", null);
+        final StepExecution mainStepExecution = new StepExecution("mainStep", jobExecution, 1L);
         final StepExecution partition = createPartitionExecution("invalid-case", "invalid-mat", "Material X");
 
         aggregator.aggregate(mainStepExecution, List.of(partition));
@@ -73,7 +76,7 @@ class MaterialMappingAggregatorTest {
     @Test
     @SuppressWarnings("unchecked")
     void aggregate_generatesNewDocId_whenNoExistingDocId() {
-        final StepExecution mainStepExecution = new StepExecution(1L, "mainStep", null);
+        final StepExecution mainStepExecution = new StepExecution("mainStep", jobExecution, 1L);
 
         final UUID caseId = randomUUID();
         final UUID materialId = randomUUID();
@@ -98,7 +101,7 @@ class MaterialMappingAggregatorTest {
     @SuppressWarnings("unchecked")
     @Test
     void aggregate_usesExistingDocId_whenPresent() {
-        final StepExecution mainStepExecution = new StepExecution(1L, "mainStep", null);
+        final StepExecution mainStepExecution = new StepExecution("mainStep", jobExecution, 1L);
 
         final UUID caseId = randomUUID();
         final UUID materialId = randomUUID();
@@ -119,7 +122,7 @@ class MaterialMappingAggregatorTest {
     }
 
     private StepExecution createPartitionExecution(String caseId, String materialId, String materialName) {
-        StepExecution stepExecution = new StepExecution(1L, "partition", null);
+        StepExecution stepExecution = new StepExecution("partition", jobExecution, 1L);
         ExecutionContext ec = new ExecutionContext();
         if (caseId != null) ec.putString(PARTITION_CASE_ID, caseId);
         if (materialId != null) ec.putString(PARTITION_RESULT_MATERIAL_ID, materialId);
