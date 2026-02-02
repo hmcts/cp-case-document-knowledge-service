@@ -70,3 +70,7 @@ cdk:
       questions-retry:
         max-attempts: ${CDK_JOBMANAGER_RETRY_QUESTIONS_MAX_ATTEMPTS:100}
         delay-seconds: ${CDK_JOBMANAGER_RETRY_QUESTIONS_DELAY_SECONDS:10}
+
+taskmanager:
+  schema:
+    enabled=true:
