@@ -2,17 +2,17 @@ plugins {
     id 'application'
     id 'java'
 
-    id 'org.springframework.boot' version '4.0.0-M3'
+    id 'org.springframework.boot' version '4.1.0-M1'
     id 'io.spring.dependency-management' version '1.1.7'
 
     id 'jacoco'
     id 'pmd'
     id 'maven-publish'
     id 'com.github.ben-manes.versions' version '0.53.0'
-    id 'org.cyclonedx.bom' version '3.0.1'
-    id 'au.com.dius.pact' version '4.6.17'
-    id 'com.gorylenko.gradle-git-properties' version '2.5.3'
-    id 'com.avast.gradle.docker-compose' version '0.17.19'
+    id 'org.cyclonedx.bom' version '3.1.0'
+    id 'au.com.dius.pact' version '4.6.19'
+    id 'com.gorylenko.gradle-git-properties' version '2.5.4'
+    id 'com.avast.gradle.docker-compose' version '0.17.20'
 }
 
 group = 'uk.gov.hmcts.cp'
@@ -101,7 +101,7 @@ ext.vers = [
 ]
 
 /* ---- Import Spring Boot BOM explicitly (helps with milestone builds) ---- */
-def springBootVersion = '4.0.0-M3'
+def springBootVersion = '4.1.0-M1'
 dependencyManagement {
     imports {
         mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
