@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATED;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATION_PENDING;
@@ -17,12 +18,16 @@ import uk.gov.hmcts.cp.openapi.model.RequestErrored;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerRequestAccepted;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullyAsynchronously;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -31,6 +36,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriBuilder;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @ExtendWith(MockitoExtension.class)
 class RagAnswerAsyncServiceImplTest {
@@ -52,6 +59,8 @@ class RagAnswerAsyncServiceImplTest {
 
     @Mock
     private RestClient.RequestHeadersUriSpec uriSpec;
+    @Captor
+    private ArgumentCaptor<Function<UriBuilder, URI>> uriCaptor;
 
     @BeforeEach
     void setup() {
@@ -149,8 +158,9 @@ class RagAnswerAsyncServiceImplTest {
     RestClient.RequestHeadersSpec<?> headersSpec;
 
 
+    @SuppressWarnings("unchecked")
     @Test
-    void shouldGetAnswerStatus_answerGenerationPendingWhenAnswerNotReady() {
+    void shouldGetAnswerStatus_answerGenerationPendingWhenAnswerNotReady() throws URISyntaxException {
         mockGetRequest();
         final String transactionId = randomUUID().toString();
         final UserQueryAnswerReturnedSuccessfullyAsynchronously apiResponse = new UserQueryAnswerReturnedSuccessfullyAsynchronously();
@@ -161,6 +171,11 @@ class RagAnswerAsyncServiceImplTest {
 
         // when
         final var result = service.answerUserQueryStatus(transactionId);
+
+        verify(uriSpec).uri(uriCaptor.capture());
+        final Function<UriBuilder, URI> uriFunction = uriCaptor.getValue();
+        final URI uri = uriFunction.apply(UriComponentsBuilder.fromUri(new URI("http://localhost")));
+        assertThat(uri.toString()).isEqualTo("http://localhost/answer-user-query-async-status/" + transactionId);
 
         // then
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
