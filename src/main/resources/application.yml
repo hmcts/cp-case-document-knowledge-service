@@ -14,7 +14,7 @@ spring:
       - optional:classpath:application-other.yml
 
   flyway:
-    out-of-order: false
+    out-of-order: true
 
 server:
   port: ${SERVER_PORT:8082}
