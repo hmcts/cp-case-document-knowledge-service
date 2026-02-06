@@ -81,7 +81,7 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
             UserQueryAnswerReturnedSuccessfullyAsynchronously response = ragRestClient
                     .get()
                     .uri(uriBuilder -> uriBuilder
-                            .path(PATH_ANSWER_USER_QUERY_STATUS + "/{transactionId}")
+                            .path(PATH_ANSWER_USER_QUERY_STATUS)
                             .build(transactionId))
                     .accept(MediaType.APPLICATION_JSON)
                     .headers(httpHeaders -> {
