@@ -140,10 +140,10 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
         );
     }
 
-    private void persistCaseDocument(UUID docId,
-                                     UUID caseId,
-                                     UUID defendantId,
-                                     LatestMaterialInfo info) {
+    private void persistCaseDocument(final UUID docId,
+                                     final UUID caseId,
+                                     final UUID defendantId,
+                                     final LatestMaterialInfo info) {
 
         final CaseDocument entity = new CaseDocument();
         entity.setDocId(docId);

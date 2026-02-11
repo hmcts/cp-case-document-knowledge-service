@@ -71,6 +71,10 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
         final UUID documentId = parseUuid(jobData.getString("docId", null));
         final UUID caseId = parseUuid(jobData.getString("caseId", null));
         final String blobName = jobData.getString("blobName", null);
+        final Set<String> FAILURE_STATUSES = Set.of(
+                INGESTION_FAILED.name(),
+                INVALID_METADATA.name()
+        );
 
         if (documentId == null || blobName == null) {
             log.error("{} missing required data docId={} blobName={}", CHECK_INGESTION_STATUS_FOR_DOCUMENT, documentId, blobName);
@@ -132,8 +136,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
             }
 
             return complete(executionInfo);
-        } else if (INGESTION_FAILED.name().equalsIgnoreCase(status)
-                || INVALID_METADATA.name().equalsIgnoreCase(status)) {
+        } else if (FAILURE_STATUSES.contains(status.toUpperCase())) {
 
             updateIngestionPhase(documentId, DocumentIngestionPhase.FAILED);
             log.error(
