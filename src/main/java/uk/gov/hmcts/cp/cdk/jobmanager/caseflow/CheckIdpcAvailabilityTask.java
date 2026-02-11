@@ -26,7 +26,6 @@ import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
 import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,9 +36,7 @@ import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
@@ -82,13 +79,11 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
 
 
                 final String existingDocId = existingDocUuid.map(UUID::toString).orElse(null);
-                final String newDocId = existingDocId == null ? generateUUID(caseIdString, defendantId, info.materialId()) : null;
+                final String newDocId = existingDocId == null ? UUID.randomUUID().toString() : null;
 
                 if (existingDocId != null) {
                     log.info("Resolved existing docId={} for caseId={}, materialId={} , hence skipping upload: ", existingDocId, caseIdUuidOptional.get(), info.materialId());
-                } else {
-                    log.debug("No existing docId; generated new docId={} for caseId={}, materialId={}.",
-                            newDocId, caseIdUuidOptional.get(), info.materialId());
+                    return;
                 }
 
                 if (newDocId != null) {
@@ -110,7 +105,6 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                     executionService.executeWith(executionInfoNew);
 
                 }
-
                 log.debug(
                         "Resolved material for caseId {} → id={}, name={}, requestId={}",
                         caseIdString,
@@ -120,24 +114,11 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                 );
             });
 
-
             return ExecutionInfo.executionInfo()
                     .from(executionInfo)
                     .withExecutionStatus(ExecutionStatus.COMPLETED)
                     .build();
 
-        } catch (DataIntegrityViolationException ex) {
-
-            log.warn(
-                    "Duplicate CaseDocument detected. Another process may have inserted it for " +
-                            "caseId={}, defendantId={}, materialId= {}, errorMessage = {}",
-                    caseIdString, defendantId, jobData.getString(CTX_MATERIAL_ID_KEY, null), ex.getMessage()
-            );
-
-            return ExecutionInfo.executionInfo()
-                    .from(executionInfo)
-                    .withExecutionStatus(ExecutionStatus.COMPLETED)
-                    .build();
         } catch (Exception ex) {
             log.error(
                     "{} failed. caseId={}, requestId={}", CHECK_IDPC_AVAILABILITY,
@@ -161,19 +142,6 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                         .boxed()
                         .toList()
         );
-    }
-
-    public String generateUUID(String caseIdString,
-                               String defendantId,
-                               String materialId) {
-
-        String combined = caseIdString + "_" + defendantId + "_" + materialId;
-
-        UUID uuid = UUID.nameUUIDFromBytes(
-                combined.getBytes(StandardCharsets.UTF_8)
-        );
-
-        return uuid.toString();
     }
 
     private void persistCaseDocument(UUID docId,

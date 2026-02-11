@@ -24,7 +24,7 @@ public class DocumentIdResolver {
               FROM case_documents
              WHERE case_id = :case_id
                AND material_id = :material_id
-               AND ingestion_phase IN ('UPLOADED','INGESTED')
+               AND ingestion_phase IN ('UPLOADED','INGESTED','WAITING_FOR_UPLOAD')
              ORDER BY ingestion_phase_at DESC
              LIMIT 1
             """;
