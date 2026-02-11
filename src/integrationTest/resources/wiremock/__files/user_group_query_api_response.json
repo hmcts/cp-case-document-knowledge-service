@@ -316,9 +316,9 @@
     },
     {
       "permissionId": "44971159-aab8-4ca2-a56d-e31e01792801",
-      "object": "AI search",
+      "object": "Intelligence",
       "action": "View",
-      "description": "Grant access to AI search"
+      "description": "Grant access to Intelligence"
     }
   ]
 }

@@ -9,6 +9,6 @@ class PermissionConstantsTest {
 
     @Test
     void testAccessToIntelligencePermissionsJson() {
-        assertThat(accessToIntelligencePermissions()).isEqualTo(new String[]{"{\"object\":\"AI search\",\"action\":\"View\"}"});
+        assertThat(accessToIntelligencePermissions()).isEqualTo(new String[]{"{\"object\":\"Intelligence\",\"action\":\"View\"}"});
     }
 }
