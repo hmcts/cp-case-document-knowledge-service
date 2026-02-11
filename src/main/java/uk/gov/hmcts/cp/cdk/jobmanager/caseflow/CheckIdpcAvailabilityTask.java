@@ -47,6 +47,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Task(CHECK_IDPC_AVAILABILITY)
 public class CheckIdpcAvailabilityTask implements ExecutableTask {
 
+    public static final String DEFAULT_BLOB_URI = "default_blob_uri";
+    public static final String IDPC = "IDPC";
     private final ProgressionClient progressionClient;
     private final ExecutionService executionService;
     private final DocumentIdResolver documentIdResolver;
@@ -174,7 +176,6 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
         return uuid.toString();
     }
 
-    @Transactional
     private void persistCaseDocument(UUID docId,
                                      UUID caseId,
                                      UUID defendantId,
@@ -184,6 +185,8 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
         entity.setDocId(docId);
         entity.setCaseId(caseId);
         entity.setMaterialId(UUID.fromString(info.materialId()));
+        entity.setDocName(IDPC);
+        entity.setBlobUri(DEFAULT_BLOB_URI);
         entity.setCreatedAt(utcNow());
         entity.setIngestionPhase(DocumentIngestionPhase.WAITING_FOR_UPLOAD);
         entity.setDefendantId(defendantId);
