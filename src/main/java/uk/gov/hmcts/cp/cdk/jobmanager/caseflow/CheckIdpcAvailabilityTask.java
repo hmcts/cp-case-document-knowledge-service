@@ -77,34 +77,30 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                 final Optional<UUID> existingDocUuid =
                         documentIdResolver.resolveExistingDocId(caseIdUuidOptional.get(), UUID.fromString(info.materialId()));
 
-
-                final String existingDocId = existingDocUuid.map(UUID::toString).orElse(null);
-                final String newDocId = existingDocId == null ? UUID.randomUUID().toString() : null;
-
-                if (existingDocId != null) {
-                    log.info("Resolved existing docId={} for caseId={}, materialId={} , hence skipping upload: ", existingDocId, caseIdUuidOptional.get(), info.materialId());
+                if (existingDocUuid.isPresent()) {
+                    log.info("Resolved existing docId={} for caseId={}, materialId={} , hence skipping upload: ", existingDocUuid.get(), caseIdUuidOptional.get(), info.materialId());
                     return;
                 }
 
-                if (newDocId != null) {
-                    updatedJobData.add(CTX_DOC_ID_KEY, newDocId);
-                    persistCaseDocument(
-                            UUID.fromString(newDocId),
-                            caseIdUuidOptional.get(),
-                            UUID.fromString(defendantId),
-                            info
-                    );
+                final String newDocId = UUID.randomUUID().toString();
 
-                    ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
-                            .from(executionInfo)
-                            .withAssignedTaskName(RETRIEVE_FROM_MATERIAL)
-                            .withJobData(updatedJobData.build())
-                            .withExecutionStatus(ExecutionStatus.STARTED)
-                            .build();
+                updatedJobData.add(CTX_DOC_ID_KEY, newDocId);
+                persistCaseDocument(
+                        UUID.fromString(newDocId),
+                        caseIdUuidOptional.get(),
+                        UUID.fromString(defendantId),
+                        info
+                );
 
-                    executionService.executeWith(executionInfoNew);
+                ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
+                        .from(executionInfo)
+                        .withAssignedTaskName(RETRIEVE_FROM_MATERIAL)
+                        .withJobData(updatedJobData.build())
+                        .withExecutionStatus(ExecutionStatus.STARTED)
+                        .build();
 
-                }
+                executionService.executeWith(executionInfoNew);
+
                 log.debug(
                         "Resolved material for caseId {} → id={}, name={}, requestId={}",
                         caseIdString,
