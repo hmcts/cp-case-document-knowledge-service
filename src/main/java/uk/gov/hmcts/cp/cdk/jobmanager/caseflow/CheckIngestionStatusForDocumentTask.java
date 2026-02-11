@@ -4,7 +4,9 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FO
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_FAILED;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SUCCESS;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INVALID_METADATA;
 
 import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
@@ -67,7 +69,12 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
         final JsonObject jobData = executionInfo.getJobData();
 
         final UUID documentId = parseUuid(jobData.getString("docId", null));
+        final UUID caseId = parseUuid(jobData.getString("caseId", null));
         final String blobName = jobData.getString("blobName", null);
+        final Set<String> FAILURE_STATUSES = Set.of(
+                INGESTION_FAILED.name(),
+                INVALID_METADATA.name()
+        );
 
         if (documentId == null || blobName == null) {
             log.error("{} missing required data docId={} blobName={}", CHECK_INGESTION_STATUS_FOR_DOCUMENT, documentId, blobName);
@@ -111,7 +118,6 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
                     return complete(executionInfo);
                 }
             }
-
             for (UUID questionId : candidateQueryIds) {
                 JsonObject singleCaseJobData = Json.createObjectBuilder(jobData)
                         .add(CTX_SINGLE_QUERY_ID, questionId.toString())
@@ -129,6 +135,17 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
                 log.info("Created {} for docId={} questionId={}", GENERATE_ANSWER_FOR_QUERY, documentId, questionId);
             }
 
+            return complete(executionInfo);
+        } else if (FAILURE_STATUSES.contains(status.toUpperCase())) {
+
+            updateIngestionPhase(documentId, DocumentIngestionPhase.FAILED);
+            log.error(
+                    "ingestion FAILED for identifier='{}' reason='{}' (caseId={}, docId={}).",
+                    blobName,
+                    status,
+                    caseId,
+                    documentId
+            );
             return complete(executionInfo);
         }
 

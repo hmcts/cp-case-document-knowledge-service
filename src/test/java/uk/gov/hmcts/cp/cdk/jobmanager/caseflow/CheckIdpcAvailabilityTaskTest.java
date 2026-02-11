@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
@@ -18,6 +19,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUI
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
@@ -51,6 +53,9 @@ class CheckIdpcAvailabilityTaskTest {
     @Mock
     private JobManagerRetryProperties retryProperties;
 
+    @Mock
+    private CaseDocumentRepository caseDocumentRepository;
+
     @Captor
     private ArgumentCaptor<ExecutionInfo> captor;
 
@@ -63,7 +68,8 @@ class CheckIdpcAvailabilityTaskTest {
                 progressionClient,
                 executionService,
                 documentIdResolver,
-                retryProperties
+                retryProperties,
+                caseDocumentRepository
         );
 
         caseId = UUID.randomUUID().toString();
@@ -177,7 +183,9 @@ class CheckIdpcAvailabilityTaskTest {
         JsonObject jobData = createObjectBuilder()
                 .add(CTX_CASE_ID_KEY, caseId)
                 .add(CPPUID, userId)
+                .add(CTX_DEFENDANT_ID_KEY,UUID.randomUUID().toString())
                 .build();
+
 
         when(progressionClient.getCourtDocuments(any(), any()))
                 .thenReturn(Optional.of(materialInfo));

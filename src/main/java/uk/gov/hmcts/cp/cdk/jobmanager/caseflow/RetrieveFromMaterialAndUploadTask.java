@@ -20,7 +20,6 @@ import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
@@ -114,21 +113,16 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
 
             final long sizeBytes = Optional.of(storageService.getBlobSize(blobName)).orElse(UNKNOWN_SIZE_BYTES);
 
-            final CaseDocument entity = new CaseDocument();
-            entity.setDocId(documentId);
-            entity.setCaseId(caseId);
-            entity.setMaterialId(materialId);
-            entity.setDocName(blobName);
-            entity.setBlobUri(blobUrl);
-            entity.setContentType(uploadProperties.contentType());
-            entity.setSizeBytes(sizeBytes);
-            entity.setUploadedAt(utcNow());
-            entity.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
-            entity.setIngestionPhaseAt(utcNow());
-            entity.setDefendantId(defendantId);
-            entity.setCourtdocId(courtDocumentId);
-
-            caseDocumentRepository.saveAndFlush(entity);
+            caseDocumentRepository.findById(documentId).ifPresent(doc -> {
+                doc.setDocName(blobName);
+                doc.setBlobUri(blobUrl);
+                doc.setContentType(uploadProperties.contentType());
+                doc.setSizeBytes(sizeBytes);
+                doc.setUploadedAt(utcNow());
+                doc.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
+                doc.setIngestionPhaseAt(utcNow());
+                caseDocumentRepository.saveAndFlush(doc);
+            });
 
             log.info("Saved CaseDocument docId={}, caseId={}, materialId={}, sizeBytes={}, blobUri={}, requestId={}",
                     documentId, caseId, materialId, sizeBytes, blobUrl, requestId);

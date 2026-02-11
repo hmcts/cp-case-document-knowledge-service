@@ -80,4 +80,7 @@ public class CaseDocument {
 
     @Column(name = "courtdoc_id")
     private UUID courtdocId;
+
+    @Column(name = "created_at", nullable = false)
+    private OffsetDateTime createdAt = utcNow();
 }

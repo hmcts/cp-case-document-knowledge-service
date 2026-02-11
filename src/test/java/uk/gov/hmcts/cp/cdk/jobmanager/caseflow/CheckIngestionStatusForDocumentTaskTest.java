@@ -124,8 +124,8 @@ class CheckIngestionStatusForDocumentTaskTest {
 
         ExecutionInfo result = task.execute(executionInfo);
 
-        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.INPROGRESS);
-        assertThat(result.isShouldRetry()).isTrue();
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+        assertThat(result.isShouldRetry()).isFalse();
     }
 
     @Test
