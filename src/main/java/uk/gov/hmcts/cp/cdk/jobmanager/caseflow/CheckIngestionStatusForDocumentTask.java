@@ -33,17 +33,18 @@ import java.util.stream.IntStream;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 @Task(CHECK_INGESTION_STATUS_FOR_DOCUMENT)
 public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
 
+    private static final Logger log = LoggerFactory.getLogger(CheckIngestionStatusForDocumentTask.class);
     private final DocumentIngestionStatusApi documentIngestionStatusApi;
     private final CaseDocumentRepository caseDocumentRepository;
     private final QueryResolver queryResolver;
@@ -105,10 +106,15 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
             log.info("INGESTION SUCCESS identifier='{}', docId={}", blobName, documentId);
             final Set<UUID> candidateQueryIds;
             final List<Query> queries = queryResolver.resolve();
+
             if (queries == null || queries.isEmpty()) {
                 log.debug("{}: No queries resolved; nothing to generate answers.", CHECK_INGESTION_STATUS_FOR_DOCUMENT);
                 candidateQueryIds = new LinkedHashSet<>();
             } else {
+
+                log.info("Resolved queries size={}", queries.size());
+                queries.forEach(q -> log.info("QueryId={}", q.getQueryId()));
+
                 candidateQueryIds = queries.stream()
                         .map(Query::getQueryId)
                         .filter(Objects::nonNull)
@@ -118,6 +124,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
                     return complete(executionInfo);
                 }
             }
+            log.info("Queries count: {}", candidateQueryIds.size());
             for (UUID questionId : candidateQueryIds) {
                 JsonObject singleCaseJobData = Json.createObjectBuilder(jobData)
                         .add(CTX_SINGLE_QUERY_ID, questionId.toString())
