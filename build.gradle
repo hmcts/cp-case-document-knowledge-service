@@ -155,7 +155,6 @@ dependencies {
 
     // Logging
     implementation "net.logstash.logback:logstash-logback-encoder:${vers.logstashEncoder}"
-    implementation 'org.apache.logging.log4j:log4j-to-slf4j'
 
     // Security / JSON / Swagger
     implementation "io.jsonwebtoken:jjwt:${vers.jjwt}"
