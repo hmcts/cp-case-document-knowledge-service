@@ -306,6 +306,33 @@ tasks.named('jacocoTestReport') {
     reports { xml.required.set(true); csv.required.set(false); html.required.set(true) }
 }
 tasks.named('composeBuild') { dependsOn tasks.named('bootJar') }
+dockerCompose {
+    useComposeFiles = ['docker/docker-compose.integration.yml']
+    startedServices = ['artemis', 'db', 'azurite', 'azurite-seed', 'wiremock', 'app']
+    buildBeforeUp = true
+    forceRecreate = true
+    removeOrphans = true
+    removeContainers = true
+    removeVolumes = true
+    waitForTcpPorts = true
+    upAdditionalArgs = ['--wait', '--wait-timeout', '180']
+
+    // Explicitly use project.file to avoid the "method not found" error
+    def envFile = project.file('docker/.env')
+    if (envFile.exists()) {
+        envFile.eachLine { line ->
+            def trimmedLine = line.trim()
+            if (trimmedLine && !trimmedLine.startsWith('#') && trimmedLine.contains('=')) {
+                def parts = trimmedLine.split('=', 2)
+                environment.put(parts[0].trim(), parts[1].trim())
+            }
+        }
+    }
+    captureContainersOutput = true
+    projectName = "${rootProject.name}-it".replaceAll('[^A-Za-z0-9]', '')
+    useDockerComposeV2 = true
+    dockerExecutable = 'docker'
+}
 
 tasks.register('integration', Test) {
     description = "Runs integration tests against docker-compose stack"
