@@ -7,6 +7,20 @@ services:
       - "10000:10000"
     restart: unless-stopped
 
+  azurite-seed:
+    container_name: cdks_azurite_seed
+    image: mcr.microsoft.com/azure-cli:2.63.0
+    depends_on:
+      azurite:
+        condition: service_started
+    environment:
+      AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+    volumes:
+      - ../src/integrationTest/resources/wiremock-seed:/seed:ro
+      - ../src/integrationTest/resources/wiremock-seed/azurite-seed.sh:/azurite-seed.sh:ro
+    entrypoint: ["/bin/sh", "/azurite-seed.sh"]
+    restart: "no"
+    
   artemis:
     container_name: cdks_artemis
     build:
@@ -19,9 +33,7 @@ services:
     environment:
       ACTIVEMQ_ENABLED_AUTH: "false"
     volumes:
-      # persist ONLY data, don't shadow /var/lib/artemis-instance/etc
       - artemis-data:/var/lib/artemis-instance/data
-      # mount config + keystore to the *instance* path
       - ./artemis/broker.xml:/var/lib/artemis-instance/etc/broker.xml:ro
       - ../src/integrationTest/resources/ssl/keystore.jks:/var/lib/artemis-instance/etc/keystore.jks:ro
     restart: unless-stopped
@@ -36,7 +48,7 @@ services:
     ports:
       - "55432:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U casedocumentknowledge -d casedocumentknowledgeDatabase" ]
+      test: ["CMD-SHELL", "pg_isready -U casedocumentknowledge -d casedocumentknowledgeDatabase"]
       interval: 5s
       timeout: 3s
       retries: 30
@@ -51,7 +63,7 @@ services:
       - ../src/integrationTest/resources/wiremock/mappings:/home/wiremock/mappings
       - ../src/integrationTest/resources/wiremock/__files:/home/wiremock/__files
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8080/__admin/health || exit 1" ]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/__admin/health || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -69,14 +81,14 @@ services:
         condition: service_started
       wiremock:
         condition: service_started
-      azurite:
-        condition: service_started
+      azurite-seed:
+        condition: service_completed_successfully
     ports:
       - "8082:8082"
       - "5005:5005"
     environment:
       JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
-      # M Changes
+
       CP_CDK_RAG_CONNECTION_TIMEOUT_MS: 3000
       CP_CDK_RAG_READ_TIMEOUT_MS: 180000
       CP_CDK_CQRS_CONNECTION_TIMEOUT_MS: 3000
@@ -97,7 +109,7 @@ services:
       CP_CDK_DB_IDLE_TIMEOUT: 600000
       CP_CDK_DB_MAX_LIFETIME: 1800000
       CP_CDK_DB_KEEPLIVE_TIME: 300000
-      CP_CDK_DB_AUTO_COMMIT: false
+      CP_CDK_DB_AUTO_COMMIT: "false"
       CP_CDK_DB_VALIDATION_TIMEOUT: 5000
 
       CP_CDK_DATASOURCE_URL: jdbc:postgresql://db:5432/casedocumentknowledgeDatabase
@@ -108,13 +120,11 @@ services:
       SERVER_SERVLET_CONTEXT_PATH: /casedocumentknowledge-service
       SPRING_APPLICATION_NAME: cp-case-document-knowledge-service
 
-      # Artemis TLS connection (matches broker.xml acceptor)
       CP_CDK_ARTEMIS_HOST_PRIMARY: artemis
       CP_CDK_ARTEMIS_PORT: 61617
       CP_CDK_ARTEMIS_SSL_ENABLED: "true"
       CP_CDK_ARTEMIS_VERIFY_HOST: "false"
 
-      # JMS retry/timeout tuning (safe universally)
       CP_CDK_JMS_RETRY_INTERVAL_MS: 100
       CP_CDK_JMS_RECONNECT_ATTEMPTS: 0
       CP_CDK_JMS_INITIAL_CONNECT_ATTEMPTS: 10
@@ -143,11 +153,12 @@ services:
       OTEL_TRACES_URL: http://localhost:4318/traces
       OTEL_METRICS_URL: http://localhost:4318/metrics
 
-      CP_CDK_AZURE_STORAGE_CONNECTION_STRING: >
-        DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;
-        AccountKey=Eby8vdM02xNOcqFeqCnf2w==;
-        BlobEndpoint=http://azurite:10000/devstoreaccount1;
+      CP_CDK_STORAGE_MODE: connection-string
+      CP_CDK_AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
       CP_CDK_AZURE_STORAGE_CONTAINER: documents
+      CDK_STORAGE_AZURE_MODE: connection-string
+      CDK_STORAGE_AZURE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+      CDK_STORAGE_AZURE_CONTAINER: documents
 
       CP_CDK_RAG_URL: http://wiremock:8080
       CP_CDK_RAG_SUBSCRIPTION_KEY: dummy-key
@@ -155,11 +166,11 @@ services:
       CP_CDK_BASE_URL: http://wiremock:8080
 
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fsS http://localhost:8082/casedocumentknowledge-service/actuator/health || exit 1" ]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/casedocumentknowledge-service/actuator/health || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 12
     restart: unless-stopped
 
 volumes:
-  artemis-data: { }
+  artemis-data: {}
