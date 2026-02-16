@@ -1,0 +1,19 @@
+/* ------------ Docker Compose ITs ------------ */
+tasks.named('composeBuild') { dependsOn tasks.named('bootJar') }
+
+dockerCompose {
+  useComposeFiles = ['docker/docker-compose.integration.yml']
+  startedServices = ['artemis', 'db', 'wiremock', 'azurite', 'app']
+
+  buildBeforeUp = true
+  waitForTcpPorts = true
+  upAdditionalArgs = ['--wait', '--wait-timeout', '120']
+
+  captureContainersOutput = true
+  removeOrphans = true
+  stopContainers = true
+  removeContainers = true
+
+  useDockerComposeV2 = true
+  dockerExecutable = 'docker'
+}
