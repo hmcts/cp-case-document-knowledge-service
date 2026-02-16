@@ -40,10 +40,6 @@ class CaseIngestionJobConfigTest {
                     .withPassword("postgres")
                     .withReuse(true);
 
-    static {
-        POSTGRES.start(); // <-- REQUIRED
-    }
-
     @DynamicPropertySource
     static void dbProps(final DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
