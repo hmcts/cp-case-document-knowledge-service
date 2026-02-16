@@ -78,7 +78,7 @@ class CaseIngestionJobConfigTest {
         registry.add("cp.audit.enabled", () -> "false");
     }
 
-    @Ignore
+    @Test
     void caseIngestionJobCreated() {
         assertThat(caseIngestionJob).isNotNull();
     }
