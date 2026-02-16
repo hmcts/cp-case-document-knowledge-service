@@ -23,11 +23,6 @@ on:
       trigger_deploy:
         required: true
         type: boolean
-      run_api_test:
-        required: false
-        type: boolean
-        default: false
-
 
 jobs:
   Artefact-Version:
