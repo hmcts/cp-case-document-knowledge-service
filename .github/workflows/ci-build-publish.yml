@@ -84,15 +84,6 @@ jobs:
           name: app-jar
           path: build/libs/${{ steps.repo_vars.outputs.artefact_name }}.jar
 
-      - name: Upload unit and integration test reports
-        if: always()
-        uses: ./.github/actions/upload-test-reports
-        with:
-          artifact_name: unit-integration-test-reports
-          path: |
-            build/reports/tests/test/
-            build/test-results/test/
-
   Provider-Deploy:
     needs: [ Artefact-Version, Build ]
     runs-on: ubuntu-latest
