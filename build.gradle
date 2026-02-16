@@ -25,6 +25,10 @@ repositories {
     maven { url = 'https://pkgs.dev.azure.com/hmcts/Artifacts/_packaging/hmcts-lib/maven/v1' }
 }
 
+apply {
+  from("gradle/docker.gradle")
+}
+
 /* ------------ Java toolchain ------------ */
 java {
     toolchain {
@@ -170,10 +174,11 @@ dependencies {
 
 
     // Testcontainers (BOM)
-    testImplementation platform("org.testcontainers:testcontainers-bom:${vers.testcontainersBom}")
-    testImplementation 'org.testcontainers:postgresql'
-    testImplementation 'org.testcontainers:junit-jupiter'
-    implementation "org.testcontainers:testcontainers"
+    testImplementation("org.springframework.boot:spring-boot-testcontainers:4.0.2")
+    testImplementation 'org.testcontainers:postgresql:1.21.4'
+    testImplementation 'org.testcontainers:junit-jupiter:1.21.4'
+    // Something badly wrong here if we need testcontainers in none test build
+    implementation "org.testcontainers:testcontainers:2.0.3"
 
     // Lombok
     compileOnly "org.projectlombok:lombok:${vers.lombok}"
@@ -300,24 +305,8 @@ tasks.named('jacocoTestReport') {
     executionData fileTree(dir: layout.buildDirectory.dir("jacoco").get().asFile, include: ["*.exec"])
     reports { xml.required.set(true); csv.required.set(false); html.required.set(true) }
 }
-
-/* ------------ Docker Compose ITs ------------ */
 tasks.named('composeBuild') { dependsOn tasks.named('bootJar') }
-dockerCompose {
-    useComposeFiles = ['docker/docker-compose.integration.yml']
-    startedServices = ['artemis', 'db', 'wiremock', 'azurite', 'app']
-    buildBeforeUp = true
-    forceRecreate = true
-    removeOrphans = true
-    removeContainers = true
-    removeVolumes = true
-    waitForTcpPorts = true
-    upAdditionalArgs = ['--wait', '--wait-timeout', '180']
-    captureContainersOutput = true
-    projectName = "${rootProject.name}-it".replaceAll('[^A-Za-z0-9]', '')
-    useDockerComposeV2 = true
-    dockerExecutable = 'docker'
-}
+
 tasks.register('integration', Test) {
     description = "Runs integration tests against docker-compose stack"
     group = "Verification"
