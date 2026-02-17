@@ -27,6 +27,7 @@ repositories {
 
 apply {
   from("gradle/docker.gradle")
+  from("gradle/pmd.gradle")
 }
 
 /* ------------ Java toolchain ------------ */
@@ -224,22 +225,6 @@ gitProperties {
     ]
     dateFormat = "yyyy-MM-dd'T'HH:mm:ssXXX"
     dateFormatTimeZone = "UTC"
-}
-
-/* ------------ PMD ------------ */
-pmd {
-    ruleSets = []
-    ruleSetFiles = files(".github/pmd-ruleset.xml")
-    ignoreFailures = false
-}
-tasks.withType(Pmd).configureEach {
-    reports { xml.required.set(true); html.required.set(true) }
-    if (name.toLowerCase().contains("test") || name.toLowerCase().contains("integration")) {
-        enabled = false
-    }
-}
-tasks.named("pmdMain").configure {
-    onlyIf { Boolean.getBoolean("runPmd") || System.getenv("RUN_PMD")?.toBoolean() == true }
 }
 
 /* ------------ SBOM ------------ */
