@@ -18,6 +18,7 @@
         <exclude name="UnitTestAssertionsShouldIncludeMessage"/>
         <exclude name="UnitTestContainsTooManyAsserts"/>
         <exclude name="PreserveStackTrace"/>
+        <exclude name="ImplicitFunctionalInterface"/>
     </rule>
     <rule ref="category/java/codestyle.xml">
         <exclude name="AtLeastOneConstructor"/>
