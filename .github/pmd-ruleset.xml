@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ruleset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         name="Custom Ruleset"
+<ruleset name="Custom Ruleset"
          xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0
-         https://pmd.github.io/pmd-7.0.0/pmd-7.0.0.xsd">
+         https://pmd.github.io/pmd-7.17.0/pmd-7.17.0.xsd">
 
     <description>Custom ruleset including exclusions</description>
 
+    <rule ref="category/java/codestyle.xml/MethodNamingConventions">
+        <properties>
+            <!-- This regex allows underscores in JUnit 5 test method names -->
+            <property name="junit5TestPattern" value="^[a-z][a-zA-Z0-9_]*$"/>
+        </properties>
+    </rule>
     <rule ref="category/java/bestpractices.xml">
         <exclude name="GuardLogStatement"/>
         <exclude name="UnitTestAssertionsShouldIncludeMessage"/>
@@ -17,6 +23,7 @@
         <exclude name="AtLeastOneConstructor"/>
         <exclude name="CallSuperInConstructor"/>
         <exclude name="LongVariable"/>
+        <exclude name="ShortVariable"/>
         <exclude name="TooManyStaticImports"/>
     </rule>
     <rule ref="category/java/errorprone.xml">
