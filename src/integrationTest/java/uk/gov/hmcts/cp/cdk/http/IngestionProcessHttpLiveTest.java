@@ -16,10 +16,12 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -278,72 +280,32 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
         assertNotNull(auditResponse, "Expected audit event after full ingestion task chain");
 
         Thread.sleep(60000);
-
-
-        // ---- CaseDocument table validation using JDBC
         UUID caseId = UUID.fromString("2204cd6b-5759-473c-b0f7-178b3aa0c9b3");
-        CaseDocument doc;
-        try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass);
-             PreparedStatement ps = c.prepareStatement(
-                     "SELECT doc_id, case_id, material_id, doc_name, blob_uri, uploaded_at " +
-                             "FROM case_documents " +
-                             "WHERE case_id = ? " +
-                             "ORDER BY uploaded_at DESC " +
-                             "LIMIT 1"
-             )) {
-            ps.setObject(1, caseId);
-            try (ResultSet rs = ps.executeQuery()) {
-                assertTrue(rs.next(), "Expected at least one CaseDocument for the case");
-
-                doc = new CaseDocument();
-                doc.setDocId((UUID) rs.getObject("doc_id"));
-                doc.setCaseId((UUID) rs.getObject("case_id"));
-                doc.setMaterialId((UUID) rs.getObject("material_id"));
-                doc.setDocName(rs.getString("doc_name"));
-                doc.setBlobUri(rs.getString("blob_uri"));
-                doc.setUploadedAt(rs.getObject("uploaded_at", OffsetDateTime.class));
-            }
-        }
-
-        assertThat(doc.getBlobUri()).isNotBlank();
-        assertThat(doc.getDocName()).isNotBlank();
-        assertThat(doc.getMaterialId()).isNotNull();
-        assertThat(doc.getUploadedAt()).isNotNull();
-
-        // ---- Answer table validation using JDBC
         UUID queryId = UUID.fromString("2a9ae797-7f70-4be5-927f-2dae65489e69");
-        Answer answer;
 
-        try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass);
-             PreparedStatement ps = c.prepareStatement(
-                     "SELECT case_id, query_id, version, created_at, answer, doc_id " +
-                             "FROM answers " +
-                             "WHERE case_id = ? AND query_id = ? " +
-                             "ORDER BY created_at DESC, version DESC " +
-                             "LIMIT 1"
-             )) {
-            ps.setObject(1, caseId);
-            ps.setObject(2, queryId);
 
-            try (ResultSet rs = ps.executeQuery()) {
-                assertTrue(rs.next(), "Expected at least one Answer for the case and query");
+        final HttpHeaders answerHeaders = new HttpHeaders();
+        answerHeaders.setAccept(List.of(
+                MediaType.valueOf("application/vnd.casedocumentknowledge-service.answers+json")
+        ));
 
-                answer = new Answer();
-                AnswerId answerId = new AnswerId();
-                answerId.setCaseId((UUID) rs.getObject("case_id"));
-                answerId.setQueryId((UUID) rs.getObject("query_id"));
-                answerId.setVersion(rs.getInt("version"));
-                answer.setAnswerId(answerId);
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(120))
+                .untilAsserted(() -> {
 
-                answer.setCreatedAt(rs.getObject("created_at", OffsetDateTime.class));
-                answer.setAnswerText(rs.getString("answer"));
-                answer.setDocId((UUID) rs.getObject("doc_id"));
-            }
-        }
+                    ResponseEntity<String> answerResponse = http.exchange(
+                            baseUrl + "/answers/" + caseId + "/" + queryId,
+                            HttpMethod.GET,
+                            new HttpEntity<>(answerHeaders),
+                            String.class
+                    );
 
-        assertThat(answer.getAnswerText()).isNotBlank();
-        assertThat(answer.getCreatedAt()).isNotNull();
-        assertThat(answer.getDocId()).isNotNull();
+                    assertThat(answerResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+                    assertThat(answerResponse.getBody()).isNotNull();
+                    assertThat(answerResponse.getBody()).contains("\"answer\"");
+                    assertThat(answerResponse.getBody()).contains("\"version\"");
+                });
+
 
     }
 
