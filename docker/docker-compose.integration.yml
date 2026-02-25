@@ -14,7 +14,7 @@ services:
       azurite:
         condition: service_started
     environment:
-      AZURE_STORAGE_CONNECTION_STRING: "${AZURE_STORAGE_CONNECTION_STRING}"
+      AZURE_STORAGE_CONNECTION_STRING: "${CP_CDK_AZURE_STORAGE_CONNECTION_STRING}"
     volumes:
       - ../src/integrationTest/resources/wiremock-seed:/seed:ro
       - ../src/integrationTest/resources/wiremock-seed/azurite-seed.sh:/azurite-seed.sh:ro
@@ -158,10 +158,10 @@ services:
       OTEL_METRICS_URL: http://localhost:4318/metrics
 
       CP_CDK_STORAGE_MODE: connection-string
-      CP_CDK_AZURE_STORAGE_CONNECTION_STRING: "${AZURE_STORAGE_CONNECTION_STRING}"
+      CP_CDK_AZURE_STORAGE_CONNECTION_STRING: "${CP_CDK_AZURE_STORAGE_CONNECTION_STRING}"
       CP_CDK_AZURE_STORAGE_CONTAINER: documents
       CDK_STORAGE_AZURE_MODE: connection-string
-      CDK_STORAGE_AZURE_CONNECTION_STRING: "${AZURE_STORAGE_CONNECTION_STRING}"
+      CDK_STORAGE_AZURE_CONNECTION_STRING: "${CP_CDK_AZURE_STORAGE_CONNECTION_STRING}"
       CDK_STORAGE_AZURE_CONTAINER: documents
 
       CP_CDK_RAG_URL: http://wiremock:8080
