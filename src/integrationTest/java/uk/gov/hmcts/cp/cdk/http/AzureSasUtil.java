@@ -8,19 +8,27 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public final class AzureSasUtil {
-    public static void main(String[] args) {
-        System.out.println(sasUrlFromEnv("idpc-ai",     // container
-                "hello.pdf",   // blob
-                120));
-    }
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(AzureSasUtil.class);
 
     private AzureSasUtil() {
     }
 
+    public static void main(String[] args) {
+
+        LOGGER.info(sasUrlFromEnv("idpc-ai",
+                "hello.pdf",   // blob
+                120));
+    }
+
     public static String sasUrlFromEnv(final String container, final String blobName, final int minutes) {
-        String conn = "";
+        final String conn = "";
 
         if (conn == null || conn.isBlank()) {
             throw new IllegalStateException("Missing env: CP_CDK_AZURE_STORAGE_CONNECTION_STRING");

@@ -1,4 +1,4 @@
-package uk.gov.hmcts.cp.cdk.testsupport;
+package uk.gov.hmcts.cp.cdk.util;
 
 import java.util.List;
 
@@ -7,20 +7,20 @@ import org.springframework.http.client.BufferingClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
-public final class TestHttp {
-    private TestHttp() {
+public final class UtilHttp {
+    private UtilHttp() {
     }
 
     public static RestTemplate newClient() {
-        RestTemplate rt = new RestTemplate(
+        final RestTemplate rt = new RestTemplate(
                 new BufferingClientHttpRequestFactory(new SimpleClientHttpRequestFactory())
         );
 
         rt.getInterceptors().add((request, body, execution) -> {
-            HttpHeaders headers = request.getHeaders();
-            List<String> existing = headers.get(TestConstants.CJSCPPUID);
+           final HttpHeaders headers = request.getHeaders();
+           final List<String> existing = headers.get(UtilConstants.CJSCPPUID);
             if (existing == null || existing.isEmpty()) {
-                headers.add(TestConstants.CJSCPPUID, TestConstants.USER_WITH_PERMISSIONS);
+                headers.add(UtilConstants.CJSCPPUID, UtilConstants.USER_WITH_PERMISSIONS);
             }
             return execution.execute(request, body);
         });

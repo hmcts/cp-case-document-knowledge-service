@@ -9,7 +9,6 @@ import uk.gov.hmcts.cp.cdk.domain.AnswerId;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.Answer;
 
-import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
 
@@ -27,15 +26,13 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.TestPropertySource;
+
 
 
 /**
@@ -43,7 +40,7 @@ import org.springframework.test.context.TestPropertySource;
  * - POST /ingestions/start
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
+ class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
 
     // Custom VND types defined by OpenAPI contract
     private static final MediaType VND_TYPE_JSON =
@@ -65,6 +62,7 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
     private static final String LABEL_CASE_SUMMARY = "Case Summary";
     private static final String LABEL_EVIDENCE_BUNDLE = "Evidence Bundle";
     private static final String LABEL_NEXT_STEPS = "Next Steps";
+    public static final String CONTENT = "content";
 
 
     @BeforeAll
@@ -110,7 +108,7 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
                 String.class
         );
 
-        UUID queryId = UUID.fromString("2a9ae797-7f70-4be5-927f-2dae65489e69");
+        final UUID queryId = UUID.fromString("2a9ae797-7f70-4be5-927f-2dae65489e69");
 
         try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass)) {
 
@@ -169,7 +167,7 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
 
     @Test
     void start_ingestion_process_returns_started_phase() throws Exception {
-        String auditResponse;
+        final String auditResponse;
         try (BrokerUtil brokerUtil = new BrokerUtil()) {
             final HttpHeaders headers = new HttpHeaders();
             headers.setContentType(VND_TYPE_JSON);
@@ -203,15 +201,15 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
             assertThat(response.getBody()).contains("\"phase\":\"STARTED\"");
-            assertThat(response.getBody()).containsPattern("\"message\"\\s*:\\s*\"Ingestion.*request accepted.*\"");;
+            assertThat(response.getBody()).containsPattern("\"message\"\\s*:\\s*\"Ingestion.*request accepted.*\"");
             assertThat(response.getBody()).contains("STARTED");
 
             // Validate audit message published (if applicable)
             auditResponse = brokerUtil.getMessageMatching(json ->
-                    json.has("content") &&
-                            courtCentreId.toString().equals(json.get("content").get("courtCentreId").asText()) &&
-                            roomId.toString().equals(json.get("content").get("roomId").asText()) &&
-                            date.equals(json.get("content").get("date").asText())
+                    json.has(CONTENT) &&
+                            courtCentreId.toString().equals(json.get(CONTENT).get("courtCentreId").asText()) &&
+                            roomId.toString().equals(json.get(CONTENT).get("roomId").asText()) &&
+                            date.equals(json.get(CONTENT).get("date").asText())
             );
         }
 
@@ -219,20 +217,20 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
     }
 
     private boolean isJobManagerEnabled() {
+        boolean enabled = false;
+        final String sysProp = System.getProperty("cdk.ingestion.feature.use-job-manager");
 
-        String sysProp = System.getProperty("cdk.ingestion.feature.use-job-manager");
-        System.out.println("value of sysProp :"+sysProp);
         if (sysProp != null) {
-            return Boolean.parseBoolean(sysProp);
+            enabled = Boolean.parseBoolean(sysProp);
         }
 
-        String env = System.getenv("CP_CDK_FEATURE_USE_JOB_MANAGER");
-        System.out.println("value of env :"+env);
+        final String env = System.getenv("CP_CDK_FEATURE_USE_JOB_MANAGER");
+
         if (env != null) {
-            return Boolean.parseBoolean(env);
+            enabled = Boolean.parseBoolean(env);
         }
 
-        return  false;
+        return  enabled;
     }
 
 
@@ -241,7 +239,7 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
         // Arrange
 
 
-        String auditResponse;
+        final String auditResponse;
         try (BrokerUtil brokerUtil = new BrokerUtil()) {
 
             final HttpHeaders headers = new HttpHeaders();
@@ -275,20 +273,20 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
             assertThat(response.getBody()).contains("\"phase\":\"STARTED\"");
 
             auditResponse = brokerUtil.getMessageMatching(json ->
-                    json.has("content") &&
-                            courtCentreId.toString().equals(json.get("content").get("courtCentreId").asText()) &&
-                            roomId.toString().equals(json.get("content").get("roomId").asText())
+                    json.has(CONTENT) &&
+                            courtCentreId.toString().equals(json.get(CONTENT).get("courtCentreId").asText()) &&
+                            roomId.toString().equals(json.get(CONTENT).get("roomId").asText())
             );
         }
 
         assertNotNull(auditResponse, "Expected audit event after full ingestion task chain");
-        boolean jmenable = isJobManagerEnabled();
-        Thread.sleep(60000);
+        final boolean jmenable = isJobManagerEnabled();
+        Thread.sleep(60_000);
         if (jmenable) {
 
             // ---- CaseDocument table validation using JDBC
-            UUID caseId = UUID.fromString("2204cd6b-5759-473c-b0f7-178b3aa0c9b3");
-            CaseDocument doc;
+            final UUID caseId = UUID.fromString("2204cd6b-5759-473c-b0f7-178b3aa0c9b3");
+            final CaseDocument doc;
             try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass);
                  PreparedStatement ps = c.prepareStatement(
                          "SELECT doc_id, case_id, material_id, doc_name, blob_uri, uploaded_at " +
@@ -317,8 +315,8 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
             assertThat(doc.getUploadedAt()).isNotNull();
 
             // ---- Answer table validation using JDBC
-            UUID queryId = UUID.fromString("2a9ae797-7f70-4be5-927f-2dae65489e69");
-            Answer answer;
+            final UUID queryId = UUID.fromString("2a9ae797-7f70-4be5-927f-2dae65489e69");
+            final Answer answer;
 
             try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass);
                  PreparedStatement ps = c.prepareStatement(
@@ -335,7 +333,7 @@ public class IngestionProcessHttpLiveTest extends AbstractHttpLiveTest {
                     assertTrue(rs.next(), "Expected at least one Answer for the case and query");
 
                     answer = new Answer();
-                    AnswerId answerId = new AnswerId();
+                    final AnswerId answerId = new AnswerId();
                     answerId.setCaseId((UUID) rs.getObject("case_id"));
                     answerId.setQueryId((UUID) rs.getObject("query_id"));
                     answerId.setVersion(rs.getInt("version"));
