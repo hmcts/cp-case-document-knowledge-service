@@ -3,8 +3,8 @@ package uk.gov.hmcts.cp.cdk.http;
 import static java.util.UUID.fromString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.CJSCPPUID;
-import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.USER_WITH_PERMISSIONS;
+import static uk.gov.hmcts.cp.cdk.util.UtilConstants.CJSCPPUID;
+import static uk.gov.hmcts.cp.cdk.util.UtilConstants.USER_WITH_PERMISSIONS;
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
@@ -35,10 +35,14 @@ import org.springframework.web.client.HttpClientErrorException;
  * - GET /answers/{caseId}/{queryId}/with-llm         (latest with LLM payload)
  * - GET /queries?caseId={caseId}&at={isoInstant}     (as-of queries view for a case)
  */
-public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
+ class AnswersHttpLiveTest extends AbstractHttpLiveTest {
 
-    public final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.answers+json");
-    public final MediaType VND_TYPE_JSON_QUERIES = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
+    public static final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.answers+json");
+    public static final MediaType VND_TYPE_JSON_QUERIES = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
+    public static final String ANSWERS = "/answers/";
+    public static final String CONTENT = "content";
+    public static final String METADATA = "_metadata";
+    public static final String NAME = "name";
     private UUID caseId;
     private UUID queryId;
 
@@ -163,7 +167,7 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
             headers.setAccept(List.of(VND_TYPE_JSON));
 
             final ResponseEntity<String> response = http.exchange(
-                    baseUrl + "/answers/" + caseId + "/" + queryId,
+                    baseUrl + ANSWERS + caseId + "/" + queryId,
                     HttpMethod.GET,
                     new HttpEntity<>(headers),
                     String.class
@@ -175,25 +179,25 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
             // This endpoint typically omits LLM input:
             assertThat(response.getBody()).doesNotContain("llmInput");
 
-            String auditRequest = brokerUtil.getMessageMatching(json ->
-                    json.has("content")
+            final String auditRequest = brokerUtil.getMessageMatching(json ->
+                    json.has(CONTENT)
                             && "casedocumentknowledge-service".equals(json.get("origin").asText())
                             && "casedocumentknowledge-service-api".equals(json.get("component").asText())
-                            && caseId.equals(fromString(json.get("content").get("caseId").asText()))
-                            && queryId.equals(fromString(json.get("content").get("queryId").asText()))
-                            && "application/vnd.casedocumentknowledge-service.answers+json".equals(json.get("content").get("_metadata").get("name").asText())
-                            && "audit.events.audit-recorded".equals(json.get("_metadata").get("name").asText())
+                            && caseId.equals(fromString(json.get(CONTENT).get("caseId").asText()))
+                            && queryId.equals(fromString(json.get(CONTENT).get("queryId").asText()))
+                            && "application/vnd.casedocumentknowledge-service.answers+json".equals(json.get(CONTENT).get(METADATA).get(NAME).asText())
+                            && "audit.events.audit-recorded".equals(json.get(METADATA).get(NAME).asText())
             );
             assertNotNull(auditRequest);
 
-            String auditResponse = brokerUtil.getMessageMatching(json ->
-                    json.has("content")
+            final String auditResponse = brokerUtil.getMessageMatching(json ->
+                    json.has(CONTENT)
                             && "casedocumentknowledge-service".equals(json.get("origin").asText())
                             && "casedocumentknowledge-service-api".equals(json.get("component").asText())
-                            && "Answer v2".equals(json.get("content").get("answer").asText())
-                            && !json.get("content").has("llmInput")
-                            && "application/vnd.casedocumentknowledge-service.answers+json".equals(json.get("content").get("_metadata").get("name").asText())
-                            && "audit.events.audit-recorded".equals(json.get("_metadata").get("name").asText())
+                            && "Answer v2".equals(json.get(CONTENT).get("answer").asText())
+                            && !json.get(CONTENT).has("llmInput")
+                            && "application/vnd.casedocumentknowledge-service.answers+json".equals(json.get(CONTENT).get(METADATA).get(NAME).asText())
+                            && "audit.events.audit-recorded".equals(json.get(METADATA).get(NAME).asText())
             );
             assertNotNull(auditResponse);
         }
@@ -202,7 +206,7 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
     @Test
     void get_latest_answer_not_found() throws Exception {
 
-        try (BrokerUtil brokerUtil = new BrokerUtil()) {
+        try (BrokerUtil ignored = new BrokerUtil()) {
 
             final HttpHeaders headers = new HttpHeaders();
             headers.setAccept(List.of(VND_TYPE_JSON));
@@ -211,7 +215,7 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
 
             try {
                 http.exchange(
-                        baseUrl + "/answers/" + caseId + "/" + nonExistentQueryId,
+                        baseUrl + ANSWERS + caseId + "/" + nonExistentQueryId,
                         HttpMethod.GET,
                         new HttpEntity<>(headers),
                         String.class
@@ -233,7 +237,7 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
         headers.setAccept(List.of(VND_TYPE_JSON));
 
         final ResponseEntity<String> response = http.exchange(
-                baseUrl + "/answers/" + caseId + "/" + queryId + "?version=1",
+                baseUrl + ANSWERS + caseId + "/" + queryId + "?version=1",
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
                 String.class
@@ -255,7 +259,7 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
 
         final HttpEntity<Void> req = new HttpEntity<>(headers);
 
-        final String url = baseUrl + "/answers/" + caseId + "/" + queryId + "?version=1";
+        final String url = baseUrl + ANSWERS+ caseId + "/" + queryId + "?version=1";
 
         final ResponseEntity<Void> resp = http.exchange(
                 url,
@@ -272,7 +276,7 @@ public class AnswersHttpLiveTest extends AbstractHttpLiveTest {
         headers.setAccept(List.of(VND_TYPE_JSON));
         headers.set(CJSCPPUID, USER_WITH_PERMISSIONS);
         final ResponseEntity<String> response = http.exchange(
-                baseUrl + "/answers/" + caseId + "/" + queryId + "/with-llm",
+                baseUrl + ANSWERS + caseId + "/" + queryId + "/with-llm",
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
                 String.class
