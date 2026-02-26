@@ -19,16 +19,20 @@ import jakarta.jms.Session;
 import jakarta.jms.TextMessage;
 import jakarta.jms.Topic;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BrokerUtil implements AutoCloseable {
 
     private static final String TOPIC_NAME = "jms.topic.auditing.event";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(BrokerUtil.class);
     private final Connection connection;
     private final Session session;
     private final MessageConsumer consumer;
     private final BlockingQueue<String> receivedMessages = new LinkedBlockingQueue<>();
+    private final ActiveMQConnectionFactory connectionFactory;
 
     public BrokerUtil() throws Exception {
         System.setProperty("org.apache.activemq.artemis.use.global.client.thread.pool", "false");
@@ -41,38 +45,36 @@ public class BrokerUtil implements AutoCloseable {
         final String pass = env("CP_CDK_ARTEMIS_PASSWORD", "");
 
         String trustStorePath = env("CP_CDK_ARTEMIS_KEYSTORE", null);
-        String trustStorePass = env("CP_CDK_ARTEMIS_KEYSTORE_PASSWORD", "changeit");
+        final String trustStorePass = env("CP_CDK_ARTEMIS_KEYSTORE_PASSWORD", "changeit");
         if (trustStorePath == null || trustStorePath.isBlank()) {
-            URL ksUrl = getClass().getClassLoader().getResource("ssl/keystore.jks");
+            final URL ksUrl = Thread.currentThread().getContextClassLoader().getResource("ssl/keystore.jks");
             if (ksUrl == null) {
                 throw new IllegalStateException("ssl/keystore.jks not found in resources");
             }
             trustStorePath = new File(ksUrl.toURI()).getAbsolutePath();
         }
 
-        StringBuilder url = new StringBuilder("tcp://" + host + ":" + port + "?");
-        url.append("ha=false");
-        url.append("&reconnectAttempts=0");
-        url.append("&initialConnectAttempts=10");
-        url.append("&retryInterval=100");
-        url.append("&connectionTTL=15000");
-        url.append("&callTimeout=3000");
-        url.append("&closeTimeout=2000");
-        if (ssl) {
-            url.append("&sslEnabled=true");
-            url.append("&verifyHost=").append(verifyHost);
-            url.append("&trustStorePath=").append(encode(trustStorePath));
-            url.append("&trustStorePassword=").append(encode(trustStorePass));
-        }
+        String baseUrl = String.format(
+                "tcp://%s:%d?ha=false&reconnectAttempts=0&initialConnectAttempts=10&retryInterval=100&connectionTTL=15000&callTimeout=3000",
+                host, port
+        );
 
-        ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(url.toString());
+        if (ssl) {
+            baseUrl += String.format(
+                    "&sslEnabled=true&verifyHost=%b&trustStorePath=%s&trustStorePassword=%s",
+                    verifyHost, encode(trustStorePath), encode(trustStorePass)
+            );
+        }
+        connectionFactory = new ActiveMQConnectionFactory(baseUrl);
         if (!user.isEmpty() || !pass.isEmpty()) {
             connectionFactory.setUser(Objects.toString(user, ""));
             connectionFactory.setPassword(Objects.toString(pass, ""));
         }
 
         connection = connectionFactory.createConnection();
-        connection.setClientID(randomUUID().toString());
+        connection.setClientID(
+
+                randomUUID().toString());
         connection.start();
 
         session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
@@ -81,44 +83,65 @@ public class BrokerUtil implements AutoCloseable {
         final Topic topic = session.createTopic(TOPIC_NAME);
         consumer = session.createConsumer(topic, selector);
 
-        consumer.setMessageListener(message -> {
+        consumer.setMessageListener(message ->
+
+        {
             if (message instanceof TextMessage textMessage) {
                 try {
                     receivedMessages.add(textMessage.getText());
                 } catch (JMSException ignore) {
+                    LOGGER.warn(ignore.getMessage());
                 }
             }
         });
+
+
     }
 
-    public String getMessageMatching(Predicate<JsonNode> matcher) throws Exception {
-        long end = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(5);
-        while (System.currentTimeMillis() < end) {
-            String message = receivedMessages.poll(end - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
-            if (message == null) break;
+    private static String env(final String key, final String def) {
+        String v = System.getenv(key);
+        if (v == null || v.isBlank()) {
+            v = System.getProperty(key, def);
+        }
+        return v;
+    }
 
-            JsonNode json = OBJECT_MAPPER.readTree(message);
+    private static String encode(final String s) {
+        return s.replace(" ", "%20").replace(":", "%3A");
+    }
+
+    public String getMessageMatching(final Predicate<JsonNode> matcher) throws Exception {
+        final long end = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(5);
+        String matchMessage = null;
+        while (System.currentTimeMillis() < end) {
+            final String message = receivedMessages.poll(end - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+            if (message == null) {
+                break;
+            }
+
+            final JsonNode json = OBJECT_MAPPER.readTree(message);
             if (matcher.test(json)) {
-                return message;
+                matchMessage = message;
+                break;
             }
         }
-        return null;
+        return matchMessage;
     }
 
     @Override
     public void close() throws Exception {
-        consumer.close();
-        session.close();
-        connection.close();
-    }
+        if (consumer != null) {
+            consumer.close();
+        }
+        if (session != null) {
+            session.close();
+        }
+        if (connection != null) {
+            connection.close();
+        }
+        if (connectionFactory != null) {
+            connectionFactory.close();
+        }
 
-    private static String env(String key, String def) {
-        String v = System.getenv(key);
-        if (v == null || v.isBlank()) v = System.getProperty(key, def);
-        return v;
-    }
-
-    private static String encode(String s) {
-        return s.replace(" ", "%20").replace(":", "%3A");
     }
 }

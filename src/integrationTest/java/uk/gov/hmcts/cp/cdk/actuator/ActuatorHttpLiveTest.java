@@ -11,14 +11,14 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
-public class ActuatorHttpLiveTest {
+ class ActuatorHttpLiveTest {
 
     private final String baseUrl = System.getProperty("app.baseUrl", "http://localhost:8082/casedocumentknowledge-service");
     private final RestTemplate http = new RestTemplate();
 
     @Test
     void health_is_up() {
-        ResponseEntity<String> res = http.exchange(
+        final ResponseEntity<String> res = http.exchange(
                 baseUrl + "/actuator/health", HttpMethod.GET,
                 new HttpEntity<>(new HttpHeaders()),
                 String.class
@@ -29,9 +29,9 @@ public class ActuatorHttpLiveTest {
 
     @Test
     void prometheus_is_exposed() {
-        HttpHeaders h = new HttpHeaders();
+        final HttpHeaders h = new HttpHeaders();
         h.setAccept(java.util.List.of(MediaType.TEXT_PLAIN));
-        ResponseEntity<String> res = http.exchange(
+        final ResponseEntity<String> res = http.exchange(
                 baseUrl + "/actuator/prometheus", HttpMethod.GET,
                 new HttpEntity<>(h),
                 String.class

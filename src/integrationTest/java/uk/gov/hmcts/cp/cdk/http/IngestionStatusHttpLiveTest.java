@@ -28,9 +28,10 @@ import org.springframework.http.ResponseEntity;
  * End-to-end tests for ingestion status read endpoint:
  * - GET /ingestions/status?caseId=...
  */
-public class IngestionStatusHttpLiveTest extends AbstractHttpLiveTest {
+ class IngestionStatusHttpLiveTest extends AbstractHttpLiveTest {
 
-    public final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.ingestion+json");
+    public static final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.ingestion+json");
+    public static final String CONTENT = "content";
     private UUID caseId;
 
     @BeforeEach
@@ -74,7 +75,7 @@ public class IngestionStatusHttpLiveTest extends AbstractHttpLiveTest {
 
     @Test
     void latest_status_is_returned_from_view() throws Exception {
-        String auditResponse;
+        final String auditResponse;
         try (BrokerUtil brokerUtil = new BrokerUtil()) {
 
             final HttpHeaders h = new HttpHeaders();
@@ -92,15 +93,15 @@ public class IngestionStatusHttpLiveTest extends AbstractHttpLiveTest {
             assertThat(res.getBody()).contains("\"phase\":\"INGESTED\"");
             assertThat(res.getBody()).contains("\"lastUpdated\":\"2025-05-01T12:05:00Z\"");
 
-            String auditRequest = brokerUtil.getMessageMatching(json ->
-                    json.has("content") && caseId.equals(UUID.fromString(json.get("content").get("caseId").asText()))
+            final String auditRequest = brokerUtil.getMessageMatching(json ->
+                    json.has(CONTENT) && caseId.equals(UUID.fromString(json.get(CONTENT).get("caseId").asText()))
             );
             assertNotNull(auditRequest);
 
             auditResponse = brokerUtil.getMessageMatching(json ->
-                    json.has("content") &&
-                            "INGESTED".equals(json.get("content").get("phase").asText())
-                            && caseId.equals(UUID.fromString(json.get("content").get("scope").get("caseId").asText()))
+                    json.has(CONTENT) &&
+                            "INGESTED".equals(json.get(CONTENT).get("phase").asText())
+                            && caseId.equals(UUID.fromString(json.get(CONTENT).get("scope").get("caseId").asText()))
             );
             assertNotNull(auditResponse);
         }

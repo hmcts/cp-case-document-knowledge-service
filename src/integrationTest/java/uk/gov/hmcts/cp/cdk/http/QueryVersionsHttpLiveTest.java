@@ -28,9 +28,9 @@ import org.springframework.http.ResponseEntity;
  * Lists all versions for a single query via the live HTTP API.
  * Assumes the service exposes GET /queries/{queryId}/versions
  */
-public class QueryVersionsHttpLiveTest extends AbstractHttpLiveTest {
+class QueryVersionsHttpLiveTest extends AbstractHttpLiveTest {
 
-    public final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
+    public static final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
     private UUID queryId;
 
     @BeforeEach
@@ -45,29 +45,29 @@ public class QueryVersionsHttpLiveTest extends AbstractHttpLiveTest {
             ins.executeUpdate();
         }
 
-        HttpHeaders headers = new HttpHeaders();
+        final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(VND_TYPE_JSON);
 
         // v1 @ 2025-05-01
-        Map<String, Object> b1 = new HashMap<>();
+        final Map<String, Object> b1 = new HashMap<>();
         b1.put("effectiveAt", "2025-05-01T12:00:00Z");
-        Map<String, Object> q1 = new HashMap<>();
+        final Map<String, Object> q1 = new HashMap<>();
         q1.put("queryId", queryId.toString());
         q1.put("userQuery", "V1 user text");
         q1.put("queryPrompt", "V1 prompt");
         b1.put("queries", List.of(q1));
-        ResponseEntity<String> r1 = http.postForEntity(baseUrl + "/queries", new HttpEntity<>(b1, headers), String.class);
+        final ResponseEntity<String> r1 = http.postForEntity(baseUrl + "/queries", new HttpEntity<>(b1, headers), String.class);
         assertThat(r1.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
 
         // v2 @ 2025-06-01
-        Map<String, Object> b2 = new HashMap<>();
+        final Map<String, Object> b2 = new HashMap<>();
         b2.put("effectiveAt", "2025-06-01T12:00:00Z");
-        Map<String, Object> q2 = new HashMap<>();
+        final Map<String, Object> q2 = new HashMap<>();
         q2.put("queryId", queryId.toString());
         q2.put("userQuery", "V2 user text");
         q2.put("queryPrompt", "V2 prompt");
         b2.put("queries", List.of(q2));
-        ResponseEntity<String> r2 = http.postForEntity(baseUrl + "/queries", new HttpEntity<>(b2, headers), String.class);
+        final ResponseEntity<String> r2 = http.postForEntity(baseUrl + "/queries", new HttpEntity<>(b2, headers), String.class);
         assertThat(r2.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
     }
 
@@ -87,10 +87,10 @@ public class QueryVersionsHttpLiveTest extends AbstractHttpLiveTest {
 
     @Test
     void list_versions_returns_all_versions_for_query() {
-        HttpHeaders h = new HttpHeaders();
+        final HttpHeaders h = new HttpHeaders();
         h.setAccept(List.of(VND_TYPE_JSON));
 
-        ResponseEntity<String> res = http.exchange(
+        final ResponseEntity<String> res = http.exchange(
                 baseUrl + "/queries/" + queryId + "/versions",
                 HttpMethod.GET,
                 new HttpEntity<>(h),

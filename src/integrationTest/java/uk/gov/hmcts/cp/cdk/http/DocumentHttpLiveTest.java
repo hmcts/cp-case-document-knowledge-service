@@ -1,8 +1,8 @@
 package uk.gov.hmcts.cp.cdk.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.CJSCPPUID;
-import static uk.gov.hmcts.cp.cdk.testsupport.TestConstants.USER_WITH_PERMISSIONS;
+import static uk.gov.hmcts.cp.cdk.util.UtilConstants.CJSCPPUID;
+import static uk.gov.hmcts.cp.cdk.util.UtilConstants.USER_WITH_PERMISSIONS;
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 
@@ -20,15 +20,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
-public class DocumentHttpLiveTest extends AbstractHttpLiveTest {
-    public final MediaType VND_TYPE_MATERIAL = MediaType.valueOf("application/vnd.casedocumentknowledge-service.document-content+json");
-    private UUID queryId;
+ class DocumentHttpLiveTest extends AbstractHttpLiveTest {
+    public static final MediaType VND_TYPE_MATERIAL = MediaType.valueOf("application/vnd.casedocumentknowledge-service.document-content+json");
+
 
     @Test
-    void getMaterialContentUrl_returns_expected_url() throws Exception {
+    void materialContentUrl_returnsExpectedUrl() throws Exception {
 
-        UUID docId = UUID.randomUUID();
-        UUID materialId = UUID.randomUUID();
+        final UUID docId = UUID.randomUUID();
+        final UUID materialId = UUID.randomUUID();
 
         try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass);
              PreparedStatement ps = c.prepareStatement(
@@ -45,12 +45,12 @@ public class DocumentHttpLiveTest extends AbstractHttpLiveTest {
             ps.executeUpdate();
         }
 
-        HttpHeaders headers = new HttpHeaders();
+        final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(VND_TYPE_MATERIAL);
         headers.set(CJSCPPUID, USER_WITH_PERMISSIONS); // add required header
 
         // --- Act: perform GET request to the endpoint ---
-        ResponseEntity<String> res = http.exchange(
+        final ResponseEntity<String> res = http.exchange(
                 baseUrl + "/document/" + docId + "/content",
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
