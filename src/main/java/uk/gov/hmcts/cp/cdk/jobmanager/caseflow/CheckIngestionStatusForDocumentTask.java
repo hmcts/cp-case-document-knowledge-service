@@ -1,13 +1,12 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
-import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
-import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_FAILED;
-import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SUCCESS;
-import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INVALID_METADATA;
-
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
 import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.domain.Query;
@@ -30,21 +29,20 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import jakarta.json.Json;
-import jakarta.json.JsonObject;
-import lombok.RequiredArgsConstructor;
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_FAILED;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SUCCESS;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INVALID_METADATA;
 
 @Component
 @RequiredArgsConstructor
 @Task(CHECK_INGESTION_STATUS_FOR_DOCUMENT)
+@Slf4j
 public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
 
-    private static final Logger log = LoggerFactory.getLogger(CheckIngestionStatusForDocumentTask.class);
     private final DocumentIngestionStatusApi documentIngestionStatusApi;
     private final CaseDocumentRepository caseDocumentRepository;
     private final QueryResolver queryResolver;
@@ -72,7 +70,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
         final UUID documentId = parseUuid(jobData.getString("docId", null));
         final UUID caseId = parseUuid(jobData.getString("caseId", null));
         final String blobName = jobData.getString("blobName", null);
-        final Set<String> FAILURE_STATUSES = Set.of(
+        final Set<String> failureStatuses = Set.of(
                 INGESTION_FAILED.name(),
                 INVALID_METADATA.name()
         );
@@ -143,7 +141,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
             }
 
             return complete(executionInfo);
-        } else if (FAILURE_STATUSES.contains(status.toUpperCase())) {
+        } else if (failureStatuses.contains(status.toUpperCase())) {
 
             updateIngestionPhase(documentId, DocumentIngestionPhase.FAILED);
             log.error(

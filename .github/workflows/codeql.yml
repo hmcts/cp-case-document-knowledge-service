@@ -85,6 +85,8 @@ jobs:
 
   DAST:
     runs-on: ubuntu-latest
+    env:
+      AZURE_STORAGE_CONNECTION_STRING: ${{ vars.AZURE_STORAGE_CONNECTION_STRING }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
