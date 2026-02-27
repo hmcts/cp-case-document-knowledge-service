@@ -1,6 +1,10 @@
 #!/bin/sh
 set -eu
 
+if [ -z "${AZURE_STORAGE_CONNECTION_STRING}" ]; then
+    echo "Error - AZURE_STORAGE_CONNECTION_STRING must be set"
+    exit 1
+fi
 CS="${AZURE_STORAGE_CONNECTION_STRING}"
 
 echo "Waiting for Azurite..."
