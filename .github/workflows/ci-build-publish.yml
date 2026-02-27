@@ -70,8 +70,6 @@ jobs:
         env:
           ARTEFACT_VERSION: ${{ needs.Artefact-Version.outputs.artefact_version }}
         run: |
-          echo "COLING vars.AZURE_STORAGE_CONNECTION_STRING is set to \"${{ vars.AZURE_STORAGE_CONNECTION_STRING }}\""
-          echo "COLING AZURE_STORAGE_CONNECTION_STRING is set to \"${AZURE_STORAGE_CONNECTION_STRING}\""
           echo "Building with ARTEFACT_VERSION=$ARTEFACT_VERSION"
           ./gradlew build -DARTEFACT_VERSION=$ARTEFACT_VERSION
 
