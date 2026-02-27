@@ -2,8 +2,6 @@ name: CI Build and Publish
 
 on:
   workflow_call:
-    env:
-      AZURE_STORAGE_CONNECTION_STRING: ${{ vars.AZURE_STORAGE_CONNECTION_STRING }}
     secrets:
       AZURE_DEVOPS_ARTIFACT_USERNAME:
         required: true
@@ -48,6 +46,8 @@ jobs:
   Build:
     needs: [Artefact-Version]
     runs-on: ubuntu-latest
+    env:
+      AZURE_STORAGE_CONNECTION_STRING: ${{ vars.AZURE_STORAGE_CONNECTION_STRING }}
     outputs:
       repo_name: ${{ steps.repo_vars.outputs.repo_name }}
       artefact_name: ${{ steps.repo_vars.outputs.artefact_name }}
