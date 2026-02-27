@@ -2,6 +2,8 @@ name: CI Build and Publish
 
 on:
   workflow_call:
+    env:
+      AZURE_STORAGE_CONNECTION_STRING: ${{ vars.AZURE_STORAGE_CONNECTION_STRING }}
     secrets:
       AZURE_DEVOPS_ARTIFACT_USERNAME:
         required: true
