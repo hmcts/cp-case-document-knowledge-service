@@ -85,6 +85,8 @@ jobs:
 
   DAST:
     runs-on: ubuntu-latest
+    env:
+      AZURE_STORAGE_CONNECTION_STRING: ${{ vars.AZURE_STORAGE_CONNECTION_STRING }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -104,6 +106,8 @@ jobs:
 
       - name: Pre-pull integration images
         run: |
+          echo "vars.AZURE_STORAGE_CONNECTION_STRING is set to \"${{ vars.AZURE_STORAGE_CONNECTION_STRING }}\""
+          echo "AZURE_STORAGE_CONNECTION_STRING is set to \"${AZURE_STORAGE_CONNECTION_STRING}\""
           docker pull postgres:16-alpine
           docker pull wiremock/wiremock:3.9.1
           docker pull mcr.microsoft.com/azure-storage/azurite:3.33.0
