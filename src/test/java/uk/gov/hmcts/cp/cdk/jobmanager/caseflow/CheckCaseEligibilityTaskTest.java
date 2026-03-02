@@ -15,6 +15,7 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCaseEligibilityInfo;
+import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
 import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
@@ -43,6 +44,9 @@ class CheckCaseEligibilityTaskTest {
     @Mock
     private ProgressionClient progressionClient;
 
+    @Mock
+    private JobManagerRetryProperties retryProperties;
+
     @Captor
     private ArgumentCaptor<ExecutionInfo> captor;
 
@@ -51,7 +55,7 @@ class CheckCaseEligibilityTaskTest {
 
     @BeforeEach
     void setUp() {
-        task = new CheckCaseEligibilityTask(executionService, progressionClient);
+        task = new CheckCaseEligibilityTask(executionService, progressionClient,retryProperties);
 
         caseId = UUID.randomUUID();
 
@@ -147,5 +151,19 @@ class CheckCaseEligibilityTaskTest {
 
         assertThat(nextTask.getAssignedTaskName()).isEqualTo(CHECK_IDPC_AVAILABILITY);
         assertThat(nextTask.getExecutionStatus()).isEqualTo(ExecutionStatus.STARTED);
+    }
+
+    @Test
+    void shouldRetry_whenProgressionClientThrowsException() {
+
+        when(progressionClient.getProsecutionCaseEligibilityInfo(caseId, "cppuid-123"))
+                .thenThrow(new RuntimeException("Downstream service failure"));
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.INPROGRESS);
+        assertThat(result.isShouldRetry()).isTrue();
+
+        verifyNoInteractions(executionService);
     }
 }

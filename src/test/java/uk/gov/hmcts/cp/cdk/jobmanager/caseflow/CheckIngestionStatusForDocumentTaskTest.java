@@ -181,4 +181,17 @@ class CheckIngestionStatusForDocumentTaskTest {
 
         assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
     }
+
+    @Test
+    void shouldRetry_whenDocumentStatusApiThrowsException() {
+        when(documentIngestionStatusApi.documentStatus("blob-123"))
+                .thenThrow(new RuntimeException("Downstream service failure"));
+
+        ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.INPROGRESS);
+        assertThat(result.isShouldRetry()).isTrue();
+
+        verifyNoInteractions(caseDocumentRepository, queryResolver, executionService);
+    }
 }
