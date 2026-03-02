@@ -1,12 +1,13 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
-import jakarta.json.Json;
-import jakarta.json.JsonObject;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
+import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_FAILED;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SUCCESS;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INVALID_METADATA;
+
 import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.domain.Query;
@@ -29,13 +30,13 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
-import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
-import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_FAILED;
-import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SUCCESS;
-import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INVALID_METADATA;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
@@ -81,80 +82,88 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
         }
 
         log.info("Polling ingestion status for identifier='{}', docId={}", blobName, documentId);
+        try {
+            final ResponseEntity<@NotNull DocumentIngestionStatusReturnedSuccessfully> response =
+                    documentIngestionStatusApi.documentStatus(blobName);
 
-        final ResponseEntity<@NotNull DocumentIngestionStatusReturnedSuccessfully> response =
-                documentIngestionStatusApi.documentStatus(blobName);
+            if (response == null || !response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                log.info("Status not available yet for identifier='{}' → retrying", blobName);
+                return retry(executionInfo);
+            }
 
-        if (response == null || !response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-            log.info("Status not available yet for identifier='{}' → retrying", blobName);
-            return retry(executionInfo);
-        }
+            final DocumentIngestionStatusReturnedSuccessfully body = response.getBody();
+            final String rawStatus = body.getStatus() != null ? body.getStatus().getValue() : null;
 
-        final DocumentIngestionStatusReturnedSuccessfully body = response.getBody();
-        final String rawStatus = body.getStatus() != null ? body.getStatus().getValue() : null;
+            if (rawStatus == null) {
+                return retry(executionInfo);
+            }
 
-        if (rawStatus == null) {
-            return retry(executionInfo);
-        }
+            final String status = normalise(rawStatus, 255);
 
-        final String status = normalise(rawStatus, 255);
+            if (INGESTION_SUCCESS.name().equalsIgnoreCase(status)) {
+                updateIngestionPhase(documentId, DocumentIngestionPhase.INGESTED);
+                log.info("INGESTION SUCCESS identifier='{}', docId={}", blobName, documentId);
+                final Set<UUID> candidateQueryIds;
+                final List<Query> queries = queryResolver.resolve();
 
-        if (INGESTION_SUCCESS.name().equalsIgnoreCase(status)) {
-            updateIngestionPhase(documentId, DocumentIngestionPhase.INGESTED);
-            log.info("INGESTION SUCCESS identifier='{}', docId={}", blobName, documentId);
-            final Set<UUID> candidateQueryIds;
-            final List<Query> queries = queryResolver.resolve();
+                if (queries == null || queries.isEmpty()) {
+                    log.debug("{}: No queries resolved; nothing to generate answers.", CHECK_INGESTION_STATUS_FOR_DOCUMENT);
+                    candidateQueryIds = new LinkedHashSet<>();
+                } else {
 
-            if (queries == null || queries.isEmpty()) {
-                log.debug("{}: No queries resolved; nothing to generate answers.", CHECK_INGESTION_STATUS_FOR_DOCUMENT);
-                candidateQueryIds = new LinkedHashSet<>();
-            } else {
+                    log.info("Resolved queries size={}", queries.size());
+                    queries.forEach(q -> log.info("QueryId={}", q.getQueryId()));
 
-                log.info("Resolved queries size={}", queries.size());
-                queries.forEach(q -> log.info("QueryId={}", q.getQueryId()));
-
-                candidateQueryIds = queries.stream()
-                        .map(Query::getQueryId)
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toCollection(LinkedHashSet::new));
-                if (candidateQueryIds.isEmpty()) {
-                    log.debug("{}: All resolved queries had null IDs; nothing to generate answers.", CHECK_INGESTION_STATUS_FOR_DOCUMENT);
-                    return complete(executionInfo);
+                    candidateQueryIds = queries.stream()
+                            .map(Query::getQueryId)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toCollection(LinkedHashSet::new));
+                    if (candidateQueryIds.isEmpty()) {
+                        log.debug("{}: All resolved queries had null IDs; nothing to generate answers.", CHECK_INGESTION_STATUS_FOR_DOCUMENT);
+                        return complete(executionInfo);
+                    }
                 }
+                log.info("Queries count: {}", candidateQueryIds.size());
+                for (UUID questionId : candidateQueryIds) {
+                    JsonObject singleCaseJobData = Json.createObjectBuilder(jobData)
+                            .add(CTX_SINGLE_QUERY_ID, questionId.toString())
+                            .build();
+
+                    ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
+                            .from(executionInfo)
+                            .withAssignedTaskName(GENERATE_ANSWER_FOR_QUERY)
+                            .withJobData(singleCaseJobData)
+                            .withExecutionStatus(ExecutionStatus.STARTED)
+                            .build();
+
+                    executionService.executeWith(executionInfoNew);
+
+                    log.info("Created {} for docId={} questionId={}", GENERATE_ANSWER_FOR_QUERY, documentId, questionId);
+                }
+
+                return complete(executionInfo);
+            } else if (failureStatuses.contains(status.toUpperCase())) {
+
+                updateIngestionPhase(documentId, DocumentIngestionPhase.FAILED);
+                log.error(
+                        "ingestion FAILED for identifier='{}' reason='{}' (caseId={}, docId={}).",
+                        blobName,
+                        status,
+                        caseId,
+                        documentId
+                );
+                return complete(executionInfo);
             }
-            log.info("Queries count: {}", candidateQueryIds.size());
-            for (UUID questionId : candidateQueryIds) {
-                JsonObject singleCaseJobData = Json.createObjectBuilder(jobData)
-                        .add(CTX_SINGLE_QUERY_ID, questionId.toString())
-                        .build();
-
-                ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
-                        .from(executionInfo)
-                        .withAssignedTaskName(GENERATE_ANSWER_FOR_QUERY)
-                        .withJobData(singleCaseJobData)
-                        .withExecutionStatus(ExecutionStatus.STARTED)
-                        .build();
-
-                executionService.executeWith(executionInfoNew);
-
-                log.info("Created {} for docId={} questionId={}", GENERATE_ANSWER_FOR_QUERY, documentId, questionId);
-            }
-
-            return complete(executionInfo);
-        } else if (failureStatuses.contains(status.toUpperCase())) {
-
-            updateIngestionPhase(documentId, DocumentIngestionPhase.FAILED);
+        } catch (final Exception exception) {
             log.error(
-                    "ingestion FAILED for identifier='{}' reason='{}' (caseId={}, docId={}).",
-                    blobName,
-                    status,
+                    "Document status check  FAILED with reason='{}' for (caseId={}, docId={}).",
+                    exception.getMessage(),
                     caseId,
                     documentId
             );
-            return complete(executionInfo);
+            return retry(executionInfo);
         }
-
-        log.debug("Ingestion status not complete for identifier='{}': {} → retrying", blobName, status);
+        log.debug("Ingestion status not complete for identifier='{}' → retrying", blobName);
         return retry(executionInfo);
     }
 
