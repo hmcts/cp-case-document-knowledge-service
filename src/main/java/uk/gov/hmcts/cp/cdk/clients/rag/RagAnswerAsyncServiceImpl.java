@@ -74,7 +74,6 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
         }
     }
 
-    @Override
     public ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> answerUserQueryStatus(final String transactionId) {
         try {
 

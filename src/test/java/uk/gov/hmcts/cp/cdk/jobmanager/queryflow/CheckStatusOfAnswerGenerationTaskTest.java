@@ -22,6 +22,7 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.STARTED;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus;
+import uk.gov.hmcts.cp.openapi.model.DocumentChunk;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullyAsynchronously;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 
@@ -99,7 +100,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @Test
     void shouldRetry_whenExceptionCallingRagApi() {
-        doThrow(new IllegalStateException()).when(api).answerUserQueryStatus(transactionId.toString());
+        doThrow(new IllegalStateException()).when(api).answerUserQueryStatus(transactionId.toString(), true);
 
         final ExecutionInfo result = task.execute(executionInfo);
 
@@ -108,7 +109,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @Test
     void shouldRetry_whenResponseIsNull() {
-        when(api.answerUserQueryStatus(transactionId.toString())).thenReturn(null);
+        when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(null);
 
         final ExecutionInfo result = task.execute(executionInfo);
 
@@ -119,7 +120,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
     void shouldRetry_whenHttpStatusIsNot2xx() {
         final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
 
-        when(api.answerUserQueryStatus(transactionId.toString())).thenReturn(response);
+        when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(response);
 
         final ExecutionInfo result = task.execute(executionInfo);
 
@@ -130,7 +131,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
     void shouldRetry_whenResponseBodyIsNull() {
         final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.ok(null);
 
-        when(api.answerUserQueryStatus(transactionId.toString())).thenReturn(response);
+        when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(response);
 
         final ExecutionInfo result = task.execute(executionInfo);
 
@@ -143,7 +144,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
         final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.ok(body);
 
-        when(api.answerUserQueryStatus(transactionId.toString())).thenReturn(response);
+        when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(response);
 
         final ExecutionInfo result = task.execute(executionInfo);
 
@@ -154,11 +155,12 @@ class CheckStatusOfAnswerGenerationTaskTest {
     void shouldSaveAnswerToCdkDatabase_andCompleteJob_whenAnswerGenerationSuccessful() {
         when(body.getStatus()).thenReturn(ANSWER_GENERATED);
         when(body.getLlmResponse()).thenReturn("llmResponse");
-        when(body.getChunkedEntries()).thenReturn(List.of("chunk1", "chunk2"));
+        when(body.getDocumentChunks()).thenReturn(List.of(new DocumentChunk(documentId.toString(), "doc-name", 1, "chunk1"),
+                new DocumentChunk(documentId.toString(), "doc-name", 2, "chunk2")));
 
         final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.ok(body);
 
-        when(api.answerUserQueryStatus(transactionId.toString())).thenReturn(response);
+        when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(response);
 
         final ExecutionInfo result = task.execute(executionInfo);
 
@@ -176,7 +178,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
         final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.ok(body);
 
-        when(api.answerUserQueryStatus(transactionId.toString())).thenReturn(response);
+        when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(response);
 
         final ExecutionInfo result = task.execute(executionInfo);
 

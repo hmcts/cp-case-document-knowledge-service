@@ -14,6 +14,7 @@ import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERA
 import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
+import uk.gov.hmcts.cp.openapi.model.DocumentChunk;
 import uk.gov.hmcts.cp.openapi.model.RequestErrored;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerRequestAccepted;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullyAsynchronously;
@@ -71,7 +72,7 @@ class RagAnswerAsyncServiceImplTest {
     void shouldReturn200ResponseWithResponseBody() {
         // given
         mockPostRequest();
-        final AnswerUserQueryRequest request = new AnswerUserQueryRequest("uq", "qp");
+        final AnswerUserQueryRequest request = new AnswerUserQueryRequest("uq", "qp", List.of());
 
         final String transactionId = randomUUID().toString();
         final UserQueryAnswerRequestAccepted apiResponse = new UserQueryAnswerRequestAccepted();
@@ -108,7 +109,7 @@ class RagAnswerAsyncServiceImplTest {
     @Test
     void shouldReturnNullTransactionIdWhenNoneReturned() {
         mockPostRequest();
-        final AnswerUserQueryRequest req = new AnswerUserQueryRequest("query A", "prompt B");
+        final AnswerUserQueryRequest req = new AnswerUserQueryRequest("query A", "prompt B", List.of());
 
         when(bodySpec.retrieve().body(UserQueryAnswerRequestAccepted.class))
                 .thenReturn(new UserQueryAnswerRequestAccepted());
@@ -122,7 +123,7 @@ class RagAnswerAsyncServiceImplTest {
     @Test
     void shouldReturnNewResponseWhenNull() {
         mockPostRequest();
-        final AnswerUserQueryRequest req = new AnswerUserQueryRequest("query A1", null);
+        final AnswerUserQueryRequest req = new AnswerUserQueryRequest("query A1", null, List.of());
 
         when(bodySpec.retrieve().body(UserQueryAnswerRequestAccepted.class))
                 .thenReturn(null);
@@ -188,14 +189,16 @@ class RagAnswerAsyncServiceImplTest {
     void shouldGetAnswerStatus_whenAnswerGeneratedAndReady() {
         mockGetRequest();
         final String transactionId = randomUUID().toString();
-        final List<Object> chunkedEntries = List.of("chunk1", "chunk2");
+        final String documentId = randomUUID().toString();
+        final List<DocumentChunk> chunkedEntries = List.of(new DocumentChunk(documentId, "doc-name", 1, "chunk1"),
+                new DocumentChunk(documentId, "", 2, "chunk2"));
         final UserQueryAnswerReturnedSuccessfullyAsynchronously apiResponse = new UserQueryAnswerReturnedSuccessfullyAsynchronously();
         apiResponse.setTransactionId(transactionId);
         apiResponse.setStatus(ANSWER_GENERATED);
         apiResponse.setLlmResponse("llmResponse");
         apiResponse.setUserQuery("user query");
         apiResponse.setQueryPrompt("query prompt");
-        apiResponse.setChunkedEntries(chunkedEntries);
+        apiResponse.setDocumentChunks(chunkedEntries);
 
 
         when(responseSpec.body(UserQueryAnswerReturnedSuccessfullyAsynchronously.class)).thenReturn(apiResponse);
@@ -211,7 +214,7 @@ class RagAnswerAsyncServiceImplTest {
         assertThat(result.getBody().getLlmResponse()).isEqualTo("llmResponse");
         assertThat(result.getBody().getUserQuery()).isEqualTo("user query");
         assertThat(result.getBody().getQueryPrompt()).isEqualTo("query prompt");
-        assertThat(result.getBody().getChunkedEntries()).isEqualTo(chunkedEntries);
+        assertThat(result.getBody().getDocumentChunks()).isEqualTo(chunkedEntries);
     }
 
     @MockitoSettings(strictness = Strictness.LENIENT)

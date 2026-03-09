@@ -16,6 +16,7 @@ import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERA
 
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
+import uk.gov.hmcts.cp.openapi.model.DocumentChunk;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullyAsynchronously;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
@@ -70,7 +71,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
         final UUID transactionId = parseUuidOrNull(jobData.getString(CTX_RAG_TRANSACTION_ID, null));
 
         try {
-            final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> userQueryAnswerResponse = documentInformationSummarisedAsynchronouslyApi.answerUserQueryStatus(transactionId.toString());
+            final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> userQueryAnswerResponse = documentInformationSummarisedAsynchronouslyApi.answerUserQueryStatus(transactionId.toString(), true);
 
             if (isNull(userQueryAnswerResponse)
                     || !userQueryAnswerResponse.getStatusCode().is2xxSuccessful()
@@ -89,7 +90,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
 
             if (ANSWER_GENERATED == answerResponseBody.getStatus()) {
                 final Integer version = getVersionNumber(caseId, queryId, documentId);
-                final String llmInputJson = getLlmJson(answerResponseBody.getChunkedEntries(), caseId, documentId, queryId);
+                final String llmInputJson = getLlmJson(answerResponseBody.getDocumentChunks(), caseId, documentId, queryId);
 
                 final MapSqlParameterSource params = buildAnswerParams(caseId, queryId, version, answerResponseBody.getLlmResponse(), llmInputJson, documentId);
                 jdbc.update(SQL_UPSERT_ANSWER, params);
@@ -130,11 +131,11 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                 .build();
     }
 
-    private String getLlmJson(final List<Object> chunkedEntries, final UUID caseId, final UUID docId, final UUID queryId) {
+    private String getLlmJson(final List<DocumentChunk> chunkedEntries, final UUID caseId, final UUID docId, final UUID queryId) {
 
         final Map<String, Object> chunkSampleMap = new LinkedHashMap<>();
         try {
-            final List<Object> chunks = Optional.ofNullable(chunkedEntries).orElseGet(Collections::emptyList);
+            final List<DocumentChunk> chunks = Optional.ofNullable(chunkedEntries).orElseGet(Collections::emptyList);
             chunkSampleMap.put(PROVENANCE_CHUNKS_SAMPLE, chunks);
             return objectMapper.writeValueAsString(chunkSampleMap);
         } catch (final Exception e) {
