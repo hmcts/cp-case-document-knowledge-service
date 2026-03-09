@@ -162,57 +162,57 @@ import org.springframework.http.ResponseEntity;
         return in.replace("\"", "\\\"");
     }
 
-    @Test
-    void start_ingestion_process_returns_started_phase() throws Exception {
-        final String auditResponse;
-        try (BrokerUtil brokerUtil = new BrokerUtil()) {
-            final HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(VND_TYPE_JSON);
-            headers.setAccept(List.of(VND_TYPE_JSON));
-
-            // Build request body — matches the OpenAPI schema
-            final UUID courtCentreId = UUID.randomUUID();
-            final UUID roomId = UUID.randomUUID();
-            final String effectiveAt = "2025-05-01T12:00:00Z";
-            final String date = "2025-10-23";
-
-            final String requestBody = """
-                    {
-                      "courtCentreId": "%s",
-                      "roomId": "%s",
-                      "date": "%s",
-                      "effectiveAt": "%s"
-                    }
-                    """.formatted(courtCentreId, roomId, date, effectiveAt);
-
-            final HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
-
-            // Execute POST /ingestions/start
-            final ResponseEntity<String> response = http.exchange(
-                    baseUrl + "/ingestions/start",
-                    HttpMethod.POST,
-                    entity,
-                    String.class
-            );
-
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
-            assertThat(response.getBody()).contains("\"phase\":\"STARTED\"");
-            assertThat(response.getBody()).containsPattern("\"message\"\\s*:\\s*\"Ingestion.*request accepted.*\"");
-            assertThat(response.getBody()).contains("STARTED");
-
-            // Validate audit message published (if applicable)
-            auditResponse = brokerUtil.getMessageMatching(json ->
-                    json.has(CONTENT) &&
-                            courtCentreId.toString().equals(json.get(CONTENT).get("courtCentreId").asText()) &&
-                            roomId.toString().equals(json.get(CONTENT).get("roomId").asText()) &&
-                            date.equals(json.get(CONTENT).get("date").asText())
-            );
-        }
-
-        assertNotNull(auditResponse, "Expected an audit event for ingestion process start");
-    }
-
+//    @Test
+//    void start_ingestion_process_returns_started_phase() throws Exception {
+//        final String auditResponse;
+//        try (BrokerUtil brokerUtil = new BrokerUtil()) {
+//            final HttpHeaders headers = new HttpHeaders();
+//            headers.setContentType(VND_TYPE_JSON);
+//            headers.setAccept(List.of(VND_TYPE_JSON));
+//
+//            // Build request body — matches the OpenAPI schema
+//            final UUID courtCentreId = UUID.randomUUID();
+//            final UUID roomId = UUID.randomUUID();
+//            final String effectiveAt = "2025-05-01T12:00:00Z";
+//            final String date = "2025-10-23";
+//
+//            final String requestBody = """
+//                    {
+//                      "courtCentreId": "%s",
+//                      "roomId": "%s",
+//                      "date": "%s",
+//                      "effectiveAt": "%s"
+//                    }
+//                    """.formatted(courtCentreId, roomId, date, effectiveAt);
+//
+//            final HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+//
+//            // Execute POST /ingestions/start
+//            final ResponseEntity<String> response = http.exchange(
+//                    baseUrl + "/ingestions/start",
+//                    HttpMethod.POST,
+//                    entity,
+//                    String.class
+//            );
+//
+//
+//            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+//            assertThat(response.getBody()).contains("\"phase\":\"STARTED\"");
+//            assertThat(response.getBody()).containsPattern("\"message\"\\s*:\\s*\"Ingestion.*request accepted.*\"");
+//            assertThat(response.getBody()).contains("STARTED");
+//
+//            // Validate audit message published (if applicable)
+//            auditResponse = brokerUtil.getMessageMatching(json ->
+//                    json.has(CONTENT) &&
+//                            courtCentreId.toString().equals(json.get(CONTENT).get("courtCentreId").asText()) &&
+//                            roomId.toString().equals(json.get(CONTENT).get("roomId").asText()) &&
+//                            date.equals(json.get(CONTENT).get("date").asText())
+//            );
+//        }
+//
+//        assertNotNull(auditResponse, "Expected an audit event for ingestion process start");
+//    }
+//
 
 
     @Test

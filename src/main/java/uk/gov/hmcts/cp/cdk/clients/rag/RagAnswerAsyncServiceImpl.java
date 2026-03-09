@@ -74,13 +74,15 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
         }
     }
 
-    public ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> answerUserQueryStatus(final String transactionId) {
+    @Override
+    public ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> answerUserQueryStatus(final String transactionId, final Boolean withChunkedEntries) {
         try {
 
             UserQueryAnswerReturnedSuccessfullyAsynchronously response = ragRestClient
                     .get()
                     .uri(uriBuilder -> uriBuilder
                             .path(PATH_ANSWER_USER_QUERY_STATUS)
+                            .queryParam("withChunkedEntries", withChunkedEntries)
                             .build(transactionId))
                     .accept(MediaType.APPLICATION_JSON)
                     .headers(httpHeaders -> {

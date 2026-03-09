@@ -171,12 +171,12 @@ class RagAnswerAsyncServiceImplTest {
         when(responseSpec.body(UserQueryAnswerReturnedSuccessfullyAsynchronously.class)).thenReturn(apiResponse);
 
         // when
-        final var result = service.answerUserQueryStatus(transactionId);
+        final var result = service.answerUserQueryStatus(transactionId, true);
 
         verify(uriSpec).uri(uriCaptor.capture());
         final Function<UriBuilder, URI> uriFunction = uriCaptor.getValue();
         final URI uri = uriFunction.apply(UriComponentsBuilder.fromUri(new URI("http://localhost")));
-        assertThat(uri.toString()).isEqualTo("http://localhost/answer-user-query-async-status/" + transactionId);
+        assertThat(uri.toString()).isEqualTo("http://localhost/answer-user-query-async-status/" + transactionId + "?withChunkedEntries=true");
 
         // then
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -204,7 +204,7 @@ class RagAnswerAsyncServiceImplTest {
         when(responseSpec.body(UserQueryAnswerReturnedSuccessfullyAsynchronously.class)).thenReturn(apiResponse);
 
         // when
-        final var result = service.answerUserQueryStatus(transactionId);
+        final var result = service.answerUserQueryStatus(transactionId, true);
 
         // then
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
