@@ -116,7 +116,7 @@ jobs:
         run: gradle build -x test -x integration
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: DAST - Build and run containerised app
         run: |
