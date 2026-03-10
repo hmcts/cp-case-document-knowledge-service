@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.batch.clients.rag;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -13,6 +14,7 @@ import static org.springframework.http.HttpStatus.OK;
 import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
 import uk.gov.hmcts.cp.cdk.clients.rag.ApimDocumentIngestionStatusClient;
+import uk.gov.hmcts.cp.cdk.clients.rag.RagClientException;
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
 
 import java.util.function.Function;
@@ -22,9 +24,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClient;
 
 @ExtendWith(MockitoExtension.class)
@@ -54,6 +60,7 @@ class ApimDocumentIngestionStatusClientTest {
         when(uriSpec.uri(any(Function.class))).thenReturn(uriSpec);
         when(uriSpec.accept(any())).thenReturn(uriSpec);
         when(uriSpec.headers(any())).thenReturn(uriSpec);
+        when(uriSpec.retrieve()).thenReturn(responseSpec);
     }
 
     @Test
@@ -132,5 +139,39 @@ class ApimDocumentIngestionStatusClientTest {
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(INTERNAL_SERVER_ERROR);
+    }
+
+    @Test
+    void shouldReturnDocumentStatusSuccessfully() {
+        final String documentReference = randomUUID().toString();
+        final DocumentIngestionStatusReturnedSuccessfully apiResponse = new DocumentIngestionStatusReturnedSuccessfully();
+
+        when(responseSpec.body(DocumentIngestionStatusReturnedSuccessfully.class)).thenReturn(apiResponse);
+
+        final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> response = client.documentStatusByReference(documentReference);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(apiResponse);
+    }
+
+    @Test
+    void shouldWrapHttpStatusCodeExceptionIntoRagClientException() {
+
+        final String documentReference = randomUUID().toString();
+        final HttpStatusCodeException exception = new HttpClientErrorException(HttpStatus.BAD_REQUEST, "Bad request");
+
+        when(uriSpec.retrieve()).thenThrow(exception);
+
+        assertThrows(RagClientException.class, () -> client.documentStatusByReference(documentReference));
+    }
+
+    @MockitoSettings(strictness = Strictness.LENIENT)
+    @Test
+    void shouldWrapGenericExceptionIntoRagClientException() {
+        final String documentReference = randomUUID().toString();
+
+        when(restClient.get()).thenThrow(new RuntimeException("error"));
+
+        assertThrows(RagClientException.class, () -> client.documentStatusByReference(documentReference));
     }
 }
