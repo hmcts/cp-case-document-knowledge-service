@@ -7,6 +7,20 @@ services:
       - "10000:10000"
     restart: unless-stopped
 
+  azurite-seed:
+    container_name: cdks_azurite_seed
+    image: mcr.microsoft.com/azure-cli:2.63.0
+    depends_on:
+      azurite:
+        condition: service_started
+    environment:
+      AZURE_STORAGE_CONNECTION_STRING: "${AZURE_STORAGE_CONNECTION_STRING}"
+    volumes:
+      - ../src/integrationTest/resources/wiremock-seed:/seed:ro
+      - ../src/integrationTest/resources/wiremock-seed/azurite-seed.sh:/azurite-seed.sh:ro
+    entrypoint: ["/bin/sh", "/azurite-seed.sh"]
+    restart: "no"
+    
   artemis:
     container_name: cdks_artemis
     build:
@@ -69,8 +83,8 @@ services:
         condition: service_started
       wiremock:
         condition: service_started
-      azurite:
-        condition: service_started
+      azurite-seed:
+        condition: service_completed_successfully
     ports:
       - "8082:8082"
       - "5005:5005"
@@ -143,11 +157,12 @@ services:
       OTEL_TRACES_URL: http://localhost:4318/traces
       OTEL_METRICS_URL: http://localhost:4318/metrics
 
-      CP_CDK_AZURE_STORAGE_CONNECTION_STRING: >
-        DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;
-        AccountKey=Eby8vdM02xNOcqFeqCnf2w==;
-        BlobEndpoint=http://azurite:10000/devstoreaccount1;
+      CP_CDK_STORAGE_MODE: connection-string
+      CP_CDK_AZURE_STORAGE_CONNECTION_STRING: "${AZURE_STORAGE_CONNECTION_STRING}"
       CP_CDK_AZURE_STORAGE_CONTAINER: documents
+      CDK_STORAGE_AZURE_MODE: connection-string
+      CDK_STORAGE_AZURE_CONNECTION_STRING: "${AZURE_STORAGE_CONNECTION_STRING}"
+      CDK_STORAGE_AZURE_CONTAINER: documents
 
       CP_CDK_RAG_URL: http://wiremock:8080
       CP_CDK_RAG_SUBSCRIPTION_KEY: dummy-key

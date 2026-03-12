@@ -8,14 +8,17 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUI
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCaseEligibilityInfo;
+import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
 import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
 import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObjectBuilder;
@@ -31,6 +34,7 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
 
     private final ExecutionService executionService;
     private final ProgressionClient progressionClient;
+    private final JobManagerRetryProperties retryProperties;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -47,42 +51,57 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
 
         final UUID caseId = UUID.fromString(caseIdStr);
 
-        final Optional<ProsecutionCaseEligibilityInfo> eligibilityInfo =
-                progressionClient.getProsecutionCaseEligibilityInfo(caseId, cppuid);
+        try {
 
-        if (eligibilityInfo.isEmpty()) {
-            log.info("No prosecution case data found for caseId={}, skipping eligibility", caseId);
-            return complete(executionInfo);
-        }
+            final Optional<ProsecutionCaseEligibilityInfo> eligibilityInfo =
+                    progressionClient.getProsecutionCaseEligibilityInfo(caseId, cppuid);
 
-        final ProsecutionCaseEligibilityInfo info = eligibilityInfo.get();
-        final int defendantCount = info.defendantCount();
+            if (eligibilityInfo.isEmpty()) {
+                log.info("No prosecution case data found for caseId={}, skipping eligibility", caseId);
+                return complete(executionInfo);
+            }
 
-        if (defendantCount != 1) {
+            final ProsecutionCaseEligibilityInfo info = eligibilityInfo.get();
+            final int defendantCount = info.defendantCount();
+
+            if (defendantCount != 1) {
+                log.info(
+                        "Case {} has {} defendants. Not eligible to proceed. Completing task.",
+                        caseId,
+                        defendantCount
+                );
+                return complete(executionInfo);
+            }
+
             log.info(
-                    "Case {} has {} defendants. Not eligible to proceed. Completing task.",
-                    caseId,
-                    defendantCount
+                    "Case {} has exactly 1 defendant. Proceeding to {}.",
+                    caseId, CHECK_IDPC_AVAILABILITY
             );
-            return complete(executionInfo);
+
+            JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
+            updatedJobData.add(CTX_DEFENDANT_ID_KEY, info.defendantIds().getFirst());
+
+            ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
+                    .from(executionInfo)
+                    .withAssignedTaskName(CHECK_IDPC_AVAILABILITY)
+                    .withJobData(updatedJobData.build())
+                    .withExecutionStatus(ExecutionStatus.STARTED)
+                    .build();
+
+            executionService.executeWith(executionInfoNew);
+
+        } catch (final Exception exception) {
+            log.error(
+                    "{} failed for caseId={} ", CHECK_CASE_ELIGIBILITY,
+                    caseIdStr, exception
+            );
+
+            return ExecutionInfo.executionInfo()
+                    .from(executionInfo)
+                    .withExecutionStatus(ExecutionStatus.INPROGRESS)
+                    .withShouldRetry(true)
+                    .build();
         }
-
-        log.info(
-                "Case {} has exactly 1 defendant. Proceeding to {}.",
-                caseId, CHECK_IDPC_AVAILABILITY
-        );
-
-        JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
-        updatedJobData.add(CTX_DEFENDANT_ID_KEY, info.defendantIds().getFirst());
-
-        ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
-                .from(executionInfo)
-                .withAssignedTaskName(CHECK_IDPC_AVAILABILITY)
-                .withJobData(updatedJobData.build())
-                .withExecutionStatus(ExecutionStatus.STARTED)
-                .build();
-
-        executionService.executeWith(executionInfoNew);
 
         return complete(executionInfo);
     }
@@ -92,5 +111,16 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
                 .from(executionInfo)
                 .withExecutionStatus(ExecutionStatus.COMPLETED)
                 .build();
+    }
+
+    @Override
+    public Optional<List<Long>> getRetryDurationsInSecs() {
+        var retry = retryProperties.getDefaultRetry();
+        return Optional.of(
+                IntStream.range(0, retry.getMaxAttempts())
+                        .mapToLong(i -> retry.getDelaySeconds())
+                        .boxed()
+                        .toList()
+        );
     }
 }
