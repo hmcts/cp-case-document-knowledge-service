@@ -7,6 +7,7 @@ public final class BlobMetadataKeys {
     }
 
     public static final String META_CASE_ID = "case_id";
+    public static final String META_DEFENDANT_ID = "defendant_id";
     public static final String META_MATERIAL_ID = "material_id";
     public static final String META_MATERIAL_NAME = "material_name";
     public static final String META_UPLOADED_AT = "uploaded_at";

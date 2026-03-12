@@ -13,13 +13,16 @@ import java.util.concurrent.TimeoutException;
 
 import com.azure.core.util.polling.SyncPoller;
 import com.azure.storage.blob.BlobClient;
+import com.azure.storage.blob.BlobClientBuilder;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobCopyInfo;
+import com.azure.storage.blob.models.BlobProperties;
 import com.azure.storage.blob.models.CopyStatusType;
 import com.azure.storage.blob.options.BlobBeginCopyOptions;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -111,6 +114,56 @@ public class AzureBlobStorageService implements StorageService {
         }
 
         return blobUrl;
+    }
+
+    @Override
+    public DocumentBlobMetadata copyFromUrl(final String sourceUrl, final String destinationUrl) {
+
+        final String blobName = normalizeToBlobName(destinationUrl);
+        final BlobClient destinationBlobClient = new BlobClientBuilder()
+                .endpoint(destinationUrl)
+                .buildClient();
+
+        final BlobBeginCopyOptions copyOptions =
+                new BlobBeginCopyOptions(sourceUrl).setPollInterval(Duration.ofMillis(pollIntervalMs));
+
+        try {
+            final boolean existsFlag = destinationBlobClient.exists();
+
+            if (existsFlag) {
+                log.debug("Do nothing; Blob already exists before copy. blob={}", blobName);
+            } else {
+                try {
+                    final SyncPoller<BlobCopyInfo, Void> syncPoller = destinationBlobClient.beginCopy(copyOptions);
+                    final BlobCopyInfo blobCopyInfo = syncPoller.waitForCompletion(Duration.ofSeconds(timeoutSeconds)).getValue();
+                    final CopyStatusType copyStatus = blobCopyInfo.getCopyStatus();
+
+                    log.info("Blob copy from source to destination completed with status {}. blob={}", copyStatus, blobName);
+
+                    if (copyStatus == CopyStatusType.ABORTED || copyStatus == CopyStatusType.FAILED) {
+                        throw new IllegalStateException("Blob copy from source to destination failed: " + copyStatus);
+                    }
+
+                    final String blobUrl = destinationBlobClient.getBlobUrl();
+                    log.info("Azure copy from source to destination successful. blob={}, url={}", blobName, blobUrl);
+                    return new DocumentBlobMetadata(blobUrl, blobName, destinationBlobClient.getProperties().getBlobSize());
+
+                } catch (final RuntimeException runtimeException) {
+                    if (runtimeException.getCause() instanceof TimeoutException) {
+                        final String message = "Timed out after " + timeoutSeconds + "s waiting for blob copy to succeed";
+                        log.error("Timeout error - {} . blob={}", message, blobName);
+                        throw new IllegalStateException(message);
+                    }
+                    log.error("Unexpected error during blob copy. blob={}", blobName, runtimeException);
+                    throw runtimeException;
+                }
+            }
+        } catch (final RuntimeException existsException) {
+            log.warn("exists check failed . blob={}", blobName, existsException);
+            throw existsException;
+        }
+
+        return null;
     }
 
     @Override

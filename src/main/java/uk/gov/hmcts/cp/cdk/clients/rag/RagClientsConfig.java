@@ -59,7 +59,7 @@ public class RagClientsConfig {
 
     @Bean
     @ConditionalOnMissingBean(DocumentIngestionInitiationApi.class)
-    public DocumentIngestionInitiationApi documentIngestionApi(
+    public DocumentIngestionInitiationApi documentIngestionInitiationApi(
             @Qualifier("ragRestClient") final RestClient ragRestClient,
             final RagClientProperties ragClientProperties,
             final ApimAuthHeaderService apimAuthHeaderService) {
