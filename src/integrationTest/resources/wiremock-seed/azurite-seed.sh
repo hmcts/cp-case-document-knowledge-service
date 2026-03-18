@@ -48,3 +48,15 @@ ACL="$(az storage container show --name documents --connection-string "$CS" --qu
 echo "documents publicAccess=$ACL"
 
 echo "Seeded URL: http://azurite:10000/devstoreaccount1/documents/source.pdf"
+
+echo "Creating documents-new container..."
+az storage container create \
+  --name documents-new \
+  --public-access blob \
+  --connection-string "$CS" >/dev/null
+
+echo "Enforcing public access..."
+az storage container set-permission \
+  --name documents-new \
+  --public-access blob \
+  --connection-string "$CS" >/dev/null

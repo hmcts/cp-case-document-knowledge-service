@@ -11,8 +11,12 @@ import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
 import uk.gov.hmcts.cp.cdk.clients.rag.RagAnswerServiceImpl;
 import uk.gov.hmcts.cp.cdk.clients.rag.RagClientException;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
+import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
 import uk.gov.hmcts.cp.openapi.model.RequestErrored;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullySynchronously;
+
+import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,7 +65,9 @@ class RagAnswerServiceImplTest {
     @Test
     void shouldReturn200ResponseWithResponseBody() {
         // given
-        final AnswerUserQueryRequest request = new AnswerUserQueryRequest("uq", "qp");
+        final UUID docId = UUID.randomUUID();
+        final AnswerUserQueryRequest request = new AnswerUserQueryRequest("uq", "qp",
+                List.of(new MetadataFilter().key("document_id").value(docId.toString())));
 
         final UserQueryAnswerReturnedSuccessfullySynchronously apiResponse = new UserQueryAnswerReturnedSuccessfullySynchronously();
         apiResponse.setUserQuery("xxx");
@@ -97,7 +103,8 @@ class RagAnswerServiceImplTest {
 
     @Test
     void shouldFillMissingFieldsFromRequest() {
-        final AnswerUserQueryRequest req = new AnswerUserQueryRequest("query A", "prompt B");
+        final AnswerUserQueryRequest req = new AnswerUserQueryRequest("query A", "prompt B",
+                List.of(new MetadataFilter().key("document_id").value("doc-id")));
 
         when(bodySpec.retrieve().body(UserQueryAnswerReturnedSuccessfullySynchronously.class))
                 .thenReturn(new UserQueryAnswerReturnedSuccessfullySynchronously());
@@ -110,7 +117,7 @@ class RagAnswerServiceImplTest {
 
     @Test
     void shouldReturnNewResponseWhenNull() {
-        final AnswerUserQueryRequest req = new AnswerUserQueryRequest("query A1", null);
+        final AnswerUserQueryRequest req = new AnswerUserQueryRequest("query A1", null, List.of());
 
         when(bodySpec.retrieve().body(UserQueryAnswerReturnedSuccessfullySynchronously.class))
                 .thenReturn(null);
