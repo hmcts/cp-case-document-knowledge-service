@@ -11,6 +11,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_K
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_RAG_TRANSACTION_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
+import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
 import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
@@ -84,7 +85,7 @@ public class GenerateAnswerForQueryTask implements ExecutableTask {
 
             final JsonObjectBuilder nextJobData = createObjectBuilder(jobData).add(CTX_RAG_TRANSACTION_ID, transactionId);
 
-            final ExecutionInfo nextTask = ExecutionInfo.executionInfo()
+            final ExecutionInfo nextTask = executionInfo()
                     .from(executionInfo)
                     .withAssignedTaskName(CHECK_STATUS_OF_ANSWER_GENERATION)
                     .withJobData(nextJobData.build())
@@ -98,7 +99,7 @@ public class GenerateAnswerForQueryTask implements ExecutableTask {
         } catch (final Exception ex) {
             log.error("Failed to start async RAG for caseId={}, docId={}, queryId={}", caseId, docId, queryId, ex);
 
-            return ExecutionInfo.executionInfo()
+            return executionInfo()
                     .from(executionInfo)
                     .withExecutionStatus(ExecutionStatus.INPROGRESS)
                     .withShouldRetry(true)
@@ -107,7 +108,7 @@ public class GenerateAnswerForQueryTask implements ExecutableTask {
     }
 
     private ExecutionInfo completed(final ExecutionInfo executionInfo) {
-        return ExecutionInfo.executionInfo()
+        return executionInfo()
                 .from(executionInfo)
                 .withExecutionStatus(ExecutionStatus.COMPLETED)
                 .build();

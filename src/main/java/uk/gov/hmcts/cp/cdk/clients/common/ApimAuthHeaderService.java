@@ -29,22 +29,22 @@ public class ApimAuthHeaderService {
     }
 
     public void applyAuthHeaders(HttpHeaders httpHeaders, RagClientProperties properties) {
-        String mode = Optional.ofNullable(properties.getAuth())
+        final String mode = Optional.ofNullable(properties.getAuth())
                 .map(RagClientProperties.Auth::getMode)
                 .orElse(SUBSCRIPTION_KEY)
                 .toLowerCase(Locale.ROOT);
 
         switch (mode) {
             case AAD -> {
-                String scope = Optional.ofNullable(properties.getAuth().getAad())
+                final String scope = Optional.ofNullable(properties.getAuth().getAad())
                         .map(RagClientProperties.Auth.Aad::getScope)
                         .orElseThrow(() -> new IllegalStateException("rag.client.auth.aad.scope is required when rag.client.auth.mode=aad"));
-                String accessToken = azureTokenService.getAccessToken(scope);
+                final String accessToken = azureTokenService.getAccessToken(scope);
                 httpHeaders.add("Authorization", "Bearer " + accessToken);
                 log.debug("Added Authorization header via Managed Identity");
             }
             case SUBSCRIPTION_KEY -> {
-                String subscriptionKey = Optional.ofNullable(properties.getAuth().getSubscriptionKey())
+                final String subscriptionKey = Optional.ofNullable(properties.getAuth().getSubscriptionKey())
                         .orElseGet(() -> properties.getHeaders() != null ? properties.getHeaders().get(OCP_APIM_SUBSCRIPTION_KEY) : null);
                 if (StringUtils.isBlank(subscriptionKey)) {
                     throw new IllegalStateException("Ocp-Apim-Subscription-Key is required when rag.client.auth.mode=subscription-key");

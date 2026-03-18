@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.services;
 
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GET_CASES_FOR_HEARING;
+import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
@@ -47,7 +48,7 @@ public class JobManagerService implements IngestionProcessor {
         final String safeCppuid = sanitizeForLog(cppuid);
 
         try {
-            ExecutionInfo executionInfo = ExecutionInfo.executionInfo()
+            final ExecutionInfo executionInfo = executionInfo()
                     .withAssignedTaskName(GET_CASES_FOR_HEARING)
                     .withAssignedTaskStartTime(ZonedDateTime.now())
                     .withJobData(jobData)
@@ -79,7 +80,7 @@ public class JobManagerService implements IngestionProcessor {
         if (value == null) {
             return null;
         }
-        StringBuilder sanitized = new StringBuilder(value.length());
+        final StringBuilder sanitized = new StringBuilder(value.length());
         value.codePoints().forEach(cp -> {
             if (Character.isISOControl(cp)) {
                 sanitized.append('?');

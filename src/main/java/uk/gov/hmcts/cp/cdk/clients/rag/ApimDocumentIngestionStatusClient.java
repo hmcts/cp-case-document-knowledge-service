@@ -30,7 +30,7 @@ public class ApimDocumentIngestionStatusClient implements DocumentIngestionStatu
     @Override
     public ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> documentStatus(final String documentName) {
         try {
-            ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> response = restClient
+            final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> response = restClient
                     .get()
                     .uri(uriBuilder -> uriBuilder
                             .path(PATH_DOCUMENT_STATUS)
@@ -66,7 +66,7 @@ public class ApimDocumentIngestionStatusClient implements DocumentIngestionStatu
                         documentName, exception.getResponseBodyAsString(StandardCharsets.UTF_8));
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
-            String body = exception.getResponseBodyAsString(StandardCharsets.UTF_8);
+            final String body = exception.getResponseBodyAsString(StandardCharsets.UTF_8);
             log.warn("APIM error on document-status: {} {} - {}", exception.getStatusCode(), exception.getStatusText(), body, exception);
             throw exception;
         }

@@ -119,7 +119,7 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
 
     @ExceptionHandler(RagClientException.class)
     public ResponseEntity<@NotNull RequestErrored> onRagClient(final RagClientException exception) {
-        RequestErrored body = new RequestErrored();
+        final RequestErrored body = new RequestErrored();
         body.setErrorMessage(exception.getMessage());
         return ResponseEntity.status(500).body(body);
     }
@@ -127,7 +127,7 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
     @ExceptionHandler(Exception.class)
     public ResponseEntity<@NotNull RequestErrored> onGeneric(final Exception exception) {
         log.error("Unhandled error in /answer-user-query", exception);
-        RequestErrored body = new RequestErrored();
+        final RequestErrored body = new RequestErrored();
         body.setErrorMessage("Internal server error");
         return ResponseEntity.status(500).body(body);
     }

@@ -18,6 +18,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
@@ -75,7 +76,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
                     "Missing '{}' in jobData; downstream call may fail, Hence closing currentTask{} requestId={}",
                     CPPUID, RETRIEVE_FROM_MATERIAL, requestId
             );
-            return ExecutionInfo.executionInfo()
+            return executionInfo()
                     .from(executionInfo)
                     .withExecutionStatus(ExecutionStatus.COMPLETED)
                     .build();
@@ -93,7 +94,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
                     "Missing '{}' , {}, {} in jobData; downstream call may fail, Hence closing currentTask{} requestId={}",
                     CTX_MATERIAL_ID_KEY, CTX_CASE_ID_KEY, CTX_DOC_ID_KEY, RETRIEVE_FROM_MATERIAL, requestId
             );
-            return ExecutionInfo.executionInfo()
+            return executionInfo()
                     .from(executionInfo)
                     .withExecutionStatus(ExecutionStatus.COMPLETED)
                     .build();
@@ -132,7 +133,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
             updatedJobData.add(CTX_DOC_ID_KEY, documentId.toString());
             updatedJobData.add(CTX_BLOB_NAME_KEY, blobName);
 
-            ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
+            ExecutionInfo executionInfoNew = executionInfo()
                     .from(executionInfo)
                     .withAssignedTaskName(CHECK_INGESTION_STATUS_FOR_DOCUMENT)
                     .withJobData(updatedJobData.build())
@@ -141,7 +142,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
 
             executionService.executeWith(executionInfoNew);
 
-            return ExecutionInfo.executionInfo()
+            return executionInfo()
                     .from(executionInfo)
                     .withExecutionStatus(ExecutionStatus.COMPLETED)
                     .build();
@@ -149,7 +150,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
         } catch (Exception ex) {
             log.error("{} failed. requestId={}", RETRIEVE_FROM_MATERIAL, requestId, ex);
 
-            return ExecutionInfo.executionInfo()
+            return executionInfo()
                     .from(executionInfo)
                     .withExecutionStatus(ExecutionStatus.INPROGRESS)
                     .withShouldRetry(true)
@@ -159,7 +160,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        var retry = retryProperties.getDefaultRetry();
+        final var retry = retryProperties.getDefaultRetry();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())

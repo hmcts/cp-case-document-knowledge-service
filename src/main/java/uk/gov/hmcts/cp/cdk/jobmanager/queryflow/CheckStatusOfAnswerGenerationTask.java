@@ -13,6 +13,7 @@ import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATED;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATION_FAILED;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATION_PENDING;
+import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
@@ -101,7 +102,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                         caseId, documentId, queryId, transactionId);
             }
 
-            return ExecutionInfo.executionInfo()
+            return executionInfo()
                     .from(executionInfo)
                     .withExecutionStatus(ExecutionStatus.COMPLETED)
                     .build();
@@ -114,7 +115,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        var retry = retryProperties.getQuestionsRetry();
+        final var retry = retryProperties.getQuestionsRetry();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())
@@ -124,7 +125,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
     }
 
     private ExecutionInfo retry(final ExecutionInfo executionInfo) {
-        return ExecutionInfo.executionInfo()
+        return executionInfo()
                 .from(executionInfo)
                 .withExecutionStatus(ExecutionStatus.INPROGRESS)
                 .withShouldRetry(true)

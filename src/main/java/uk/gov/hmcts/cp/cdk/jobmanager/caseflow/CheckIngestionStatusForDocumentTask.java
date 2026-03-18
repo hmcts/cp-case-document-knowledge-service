@@ -7,6 +7,7 @@ import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_FAILED;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SUCCESS;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INVALID_METADATA;
+import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
@@ -129,7 +130,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
                             .add(CTX_SINGLE_QUERY_ID, questionId.toString())
                             .build();
 
-                    ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
+                    ExecutionInfo executionInfoNew = executionInfo()
                             .from(executionInfo)
                             .withAssignedTaskName(GENERATE_ANSWER_FOR_QUERY)
                             .withJobData(singleCaseJobData)
@@ -169,7 +170,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        var retry = retryProperties.getVerifyDocumentStatus();
+        final var retry = retryProperties.getVerifyDocumentStatus();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())
@@ -187,7 +188,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
     }
 
     private ExecutionInfo retry(final ExecutionInfo executionInfo) {
-        return ExecutionInfo.executionInfo()
+        return executionInfo()
                 .from(executionInfo)
                 .withExecutionStatus(ExecutionStatus.INPROGRESS)
                 .withShouldRetry(true)
@@ -195,7 +196,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
     }
 
     private ExecutionInfo complete(final ExecutionInfo executionInfo) {
-        return ExecutionInfo.executionInfo()
+        return executionInfo()
                 .from(executionInfo)
                 .withExecutionStatus(ExecutionStatus.COMPLETED)
                 .build();
