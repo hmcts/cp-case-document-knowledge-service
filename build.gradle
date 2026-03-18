@@ -198,7 +198,6 @@ dependencies {
     testImplementation "io.rest-assured:rest-assured:${vers.restAssured}"
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation "com.github.tomakehurst:wiremock:${vers.wiremock}"
-    implementation("io.github.cdimascio:dotenv-java:3.2.0")
 
     // Artemis for SSL ITs
     integrationTestImplementation "org.apache.activemq:artemis-core-client:${vers.artemis}"

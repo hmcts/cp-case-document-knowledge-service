@@ -12,7 +12,6 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
-import io.github.cdimascio.dotenv.Dotenv;
 import org.slf4j.Logger;
 
 public final class AzureSasUtil {
@@ -52,8 +51,7 @@ public final class AzureSasUtil {
     }
 
     public static String generateSasUrl(final String containerName, final String blobName) {
-        final Dotenv dotenv = Dotenv.configure().directory("docker").load();
-        final String connectionString = dotenv.get("AZURE_STORAGE_CONNECTION_STRING");
+        final String connectionString = System.getProperty("AZURE_STORAGE_CONNECTION_STRING");
 
         final BlobClient blobClient = new BlobClientBuilder()
                 .connectionString(connectionString)
