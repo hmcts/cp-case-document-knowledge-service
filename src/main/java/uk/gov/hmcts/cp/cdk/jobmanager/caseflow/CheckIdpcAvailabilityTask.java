@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPLOAD;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_COURTDOCUMENT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
@@ -17,6 +18,7 @@ import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
@@ -51,6 +53,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
     private final DocumentIdResolver documentIdResolver;
     private final JobManagerRetryProperties retryProperties;
     private final CaseDocumentRepository caseDocumentRepository;
+    private final IngestionProperties ingestionProperties;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -92,9 +95,13 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                         info
                 );
 
+                final String retrieveMaterialTask = ingestionProperties.getFeature().isUseNewUploadDocumentApi()
+                        ? RETRIEVE_MATERIAL_AND_UPLOAD
+                        : RETRIEVE_FROM_MATERIAL;
+
                 ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
                         .from(executionInfo)
-                        .withAssignedTaskName(RETRIEVE_FROM_MATERIAL)
+                        .withAssignedTaskName(retrieveMaterialTask)
                         .withJobData(updatedJobData.build())
                         .withExecutionStatus(ExecutionStatus.STARTED)
                         .build();

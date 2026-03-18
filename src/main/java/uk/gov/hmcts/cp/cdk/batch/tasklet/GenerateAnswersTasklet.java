@@ -13,6 +13,7 @@ import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
 import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedSynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
+import uk.gov.hmcts.cp.openapi.model.DocumentChunk;
 import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullySynchronously;
 
@@ -269,7 +270,7 @@ public class GenerateAnswersTasklet implements Tasklet {
                 final String llmInputJson;
                 try {
                     reusablePayload.clear();
-                    final List<Object> chunks = Optional.ofNullable(resp.getChunkedEntries())
+                    final List<DocumentChunk> chunks = Optional.ofNullable(resp.getDocumentChunks())
                             .orElseGet(Collections::emptyList);
                     reusablePayload.put("provenanceChunksSample", chunks);
                     llmInputJson = objectMapper.writeValueAsString(reusablePayload);
