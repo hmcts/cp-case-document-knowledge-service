@@ -75,13 +75,14 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
     }
 
     @Override
-    public ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> answerUserQueryStatus(final String transactionId) {
+    public ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> answerUserQueryStatus(final String transactionId, final Boolean withChunkedEntries) {
         try {
 
             UserQueryAnswerReturnedSuccessfullyAsynchronously response = ragRestClient
                     .get()
                     .uri(uriBuilder -> uriBuilder
                             .path(PATH_ANSWER_USER_QUERY_STATUS)
+                            .queryParam("withChunkedEntries", withChunkedEntries)
                             .build(transactionId))
                     .accept(MediaType.APPLICATION_JSON)
                     .headers(httpHeaders -> {
@@ -118,7 +119,7 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
 
     @ExceptionHandler(RagClientException.class)
     public ResponseEntity<@NotNull RequestErrored> onRagClient(final RagClientException exception) {
-        RequestErrored body = new RequestErrored();
+        final RequestErrored body = new RequestErrored();
         body.setErrorMessage(exception.getMessage());
         return ResponseEntity.status(500).body(body);
     }
@@ -126,7 +127,7 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
     @ExceptionHandler(Exception.class)
     public ResponseEntity<@NotNull RequestErrored> onGeneric(final Exception exception) {
         log.error("Unhandled error in /answer-user-query", exception);
-        RequestErrored body = new RequestErrored();
+        final RequestErrored body = new RequestErrored();
         body.setErrorMessage("Internal server error");
         return ResponseEntity.status(500).body(body);
     }

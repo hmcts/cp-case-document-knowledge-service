@@ -68,14 +68,14 @@ public class RagAnswerServiceImpl implements DocumentInformationSummarisedSynchr
             return ResponseEntity.ok(response);
 
         } catch (final HttpStatusCodeException exception) {
-            String responseBody = Optional.of(exception.getResponseBodyAsString(StandardCharsets.UTF_8)).orElse("");
-            String message = "RAG API error: %d %s - %s".formatted(
+            final String responseBody = Optional.of(exception.getResponseBodyAsString(StandardCharsets.UTF_8)).orElse("");
+            final String message = "RAG API error: %d %s - %s".formatted(
                     exception.getStatusCode().value(), exception.getStatusText(), responseBody);
             log.warn(message);
             throw new RagClientException(message, exception);
 
         } catch (final Exception exception) {
-            String message = "Failed to call RAG API";
+            final String message = "Failed to call RAG API";
             log.error(message, exception);
             throw new RagClientException(message, exception);
         }
@@ -83,7 +83,7 @@ public class RagAnswerServiceImpl implements DocumentInformationSummarisedSynchr
 
     @ExceptionHandler(RagClientException.class)
     public ResponseEntity<RequestErrored> onRagClient(final RagClientException exception) {
-        RequestErrored body = new RequestErrored();
+        final RequestErrored body = new RequestErrored();
         body.setErrorMessage(exception.getMessage());
         return ResponseEntity.status(500).body(body);
     }
@@ -91,7 +91,7 @@ public class RagAnswerServiceImpl implements DocumentInformationSummarisedSynchr
     @ExceptionHandler(Exception.class)
     public ResponseEntity<RequestErrored> onGeneric(final Exception exception) {
         log.error("Unhandled error in /answer-user-query", exception);
-        RequestErrored body = new RequestErrored();
+        final RequestErrored body = new RequestErrored();
         body.setErrorMessage("Internal server error");
         return ResponseEntity.status(500).body(body);
     }

@@ -129,7 +129,7 @@ public class GetCasesForHearingTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        var retry = retryProperties.getDefaultRetry();
+        final var retry = retryProperties.getDefaultRetry();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())

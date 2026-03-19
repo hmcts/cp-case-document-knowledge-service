@@ -68,7 +68,7 @@ public class DocumentVerificationQueueDao {
     public List<DocumentVerificationTask> claimBatch(final String owner, final int limit) {
         final MapSqlParameterSource parameters = new MapSqlParameterSource()
                 .addValue("owner", owner)
-                .addValue("limit", Integer.valueOf(limit));
+                .addValue("limit", limit);
 
         return this.namedParameterJdbcTemplate.query(CLAIM_SQL, parameters, new TaskRowMapper());
     }
@@ -82,7 +82,7 @@ public class DocumentVerificationQueueDao {
         public DocumentVerificationTask mapRow(final ResultSet resultSet, final int rowNum) throws SQLException {
             final DocumentVerificationTask task = new DocumentVerificationTask();
 
-            task.setId(Long.valueOf(resultSet.getLong("id")));
+            task.setId(resultSet.getLong("id"));
             task.setDocId((UUID) resultSet.getObject("doc_id"));
             task.setCaseId((UUID) resultSet.getObject("case_id"));
             task.setBlobName(resultSet.getString("blob_name"));

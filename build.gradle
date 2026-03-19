@@ -101,7 +101,8 @@ ext.vers = [
         commonsCollections: findProperty('version.commonsCollections'),
         cpAuthFilter      : findProperty('version.cpAuthFilter'),
         cpAuditFilter     : findProperty('version.cpAuditFilter'),
-        jobManager        : findProperty('version.jobManager')
+        jobManager        : findProperty('version.jobManager'),
+        wiremock          : findProperty('version.wiremock')
 
 ]
 
@@ -196,6 +197,7 @@ dependencies {
     testImplementation "org.assertj:assertj-core:${vers.assertj}"
     testImplementation "io.rest-assured:rest-assured:${vers.restAssured}"
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation "com.github.tomakehurst:wiremock:${vers.wiremock}"
 
     // Artemis for SSL ITs
     integrationTestImplementation "org.apache.activemq:artemis-core-client:${vers.artemis}"

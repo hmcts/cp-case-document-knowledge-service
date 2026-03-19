@@ -1,18 +1,21 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
+import static io.micrometer.common.util.StringUtils.isBlank;
+import static jakarta.json.Json.createObjectBuilder;
+import static java.time.format.DateTimeFormatter.ofPattern;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_DOCUMENT_INGESTION_STATUS;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPLOAD;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_CASE_ID;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_DOCUMENT_ID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_DEFENDANT_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_MATERIAL_ID;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_MATERIAL_NAME;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_METADATA;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_UPLOADED_AT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_BLOB_NAME_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_COURTDOCUMENT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_REFERENCE_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
@@ -24,35 +27,41 @@ import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+import uk.gov.hmcts.cp.cdk.storage.DocumentBlobMetadata;
 import uk.gov.hmcts.cp.cdk.storage.StorageService;
 import uk.gov.hmcts.cp.cdk.storage.UploadProperties;
+import uk.gov.hmcts.cp.openapi.api.DocumentIngestionInitiationApi;
+import uk.gov.hmcts.cp.openapi.model.DocumentUploadRequest;
+import uk.gov.hmcts.cp.openapi.model.FileStorageLocationReturnedSuccessfully;
+import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
 import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
 import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Task(RETRIEVE_FROM_MATERIAL)
-public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
+@Task(RETRIEVE_MATERIAL_AND_UPLOAD)
+public class RetrieveMaterialAndUploadTask implements ExecutableTask {
 
+    private static final String UNKNOWN_BLOB_URL = "";
+    private static final String UNKNOWN_BLOB_NAME = "";
     private static final long UNKNOWN_SIZE_BYTES = -1L;
 
     private final ObjectMapper objectMapper;
@@ -62,37 +71,35 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
     private final UploadProperties uploadProperties;
     private final JobManagerRetryProperties retryProperties;
     private final ExecutionService executionService;
+    private final DocumentIngestionInitiationApi documentIngestionInitiationApi;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
 
         final JsonObject jobData = executionInfo.getJobData();
         final String requestId = jobData.getString("requestId", "unknown");
-
-
         final String userIdForExternalCalls = jobData.getString(CPPUID, null);
-        if (userIdForExternalCalls == null || userIdForExternalCalls.isBlank()) {
-            log.warn(
-                    "Missing '{}' in jobData; downstream call may fail, Hence closing currentTask{} requestId={}",
-                    CPPUID, RETRIEVE_FROM_MATERIAL, requestId
-            );
+
+        if (isBlank(userIdForExternalCalls)) {
+            log.warn("Missing '{}' in jobData; downstream call may fail, Hence closing currentTask{} requestId={}",
+                    CPPUID, RETRIEVE_MATERIAL_AND_UPLOAD, requestId);
+
             return executionInfo()
                     .from(executionInfo)
                     .withExecutionStatus(ExecutionStatus.COMPLETED)
                     .build();
         }
 
-        final UUID materialId = readUuid(jobData, CTX_MATERIAL_ID_KEY, "materialId", requestId);
-        final UUID defendantId = readUuid(jobData, CTX_DEFENDANT_ID_KEY, "defendantId", requestId);
-        final UUID courtDocumentId = readUuid(jobData, CTX_COURTDOCUMENT_ID_KEY, "courtDocumentId", requestId);
-        final UUID caseId = readUuid(jobData, CTX_CASE_ID_KEY, "caseId", requestId);
         final UUID documentId = readUuid(jobData, CTX_DOC_ID_KEY, "docId", requestId);
+        final UUID caseId = readUuid(jobData, CTX_CASE_ID_KEY, "caseId", requestId);
+        final UUID defendantId = readUuid(jobData, CTX_DEFENDANT_ID_KEY, "defendantId", requestId);
+        final UUID materialId = readUuid(jobData, CTX_MATERIAL_ID_KEY, "materialId", requestId);
         final String materialName = jobData.getString(CTX_MATERIAL_NAME, "");
 
-        if (materialId == null || caseId == null || documentId == null) {
+        if (isNull(materialId) || isNull(caseId) || isNull(documentId)) {
             log.warn(
                     "Missing '{}' , {}, {} in jobData; downstream call may fail, Hence closing currentTask{} requestId={}",
-                    CTX_MATERIAL_ID_KEY, CTX_CASE_ID_KEY, CTX_DOC_ID_KEY, RETRIEVE_FROM_MATERIAL, requestId
+                    CTX_MATERIAL_ID_KEY, CTX_CASE_ID_KEY, CTX_DOC_ID_KEY, RETRIEVE_MATERIAL_AND_UPLOAD, requestId
             );
             return executionInfo()
                     .from(executionInfo)
@@ -104,15 +111,16 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
 
             final String downloadUrl = fetchDownloadUrl(materialId, userIdForExternalCalls, requestId);
             log.info("downloadUrl generated :{} ", downloadUrl);
-            final DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern(uploadProperties.datePattern());
-            final String today = utcNow().format(dateFmt);
-            final String blobName = documentId + "_" + today + uploadProperties.fileExtension();
 
-            final Map<String, String> metadata = createBlobMetadata(documentId, materialId, caseId.toString(), today, materialName);
+            //materialName passed as documentName (friendly)
+            final String today = utcNow().format(ofPattern(uploadProperties.datePattern()));
+            final List<MetadataFilter> documentMetadata = createUploadMetadata(caseId, defendantId, materialId, today);
+            final FileStorageLocationReturnedSuccessfully fileStorageLocation = initiateDocumentUpload(documentId, materialName, documentMetadata);
 
-            final String blobUrl = storageService.copyFromUrl(downloadUrl, blobName, metadata);
-
-            final long sizeBytes = Optional.of(storageService.getBlobSize(blobName)).orElse(UNKNOWN_SIZE_BYTES);
+            final DocumentBlobMetadata documentBlobMetadata = storageService.copyFromUrl(downloadUrl, fileStorageLocation.getStorageUrl());
+            final String blobUrl = nonNull(documentBlobMetadata) ? documentBlobMetadata.blobUrl() : UNKNOWN_BLOB_URL;
+            final String blobName = nonNull(documentBlobMetadata) ? documentBlobMetadata.blobName() : UNKNOWN_BLOB_NAME;
+            final long sizeBytes = nonNull(documentBlobMetadata) ? documentBlobMetadata.blobSize() : UNKNOWN_SIZE_BYTES;
 
             caseDocumentRepository.findById(documentId).ifPresent(doc -> {
                 doc.setDocName(blobName);
@@ -128,14 +136,15 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
             log.info("Saved CaseDocument docId={}, caseId={}, materialId={}, sizeBytes={}, blobUri={}, requestId={}",
                     documentId, caseId, materialId, sizeBytes, blobUrl, requestId);
 
-            JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
+            final JsonObjectBuilder updatedJobData = createObjectBuilder(jobData);
 
             updatedJobData.add(CTX_DOC_ID_KEY, documentId.toString());
+            updatedJobData.add(CTX_DOC_REFERENCE_KEY, fileStorageLocation.getDocumentReference());
             updatedJobData.add(CTX_BLOB_NAME_KEY, blobName);
 
-            ExecutionInfo executionInfoNew = executionInfo()
+            final ExecutionInfo executionInfoNew = executionInfo()
                     .from(executionInfo)
-                    .withAssignedTaskName(CHECK_INGESTION_STATUS_FOR_DOCUMENT)
+                    .withAssignedTaskName(CHECK_DOCUMENT_INGESTION_STATUS)
                     .withJobData(updatedJobData.build())
                     .withExecutionStatus(ExecutionStatus.STARTED)
                     .build();
@@ -148,7 +157,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
                     .build();
 
         } catch (Exception ex) {
-            log.error("{} failed. requestId={}", RETRIEVE_FROM_MATERIAL, requestId, ex);
+            log.error("{} failed. requestId={}", RETRIEVE_MATERIAL_AND_UPLOAD, requestId, ex);
 
             return executionInfo()
                     .from(executionInfo)
@@ -189,22 +198,27 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
                 );
     }
 
-    private Map<String, String> createBlobMetadata(final UUID documentId, final UUID materialId, final String caseId,
-                                                   final String uploadedDate, final String materialName) {
+    private List<MetadataFilter> createUploadMetadata(final UUID caseId, final UUID defendantId, final UUID materialId, final String uploadedDate) {
         try {
-            final Map<String, Object> metadataJson = Map.of(
-                    META_CASE_ID, caseId,
-                    META_MATERIAL_ID, materialId.toString(),
-                    META_MATERIAL_NAME, materialName,
-                    META_UPLOADED_AT, uploadedDate
-            );
-
-            return Map.of(
-                    META_DOCUMENT_ID, documentId.toString(),
-                    META_METADATA, objectMapper.writeValueAsString(metadataJson)
+            return List.of(
+                    new MetadataFilter(META_CASE_ID, caseId.toString()),
+                    new MetadataFilter(META_DEFENDANT_ID, defendantId.toString()),
+                    new MetadataFilter(META_MATERIAL_ID, materialId.toString()),
+                    new MetadataFilter(META_UPLOADED_AT, uploadedDate)
             );
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to create blob metadata", e);
+            throw new IllegalStateException("Failed to create document upload metadata", e);
         }
     }
+
+    private FileStorageLocationReturnedSuccessfully initiateDocumentUpload(final UUID documentId, final String materialName, final List<MetadataFilter> documentMetadata) {
+        final DocumentUploadRequest documentUploadRequest = new DocumentUploadRequest();
+        documentUploadRequest.setDocumentId(documentId.toString());
+        documentUploadRequest.setDocumentName(materialName);
+        documentUploadRequest.setMetadataFilter(documentMetadata);
+
+        final ResponseEntity<@NotNull FileStorageLocationReturnedSuccessfully> fileStorageLocationEntity = documentIngestionInitiationApi.initiateDocumentUpload(documentUploadRequest);
+        return fileStorageLocationEntity.getBody();
+    }
+
 }

@@ -18,6 +18,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUI
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
@@ -55,7 +56,10 @@ class CheckIdpcAvailabilityTaskTest {
 
     @Mock
     private CaseDocumentRepository caseDocumentRepository;
-
+    @Mock
+    private IngestionProperties ingestionProperties;
+    @Mock
+    private IngestionProperties.Feature feature;
     @Captor
     private ArgumentCaptor<ExecutionInfo> captor;
 
@@ -69,7 +73,8 @@ class CheckIdpcAvailabilityTaskTest {
                 executionService,
                 documentIdResolver,
                 retryProperties,
-                caseDocumentRepository
+                caseDocumentRepository,
+                ingestionProperties
         );
 
         caseId = UUID.randomUUID().toString();
@@ -186,7 +191,7 @@ class CheckIdpcAvailabilityTaskTest {
                 .add(CTX_DEFENDANT_ID_KEY,UUID.randomUUID().toString())
                 .build();
 
-
+        when(ingestionProperties.getFeature()).thenReturn(feature);
         when(progressionClient.getCourtDocuments(any(), any()))
                 .thenReturn(Optional.of(materialInfo));
         when(documentIdResolver.resolveExistingDocId(any(), any()))

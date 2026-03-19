@@ -4,6 +4,7 @@ import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedSynchronouslyApi;
+import uk.gov.hmcts.cp.openapi.api.DocumentIngestionInitiationApi;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
 
 import lombok.extern.slf4j.Slf4j;
@@ -54,5 +55,17 @@ public class RagClientsConfig {
         log.info("Creating DocumentIngestionStatusApi client with auth mode={}",
                 ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : "subscription-key");
         return new ApimDocumentIngestionStatusClient(ragRestClient, ragClientProperties, apimAuthHeaderService);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(DocumentIngestionInitiationApi.class)
+    public DocumentIngestionInitiationApi documentIngestionInitiationApi(
+            @Qualifier("ragRestClient") final RestClient ragRestClient,
+            final RagClientProperties ragClientProperties,
+            final ApimAuthHeaderService apimAuthHeaderService) {
+
+        log.info("Creating DocumentIngestionApi client with auth mode={}",
+                ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : "subscription-key");
+        return new ApimDocumentIngestionClient(ragRestClient, ragClientProperties, apimAuthHeaderService);
     }
 }
