@@ -1,11 +1,13 @@
 package uk.gov.hmcts.cp.cdk.repo;
 
+import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,7 +22,8 @@ public interface QueryVersionRepository extends JpaRepository<QueryVersion, Quer
                    q.label       AS label,
                    v.user_query  AS userQuery,
                    v.query_prompt AS queryPrompt,
-                   v.effective_at AS effectiveAt
+                   v.effective_at AS effectiveAt,
+                   v.level as level
               FROM queries q
               JOIN LATERAL (
                  SELECT *
@@ -42,11 +45,26 @@ public interface QueryVersionRepository extends JpaRepository<QueryVersion, Quer
             """, nativeQuery = true)
     List<QueryVersion> findAllVersions(UUID queryId);
 
+    /**
+     * Fetch the latest QueryVersion by queryId (most recent effectiveAt)
+     * Includes the level as enum directly.
+     */
+    @Query(value = """
+            SELECT *
+              FROM query_versions v
+             WHERE v.query_id = :queryId
+             ORDER BY v.effective_at DESC
+             LIMIT 1
+            """, nativeQuery = true)
+    Optional<QueryVersion> findLatestByQueryId(UUID queryId);
+
+
     record SnapshotDefinition(
             UUID queryId,
             String label,
             String userQuery,
             String queryPrompt,
-            Instant effectiveAt) {
+            Instant effectiveAt,
+            String level) {
     }
 }

@@ -4,6 +4,7 @@ import uk.gov.hmcts.cp.cdk.domain.DefendantAnswer;
 import uk.gov.hmcts.cp.cdk.domain.DefendantAnswerId;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -51,4 +52,15 @@ public interface DefendantAnswerRepository extends JpaRepository<DefendantAnswer
              WHERE a.query_id = :queryId
             """, nativeQuery = true)
     long countDistinctCasesForQuery(UUID queryId);
+
+    @Query(value = """
+            SELECT a.*
+              FROM defendant_answers a
+             WHERE a.case_id = :caseId
+               AND a.query_id = :queryId
+               AND a.created_at <= :asOf
+             ORDER BY a.defendant_id, a.created_at DESC, a.version DESC
+            """, nativeQuery = true)
+    List<DefendantAnswer> findAllAsOfForCase(UUID caseId, UUID queryId, OffsetDateTime asOf);
+
 }

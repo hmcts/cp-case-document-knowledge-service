@@ -55,22 +55,17 @@ public class AnswersController implements AnswersApi {
 
 
     @Override
-    @SuppressWarnings("PMD.ShortVariable") // 'at' is defined by the OpenAPI contract
+    @SuppressWarnings("PMD.ShortVariable")
     public ResponseEntity<AnswersResponse> getAnswerListByCaseAndQuery(
             final UUID caseId,
             final UUID queryId,
             final Integer version,
             final OffsetDateTime at
     ) {
-        log.debug("getAnswerListByCaseAndQuery caseId={}, queryId={}, version={}, at={}", caseId, queryId, version, at);
+        log.debug("getAnswerListByCaseAndQuery caseId={}, queryId={}, version={}, at={}",
+                caseId, queryId, version, at);
 
-        final AnswerResponse answer = service.getAnswer(queryId, caseId, version, at);
-
-        final AnswerResponse answer1 = service.getAnswer(UUID.fromString("52498581-d01c-4351-807b-c43a4ba5cd1f"), caseId, version, at);
-
-        final AnswersResponse response = new AnswersResponse();
-        response.setAsOf(answer.getCreatedAt());
-        response.setAnswers(List.of(answer,answer1));
+        final AnswersResponse response = service.getAnswers(queryId, caseId, version, at);
 
         return ResponseEntity.ok(response);
     }

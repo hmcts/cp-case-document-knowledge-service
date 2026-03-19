@@ -13,6 +13,7 @@ import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
@@ -70,7 +71,7 @@ class QueryServiceTest {
     void list_definitions_snapshot() {
         final OffsetDateTime asOf = OffsetDateTime.parse("2025-05-01T12:00:00Z");
         final UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
-        final QueryVersionRepository.SnapshotDefinition row = new QueryVersionRepository.SnapshotDefinition(qid, "L", "UQ", "QP", asOf.toInstant());
+        final QueryVersionRepository.SnapshotDefinition row = new QueryVersionRepository.SnapshotDefinition(qid, "L", "UQ", "QP", asOf.toInstant(), QueryLevel.CASE.toString());
         when(qvRepo.snapshotDefinitionsAsOf(asOf)).thenReturn(List.of(row));
 
         final QueryStatusResponse resp = service.listForCaseAsOf(null, asOf, "u-123");
@@ -192,7 +193,7 @@ class QueryServiceTest {
         when(qRepo.findById(qid)).thenReturn(Optional.of(q));
 
         final OffsetDateTime eff = OffsetDateTime.parse("2025-05-01T12:00:00Z");
-        final QueryVersionRepository.SnapshotDefinition row = new QueryVersionRepository.SnapshotDefinition(qid, "L", "UQ", "QP", eff.toInstant());
+        final QueryVersionRepository.SnapshotDefinition row = new QueryVersionRepository.SnapshotDefinition(qid, "L", "UQ", "QP", eff.toInstant(),QueryLevel.CASE.toString());
         when(qvRepo.snapshotDefinitionsAsOf(eff)).thenReturn(List.of(row));
 
         final QueryUpsertRequest req = new QueryUpsertRequest();
