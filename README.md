@@ -141,6 +141,8 @@ Integration tests automatically **bring up** Postgres + app, **wait** until they
 tests, then **tear down
 ** the stack.
 
+### Before running the integration tests ensure 'AZURE_STORAGE_CONNECTION_STRING=<connection-string>' is exported from the command line
+
 ```bash
 gradle clean integration
 ```

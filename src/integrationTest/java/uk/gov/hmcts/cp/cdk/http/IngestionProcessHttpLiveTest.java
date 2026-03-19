@@ -1,8 +1,10 @@
 package uk.gov.hmcts.cp.cdk.http;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.configureFor;
+import static java.util.UUID.fromString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-
+import static uk.gov.hmcts.cp.cdk.stub.DocumentIngestionInitiationApiStub.stubInitiateDocumentUpload;
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
@@ -11,12 +13,10 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
-
 import java.util.UUID;
 
 import org.awaitility.Awaitility;
@@ -105,7 +105,7 @@ import org.springframework.http.ResponseEntity;
                 String.class
         );
 
-        final UUID queryId = UUID.fromString("2a9ae797-7f70-4be5-927f-2dae65489e69");
+        final UUID queryId = fromString("2a9ae797-7f70-4be5-927f-2dae65489e69");
 
         try (Connection c = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass)) {
 
@@ -213,8 +213,6 @@ import org.springframework.http.ResponseEntity;
         assertNotNull(auditResponse, "Expected an audit event for ingestion process start");
     }
 
-
-
     @Test
     void start_ingestion_process_executes_all_tasks_successfully() throws Exception {
         // Arrange
@@ -233,13 +231,13 @@ import org.springframework.http.ResponseEntity;
             final String date = "2025-10-23";
 
             final String requestBody = """
-        {
-          "courtCentreId": "%s",
-          "roomId": "%s",
-          "date": "%s",
-          "effectiveAt": "%s"
-        }
-        """.formatted(courtCentreId, roomId, date, effectiveAt);
+                    {
+                      "courtCentreId": "%s",
+                      "roomId": "%s",
+                      "date": "%s",
+                      "effectiveAt": "%s"
+                    }
+                    """.formatted(courtCentreId, roomId, date, effectiveAt);
 
             // Act
             final ResponseEntity<String> response = http.exchange(
@@ -262,9 +260,8 @@ import org.springframework.http.ResponseEntity;
 
         assertNotNull(auditResponse, "Expected audit event after full ingestion task chain");
 
-        Thread.sleep(60_000);
-        final UUID caseId = UUID.fromString("2204cd6b-5759-473c-b0f7-178b3aa0c9b3");
-        final UUID queryId = UUID.fromString("2a9ae797-7f70-4be5-927f-2dae65489e69");
+        final UUID caseId = fromString("2204cd6b-5759-473c-b0f7-178b3aa0c9b3");
+        final UUID queryId = fromString("2a9ae797-7f70-4be5-927f-2dae65489e69");
 
 
         final HttpHeaders answerHeaders = new HttpHeaders();
@@ -274,6 +271,8 @@ import org.springframework.http.ResponseEntity;
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(120))
+                .pollInterval(Duration.ofSeconds(2))
+                .ignoreExceptions()
                 .untilAsserted(() -> {
 
                     final ResponseEntity<String> answerResponse = http.exchange(
@@ -288,9 +287,82 @@ import org.springframework.http.ResponseEntity;
                     assertThat(answerResponse.getBody()).contains("\"answer\"");
                     assertThat(answerResponse.getBody()).contains("\"version\"");
                 });
-
-
     }
 
+    @Test
+    void start_ingestion_process_executes_all_tasks_successfully_using_new_upload_api() throws Exception {
+        // Arrange
+        configureFor("localhost", 8089);
+        stubInitiateDocumentUpload("documents-new", "destination.pdf");
+
+        final String auditResponse;
+        try (BrokerUtil brokerUtil = new BrokerUtil()) {
+
+            final HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(VND_TYPE_JSON);
+            headers.setAccept(List.of(VND_TYPE_JSON));
+
+            final UUID courtCentreId = UUID.randomUUID();
+            final UUID roomId = UUID.randomUUID();
+            final String effectiveAt = "2025-05-01T12:00:00Z";
+            final String date = "2025-10-23";
+
+            final String requestBody = """
+                    {
+                      "courtCentreId": "%s",
+                      "roomId": "%s",
+                      "date": "%s",
+                      "effectiveAt": "%s"
+                    }
+                    """.formatted(courtCentreId, roomId, date, effectiveAt);
+
+            // Act
+            final ResponseEntity<String> response = http.exchange(
+                    baseUrl + "/ingestions/start",
+                    HttpMethod.POST,
+                    new HttpEntity<>(requestBody, headers),
+                    String.class
+            );
+
+            // Assert HTTP
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+            assertThat(response.getBody()).contains("\"phase\":\"STARTED\"");
+
+            auditResponse = brokerUtil.getMessageMatching(json ->
+                    json.has(CONTENT) &&
+                            courtCentreId.toString().equals(json.get(CONTENT).get("courtCentreId").asText()) &&
+                            roomId.toString().equals(json.get(CONTENT).get("roomId").asText())
+            );
+        }
+
+        assertNotNull(auditResponse, "Expected audit event after full ingestion task chain");
+
+        final UUID caseId = fromString("2204cd6b-5759-473c-b0f7-178b3aa0c9b3");
+        final UUID queryId = fromString("2a9ae797-7f70-4be5-927f-2dae65489e69");
+
+        final HttpHeaders answerHeaders = new HttpHeaders();
+        answerHeaders.setAccept(List.of(
+                MediaType.valueOf("application/vnd.casedocumentknowledge-service.answers+json")
+        ));
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(120))
+                .pollInterval(Duration.ofSeconds(2))
+                .ignoreExceptions()
+                .untilAsserted(() -> {
+
+                    final ResponseEntity<String> answerResponse = http.exchange(
+                            baseUrl + "/answers/" + caseId + "/" + queryId,
+                            HttpMethod.GET,
+                            new HttpEntity<>(answerHeaders),
+                            String.class
+                    );
+
+                    assertThat(answerResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+                    assertThat(answerResponse.getBody()).isNotNull();
+                    assertThat(answerResponse.getBody()).contains("\"answer\"");
+                    assertThat(answerResponse.getBody()).contains("\"version\"");
+                });
+    }
 
 }

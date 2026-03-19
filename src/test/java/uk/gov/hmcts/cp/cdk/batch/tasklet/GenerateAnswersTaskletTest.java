@@ -1,5 +1,6 @@
 package uk.gov.hmcts.cp.cdk.batch.tasklet;
 
+import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -20,8 +21,6 @@ import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
 import uk.gov.hmcts.cp.openapi.model.MetadataFilter;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullySynchronously;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -189,7 +188,7 @@ class GenerateAnswersTaskletTest {
         final UserQueryAnswerReturnedSuccessfullySynchronously rag =
                 new UserQueryAnswerReturnedSuccessfullySynchronously()
                         .llmResponse("answer-1")
-                        .chunkedEntries(new ArrayList<>());
+                        .documentChunks(emptyList());
         when(documentInformationSummarisedSynchronouslyApi.answerUserQuery(any(AnswerUserQueryRequest.class)))
                 .thenReturn(ResponseEntity.ok(rag));
 
@@ -257,7 +256,7 @@ class GenerateAnswersTaskletTest {
                 eq("SELECT version FROM answer_reservations  WHERE case_id=:case_id AND query_id=:query_id AND doc_id=:doc_id"),
                 any(MapSqlParameterSource.class),
                 anyIntRowMapper()
-        )).thenReturn(Collections.emptyList());
+        )).thenReturn(emptyList());
 
         when(jdbc.queryForObject(
                 eq("SELECT get_or_create_answer_version(:case_id,:query_id,:doc_id)"),
@@ -341,7 +340,7 @@ class GenerateAnswersTaskletTest {
         final UserQueryAnswerReturnedSuccessfullySynchronously rag =
                 new UserQueryAnswerReturnedSuccessfullySynchronously()
                         .llmResponse("ok")
-                        .chunkedEntries(Collections.emptyList());
+                        .documentChunks(emptyList());
         when(documentInformationSummarisedSynchronouslyApi.answerUserQuery(any(AnswerUserQueryRequest.class)))
                 .thenReturn(ResponseEntity.ok(rag));
 

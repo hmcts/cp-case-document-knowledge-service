@@ -10,4 +10,5 @@ public interface StorageService {
 
     long getBlobSize(String blobPath);
 
+    DocumentBlobMetadata copyFromUrl(String sourceUrl, String destinationUrl);
 }

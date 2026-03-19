@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.batch.verification;
 
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.FAILED;
+import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.IN_PROGRESS;
 import static uk.gov.hmcts.cp.cdk.domain.DocumentVerificationStatus.SUCCEEDED;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_FAILED;
@@ -287,7 +288,7 @@ public class DocumentVerificationScheduler {
                             Duration.ofMillis(this.verifySchedulerProperties.getDelayMs())
                     );
 
-            task.setStatus(DocumentVerificationStatus.IN_PROGRESS);
+            task.setStatus(IN_PROGRESS);
             task.setNextAttemptAt(nextAttemptAt);
             task.setLockOwner(null);
             task.setLockAcquiredAt(null);
@@ -413,14 +414,16 @@ public class DocumentVerificationScheduler {
                     exception.getMessage(),
                     exception
             );
-            for (DocumentVerificationTask task : succeededTasks) {
+
+            succeededTasks.forEach(task -> {
                 scheduleRetry(
                         task,
-                        DocumentVerificationStatus.IN_PROGRESS.name(),
+                        IN_PROGRESS.name(),
                         exception.getMessage(),
                         utcNow()
                 );
-            }
+            });
+
         }
     }
 
