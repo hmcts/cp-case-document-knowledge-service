@@ -4,8 +4,10 @@ import uk.gov.hmcts.cp.cdk.services.AnswerService;
 import uk.gov.hmcts.cp.openapi.api.cdk.AnswersApi;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerResponse;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerWithLlmResponse;
+import uk.gov.hmcts.cp.openapi.model.cdk.AnswersResponse;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import lombok.RequiredArgsConstructor;
@@ -49,5 +51,27 @@ public class AnswersController implements AnswersApi {
         log.debug("getAnswerWithLlmByCaseAndQuery caseId={}, queryId={}, version={}, at={}", caseId, queryId, version, at);
         final AnswerWithLlmResponse body = service.getAnswerWithLlm(queryId, caseId, version, at);
         return ResponseEntity.ok(body);
+    }
+
+
+    @Override
+    @SuppressWarnings("PMD.ShortVariable") // 'at' is defined by the OpenAPI contract
+    public ResponseEntity<AnswersResponse> getAnswerListByCaseAndQuery(
+            final UUID caseId,
+            final UUID queryId,
+            final Integer version,
+            final OffsetDateTime at
+    ) {
+        log.debug("getAnswerListByCaseAndQuery caseId={}, queryId={}, version={}, at={}", caseId, queryId, version, at);
+
+        final AnswerResponse answer = service.getAnswer(queryId, caseId, version, at);
+
+        final AnswerResponse answer1 = service.getAnswer(UUID.fromString("52498581-d01c-4351-807b-c43a4ba5cd1f"), caseId, version, at);
+
+        final AnswersResponse response = new AnswersResponse();
+        response.setAsOf(answer.getCreatedAt());
+        response.setAnswers(List.of(answer,answer1));
+
+        return ResponseEntity.ok(response);
     }
 }

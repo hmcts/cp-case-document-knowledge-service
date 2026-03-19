@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
 
@@ -77,10 +78,10 @@ class QueryVersionRepositoryTest {
         final Query q = new Query(qid, "Case Summary (All Witnesses)", OffsetDateTime.now(), 200);
         queryRepo.saveAndFlush(q);
 
-        final QueryVersion v1 = new QueryVersion(new QueryVersionId(qid, t1), q, "UQ v1", "QP v1");
+        final QueryVersion v1 = new QueryVersion(new QueryVersionId(qid, t1), q, "UQ v1", "QP v1", QueryLevel.CASE);
         repo.save(v1);
 
-        final QueryVersion v2 = new QueryVersion(new QueryVersionId(qid, t2), q, "UQ v2", "QP v2");
+        final QueryVersion v2 = new QueryVersion(new QueryVersionId(qid, t2), q, "UQ v2", "QP v2",QueryLevel.CASE);
         repo.saveAndFlush(v2);
     }
 

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import uk.gov.hmcts.cp.cdk.domain.CaseQueryStatus;
 import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.domain.QueryLifecycleStatus;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
@@ -85,10 +86,10 @@ class QueriesAsOfRepositoryTest {
         final Query q = new Query(qid, "Defendant Position", OffsetDateTime.now(), 200);
         queryRepo.saveAndFlush(q);
 
-        final QueryVersion v1 = new QueryVersion(new QueryVersionId(qid, t1), q, "def v1", "prompt v1");
+        final QueryVersion v1 = new QueryVersion(new QueryVersionId(qid, t1), q, "def v1", "prompt v1", QueryLevel.CASE);
         versionRepo.save(v1);
 
-        final QueryVersion v2 = new QueryVersion(new QueryVersionId(qid, t2), q, "def v2", "prompt v2");
+        final QueryVersion v2 = new QueryVersion(new QueryVersionId(qid, t2), q, "def v2", "prompt v2",QueryLevel.CASE);
         versionRepo.saveAndFlush(v2);
 
         final CaseQueryStatus cqs = new CaseQueryStatus();

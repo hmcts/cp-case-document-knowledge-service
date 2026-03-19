@@ -32,6 +32,15 @@ then
   $o.setSuccess(true);
 end
 
+rule "Allow LA – answers-v2"
+when
+  $o: Outcome()
+  $a: Action(name == "casedocumentknowledge-service.answers.v2")
+  eval(userAndGroupProvider.hasPermission($a, PermissionConstants.accessToIntelligencePermissions()))
+then
+  $o.setSuccess(true);
+end
+
 rule "Allow LA – query-catalogue"
 when
   $o: Outcome()

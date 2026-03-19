@@ -3,6 +3,8 @@ package uk.gov.hmcts.cp.cdk.domain;
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
@@ -14,6 +16,8 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Getter
 @Setter
@@ -40,4 +44,13 @@ public class QueryVersion {
 
     @Column(name = "query_prompt", nullable = false, columnDefinition = "TEXT")
     private String queryPrompt;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(
+            name = "level",
+            nullable = false,
+            columnDefinition = "query_level_enum"
+    )
+    private QueryLevel level = QueryLevel.CASE;
 }
