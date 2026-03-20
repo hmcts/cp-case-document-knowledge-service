@@ -8,6 +8,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUI
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCaseEligibilityInfo;
+import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
@@ -35,6 +36,7 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
     private final ExecutionService executionService;
     private final ProgressionClient progressionClient;
     private final JobManagerRetryProperties retryProperties;
+    private final IngestionProperties ingestionProperties;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -64,7 +66,9 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
             final ProsecutionCaseEligibilityInfo info = eligibilityInfo.get();
             final int defendantCount = info.defendantCount();
 
-            if (defendantCount != 1) {
+            if (defendantCount < 1
+                    || (defendantCount > 1 && !ingestionProperties.getFeature().isUseMultiDefendant())) {
+
                 log.info(
                         "Case {} has {} defendants. Not eligible to proceed. Completing task.",
                         caseId,

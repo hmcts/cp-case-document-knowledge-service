@@ -11,6 +11,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.ROOM_
 
 import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
+import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.util.TaskUtils;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
@@ -41,6 +42,7 @@ public class GetCasesForHearingTask implements ExecutableTask {
     private final HearingClient hearingClient;
     private final ExecutionService executionService;
     private final JobManagerRetryProperties retryProperties;
+
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
