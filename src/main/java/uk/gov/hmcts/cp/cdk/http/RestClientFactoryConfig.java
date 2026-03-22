@@ -3,6 +3,7 @@ package uk.gov.hmcts.cp.cdk.http;
 import java.time.Duration;
 import java.util.Map;
 
+import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
@@ -31,8 +32,13 @@ public class RestClientFactoryConfig {
 
     @Bean(destroyMethod = "close")
     public CloseableHttpClient closeableHttpClient(final PoolingHttpClientConnectionManager connectionManager) {
-        final RequestConfig defaultConfig = RequestConfig.custom()
+
+        final ConnectionConfig connectionConfig = ConnectionConfig.custom()
                 .setConnectTimeout(Timeout.of(THREE_MIN))
+                .build();
+        connectionManager.setDefaultConnectionConfig(connectionConfig);
+
+        final RequestConfig defaultConfig = RequestConfig.custom()
                 .setConnectionRequestTimeout(Timeout.of(THREE_MIN))
                 .setResponseTimeout(Timeout.of(THREE_MIN))
                 .build();
@@ -77,8 +83,13 @@ public class RestClientFactoryConfig {
                 final Duration ct = (connectTimeout != null) ? connectTimeout : THREE_MIN;
                 final Duration rt = (readTimeout != null) ? readTimeout : THREE_MIN;
 
-                final RequestConfig perClientConfig = RequestConfig.custom()
+                final ConnectionConfig connectionConfig = ConnectionConfig.custom()
                         .setConnectTimeout(Timeout.of(ct))
+                        .build();
+                connectionManager.setDefaultConnectionConfig(connectionConfig);
+
+
+                final RequestConfig perClientConfig = RequestConfig.custom()
                         .setConnectionRequestTimeout(Timeout.of(ct))
                         .setResponseTimeout(Timeout.of(rt))
                         .build();

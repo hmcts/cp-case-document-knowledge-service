@@ -32,7 +32,6 @@ import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import org.jetbrains.annotations.NotNull;
@@ -46,8 +45,6 @@ import org.springframework.http.ResponseEntity;
 
 public class RetrieveMaterialAndUploadTaskTest {
 
-    @Mock
-    private ObjectMapper objectMapper;
     @Mock
     private ProgressionClient progressionClient;
     @Mock
@@ -80,7 +77,6 @@ public class RetrieveMaterialAndUploadTaskTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         task = new RetrieveMaterialAndUploadTask(
-                objectMapper,
                 progressionClient,
                 storageService,
                 caseDocumentRepository,
@@ -110,7 +106,7 @@ public class RetrieveMaterialAndUploadTaskTest {
     }
 
     @Test
-    void shouldUploadDocumentAndScheduleNextTask() throws Exception {
+    void shouldUploadDocumentAndScheduleNextTask() {
 
         when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
         when(uploadProperties.fileExtension()).thenReturn(".pdf");
@@ -123,7 +119,6 @@ public class RetrieveMaterialAndUploadTaskTest {
         when(storageLocation.getStorageUrl()).thenReturn("https://storage.blob/document-id_120326.pdf?dalkherlncnl%=");
         when(storageLocation.getDocumentReference()).thenReturn("document-id");
         when(storageService.copyFromUrl(any(), any())).thenReturn(new DocumentBlobMetadata("https://storage.blob/blob1", "document-id_120326.pdf", 12345L));
-        when(objectMapper.writeValueAsString(any())).thenReturn("{\"dummy\":\"metadata\"}");
 
         ExecutionInfo result;
         result = task.execute(executionInfo);

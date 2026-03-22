@@ -7,8 +7,6 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_K
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_RAG_TRANSACTION_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.EMPTY_STRING;
-import static uk.gov.hmcts.cp.cdk.util.TaskUtils.buildAnswerParams;
-import static uk.gov.hmcts.cp.cdk.util.TaskUtils.buildReservationParams;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATED;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATION_FAILED;
@@ -16,6 +14,7 @@ import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERA
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
+import uk.gov.hmcts.cp.cdk.services.AnswerGenerationService;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.DocumentChunk;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullyAsynchronously;
@@ -38,8 +37,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -49,21 +46,11 @@ import org.springframework.stereotype.Component;
 public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
 
     private static final String PROVENANCE_CHUNKS_SAMPLE = "provenanceChunksSample";
-    private final NamedParameterJdbcTemplate jdbc;
+
     private final DocumentInformationSummarisedAsynchronouslyApi documentInformationSummarisedAsynchronouslyApi;
     private final ObjectMapper objectMapper;
     private final JobManagerRetryProperties retryProperties;
-
-    static final String SQL_CREATE_OR_GET_VERSION =
-            "SELECT get_or_create_answer_version(:case_id,:query_id,:doc_id)";
-    static final String SQL_UPSERT_ANSWER =
-            "INSERT INTO answers(case_id, query_id, version, created_at, answer, llm_input, doc_id) " +
-                    "VALUES (:case_id, :query_id, :version, NOW(), :answer, :llm_input, :doc_id) " +
-                    "ON CONFLICT (case_id, query_id, version) DO UPDATE SET " +
-                    "  answer = EXCLUDED.answer, " +
-                    "  llm_input = EXCLUDED.llm_input, " +
-                    "  doc_id = EXCLUDED.doc_id, " +
-                    "  created_at = EXCLUDED.created_at";
+    private final AnswerGenerationService answerGenerationService;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -90,11 +77,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
             final UUID queryId = parseUuidOrNull(jobData.getString(CTX_SINGLE_QUERY_ID, null));
 
             if (ANSWER_GENERATED == answerResponseBody.getStatus()) {
-                final Integer version = getVersionNumber(caseId, queryId, documentId);
                 final String llmInputJson = getLlmJson(answerResponseBody.getDocumentChunks(), caseId, documentId, queryId);
-
-                final MapSqlParameterSource params = buildAnswerParams(caseId, queryId, version, answerResponseBody.getLlmResponse(), llmInputJson, documentId);
-                jdbc.update(SQL_UPSERT_ANSWER, params);
+                answerGenerationService.upsertAnswer(caseId, queryId, answerResponseBody.getLlmResponse(), llmInputJson, documentId);
             }
 
             if (ANSWER_GENERATION_FAILED == answerResponseBody.getStatus()) {
@@ -145,11 +129,6 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
         }
 
         return EMPTY_STRING;
-    }
-
-    private Integer getVersionNumber(final UUID caseId, final UUID queryId, final UUID docId) {
-        final MapSqlParameterSource paramsForReservation = buildReservationParams(caseId, queryId, docId);
-        return jdbc.queryForObject(SQL_CREATE_OR_GET_VERSION, paramsForReservation, Integer.class);
     }
 
 }

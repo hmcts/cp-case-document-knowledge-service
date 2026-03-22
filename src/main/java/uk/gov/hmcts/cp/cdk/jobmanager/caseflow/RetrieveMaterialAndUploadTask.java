@@ -45,7 +45,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 import lombok.RequiredArgsConstructor;
@@ -64,7 +63,6 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
     private static final String UNKNOWN_BLOB_NAME = "";
     private static final long UNKNOWN_SIZE_BYTES = -1L;
 
-    private final ObjectMapper objectMapper;
     private final ProgressionClient progressionClient;
     private final StorageService storageService;
     private final CaseDocumentRepository caseDocumentRepository;
