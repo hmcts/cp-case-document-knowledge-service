@@ -68,26 +68,32 @@ public class AnswerService {
 
         QueryLevel level = latest.getLevel();
 
-        List<?> answers;
-        switch (level) {
-            case CASE:
-                answers = latestDocRepo.findLatestAsOfForCase(caseId, queryId, at)
-                        .map(List::of)
-                        .orElseGet(List::of);
-                break;
+        List<?> answers =List.of();
+        if (level != null) {
+            switch (level) {
+                case CASE:
+                    answers = latestDocRepo.findLatestAsOfForCase(caseId, queryId, at)
+                            .map(List::of)
+                            .orElseGet(List::of);
+                    break;
 
-            case CASE_ALL_DOCUMENTS:
-                answers = allDocsRepo.findLatestAsOfForCase(caseId, queryId, at)
-                        .map(List::of)
-                        .orElseGet(List::of);
-                break;
+                case CASE_ALL_DOCUMENTS:
+                    answers = allDocsRepo.findLatestAsOfForCase(caseId, queryId, at)
+                            .map(List::of)
+                            .orElseGet(List::of);
+                    break;
 
-            case DEFENDANT:
-                answers = defendantRepo.findAllAsOfForCase(caseId, queryId, at);
-                break;
+                case DEFENDANT:
+                    answers = defendantRepo.findAllAsOfForCase(caseId, queryId, at);
+                    break;
 
-            default:
-                throw new IllegalArgumentException("Unsupported QueryLevel: " + level);
+                default:
+                    throw new IllegalArgumentException("Unsupported QueryLevel: " + level);
+            }
+        }
+        if (answers == null || answers.isEmpty()) {
+            Answer answerEntity = resolveAnswer(queryId, caseId, version, at);
+            answers = (answerEntity != null) ? List.of(answerEntity) : List.of();
         }
 
         List<AnswerResponse> answerResponses = mapToAnswerResponses(answers);
@@ -183,7 +189,14 @@ public class AnswerService {
                         answerText = defAnswer.getAnswerText();
                         version = defAnswer.getAnswerId().getVersion();
                         defendantId = defAnswer.getAnswerId().getDefendantId();
-                    } else {
+                    }
+                    else if (answer instanceof Answer baseAnswer) {
+                        queryId = baseAnswer.getAnswerId().getQueryId();
+                        createdAt = baseAnswer.getCreatedAt();
+                        answerText = baseAnswer.getAnswerText();
+                        version = baseAnswer.getAnswerId().getVersion();
+                    }
+                    else {
                         throw new IllegalArgumentException("Unknown answer type: " + answer.getClass());
                     }
 
@@ -194,7 +207,7 @@ public class AnswerService {
                     answerRes.setCreatedAt(createdAt);
                     answerRes.setAnswer(answerText);
                     answerRes.setVersion(version);
-                    answerRes.setDefendantId(defendantId.toString());
+                    answerRes.setDefendantId(defendantId != null ? defendantId.toString() : null);
                     //dto.setStatus(status);
                     answerRes.setUserQuery(userQueryText);
 
