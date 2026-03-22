@@ -108,6 +108,7 @@ class QueryServiceTest {
                 "MAT001",
                 "Material Name",
                 ZonedDateTime.now(),
+                UUID.randomUUID().toString(),
                 UUID.randomUUID().toString()
         );
         when(progressionClient.getCourtDocuments(any(), anyString()))

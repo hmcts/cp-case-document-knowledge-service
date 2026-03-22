@@ -118,6 +118,7 @@ class ResolveMaterialForCaseTaskletTest {
                 materialId,
                 materialName,
                 ZonedDateTime.now(),
+                UUID.randomUUID().toString(),
                 UUID.randomUUID().toString()
         );
 

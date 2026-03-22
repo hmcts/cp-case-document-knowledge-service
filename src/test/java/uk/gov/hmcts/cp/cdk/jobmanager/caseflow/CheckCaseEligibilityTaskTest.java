@@ -57,6 +57,9 @@ class CheckCaseEligibilityTaskTest {
     private ExecutionInfo executionInfo;
     private UUID caseId;
 
+    @Mock
+    private IngestionProperties.Feature feature;
+
     @BeforeEach
     void setUp() {
         task = new CheckCaseEligibilityTask(executionService, progressionClient,retryProperties,ingestionProperties);
@@ -101,6 +104,9 @@ class CheckCaseEligibilityTaskTest {
 
     @Test
     void shouldComplete_whenMoreThanOneDefendant() {
+
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
         ProsecutionCaseEligibilityInfo info =
                 new ProsecutionCaseEligibilityInfo(
                         caseId.toString(),
@@ -118,6 +124,7 @@ class CheckCaseEligibilityTaskTest {
 
     @Test
     void shouldComplete_whenZeroDefendants() {
+
         ProsecutionCaseEligibilityInfo info =
                 new ProsecutionCaseEligibilityInfo(
                         caseId.toString(),
@@ -143,6 +150,8 @@ class CheckCaseEligibilityTaskTest {
 
         when(progressionClient.getProsecutionCaseEligibilityInfo(caseId, "cppuid-123"))
                 .thenReturn(Optional.of(info));
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
 
         ExecutionInfo result = task.execute(executionInfo);
 
@@ -159,7 +168,6 @@ class CheckCaseEligibilityTaskTest {
 
     @Test
     void shouldRetry_whenProgressionClientThrowsException() {
-
         when(progressionClient.getProsecutionCaseEligibilityInfo(caseId, "cppuid-123"))
                 .thenThrow(new RuntimeException("Downstream service failure"));
 

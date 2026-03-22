@@ -2,6 +2,9 @@ package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_CASE_ELIGIBILITY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPLOAD;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
@@ -77,9 +80,13 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
                 return complete(executionInfo);
             }
 
+            final String checkIdpcTask = ingestionProperties.getFeature().isUseMultiDefendant()
+                    ? CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS
+                    : CHECK_IDPC_AVAILABILITY;
+
             log.info(
                     "Case {} has exactly 1 defendant. Proceeding to {}.",
-                    caseId, CHECK_IDPC_AVAILABILITY
+                    caseId, checkIdpcTask
             );
 
             JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
@@ -87,7 +94,7 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
 
             ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
                     .from(executionInfo)
-                    .withAssignedTaskName(CHECK_IDPC_AVAILABILITY)
+                    .withAssignedTaskName(checkIdpcTask)
                     .withJobData(updatedJobData.build())
                     .withExecutionStatus(ExecutionStatus.STARTED)
                     .build();

@@ -9,7 +9,8 @@ public record CourtDocumentSearchResponse(
 ) {
     public record DocumentIndex(
             List<String> caseIds,
-            Document document
+            Document document,
+            List<String> defendantIds
     ) {
     }
 

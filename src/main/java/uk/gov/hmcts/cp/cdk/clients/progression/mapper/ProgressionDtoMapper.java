@@ -67,6 +67,15 @@ public class ProgressionDtoMapper {
                     documentTypeId, documentIndex.caseIds());
         }
 
+        String defendantId = null;
+        if (documentIndex.defendantIds() != null && !documentIndex.defendantIds().isEmpty()) {
+            if (documentIndex.defendantIds().size() > 1) {
+                log.warn("Multiple defendantIds found for caseIds={}: {}. Using first.",
+                        documentIndex.caseIds(), documentIndex.defendantIds());
+            }
+            defendantId = documentIndex.defendantIds().get(0);
+        }
+
         final LatestMaterialInfo latestMaterialInfo = new LatestMaterialInfo(
                 documentIndex.caseIds(),
                 documentTypeId,
@@ -74,7 +83,8 @@ public class ProgressionDtoMapper {
                 latestMaterial.id(),
                 resolvedDocumentName,
                 latestMaterial.uploadDateTime(),
-                courtDocumentId
+                courtDocumentId,
+                defendantId
         );
 
         log.info("Resolved latest material. caseIds={} documentTypeId={} materialId={} uploadedAt={}",
