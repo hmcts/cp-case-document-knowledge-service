@@ -9,9 +9,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.cdk.services.AnswerGenerationService.NEXT_VERSION_SQL;
+import static uk.gov.hmcts.cp.cdk.services.AnswerGenerationService.SQL_UPDATE_CASE_QUERY_STATUS;
 import static uk.gov.hmcts.cp.cdk.services.AnswerGenerationService.SQL_UPSERT_ANSWER;
 
 import java.util.UUID;
@@ -55,7 +57,7 @@ public class AnswerGenerationServiceTest {
     }
 
     @Test
-    void shouldCallVersionQueryAndThenUpsert() {
+    void shouldExecuteAllStepsWithCorrectParamsInOrder() {
         // given
         when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Integer.class)))
                 .thenReturn(3);
@@ -70,17 +72,22 @@ public class AnswerGenerationServiceTest {
         final InOrder inOrder = inOrder(jdbcTemplate);
 
         // 1. version query happens first
-        inOrder.verify(jdbcTemplate).queryForObject(
-                eq(NEXT_VERSION_SQL),
-                any(MapSqlParameterSource.class),
-                eq(Integer.class)
-        );
+        inOrder.verify(jdbcTemplate).queryForObject(eq(NEXT_VERSION_SQL), paramCaptor.capture(), eq(Integer.class));
 
         // 2. upsert happens next
-        inOrder.verify(jdbcTemplate).update(
-                eq(SQL_UPSERT_ANSWER),
-                any(MapSqlParameterSource.class)
-        );
+        inOrder.verify(jdbcTemplate).update(eq(SQL_UPSERT_ANSWER), paramCaptor.capture());
+
+        // status update
+        inOrder.verify(jdbcTemplate).update(eq(SQL_UPDATE_CASE_QUERY_STATUS), paramCaptor.capture());
+
+        // assert captured params
+        MapSqlParameterSource versionParams = paramCaptor.getAllValues().get(0);
+        MapSqlParameterSource answerParams = paramCaptor.getAllValues().get(1);
+        MapSqlParameterSource statusParams = paramCaptor.getAllValues().get(2);
+
+        assertThat(versionParams.getValue("case_id")).isEqualTo(caseId);
+        assertThat(answerParams.getValue("version")).isEqualTo(3);
+        assertThat(statusParams.getValue("version")).isEqualTo(3);
     }
 
     @Test
@@ -97,9 +104,8 @@ public class AnswerGenerationServiceTest {
 
         final MapSqlParameterSource params = paramCaptor.getValue();
 
-        assertThat(params.getValue("caseId")).isEqualTo(caseId);
-        assertThat(params.getValue("queryId")).isEqualTo(queryId);
-        assertThat(params.getValue("docId")).isEqualTo(docId);
+        assertThat(params.getValue("case_id")).isEqualTo(caseId);
+        assertThat(params.getValue("query_id")).isEqualTo(queryId);
     }
 
     @Test
@@ -173,10 +179,32 @@ public class AnswerGenerationServiceTest {
         String versionSql = sqlCaptor.getValue();
 
         assertThat(versionSql.contains("MAX(a.version)")).isTrue();
-        assertThat(versionSql.contains("a.case_id = :caseId")).isTrue();
-        assertThat(versionSql.contains("a.query_id = :queryId")).isTrue();
-        assertThat(versionSql.contains("a.doc_id = :docId")).isTrue();
+        assertThat(versionSql.contains("a.case_id = :case_id")).isTrue();
+        assertThat(versionSql.contains("a.query_id = :query_id")).isTrue();
 
         verify(jdbcTemplate).update(eq(SQL_UPSERT_ANSWER), any(MapSqlParameterSource.class));
+    }
+
+    @Test
+    void shouldPassCorrectParamsToStatusUpdate() {
+        // given
+        when(jdbcTemplate.queryForObject(eq(NEXT_VERSION_SQL), any(MapSqlParameterSource.class), eq(Integer.class)))
+                .thenReturn(2);
+
+        when(jdbcTemplate.update(eq(SQL_UPSERT_ANSWER), any(MapSqlParameterSource.class))).thenReturn(1);
+
+        // when
+        service.upsertAnswer(caseId, queryId, "answer", "llmInput", docId);
+
+        // then
+        verify(jdbcTemplate, times(2)).update(anyString(), paramCaptor.capture());
+
+        // 2nd call = status update
+        MapSqlParameterSource statusParams = paramCaptor.getAllValues().get(1);
+
+        assertThat(statusParams.getValue("case_id")).isEqualTo(caseId);
+        assertThat(statusParams.getValue("query_id")).isEqualTo(queryId);
+        assertThat(statusParams.getValue("doc_id")).isEqualTo(docId);
+        assertThat(statusParams.getValue("version")).isEqualTo(2);
     }
 }

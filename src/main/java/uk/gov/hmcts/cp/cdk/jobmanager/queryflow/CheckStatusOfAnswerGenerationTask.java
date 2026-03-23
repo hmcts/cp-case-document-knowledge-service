@@ -79,6 +79,9 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
             if (ANSWER_GENERATED == answerResponseBody.getStatus()) {
                 final String llmInputJson = getLlmJson(answerResponseBody.getDocumentChunks(), caseId, documentId, queryId);
                 answerGenerationService.upsertAnswer(caseId, queryId, answerResponseBody.getLlmResponse(), llmInputJson, documentId);
+
+                log.info("Answer Generation updated in the DB for caseId={}, docId={}, queryId={}, transactionId={}, task completed.",
+                        caseId, documentId, queryId, transactionId);
             }
 
             if (ANSWER_GENERATION_FAILED == answerResponseBody.getStatus()) {

@@ -95,6 +95,18 @@ public class TaskUtils {
                 .addValue("doc_id", documentId);
     }
 
+    public static MapSqlParameterSource buildCaseStatusParams(final UUID caseId,
+                                                              final UUID queryId,
+                                                              final UUID documentId,
+                                                              final Integer version
+    ) {
+        return new MapSqlParameterSource()
+                .addValue("case_id", caseId)
+                .addValue("query_id", queryId)
+                .addValue("doc_id", documentId)
+                .addValue("version", version);
+    }
+
     // ---------- ExecutionContext helpers ----------
 
     /**
