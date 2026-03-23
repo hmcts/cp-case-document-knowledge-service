@@ -81,7 +81,7 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
                 updatedJobData.add(CTX_COURTDOCUMENT_ID_KEY, info.courtDocumentId());
 
                 final Optional<UUID> existingDocUuid =
-                        documentIdResolver.resolveExistingDocId(caseIdUuidOptional.get(), UUID.fromString(info.materialId()));
+                        documentIdResolver.resolveExistingDocIdForDefendant(caseIdUuidOptional.get(), UUID.fromString(info.materialId()),UUID.fromString(info.defendantId()));
 
                 if (existingDocUuid.isPresent()) {
                     log.info("Resolved existing docId={} for caseId={}, materialId={} , hence skipping upload: ", existingDocUuid.get(), caseIdUuidOptional.get(), info.materialId());
@@ -94,7 +94,6 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
                 persistCaseDocument(
                         UUID.fromString(newDocId),
                         caseIdUuidOptional.get(),
-                        UUID.fromString(defendantId),
                         info
                 );
 
@@ -152,7 +151,6 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
 
     private void persistCaseDocument(final UUID docId,
                                      final UUID caseId,
-                                     final UUID defendantId,
                                      final LatestMaterialInfo info) {
 
         final CaseDocument entity = new CaseDocument();
