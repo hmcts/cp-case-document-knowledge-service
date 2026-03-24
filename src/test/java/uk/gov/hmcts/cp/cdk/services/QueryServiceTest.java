@@ -95,7 +95,7 @@ class QueryServiceTest {
         final UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         final OffsetDateTime eff = OffsetDateTime.parse("2025-05-01T12:00:00Z");
 
-        final QueriesAsOfRepository.QueryAsOfView queryAsOfViewRow = new QueriesAsOfRepository.QueryAsOfView(qid, caseId, "L", "UQ", "QP", eff.toInstant(), "ANSWER_AVAILABLE", OffsetDateTime.now().toInstant(), 2);
+        final QueriesAsOfRepository.QueryAsOfView queryAsOfViewRow = new QueriesAsOfRepository.QueryAsOfView(qid, caseId, "L", "UQ", "QP", eff.toInstant(), "ANSWER_AVAILABLE", OffsetDateTime.now().toInstant(), 2,QueryLevel.CASE.toString());
         when(asOfRepo.listForCaseAsOf(eq(caseId), any())).thenReturn(List.of(queryAsOfViewRow));
 
         final CaseDocument doc = new CaseDocument();
@@ -129,7 +129,7 @@ class QueryServiceTest {
         final UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         final OffsetDateTime eff = OffsetDateTime.parse("2025-05-01T12:00:00Z");
 
-        final QueriesAsOfRepository.QueryAsOfView queryAsOfViewRow = new QueriesAsOfRepository.QueryAsOfView(qid, caseId, "L", "UQ", "QP", eff.toInstant(), null, OffsetDateTime.now().toInstant(), 2);
+        final QueriesAsOfRepository.QueryAsOfView queryAsOfViewRow = new QueriesAsOfRepository.QueryAsOfView(qid, caseId, "L", "UQ", "QP", eff.toInstant(), null, OffsetDateTime.now().toInstant(), 2,QueryLevel.CASE.toString());
         when(asOfRepo.listForCaseAsOf(eq(caseId), any())).thenReturn(List.of(queryAsOfViewRow));
 
         final QueryStatusResponse resp = service.listForCaseAsOf(caseId, eff, "u-123");
@@ -145,7 +145,7 @@ class QueryServiceTest {
         final UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         final OffsetDateTime eff = OffsetDateTime.parse("2025-05-01T12:00:00Z");
 
-        final QueriesAsOfRepository.QueryAsOfView queryAsOfViewRow = new QueriesAsOfRepository.QueryAsOfView(qid, caseId, "L", "UQ", "QP", eff.toInstant(), "ANSWER_AVAILABLE", OffsetDateTime.now().toInstant(), 2);
+        final QueriesAsOfRepository.QueryAsOfView queryAsOfViewRow = new QueriesAsOfRepository.QueryAsOfView(qid, caseId, "L", "UQ", "QP", eff.toInstant(), "ANSWER_AVAILABLE", OffsetDateTime.now().toInstant(), 2,QueryLevel.CASE.toString());
         when(asOfRepo.getOneForCaseAsOf(caseId, qid, eff)).thenReturn(queryAsOfViewRow);
 
         final QuerySummary s = service.getOneForCaseAsOf(caseId, qid, eff);
