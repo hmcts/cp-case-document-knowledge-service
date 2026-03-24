@@ -82,17 +82,20 @@ import org.springframework.http.ResponseEntity;
                     {
                       "queryId": "%s",
                       "userQuery": "Give me a concise case summary including parties, charges, hearing dates, and current status.",
-                      "queryPrompt": "Summarise the case in bullet points. Focus on parties, charges, hearing dates, and procedural status."
+                      "queryPrompt": "Summarise the case in bullet points. Focus on parties, charges, hearing dates, and procedural status.",
+                      "level": "CASE"
                     },
                     {
                       "queryId": "%s",
                       "userQuery": "Summarise the key evidence and exhibits (IDs, types, and relevance).",
-                      "queryPrompt": "List evidence/exhibits with IDs, types, short relevance notes; avoid speculation."
+                      "queryPrompt": "List evidence/exhibits with IDs, types, short relevance notes; avoid speculation.",
+                      "level": "CASE"
                     },
                     {
                       "queryId": "%s",
                       "userQuery": "What are the next procedural steps and likely timelines?",
-                      "queryPrompt": "Outline upcoming procedural steps with indicative timelines based on current case status."
+                      "queryPrompt": "Outline upcoming procedural steps with indicative timelines based on current case status.",
+                      "level": "CASE"
                     }
                   ]
                 }

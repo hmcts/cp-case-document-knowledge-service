@@ -202,6 +202,7 @@ class QueryServiceTest {
         item.setQueryId(qid);
         item.setUserQuery("UQ");
         item.setQueryPrompt("QP");
+        item.setLevel(uk.gov.hmcts.cp.openapi.model.cdk.QueryLevel.CASE);
         req.setEffectiveAt(eff);
         req.setQueries(List.of(item));
 
@@ -233,6 +234,7 @@ class QueryServiceTest {
         item.setQueryId(qid);
         item.setUserQuery("UQ");
         item.setQueryPrompt("QP");
+        item.setLevel(uk.gov.hmcts.cp.openapi.model.cdk.QueryLevel.CASE);
         req.setQueries(List.of(item));
 
         service.upsertDefinitions(req);

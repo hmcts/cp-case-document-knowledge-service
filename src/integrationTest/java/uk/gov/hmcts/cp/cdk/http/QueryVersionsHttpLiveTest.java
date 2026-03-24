@@ -3,6 +3,7 @@ package uk.gov.hmcts.cp.cdk.http;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryLevel;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -55,6 +56,7 @@ class QueryVersionsHttpLiveTest extends AbstractHttpLiveTest {
         q1.put("queryId", queryId.toString());
         q1.put("userQuery", "V1 user text");
         q1.put("queryPrompt", "V1 prompt");
+        q1.put("level", QueryLevel.CASE);
         b1.put("queries", List.of(q1));
         final ResponseEntity<String> r1 = http.postForEntity(baseUrl + "/queries", new HttpEntity<>(b1, headers), String.class);
         assertThat(r1.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
@@ -66,6 +68,7 @@ class QueryVersionsHttpLiveTest extends AbstractHttpLiveTest {
         q2.put("queryId", queryId.toString());
         q2.put("userQuery", "V2 user text");
         q2.put("queryPrompt", "V2 prompt");
+        q2.put("level", QueryLevel.CASE);
         b2.put("queries", List.of(q2));
         final ResponseEntity<String> r2 = http.postForEntity(baseUrl + "/queries", new HttpEntity<>(b2, headers), String.class);
         assertThat(r2.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
