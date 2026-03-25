@@ -1,13 +1,16 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY;
+
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPLOAD;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_COURTDOCUMENT_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_COUNT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOCIDS_ARRAY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_LATEST_DEFENDANT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
@@ -28,7 +31,10 @@ import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
 import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
@@ -62,7 +68,7 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
 
         final String caseIdString = jobData.getString(CTX_CASE_ID_KEY, null);
         final String userId = jobData.getString(CPPUID, null);
-        String defendantId = jobData.getString(CTX_DEFENDANT_ID_KEY, null);
+        final int defendantCount = jobData.getInt(CTX_DEFENDANT_COUNT, 0);
         final String requestId = jobData.getString("requestId", "unknown");
         Optional<UUID> caseIdUuidOptional;
 
@@ -71,31 +77,67 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
 
             final List<LatestMaterialInfo> materials =
                     progressionClient.getCourtDocumentsForAllDefendants(caseIdUuidOptional.get(), userId);
+            Map<String, String> defendantToDocIdMap = new HashMap<>();
 
             for (LatestMaterialInfo info : materials) {
-
-                JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
-                updatedJobData.add(CTX_MATERIAL_ID_KEY, info.materialId());
-                updatedJobData.add(CTX_MATERIAL_NAME, info.materialName());
-                updatedJobData.add(CTX_DEFENDANT_ID_KEY, info.defendantId());
-                updatedJobData.add(CTX_COURTDOCUMENT_ID_KEY, info.courtDocumentId());
-
-                final Optional<UUID> existingDocUuid =
-                        documentIdResolver.resolveExistingDocIdForDefendant(caseIdUuidOptional.get(), UUID.fromString(info.materialId()),UUID.fromString(info.defendantId()));
+                UUID materialUuid = UUID.fromString(info.materialId());
+                UUID defendantUuid = UUID.fromString(info.defendantId());
+                Optional<UUID> existingDocUuid =
+                        documentIdResolver.resolveExistingDocIdForDefendant(
+                                caseIdUuidOptional.get(),
+                                materialUuid,
+                                defendantUuid
+                        );
 
                 if (existingDocUuid.isPresent()) {
-                    log.info("Resolved existing docId={} for caseId={}, materialId={} , hence skipping upload: ", existingDocUuid.get(), caseIdUuidOptional.get(), info.materialId());
+                    log.info("Skipping defendantId={} as doc already exists", info.defendantId());
                     continue;
                 }
+                String newDocId = UUID.randomUUID().toString();
+                defendantToDocIdMap.put(info.defendantId(), newDocId);
 
-                final String newDocId = UUID.randomUUID().toString();
-
-                updatedJobData.add(CTX_DOC_ID_KEY, newDocId);
                 persistCaseDocument(
                         UUID.fromString(newDocId),
                         caseIdUuidOptional.get(),
                         info
                 );
+            }
+
+            String latestDefendantId = materials.stream()
+                    .filter(m -> defendantToDocIdMap.containsKey(m.defendantId()))
+                    .filter(m -> m.uploadDateTime() != null)
+                    .max(Comparator.comparing(LatestMaterialInfo::uploadDateTime))
+                    .map(LatestMaterialInfo::defendantId)
+                    .orElse(null);
+            log.info("Latest defendant identified: {}", latestDefendantId);
+
+            var docIdsArrayBuilder = Json.createArrayBuilder();
+            var defendantIdsArrayBuilder = Json.createArrayBuilder();
+
+            defendantToDocIdMap.forEach((defendantId, docId) -> {
+                defendantIdsArrayBuilder.add(defendantId);
+                docIdsArrayBuilder.add(docId);
+            });
+
+            var docIdsArray = docIdsArrayBuilder.build();
+            var defendantIdsArray = defendantIdsArrayBuilder.build();
+
+            for (LatestMaterialInfo info : materials) {
+
+                String defendantId = info.defendantId();
+                if (!defendantToDocIdMap.containsKey(defendantId)) {
+                    continue;
+                }
+
+                JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
+                updatedJobData.add(CTX_DOC_ID_KEY, defendantToDocIdMap.get(defendantId));
+                updatedJobData.add(CTX_MATERIAL_ID_KEY, info.materialId());
+                updatedJobData.add(CTX_MATERIAL_NAME, info.materialName());
+                updatedJobData.add(CTX_DEFENDANT_ID_KEY, info.defendantId());
+                updatedJobData.add(CTX_COURTDOCUMENT_ID_KEY, info.courtDocumentId());
+                updatedJobData.add(CTX_DOCIDS_ARRAY, docIdsArray);
+                boolean isLatest = defendantId.equals(latestDefendantId);
+                updatedJobData.add(CTX_LATEST_DEFENDANT, isLatest);
 
                 final String retrieveMaterialTask = ingestionProperties.getFeature().isUseNewUploadDocumentApi()
                         ? RETRIEVE_MATERIAL_AND_UPLOAD

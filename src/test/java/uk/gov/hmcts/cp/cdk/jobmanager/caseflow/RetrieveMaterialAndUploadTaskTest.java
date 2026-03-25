@@ -16,6 +16,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.storage.DocumentBlobMetadata;
@@ -60,6 +61,14 @@ public class RetrieveMaterialAndUploadTaskTest {
     @Mock
     private DocumentIngestionInitiationApi documentIngestionInitiationApi;
 
+    @Mock
+    private IngestionProperties ingestionProperties;
+
+    @Mock
+    private IngestionProperties.Feature feature;
+
+
+
     @Captor
     private ArgumentCaptor<ExecutionInfo> executionInfoCaptor;
 
@@ -83,7 +92,8 @@ public class RetrieveMaterialAndUploadTaskTest {
                 uploadProperties,
                 retryProperties,
                 executionService,
-                documentIngestionInitiationApi
+                documentIngestionInitiationApi,
+                ingestionProperties
         );
 
         documentId = UUID.randomUUID();
@@ -108,9 +118,13 @@ public class RetrieveMaterialAndUploadTaskTest {
     @Test
     void shouldUploadDocumentAndScheduleNextTask() {
 
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
         when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
         when(uploadProperties.fileExtension()).thenReturn(".pdf");
         when(uploadProperties.contentType()).thenReturn("application/pdf");
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
         when(progressionClient.getMaterialDownloadUrl(any(), any()))
                 .thenReturn(Optional.of("https://progression/download/url"));
 

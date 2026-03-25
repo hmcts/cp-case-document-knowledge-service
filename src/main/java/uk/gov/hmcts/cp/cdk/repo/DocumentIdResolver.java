@@ -39,6 +39,11 @@ public class DocumentIdResolver {
          ORDER BY ingestion_phase_at DESC
          LIMIT 1
         """;
+    static final String SQL_FIND_INGESTION_STATUS = """
+    SELECT ingestion_phase
+      FROM case_documents
+     WHERE doc_id = :doc_id
+    """;
     private final NamedParameterJdbcTemplate jdbc;
 
     /**
@@ -83,5 +88,23 @@ public class DocumentIdResolver {
         }
 
         return result;
+    }
+
+    public Optional<String> findIngestionStatus(final UUID docId) {
+
+        try {
+            final MapSqlParameterSource params = new MapSqlParameterSource()
+                    .addValue("doc_id", docId);
+
+            final List<String> rows = jdbc.query(SQL_FIND_INGESTION_STATUS, params,
+                    (rs, rowNum) -> rs.getString("ingestion_phase")
+            );
+
+            return rows.stream().findFirst();
+
+        } catch (Exception e) {
+            log.error("Failed to fetch ingestion status for docId={}", docId, e);
+            return Optional.empty();
+        }
     }
 }

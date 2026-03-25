@@ -6,6 +6,8 @@ import static java.time.format.DateTimeFormatter.ofPattern;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_DOCUMENT_INGESTION_STATUS;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPLOAD;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_CASE_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_DEFENDANT_ID;
@@ -25,6 +27,7 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.storage.DocumentBlobMetadata;
@@ -70,6 +73,7 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
     private final JobManagerRetryProperties retryProperties;
     private final ExecutionService executionService;
     private final DocumentIngestionInitiationApi documentIngestionInitiationApi;
+    private final IngestionProperties ingestionProperties;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -140,9 +144,13 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
             updatedJobData.add(CTX_DOC_REFERENCE_KEY, fileStorageLocation.getDocumentReference());
             updatedJobData.add(CTX_BLOB_NAME_KEY, blobName);
 
+            final String checkIngestionTask = ingestionProperties.getFeature().isUseMultiDefendant()
+                    ? CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS
+                    : CHECK_DOCUMENT_INGESTION_STATUS;
+
             final ExecutionInfo executionInfoNew = executionInfo()
                     .from(executionInfo)
-                    .withAssignedTaskName(CHECK_DOCUMENT_INGESTION_STATUS)
+                    .withAssignedTaskName(checkIngestionTask)
                     .withJobData(updatedJobData.build())
                     .withExecutionStatus(ExecutionStatus.STARTED)
                     .build();
