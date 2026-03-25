@@ -25,6 +25,7 @@ public final class JobManagerKeys {
         public static final String ROOM_ID = "roomId";
         public static final String DATE = "date";
         public static final String CPPUID = "cppuid";
+        public static final String REQUEST_ID = "requestId";
 
 
         private Params() {

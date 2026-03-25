@@ -50,7 +50,7 @@ public class CheckAllDocumentsIngestionStatusTask implements ExecutableTask {
             return complete(executionInfo);
         }
         for (UUID docid : docIds) {
-            Optional<String> ingestionPhaseOpt = documentIdResolver.findIngestionStatus(docid);
+            final Optional<String> ingestionPhaseOpt = documentIdResolver.findIngestionStatus(docid);
 
             if (ingestionPhaseOpt.isEmpty() || !DocumentIngestionPhase.INGESTED.toString().equals(ingestionPhaseOpt.get())) {
                 log.info("Document {} not ingested yet → retrying as current status is {}", docid,ingestionPhaseOpt.get());
@@ -58,7 +58,7 @@ public class CheckAllDocumentsIngestionStatusTask implements ExecutableTask {
             }
         }
         log.info("All documents are INGESTED. Proceeding with query generation.");
-        ExecutionInfo executionInfoNew = executionInfo()
+        final ExecutionInfo executionInfoNew = executionInfo()
                 .from(executionInfo)
                 .withAssignedTaskName(GENERATE_ANSWER_FOR_QUERY)
                 .withJobData(jobData)
@@ -67,7 +67,7 @@ public class CheckAllDocumentsIngestionStatusTask implements ExecutableTask {
 
         executionService.executeWith(executionInfoNew);
 
-        return ExecutionInfo.executionInfo()
+        return executionInfo()
                 .from(executionInfo)
                 .withExecutionStatus(ExecutionStatus.COMPLETED)
                 .build();
@@ -75,7 +75,7 @@ public class CheckAllDocumentsIngestionStatusTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        var retry = retryProperties.getVerifyDocumentStatus();
+        final var retry = retryProperties.getVerifyDocumentStatus();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())
@@ -83,7 +83,6 @@ public class CheckAllDocumentsIngestionStatusTask implements ExecutableTask {
                         .toList()
         );
     }
-
 
     private ExecutionInfo retry(final ExecutionInfo executionInfo) {
         return executionInfo()

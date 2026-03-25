@@ -125,14 +125,15 @@ class CheckCaseEligibilityTaskTest {
     @Test
     void shouldComplete_whenZeroDefendants() {
 
-        ProsecutionCaseEligibilityInfo info =
-                new ProsecutionCaseEligibilityInfo(
+        final ProsecutionCaseEligibilityInfo info = new ProsecutionCaseEligibilityInfo(
                         caseId.toString(),
                         List.of()
                 );
 
         when(progressionClient.getProsecutionCaseEligibilityInfo(caseId, "cppuid-123"))
                 .thenReturn(Optional.of(info));
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(true);
 
         ExecutionInfo result = task.execute(executionInfo);
 

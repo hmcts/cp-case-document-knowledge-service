@@ -1,5 +1,6 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
+import static jakarta.json.Json.createObjectBuilder;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_ALL_DOCUMENTS_INGESTION_STATUS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
@@ -8,6 +9,8 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDAN
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_LATEST_DEFENDANT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERY_LEVEL;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.normalise;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_FAILED;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SUCCESS;
@@ -50,33 +53,19 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask {
 
-
     private final DocumentIngestionStatusApi documentIngestionStatusApi;
     private final CaseDocumentRepository caseDocumentRepository;
     private final QueryVersionRepository queryVersionRepository;
     private final ExecutionService executionService;
     private final JobManagerRetryProperties retryProperties;
 
-    private static UUID parseUuid(final String raw) {
-        try {
-            return raw != null ? UUID.fromString(raw) : null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private static String normalise(final String value, final int max) {
-        if (value == null) return null;
-        return value.length() <= max ? value : value.substring(0, max);
-    }
-
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
 
         final JsonObject jobData = executionInfo.getJobData();
 
-        final UUID documentId = parseUuid(jobData.getString("docId", null));
-        final UUID caseId = parseUuid(jobData.getString("caseId", null));
+        final UUID documentId = parseUuidOrNull(jobData.getString("docId", null));
+        final UUID caseId = parseUuidOrNull(jobData.getString("caseId", null));
         final String blobName = jobData.getString("blobName", null);
         final boolean isLatestDefendant = jobData.getBoolean(CTX_LATEST_DEFENDANT, false);
         final String defendantId = jobData.getString(CTX_DEFENDANT_ID_KEY);
@@ -110,28 +99,23 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
             final String status = normalise(rawStatus, 255);
 
             if (INGESTION_SUCCESS.name().equalsIgnoreCase(status)) {
+
                 updateIngestionPhase(documentId, DocumentIngestionPhase.INGESTED);
                 log.info("INGESTION SUCCESS identifier='{}', docId={}", blobName, documentId);
-                final List<QueryVersionRepository.SnapshotDefinition> rows =
-                        queryVersionRepository.snapshotDefinitionsAsOf(utcNow());
-                Map<String, List<UUID>> queriesByLevel = rows.stream()
-                        .filter(r -> r.queryId() != null && r.level() != null)
-                        .collect(Collectors.groupingBy(
-                                r -> r.level(),
-                                Collectors.mapping(QueryVersionRepository.SnapshotDefinition::queryId, Collectors.toList())
-                        ));
 
-                List<UUID> caseQueries = queriesByLevel.getOrDefault(QueryLevel.CASE.toString(), List.of());
+                final Map<String, List<UUID>> queriesByLevel = getQueriesByLevel();
+                final List<UUID> caseQueries = queriesByLevel.getOrDefault(QueryLevel.CASE.toString(), List.of());
                 log.info("{} Queries count: {}", QueryLevel.CASE, caseQueries.size());
+
                 if (isLatestDefendant && !caseQueries.isEmpty()) {
 
                     for (UUID questionId : caseQueries) {
-                        JsonObject singleCaseJobData = Json.createObjectBuilder(jobData)
+                        final JsonObject singleCaseJobData = createObjectBuilder(jobData)
                                 .add(CTX_SINGLE_QUERY_ID, questionId.toString())
                                 .add(CTX_QUERY_LEVEL, QueryLevel.CASE.toString())
                                 .build();
 
-                        ExecutionInfo executionInfoNew = executionInfo()
+                        final ExecutionInfo executionInfoNew = executionInfo()
                                 .from(executionInfo)
                                 .withAssignedTaskName(GENERATE_ANSWER_FOR_QUERY)
                                 .withJobData(singleCaseJobData)
@@ -143,16 +127,17 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
                         log.info("Created {} for docId={} questionId={} ", GENERATE_ANSWER_FOR_QUERY, documentId, questionId);
                     }
                 }
-                List<UUID> caseAllDocsQueries = queriesByLevel.getOrDefault(QueryLevel.CASE_ALL_DOCUMENTS.toString(), List.of());
+
+                final List<UUID> caseAllDocsQueries = queriesByLevel.getOrDefault(QueryLevel.CASE_ALL_DOCUMENTS.toString(), List.of());
                 if (isLatestDefendant && !caseAllDocsQueries.isEmpty()) {
 
                     for (UUID questionId : caseAllDocsQueries) {
-                        JsonObject singleCaseJobData = Json.createObjectBuilder(jobData)
+                        final JsonObject singleCaseJobData = createObjectBuilder(jobData)
                                 .add(CTX_SINGLE_QUERY_ID, questionId.toString())
                                 .add(CTX_QUERY_LEVEL, QueryLevel.CASE_ALL_DOCUMENTS.toString())
                                 .build();
 
-                        ExecutionInfo executionInfoNew = executionInfo()
+                        final ExecutionInfo executionInfoNew = executionInfo()
                                 .from(executionInfo)
                                 .withAssignedTaskName(CHECK_ALL_DOCUMENTS_INGESTION_STATUS)
                                 .withJobData(singleCaseJobData)
@@ -164,10 +149,11 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
                         log.info("Created {} for docId={} questionId={} ", GENERATE_ANSWER_FOR_QUERY, documentId, questionId);
                     }
                 }
-                List<UUID> defendantQueries = queriesByLevel.getOrDefault(QueryLevel.DEFENDANT.toString(), List.of());
+
+                final List<UUID> defendantQueries = queriesByLevel.getOrDefault(QueryLevel.DEFENDANT.toString(), List.of());
                 if (!defendantQueries.isEmpty()) {
                         for (UUID queryId : defendantQueries) {
-                            JsonObject job = Json.createObjectBuilder(jobData)
+                            JsonObject job = createObjectBuilder(jobData)
                                     .add(CTX_SINGLE_QUERY_ID, queryId.toString())
                                     .add(CTX_QUERY_LEVEL, QueryLevel.DEFENDANT.toString())
                                     .build();
@@ -207,6 +193,15 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
         }
         log.debug("Ingestion status not complete for identifier='{}' → retrying", blobName);
         return retry(executionInfo);
+    }
+
+    private @NotNull Map<String, List<UUID>> getQueriesByLevel() {
+        return queryVersionRepository.snapshotDefinitionsAsOf(utcNow()).stream()
+                .filter(r -> r.queryId() != null && r.level() != null)
+                .collect(Collectors.groupingBy(
+                        QueryVersionRepository.SnapshotDefinition::level,
+                        Collectors.mapping(QueryVersionRepository.SnapshotDefinition::queryId, Collectors.toList())
+                ));
     }
 
     @Override

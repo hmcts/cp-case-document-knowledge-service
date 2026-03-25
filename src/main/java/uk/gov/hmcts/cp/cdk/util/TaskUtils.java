@@ -159,4 +159,10 @@ public class TaskUtils {
         }
         return result;
     }
+
+    public static String normalise(final String value, final int max) {
+        if (value == null) return null;
+        return value.length() <= max ? value : value.substring(0, max);
+    }
+
 }
