@@ -23,12 +23,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
+@Slf4j
 @Transactional(readOnly = true)
 public class AnswerService {
 
@@ -67,24 +69,27 @@ public class AnswerService {
                 .orElseThrow(() -> new IllegalArgumentException("No QueryVersion found for queryId " + queryId));
 
         QueryLevel level = latest.getLevel();
+        final OffsetDateTime asOf = Optional.ofNullable(at).orElse(utcNow());
 
         List<?> answers =List.of();
         if (level != null) {
             switch (level) {
                 case CASE:
-                    answers = latestDocRepo.findLatestAsOfForCase(caseId, queryId, at)
+                    answers = latestDocRepo.findLatestAsOfForCase(caseId, queryId, asOf)
                             .map(List::of)
                             .orElseGet(List::of);
                     break;
 
                 case CASE_ALL_DOCUMENTS:
-                    answers = allDocsRepo.findLatestAsOfForCase(caseId, queryId, at)
+                    log.info("INSIDE CASE_ALL_DOCUMENTS branch");
+                    answers = allDocsRepo.findLatestAsOfForCase(caseId, queryId, asOf)
                             .map(List::of)
                             .orElseGet(List::of);
                     break;
 
                 case DEFENDANT:
-                    answers = defendantRepo.findAllAsOfForCase(caseId, queryId, at);
+                    log.info("INSIDE DEFENDANT branch");
+                    answers = defendantRepo.findAllAsOfForCase(caseId, queryId, asOf);
                     break;
 
                 default:
@@ -92,7 +97,7 @@ public class AnswerService {
             }
         }
         if (answers == null || answers.isEmpty()) {
-            Answer answerEntity = resolveAnswer(queryId, caseId, version, at);
+            Answer answerEntity = resolveAnswer(queryId, caseId, version, asOf);
             answers = (answerEntity != null) ? List.of(answerEntity) : List.of();
         }
 

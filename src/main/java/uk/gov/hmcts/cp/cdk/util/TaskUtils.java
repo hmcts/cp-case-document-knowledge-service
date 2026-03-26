@@ -4,6 +4,7 @@ import static java.util.Objects.nonNull;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -20,6 +21,16 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 public class TaskUtils {
 
     public static final String EMPTY_STRING = "";
+
+    public static final String GLOBAL_UPDATE_CASE_QUERY_STATUS =
+            "INSERT INTO case_query_status (case_id, query_id, status, status_at, doc_id, last_answer_version, last_answer_at)" +
+                    "VALUES (:case_id, :query_id, 'ANSWER_AVAILABLE', NOW(), :doc_id, :version, NOW())" +
+                    "ON CONFLICT (case_id, query_id) DO UPDATE SET" +
+                    "  status = 'ANSWER_AVAILABLE'," +
+                    "  status_at = EXCLUDED.status_at," +
+                    "  last_answer_version = EXCLUDED.last_answer_version," +
+                    "  last_answer_at = EXCLUDED.last_answer_at," +
+                    "  doc_id = COALESCE(EXCLUDED.doc_id, case_query_status.doc_id);";
 
     // ---------- UUID helpers ----------
 
@@ -163,6 +174,15 @@ public class TaskUtils {
     public static String normalise(final String value, final int max) {
         if (value == null) return null;
         return value.length() <= max ? value : value.substring(0, max);
+    }
+
+    public static  QueryLevel parseQueryLevel(String levelStr) {
+        try {
+            return levelStr == null ? null : QueryLevel.valueOf(levelStr.toUpperCase());
+        } catch (Exception e) {
+            log.warn("Invalid query level: {}", levelStr);
+            return null;
+        }
     }
 
 }

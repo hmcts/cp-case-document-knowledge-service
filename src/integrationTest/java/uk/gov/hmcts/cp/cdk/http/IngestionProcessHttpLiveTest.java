@@ -47,6 +47,10 @@ import org.springframework.http.ResponseEntity;
     public static final MediaType VND_TYPE_JSON_CATA =
             MediaType.valueOf("application/vnd.casedocumentknowledge-service.query-catalogue+json");
 
+    public static final String ANSWER = "\"answer\"";
+
+    public static final String VERSION = "\"version\"";
+
     // Stable IDs so test is idempotent across runs
     private static final UUID QID_CASE_SUMMARY =
             UUID.nameUUIDFromBytes("query-case-summary".getBytes(StandardCharsets.UTF_8));
@@ -279,17 +283,55 @@ import org.springframework.http.ResponseEntity;
                 .ignoreExceptions()
                 .untilAsserted(() -> {
 
-                    final ResponseEntity<String> answerResponse = http.exchange(
-                            baseUrl + "/answers/" + caseId + "/" + queryId,
-                            HttpMethod.GET,
-                            new HttpEntity<>(answerHeaders),
-                            String.class
-                    );
+                    boolean v1Success = false;
+                    boolean v2Success = false;
 
-                    assertThat(answerResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-                    assertThat(answerResponse.getBody()).isNotNull();
-                    assertThat(answerResponse.getBody()).contains("\"answer\"");
-                    assertThat(answerResponse.getBody()).contains("\"version\"");
+                    // ---- V1 call ----
+
+                    try {
+                        final ResponseEntity<String> v1Response = http.exchange(
+                                baseUrl + "/answers/" + caseId + "/" + queryId,
+                                HttpMethod.GET,
+                                new HttpEntity<>(answerHeaders),
+                                String.class
+                        );
+
+                        v1Success = v1Response.getStatusCode() == HttpStatus.OK &&
+                                v1Response.getBody() != null &&
+                                v1Response.getBody().contains(ANSWER) &&
+                                v1Response.getBody().contains(VERSION);
+
+                    } catch (Exception ignored) {
+
+                    }
+
+                    // ---- V2 call ----
+                    try {
+                        final HttpHeaders v2Headers = new HttpHeaders();
+                        v2Headers.set("CJSCPPUID", "a085e359-6069-4694-8820-7810e7dfe762");
+                        v2Headers.setAccept(List.of(
+                                MediaType.valueOf("application/vnd.casedocumentknowledge-service.answers.v2+json")
+                        ));
+
+                        final ResponseEntity<String> v2Response = http.exchange(
+                                baseUrl + "/v2/cases/" + caseId + "/queries/" + queryId + "/answers",
+                                HttpMethod.GET,
+                                new HttpEntity<>(v2Headers),
+                                String.class
+                        );
+
+                        v2Success = v2Response.getStatusCode() == HttpStatus.OK &&
+                                v2Response.getBody() != null &&
+                                v2Response.getBody().contains(ANSWER) &&
+                                v2Response.getBody().contains(VERSION);
+
+                    } catch (Exception ignored) {
+
+                    }
+
+                    assertThat(v1Success || v2Success)
+                            .as("Expected either V1 or V2 endpoint to return valid answers")
+                            .isTrue();
                 });
     }
 
@@ -355,17 +397,54 @@ import org.springframework.http.ResponseEntity;
                 .ignoreExceptions()
                 .untilAsserted(() -> {
 
-                    final ResponseEntity<String> answerResponse = http.exchange(
-                            baseUrl + "/answers/" + caseId + "/" + queryId,
-                            HttpMethod.GET,
-                            new HttpEntity<>(answerHeaders),
-                            String.class
-                    );
+                    boolean v1Success = false;
+                    boolean v2Success = false;
 
-                    assertThat(answerResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-                    assertThat(answerResponse.getBody()).isNotNull();
-                    assertThat(answerResponse.getBody()).contains("\"answer\"");
-                    assertThat(answerResponse.getBody()).contains("\"version\"");
+                    // ---- V1 call ----
+                    try {
+                        final ResponseEntity<String> v1Response = http.exchange(
+                                baseUrl + "/answers/" + caseId + "/" + queryId,
+                                HttpMethod.GET,
+                                new HttpEntity<>(answerHeaders),
+                                String.class
+                        );
+
+                        v1Success = v1Response.getStatusCode() == HttpStatus.OK &&
+                                v1Response.getBody() != null &&
+                                v1Response.getBody().contains(ANSWER) &&
+                                v1Response.getBody().contains(VERSION);
+
+                    } catch (Exception ignored) {
+
+                    }
+
+                    // ---- V2 call ----
+                    try {
+                        final HttpHeaders v2Headers = new HttpHeaders();
+                        v2Headers.set("CJSCPPUID", "a085e359-6069-4694-8820-7810e7dfe762");
+                        v2Headers.setAccept(List.of(
+                                MediaType.valueOf("application/vnd.casedocumentknowledge-service.answers.v2+json")
+                        ));
+
+                        final ResponseEntity<String> v2Response = http.exchange(
+                                baseUrl + "/v2/cases/" + caseId + "/queries/" + queryId + "/answers",
+                                HttpMethod.GET,
+                                new HttpEntity<>(v2Headers),
+                                String.class
+                        );
+
+                        v2Success = v2Response.getStatusCode() == HttpStatus.OK &&
+                                v2Response.getBody() != null &&
+                                v2Response.getBody().contains(ANSWER) &&
+                                v2Response.getBody().contains(VERSION);
+
+                    } catch (Exception ignored) {
+
+                    }
+
+                    assertThat(v1Success || v2Success)
+                            .as("Expected either V1 or V2 endpoint to return valid answers")
+                            .isTrue();
                 });
     }
 

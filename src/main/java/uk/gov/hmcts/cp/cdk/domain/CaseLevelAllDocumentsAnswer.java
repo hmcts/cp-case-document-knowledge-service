@@ -23,7 +23,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@EqualsAndHashCode
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -34,7 +34,7 @@ import lombok.Setter;
                 @Index(name = "idx_cl_all_case_query_ver_desc", columnList = "case_id,query_id,version DESC")
         }
 )
-public class CaseLevelAllDocumentsAnswer {
+public class CaseLevelAllDocumentsAnswer extends BaseAnswer {
 
     @EmbeddedId
     @AttributeOverrides({
@@ -44,12 +44,4 @@ public class CaseLevelAllDocumentsAnswer {
     })
     private AnswerId answerId;
 
-    @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt = utcNow();
-
-    @Column(name = "answer", nullable = false, columnDefinition = "TEXT")
-    private String answerText;
-
-    @Column(name = "llm_input", columnDefinition = "TEXT")
-    private String llmInput;
 }

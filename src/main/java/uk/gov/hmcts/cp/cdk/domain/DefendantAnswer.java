@@ -24,7 +24,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@EqualsAndHashCode
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -35,7 +35,7 @@ import lombok.Setter;
                 @Index(name = "idx_def_case_query_ver_desc", columnList = "case_id,query_id,version DESC")
         }
 )
-public class DefendantAnswer {
+public class DefendantAnswer extends DocumentAnswer {
 
     @EmbeddedId
     @AttributeOverrides({
@@ -46,15 +46,4 @@ public class DefendantAnswer {
     })
     private DefendantAnswerId answerId;
 
-    @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt = utcNow();
-
-    @Column(name = "answer", nullable = false, columnDefinition = "TEXT")
-    private String answerText;
-
-    @Column(name = "llm_input", columnDefinition = "TEXT")
-    private String llmInput;
-
-    @Column(name = "doc_id")
-    private UUID docId;
 }

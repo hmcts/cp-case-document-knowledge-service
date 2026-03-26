@@ -3,18 +3,26 @@ package uk.gov.hmcts.cp.cdk.jobmanager.queryflow;
 import static java.util.Objects.isNull;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_STATUS_OF_ANSWER_GENERATION;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERY_LEVEL;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_RAG_TRANSACTION_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.EMPTY_STRING;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseQueryLevel;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATED;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATION_FAILED;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATION_PENDING;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
+import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
+import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.services.AnswerGenerationService;
+import uk.gov.hmcts.cp.cdk.services.CaseLevelAllDocumentsAnswerService;
+import uk.gov.hmcts.cp.cdk.services.CaseLevelLatestDocumentAnswerService;
+import uk.gov.hmcts.cp.cdk.services.DefendantAnswerService;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.DocumentChunk;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullyAsynchronously;
@@ -51,12 +59,17 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
     private final ObjectMapper objectMapper;
     private final JobManagerRetryProperties retryProperties;
     private final AnswerGenerationService answerGenerationService;
+    private final CaseLevelAllDocumentsAnswerService caseLevelAllDocumentsAnswerService;
+    private final CaseLevelLatestDocumentAnswerService caseLevelLatestDocumentAnswerService;
+    private final DefendantAnswerService defendantAnswerService;
+    private final IngestionProperties ingestionProperties;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
 
         final JsonObject jobData = executionInfo.getJobData();
         final UUID transactionId = parseUuidOrNull(jobData.getString(CTX_RAG_TRANSACTION_ID, null));
+        final boolean isUseMultiDefendant = ingestionProperties.getFeature().isUseMultiDefendant();
 
         try {
             final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> userQueryAnswerResponse = documentInformationSummarisedAsynchronouslyApi.answerUserQueryStatus(transactionId.toString(), true);
@@ -75,10 +88,57 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
             final UUID caseId = parseUuidOrNull(jobData.getString(CTX_CASE_ID_KEY, null));
             final UUID documentId = parseUuidOrNull(jobData.getString(CTX_DOC_ID_KEY, null));
             final UUID queryId = parseUuidOrNull(jobData.getString(CTX_SINGLE_QUERY_ID, null));
+            final UUID defendantId = parseUuidOrNull(jobData.getString(CTX_DEFENDANT_ID_KEY, null));
+            final String levelStr = jobData.getString(CTX_QUERY_LEVEL, null);
+            final QueryLevel level = parseQueryLevel(levelStr);
 
             if (ANSWER_GENERATED == answerResponseBody.getStatus()) {
                 final String llmInputJson = getLlmJson(answerResponseBody.getDocumentChunks(), caseId, documentId, queryId);
-                answerGenerationService.upsertAnswer(caseId, queryId, answerResponseBody.getLlmResponse(), llmInputJson, documentId);
+                if (!isUseMultiDefendant) {
+                    answerGenerationService.upsertAnswer(caseId, queryId, answerResponseBody.getLlmResponse(), llmInputJson, documentId);
+                } else {
+                    switch (level) {
+                        case QueryLevel.CASE:
+                            caseLevelLatestDocumentAnswerService.upsert(
+                                    caseId,
+                                    queryId,
+                                    answerResponseBody.getLlmResponse(),
+                                    llmInputJson,
+                                    documentId
+                            );
+                            break;
+
+                        case QueryLevel.CASE_ALL_DOCUMENTS:
+                            caseLevelAllDocumentsAnswerService.upsert(
+                                    caseId,
+                                    queryId,
+                                    answerResponseBody.getLlmResponse(),
+                                    llmInputJson
+                            );
+                            break;
+
+                        case QueryLevel.DEFENDANT:
+                            defendantAnswerService.upsert(
+                                    caseId,
+                                    queryId,
+                                    defendantId,
+                                    answerResponseBody.getLlmResponse(),
+                                    llmInputJson,
+                                    documentId
+                            );
+                            break;
+                        case null, default:
+                            answerGenerationService.upsertAnswer(
+                                    caseId,
+                                    queryId,
+                                    answerResponseBody.getLlmResponse(),
+                                    llmInputJson,
+                                    documentId
+                            );
+                            break;
+                    }
+
+                }
 
                 log.info("Answer Generation updated in the DB for caseId={}, docId={}, queryId={}, transactionId={}, task completed.",
                         caseId, documentId, queryId, transactionId);
@@ -133,5 +193,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
 
         return EMPTY_STRING;
     }
+
+
+
 
 }

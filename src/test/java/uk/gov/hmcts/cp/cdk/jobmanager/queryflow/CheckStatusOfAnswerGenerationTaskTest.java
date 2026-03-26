@@ -20,8 +20,12 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.COMPLETED;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.INPROGRESS;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.STARTED;
 
+import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.services.AnswerGenerationService;
+import uk.gov.hmcts.cp.cdk.services.CaseLevelAllDocumentsAnswerService;
+import uk.gov.hmcts.cp.cdk.services.CaseLevelLatestDocumentAnswerService;
+import uk.gov.hmcts.cp.cdk.services.DefendantAnswerService;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus;
 import uk.gov.hmcts.cp.openapi.model.DocumentChunk;
@@ -75,6 +79,19 @@ class CheckStatusOfAnswerGenerationTaskTest {
     @Mock
     private AnswerGenerationService answerGenerationService;
 
+    @Mock
+    private CaseLevelAllDocumentsAnswerService caseLevelAllDocumentsAnswerService;
+    @Mock
+    private  CaseLevelLatestDocumentAnswerService caseLevelLatestDocumentAnswerService;
+    @Mock
+    private  DefendantAnswerService defendantAnswerService;
+
+    @Mock
+    private IngestionProperties ingestionProperties;
+
+    @Mock
+    private IngestionProperties.Feature feature;
+
     private ExecutionInfo executionInfo;
     private UUID transactionId;
     private UUID caseId;
@@ -83,7 +100,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @BeforeEach
     void setUp() {
-        task = new CheckStatusOfAnswerGenerationTask(api, objectMapper, retryProperties, answerGenerationService);
+        task = new CheckStatusOfAnswerGenerationTask(api, objectMapper, retryProperties, answerGenerationService,caseLevelAllDocumentsAnswerService,caseLevelLatestDocumentAnswerService,defendantAnswerService,ingestionProperties);
         transactionId = UUID.randomUUID();
         caseId = UUID.randomUUID();
         queryId = UUID.randomUUID();
@@ -105,6 +122,8 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @Test
     void shouldRetry_whenExceptionCallingRagApi() {
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
         doThrow(new IllegalStateException()).when(api).answerUserQueryStatus(transactionId.toString(), true);
 
         final ExecutionInfo result = task.execute(executionInfo);
@@ -114,6 +133,8 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @Test
     void shouldRetry_whenResponseIsNull() {
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
         when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(null);
 
         final ExecutionInfo result = task.execute(executionInfo);
@@ -123,6 +144,8 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @Test
     void shouldRetry_whenHttpStatusIsNot2xx() {
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
         final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
 
         when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(response);
@@ -134,6 +157,8 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @Test
     void shouldRetry_whenResponseBodyIsNull() {
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
         final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.ok(null);
 
         when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(response);
@@ -146,6 +171,8 @@ class CheckStatusOfAnswerGenerationTaskTest {
     @Test
     void shouldRetry_whenAnswerGenerationIsPending() {
         when(body.getStatus()).thenReturn(AnswerGenerationStatus.ANSWER_GENERATION_PENDING);
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
 
         final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.ok(body);
 
@@ -160,6 +187,8 @@ class CheckStatusOfAnswerGenerationTaskTest {
     void shouldSaveAnswerToCdkDatabase_andCompleteJob_whenAnswerGenerationSuccessful() {
         when(body.getStatus()).thenReturn(ANSWER_GENERATED);
         when(body.getLlmResponse()).thenReturn("llmResponse");
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
         when(body.getDocumentChunks()).thenReturn(List.of(new DocumentChunk(documentId.toString(), "doc-name", 1, "chunk1"),
                 new DocumentChunk(documentId.toString(), "doc-name", 2, "chunk2")));
 
@@ -178,7 +207,8 @@ class CheckStatusOfAnswerGenerationTaskTest {
     @Test
     void shouldNotSaveAnswerToCdkDatabase_andCompleteJob_whenAnswerGenerationFailed() {
         when(body.getStatus()).thenReturn(ANSWER_GENERATION_FAILED);
-
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
         final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.ok(body);
 
         when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(response);
