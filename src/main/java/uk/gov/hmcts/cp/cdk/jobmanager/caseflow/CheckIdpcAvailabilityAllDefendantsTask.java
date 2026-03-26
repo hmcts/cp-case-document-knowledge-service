@@ -9,7 +9,6 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPLOAD;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_COURTDOCUMENT_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_COUNT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOCIDS_ARRAY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
@@ -98,7 +97,6 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
                 }
                 final String newDocId = randomUUID().toString();
                 defendantToDocIdMap.put(info.defendantId(), newDocId);
-
                 persistCaseDocument(fromString(newDocId), caseIdUuidOptional.get(), info);
             }
 
@@ -111,22 +109,17 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
             log.info("Latest defendant identified: {}", latestDefendantId);
 
             var docIdsArrayBuilder = Json.createArrayBuilder();
-            var defendantIdsArrayBuilder = Json.createArrayBuilder();
-
             defendantToDocIdMap.forEach((defendantId, docId) -> {
-                defendantIdsArrayBuilder.add(defendantId);
                 docIdsArrayBuilder.add(docId);
             });
 
             var docIdsArray = docIdsArrayBuilder.build();
-            var defendantIdsArray = defendantIdsArrayBuilder.build();
 
             for (LatestMaterialInfo info : materials) {
                 final String defendantId = info.defendantId();
                 if (!defendantToDocIdMap.containsKey(defendantId)) {
                     continue;
                 }
-
                 final JsonObjectBuilder updatedJobData = createObjectBuilder(jobData);
                 updatedJobData.add(CTX_DOC_ID_KEY, defendantToDocIdMap.get(defendantId));
                 updatedJobData.add(CTX_MATERIAL_ID_KEY, info.materialId());
