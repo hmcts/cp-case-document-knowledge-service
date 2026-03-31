@@ -27,7 +27,7 @@ public final class AzureSasUtil {
                 "hello.pdf",   // blob
                 120));**/
 
-        LOGGER.info(" url : "+generateSasUrl("documents-new", "destination.pdf"));
+       // LOGGER.info(" url : "+generateSasUrl("documents-new", "destination.pdf"));
 
     }
 
