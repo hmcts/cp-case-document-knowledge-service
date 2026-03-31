@@ -26,7 +26,7 @@ public final class AzureSasUtil {
         /**LOGGER.info(sasUrlFromEnv("idpc-ai",
                 "hello.pdf",   // blob
                 120));**/
-
+        LOGGER.info("to invoke generateSasUrl method");
        // LOGGER.info(" url : "+generateSasUrl("documents-new", "destination.pdf"));
 
     }
