@@ -28,6 +28,22 @@ public class DocumentIdResolver {
              ORDER BY ingestion_phase_at DESC
              LIMIT 1
             """;
+
+    static final String SQL_FIND_EXISTING_DOC_FOR_DEFENDANT = """
+        SELECT doc_id
+          FROM case_documents
+         WHERE case_id = :case_id
+           AND material_id = :material_id
+           AND defendant_id = :defendant_id
+           AND ingestion_phase IN ('UPLOADED','INGESTED','WAITING_FOR_UPLOAD')
+         ORDER BY ingestion_phase_at DESC
+         LIMIT 1
+        """;
+    static final String SQL_FIND_INGESTION_STATUS = """
+    SELECT ingestion_phase
+      FROM case_documents
+     WHERE doc_id = :doc_id
+    """;
     private final NamedParameterJdbcTemplate jdbc;
 
     /**
@@ -48,5 +64,47 @@ public class DocumentIdResolver {
         }
 
         return result;
+    }
+
+    /**
+     * Attempts to resolve an existing document id for the given case, material, and defendant.
+     * Never throws; logs and returns {@link Optional#empty()} on error.
+     */
+    public Optional<UUID> resolveExistingDocIdForDefendant(final UUID caseId,
+                                                           final UUID materialId,
+                                                           final UUID defendantId) {
+        Optional<UUID> result = Optional.empty();
+
+        final MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("case_id", caseId)
+                .addValue("material_id", materialId)
+                .addValue("defendant_id", defendantId);
+
+        final List<UUID> rows = jdbc.query(SQL_FIND_EXISTING_DOC_FOR_DEFENDANT, params,
+                (rs, rowNum) -> (UUID) rs.getObject(1));
+
+        if (!rows.isEmpty()) {
+            result = Optional.ofNullable(rows.get(0));
+        }
+
+        return result;
+    }
+
+    public Optional<String> findIngestionStatus(final UUID docId) {
+
+        try {
+            final MapSqlParameterSource params = new MapSqlParameterSource()
+                    .addValue("doc_id", docId);
+
+            final List<String> rows = jdbc.query(SQL_FIND_INGESTION_STATUS, params,
+                    (rs, rowNum) -> rs.getString("ingestion_phase")
+            );
+
+            return rows.stream().findFirst();
+
+        } catch (Exception e) {
+            log.error("Failed to fetch ingestion status for docId={}", docId, e);
+            return Optional.empty();
+        }
     }
 }

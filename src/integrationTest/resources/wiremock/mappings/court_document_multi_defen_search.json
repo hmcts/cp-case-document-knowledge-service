@@ -1,0 +1,19 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/progression-query-api/query/api/rest/progression/courtdocumentsearch",
+    "queryParameters": {
+      "caseId": {
+        "equalTo": "e5fd29f1-fbce-409a-b451-6a7958c33f5a"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "court_document_search_multi_defendant_response.json"
+  }
+}

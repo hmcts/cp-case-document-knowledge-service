@@ -25,6 +25,7 @@ public interface QueriesAsOfRepository extends JpaRepository<uk.gov.hmcts.cp.cdk
                     qv.user_query,
                     qv.query_prompt,
                     qv.effective_at,
+                    qv.level,
                     ROW_NUMBER() OVER (PARTITION BY qv.query_id ORDER BY qv.effective_at DESC) AS rn
                   FROM query_versions qv
                   WHERE qv.effective_at <= :asOf
@@ -38,7 +39,8 @@ public interface QueriesAsOfRepository extends JpaRepository<uk.gov.hmcts.cp.cdk
                   ld.effective_at       AS effectiveAt,
                   cqs.status::text      AS status,
                   cqs.status_at         AS statusAt,
-                  q.display_order       AS displayOrder
+                  q.display_order       AS displayOrder,
+                  ld.level::text        AS "level"
                 FROM queries q
                 JOIN latest_def ld
                   ON ld.query_id = q.query_id AND ld.rn = 1
@@ -57,6 +59,7 @@ public interface QueriesAsOfRepository extends JpaRepository<uk.gov.hmcts.cp.cdk
                     qv.user_query,
                     qv.query_prompt,
                     qv.effective_at,
+                    qv.level,
                     ROW_NUMBER() OVER (PARTITION BY qv.query_id ORDER BY qv.effective_at DESC) AS rn
                   FROM query_versions qv
                   WHERE qv.query_id = :queryId
@@ -71,7 +74,8 @@ public interface QueriesAsOfRepository extends JpaRepository<uk.gov.hmcts.cp.cdk
                   ld.effective_at       AS effectiveAt,
                   cqs.status::text      AS status,
                   cqs.status_at         AS statusAt,
-                  q.display_order       AS displayOrder
+                  q.display_order       AS displayOrder,
+                  ld.level::text        AS "level"
                 FROM queries q
                 JOIN latest_def ld
                   ON ld.query_id = q.query_id AND ld.rn = 1
@@ -93,6 +97,7 @@ public interface QueriesAsOfRepository extends JpaRepository<uk.gov.hmcts.cp.cdk
             Instant effectiveAt,
             String status,
             Instant statusAt,
-            Integer displayOrder) {
+            Integer displayOrder,
+            String level) {
     }
 }

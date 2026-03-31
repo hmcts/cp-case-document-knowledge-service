@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
@@ -135,6 +138,42 @@ public class ProgressionClientImpl implements ProgressionClient {
         return Optional.of(
                 new ProsecutionCaseEligibilityInfo(prosecutionCase.id(), defendantIds)
         );
+    }
+
+
+    @Override
+    @SuppressWarnings({"PMD.OnlyOneReturn", "PMD.UseExplicitTypes"})
+    public List<LatestMaterialInfo> getCourtDocumentsForAllDefendants(final UUID caseId, final String userId) {
+
+        final URI uri = UriComponentsBuilder
+                .fromPath(courtDocsPath)
+                .queryParam("caseId", caseId)
+                .build()
+                .toUri();
+
+        final CourtDocumentSearchResponse response = restClient.get()
+                .uri(uri)
+                .header(cppuidHeader, userId)
+                .header(HttpHeaders.ACCEPT, acceptForCourtDocSearch)
+                .retrieve()
+                .body(CourtDocumentSearchResponse.class);
+
+        if (response == null || response.documentIndices() == null || response.documentIndices().isEmpty()) {
+            return List.of();
+        }
+
+        return response.documentIndices().stream()
+                .map(mapper::mapToLatestMaterialInfo)
+                .flatMap(Optional::stream)
+                .filter(info -> info.defendantId() != null)
+                .collect(Collectors.toMap(
+                        LatestMaterialInfo::defendantId,
+                        Function.identity(),
+                        BinaryOperator.maxBy(Comparator.comparing(LatestMaterialInfo::uploadDateTime))
+                ))
+                .values()
+                .stream()
+                .toList();
     }
 
 }

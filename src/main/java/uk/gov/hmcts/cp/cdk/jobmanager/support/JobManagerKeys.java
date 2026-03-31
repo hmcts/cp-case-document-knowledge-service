@@ -8,6 +8,11 @@ public final class JobManagerKeys {
     public static final String CTX_BLOB_NAME_KEY  ="blobName";
     public static final String CTX_MATERIAL_ID_KEY = "materialId";
     public static final String CTX_DEFENDANT_ID_KEY = "defendantId";
+    public static final String CTX_DEFENDANT_COUNT= "defendantCount";
+    public static final String CTX_LATEST_DEFENDANT= "latestDefendant";
+    public static final String CTX_DOCIDS_ARRAY= "docIdsList";
+    public static final String CTX_QUERY_LEVEL= "queryLevel";
+
     public static final String CTX_COURTDOCUMENT_ID_KEY = "courtDocumentId";
     public static final String CTX_MATERIAL_NAME = "materialName";
     public static final String CTX_SINGLE_QUERY_ID = "CTX_SINGLE_QUERY_ID";
@@ -20,6 +25,7 @@ public final class JobManagerKeys {
         public static final String ROOM_ID = "roomId";
         public static final String DATE = "date";
         public static final String CPPUID = "cppuid";
+        public static final String REQUEST_ID = "requestId";
 
 
         private Params() {

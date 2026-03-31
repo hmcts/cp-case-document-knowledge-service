@@ -6,6 +6,7 @@ import static uk.gov.hmcts.cp.cdk.util.TimeUtils.toUtc;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
@@ -85,12 +86,22 @@ public class QueryService {
         querySummary.setUserQuery(row.userQuery());
         querySummary.setQueryPrompt(row.queryPrompt());
         querySummary.setEffectiveAt(toUtc(row.effectiveAt()));
-
+        querySummary.setLevel(mapLevel(row.level()));
         // status can be null; default it safely
         querySummary.setStatus(isNull(row.status())
                 ? QueryLifecycleStatus.ANSWER_NOT_AVAILABLE
                 : QueryLifecycleStatus.fromValue(row.status()));
         return querySummary;
+    }
+
+    private static uk.gov.hmcts.cp.openapi.model.cdk.QueryLevel mapLevel(String level) {
+        if (level == null) {
+            return null;
+        }
+        if (uk.gov.hmcts.cp.cdk.domain.QueryLevel.CASE_ALL_DOCUMENTS.toString().equals(level)) {
+            return uk.gov.hmcts.cp.openapi.model.cdk.QueryLevel.CASE;
+        }
+        return uk.gov.hmcts.cp.openapi.model.cdk.QueryLevel.valueOf(level);
     }
 
     private static QueryVersionSummary mapDefinitionRowToVersionSummary(final QueryVersionRepository.SnapshotDefinition row) {
@@ -100,6 +111,7 @@ public class QueryService {
         summary.setUserQuery(row.userQuery());
         summary.setQueryPrompt(row.queryPrompt());
         summary.setEffectiveAt(toUtc(row.effectiveAt()));
+        summary.setLevel(mapLevel(row.level()));
         return summary;
     }
 
@@ -195,11 +207,21 @@ public class QueryService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "queryPrompt must not be blank for " + queryId);
             }
 
+            final uk.gov.hmcts.cp.openapi.model.cdk.QueryLevel level = item.getLevel();
+
+            if (level == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "level must not be null for " + queryId
+                );
+            }
+
             final QueryVersion version = new QueryVersion();
             version.setQuery(query);
             version.setQueryVersionId(new QueryVersionId(queryId, effectiveAt));
             version.setUserQuery(userQuery);
             version.setQueryPrompt(queryPrompt);
+            version.setLevel(uk.gov.hmcts.cp.cdk.domain.QueryLevel.valueOf(item.getLevel().name()));
             queryVersionRepository.save(version);
         });
 

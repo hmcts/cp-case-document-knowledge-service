@@ -1,0 +1,779 @@
+{
+  "prosecutionCase": {
+    "cpsOrganisation": "A30AB00",
+    "defendants": [
+      {
+        "courtProceedingsInitiated": "2026-03-20T00:58:48.054Z",
+        "id": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+        "initiationCode": "C",
+        "masterDefendantId": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+        "offences": [
+          {
+            "arrestDate": "2005-11-19",
+            "chargeDate": "2004-12-09",
+            "count": 0,
+            "endorsableFlag": false,
+            "id": "4bce707c-7c6e-45e7-9631-4bc80135bc17",
+            "listingNumber": 1,
+            "maxPenalty": "S:L3",
+            "modeOfTrial": "Summary",
+            "offenceCode": "CA03010",
+            "offenceDateCode": 1,
+            "offenceDefinitionId": "6d4e6673-a075-35e9-9ded-448284bf316b",
+            "offenceLegislation": "Contrary to section 363(2) and (4) of the Communications Act 2003.",
+            "offenceLegislationWelsh": "Yn groes i adran 363(2) a (4) Deddf Cyfathrebu 2003.",
+            "offenceTitle": "Use a television set without a licence",
+            "offenceTitleWelsh": "Defnyddio set deledu heb drwydded",
+            "orderIndex": 2,
+            "startDate": "2004-12-09",
+            "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+          },
+          {
+            "arrestDate": "2005-11-19",
+            "chargeDate": "2004-12-09",
+            "convictionDate": "2026-03-21",
+            "count": 0,
+            "endorsableFlag": false,
+            "id": "7fae6e7b-70a4-4549-b0a2-7f27b04dbc41",
+            "listingNumber": 1,
+            "maxPenalty": "S:L3",
+            "modeOfTrial": "Summary",
+            "offenceCode": "TW01046",
+            "offenceDateCode": 1,
+            "offenceDefinitionId": "99f673ae-9505-37f6-853f-462be00ed38a",
+            "offenceLegislation": "Contrary to byelaw 19 and 31(1) of the Tyne and Wear Metro Byelaws made under sections 58 and 62 of the Tyneside Metropolitan Railway Act 1973.",
+            "offenceTitle": "Occupy reserved seat / berth without a valid ticket on the Tyne and Wear Metro",
+            "orderIndex": 1,
+            "startDate": "2004-12-09",
+            "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+          }
+        ],
+        "personDefendant": {
+          "arrestSummonsNumber": "TFL",
+          "bailStatus": {
+            "code": "C",
+            "description": "Custody",
+            "id": "12e69486-4d01-3403-a50a-7419ca040635"
+          },
+          "personDetails": {
+            "address": {
+              "address1": "gypqvjnZwE",
+              "address2": "StreetDescription",
+              "address3": "Locality2O"
+            },
+            "dateOfBirth": "2003-04-13",
+            "documentationLanguageNeeds": "ENGLISH",
+            "firstName": "Modesto",
+            "gender": "MALE",
+            "hearingLanguageNeeds": "ENGLISH",
+            "lastName": "Fisher",
+            "title": "MR"
+          },
+          "policeBailStatus": {
+            "code": "C",
+            "description": "Custody",
+            "id": "12e69486-4d01-3403-a50a-7419ca040635"
+          }
+        },
+        "prosecutionAuthorityReference": "TFL",
+        "prosecutionCaseId": "e5fd29f1-fbce-409a-b451-6a7958c33f5a"
+      },
+      {
+        "courtProceedingsInitiated": "2026-03-20T00:58:48.055Z",
+        "id": "3e5f84fb-4477-4ff6-a2bf-8dfd52ea86f1",
+        "masterDefendantId": "3e5f84fb-4477-4ff6-a2bf-8dfd52ea86f1",
+        "offences": [
+          {
+            "arrestDate": "2005-11-19",
+            "chargeDate": "2004-12-09",
+            "count": 0,
+            "endorsableFlag": false,
+            "id": "45866a55-7790-4e38-bd0e-a8b1463f92d7",
+            "listingNumber": 1,
+            "maxPenalty": "S:L3",
+            "modeOfTrial": "Summary",
+            "offenceCode": "TW01046",
+            "offenceDateCode": 1,
+            "offenceDefinitionId": "99f673ae-9505-37f6-853f-462be00ed38a",
+            "offenceLegislation": "Contrary to byelaw 19 and 31(1) of the Tyne and Wear Metro Byelaws made under sections 58 and 62 of the Tyneside Metropolitan Railway Act 1973.",
+            "offenceTitle": "Occupy reserved seat / berth without a valid ticket on the Tyne and Wear Metro",
+            "orderIndex": 1,
+            "startDate": "2004-12-09",
+            "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+          },
+          {
+            "arrestDate": "2005-11-19",
+            "chargeDate": "2004-12-09",
+            "count": 0,
+            "endorsableFlag": false,
+            "id": "dce06533-cf23-470f-8158-0287afe8e5f5",
+            "listingNumber": 1,
+            "maxPenalty": "S:L3",
+            "modeOfTrial": "Summary",
+            "offenceCode": "CA03011",
+            "offenceDateCode": 1,
+            "offenceDefinitionId": "b00b9ed1-18f5-38bd-99e1-e3d7f8d96f7d",
+            "offenceLegislation": "Contrary to section 363(3)(a) and (4) of the Communications Act 2003.",
+            "offenceLegislationWelsh": "Yn groes i adran 363(3)(a) a (4) Deddf Cyfathrebu 2003.",
+            "offenceTitle": "Possess a television set with intent to install / use without a licence",
+            "offenceTitleWelsh": "Meddu ar set deledu gan fwriadu'i osod/ddefnyddio heb drwydded",
+            "orderIndex": 2,
+            "startDate": "2004-12-09",
+            "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+          }
+        ],
+        "personDefendant": {
+          "arrestSummonsNumber": "TFL1",
+          "bailStatus": {
+            "code": "C",
+            "description": "Custody",
+            "id": "12e69486-4d01-3403-a50a-7419ca040635"
+          },
+          "personDetails": {
+            "address": {
+              "address1": "gypqvjnZwE",
+              "address2": "StreetDescription",
+              "address3": "Locality2O"
+            },
+            "dateOfBirth": "2003-04-13",
+            "documentationLanguageNeeds": "ENGLISH",
+            "firstName": "Jay",
+            "gender": "MALE",
+            "hearingLanguageNeeds": "ENGLISH",
+            "lastName": "Prohaska",
+            "title": "MS"
+          },
+          "policeBailStatus": {
+            "code": "C",
+            "description": "Custody",
+            "id": "12e69486-4d01-3403-a50a-7419ca040635"
+          }
+        },
+        "pncId": "11112222",
+        "prosecutionAuthorityReference": "TFL1",
+        "prosecutionCaseId": "e5fd29f1-fbce-409a-b451-6a7958c33f5a"
+      }
+    ],
+    "id": "e5fd29f1-fbce-409a-b451-6a7958c33f5a",
+    "initiationCode": "C",
+    "originatingOrganisation": "0300000",
+    "prosecutionCaseIdentifier": {
+      "address": {
+        "address1": "Criminal Justice Department",
+        "address2": "Derbyshire Constabulary",
+        "address3": "Butterley Hall",
+        "address4": "Ripley",
+        "address5": "Derby",
+        "postcode": "DE5 3RS"
+      },
+      "contact": {
+        "primaryEmail": "criminaldataderbyshire@derbyshire.police.uk"
+      },
+      "majorCreditorCode": "PO30",
+      "prosecutionAuthorityCode": "DERPF",
+      "prosecutionAuthorityId": "bdc190e7-c939-37ca-be4b-9f615d6ef40e",
+      "prosecutionAuthorityName": "Derbyshire Police",
+      "prosecutionAuthorityOUCode": "0300000",
+      "caseURN": "52GD7423826"
+    },
+    "caseStatus": "ACTIVE"
+  },
+  "linkedApplicationsSummary": [
+    {
+      "applicationId": "03a8ba29-4fb5-4dba-bfa7-d609cf5ff0d8",
+      "applicationTitle": "Application for a witness summons",
+      "applicationReference": "52GD7423826",
+      "applicationStatus": "LISTED",
+      "applicantDisplayName": "Modesto Fisher",
+      "applicantId": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+      "subjectId": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+      "isAppeal": false
+    }
+  ],
+  "hearingsAtAGlance": {
+    "courtApplications": [
+      {
+        "applicant": {
+          "id": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+          "masterDefendant": {
+            "masterDefendantId": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+            "personDefendant": {
+              "arrestSummonsNumber": "TFL",
+              "bailStatus": {
+                "code": "C",
+                "description": "Custody",
+                "id": "12e69486-4d01-3403-a50a-7419ca040635"
+              },
+              "personDetails": {
+                "address": {
+                  "address1": "gypqvjnZwE",
+                  "address2": "StreetDescription",
+                  "address3": "Locality2O"
+                },
+                "dateOfBirth": "2003-04-13",
+                "documentationLanguageNeeds": "ENGLISH",
+                "firstName": "Modesto",
+                "gender": "MALE",
+                "hearingLanguageNeeds": "ENGLISH",
+                "lastName": "Fisher",
+                "title": "MR"
+              },
+              "policeBailStatus": {
+                "code": "C",
+                "description": "Custody",
+                "id": "12e69486-4d01-3403-a50a-7419ca040635"
+              }
+            }
+          },
+          "notificationRequired": true,
+          "summonsRequired": false
+        },
+        "applicationParticulars": "ApplicationParticulars Application for a witness summons",
+        "applicationReceivedDate": "2026-03-19",
+        "applicationReference": "52GD7423826",
+        "applicationStatus": "LISTED",
+        "courtApplicationCases": [
+          {
+            "caseStatus": "ACTIVE",
+            "isSJP": false,
+            "prosecutionCaseId": "e5fd29f1-fbce-409a-b451-6a7958c33f5a",
+            "prosecutionCaseIdentifier": {
+              "address": {
+                "address1": "Criminal Justice Department",
+                "address2": "Derbyshire Constabulary",
+                "address3": "Butterley Hall",
+                "address4": "Ripley",
+                "address5": "Derby",
+                "postcode": "DE5 3RS"
+              },
+              "contact": {
+                "primaryEmail": "criminaldataderbyshire@derbyshire.police.uk"
+              },
+              "majorCreditorCode": "PO30",
+              "prosecutionAuthorityCode": "DERPF",
+              "prosecutionAuthorityId": "bdc190e7-c939-37ca-be4b-9f615d6ef40e",
+              "prosecutionAuthorityName": "Derbyshire Police",
+              "prosecutionAuthorityOUCode": "0300000",
+              "caseURN": "52GD7423826"
+            }
+          }
+        ],
+        "courtCivilApplication": {
+          "isCivil": false
+        },
+        "id": "03a8ba29-4fb5-4dba-bfa7-d609cf5ff0d8",
+        "subject": {
+          "id": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+          "masterDefendant": {
+            "masterDefendantId": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+            "personDefendant": {
+              "arrestSummonsNumber": "TFL",
+              "bailStatus": {
+                "code": "C",
+                "description": "Custody",
+                "id": "12e69486-4d01-3403-a50a-7419ca040635"
+              },
+              "personDetails": {
+                "address": {
+                  "address1": "gypqvjnZwE",
+                  "address2": "StreetDescription",
+                  "address3": "Locality2O"
+                },
+                "dateOfBirth": "2003-04-13",
+                "documentationLanguageNeeds": "ENGLISH",
+                "firstName": "Modesto",
+                "gender": "MALE",
+                "hearingLanguageNeeds": "ENGLISH",
+                "lastName": "Fisher",
+                "title": "MR"
+              },
+              "policeBailStatus": {
+                "code": "C",
+                "description": "Custody",
+                "id": "12e69486-4d01-3403-a50a-7419ca040635"
+              }
+            }
+          },
+          "notificationRequired": true,
+          "summonsRequired": false
+        },
+        "type": {
+          "appealFlag": false,
+          "applicantAppellantFlag": false,
+          "applicationWording": "Application for a witness summons in respect of {1}",
+          "applicationWordingWelsh": "Cais am wŷs i dystio yng nghyswllt <Name of Witness>",
+          "boxworkNotifTemplate": "NOT_APPLICABLE",
+          "breachType": "NOT_APPLICABLE",
+          "categoryCode": "CR",
+          "changeDate": "2022-10-09T14:12:09",
+          "code": "MC80518",
+          "commrOfOathFlag": false,
+          "contestedFeeApplicable": false,
+          "courtExtractAvlFlag": true,
+          "courtOfAppealFlag": false,
+          "exParte": false,
+          "hearingCode": "APN",
+          "id": "69a7a4bf-5533-4ace-838b-5ea3a6be142e",
+          "initialFeeApplicable": false,
+          "jurisdiction": "EITHER",
+          "lastModified": "2025-02-24T18:18:52.487Z",
+          "legislation": "In accordance with section 97 of the Magistrates' Courts Act 1980.",
+          "legislationWelsh": "Yn unol ag adran 97 Deddf Llysoedd Ynadon 1980.",
+          "linkType": "LINKED",
+          "listingNotifTemplate": "POSTAL_NOTIFICATION",
+          "offenceActiveOrder": "NOT_APPLICABLE",
+          "pleaApplicableFlag": false,
+          "prosecutorThirdPartyFlag": false,
+          "pssId": 601831,
+          "sowRef": "APPS",
+          "spiOutApplicableFlag": true,
+          "summonsTemplateType": "NOT_APPLICABLE",
+          "type": "Application for a witness summons",
+          "typeWelsh": "Cais am w?s tyst",
+          "validFrom": "1980-01-03"
+        }
+      }
+    ],
+    "defendantHearings": [
+      {
+        "defendantId": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+        "defendantName": "Modesto Fisher",
+        "hearingIds": [
+          "32069b4b-cc83-4c8b-95fd-50681413f571"
+        ],
+        "masterDefendantId": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42"
+      },
+      {
+        "defendantId": "3e5f84fb-4477-4ff6-a2bf-8dfd52ea86f1",
+        "defendantName": "Jay Prohaska",
+        "hearingIds": [
+          "32069b4b-cc83-4c8b-95fd-50681413f571"
+        ],
+        "masterDefendantId": "3e5f84fb-4477-4ff6-a2bf-8dfd52ea86f1"
+      }
+    ],
+    "hearings": [
+      {
+        "courtCentre": {
+          "address": {
+            "address1": "176A Lavender Hill",
+            "address2": "London",
+            "address3": "",
+            "address4": "",
+            "address5": "",
+            "postcode": "SW11 1JU"
+          },
+          "code": "B01LY00",
+          "courtHearingLocation": "B01LY01",
+          "id": "f8254db1-1683-483e-afb3-b87fde5a0a26",
+          "lja": {
+            "ljaCode": "2577",
+            "ljaName": "South West London Magistrates' Court"
+          },
+          "name": "Lavender Hill Magistrates' Court",
+          "roomId": "9e4932f7-97b2-3010-b942-ddd2624e4dd8",
+          "roomName": "Courtroom 01"
+        },
+        "defendants": [
+          {
+            "address": {
+              "address1": "gypqvjnZwE",
+              "address2": "StreetDescription",
+              "address3": "Locality2O"
+            },
+            "age": "22",
+            "courtApplications": [],
+            "dateOfBirth": "2003-04-13",
+            "defenceOrganisation": {
+              "defenceCounsels": [],
+              "defendantId": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42"
+            },
+            "id": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+            "judicialResults": [],
+            "masterDefendantId": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+            "name": "Modesto Fisher",
+            "offences": [
+              {
+                "allocationDecision": {
+                  "allocationDecisionDate": "2026-02-28",
+                  "motReasonCode": "01",
+                  "motReasonDescription": "Summary-only offence",
+                  "motReasonId": "a00ae84c-a2de-4428-b89d-282dc6a0ac9a",
+                  "offenceId": "7fae6e7b-70a4-4549-b0a2-7f27b04dbc41",
+                  "originatingHearingId": "32069b4b-cc83-4c8b-95fd-50681413f571",
+                  "sequenceNumber": 980428046
+                },
+                "count": 0,
+                "id": "7fae6e7b-70a4-4549-b0a2-7f27b04dbc41",
+                "indicatedPlea": {
+                  "indicatedPleaDate": "2026-03-20",
+                  "indicatedPleaValue": "INDICATED_GUILTY",
+                  "offenceId": "7fae6e7b-70a4-4549-b0a2-7f27b04dbc41",
+                  "originatingHearingId": "32069b4b-cc83-4c8b-95fd-50681413f571",
+                  "source": "IN_COURT"
+                },
+                "judicialResults": [],
+                "offenceCode": "TW01046",
+                "offenceDefinitionId": "99f673ae-9505-37f6-853f-462be00ed38a",
+                "offenceLegislation": "Contrary to byelaw 19 and 31(1) of the Tyne and Wear Metro Byelaws made under sections 58 and 62 of the Tyneside Metropolitan Railway Act 1973.",
+                "offenceTitle": "Occupy reserved seat / berth without a valid ticket on the Tyne and Wear Metro",
+                "orderIndex": 1,
+                "pleas": [
+                  {
+                    "delegatedPowers": {
+                      "firstName": "FirstName",
+                      "lastName": "LastName",
+                      "userId": "4fbfce95-7c5a-4a76-af1d-cf7820359711"
+                    },
+                    "offenceId": "7fae6e7b-70a4-4549-b0a2-7f27b04dbc41",
+                    "originatingHearingId": "32069b4b-cc83-4c8b-95fd-50681413f571",
+                    "pleaDate": "2026-03-21",
+                    "pleaValue": "GUILTY"
+                  }
+                ],
+                "startDate": "2004-12-09",
+                "verdicts": [
+                  {
+                    "jurors": {
+                      "numberOfJurors": 12,
+                      "numberOfSplitJurors": 0,
+                      "unanimous": true
+                    },
+                    "lesserOrAlternativeOffence": {
+                      "offenceCode": "TW01046",
+                      "offenceDefinitionId": "99f673ae-9505-37f6-853f-462be00ed38a",
+                      "offenceLegislation": "Contrary to byelaw 19 and 31(1) of the Tyne and Wear Metro Byelaws made under sections 58 and 62 of the Tyneside Metropolitan Railway Act 1973.",
+                      "offenceTitle": "Occupy reserved seat / berth without a valid ticket on the Tyne and Wear Metro"
+                    },
+                    "offenceId": "7fae6e7b-70a4-4549-b0a2-7f27b04dbc41",
+                    "originatingHearingId": "32069b4b-cc83-4c8b-95fd-50681413f571",
+                    "verdictDate": "2026-03-20",
+                    "verdictType": {
+                      "category": "Guilty",
+                      "categoryType": "GUILTY_CONVICTED",
+                      "id": "495b432d-5c54-499e-b5cd-b9b0100ae5ee"
+                    }
+                  }
+                ],
+                "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+              },
+              {
+                "count": 0,
+                "id": "4bce707c-7c6e-45e7-9631-4bc80135bc17",
+                "judicialResults": [],
+                "offenceCode": "CA03010",
+                "offenceDefinitionId": "6d4e6673-a075-35e9-9ded-448284bf316b",
+                "offenceLegislation": "Contrary to section 363(2) and (4) of the Communications Act 2003.",
+                "offenceLegislationWelsh": "Yn groes i adran 363(2) a (4) Deddf Cyfathrebu 2003.",
+                "offenceTitle": "Use a television set without a licence",
+                "offenceTitleWelsh": "Defnyddio set deledu heb drwydded",
+                "orderIndex": 2,
+                "pleas": [],
+                "startDate": "2004-12-09",
+                "verdicts": [],
+                "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+              }
+            ]
+          },
+          {
+            "address": {
+              "address1": "gypqvjnZwE",
+              "address2": "StreetDescription",
+              "address3": "Locality2O"
+            },
+            "age": "22",
+            "courtApplications": [],
+            "dateOfBirth": "2003-04-13",
+            "defenceOrganisation": {
+              "defenceCounsels": [],
+              "defendantId": "3e5f84fb-4477-4ff6-a2bf-8dfd52ea86f1"
+            },
+            "id": "3e5f84fb-4477-4ff6-a2bf-8dfd52ea86f1",
+            "judicialResults": [],
+            "masterDefendantId": "3e5f84fb-4477-4ff6-a2bf-8dfd52ea86f1",
+            "name": "Jay Prohaska",
+            "offences": [
+              {
+                "count": 0,
+                "id": "45866a55-7790-4e38-bd0e-a8b1463f92d7",
+                "judicialResults": [],
+                "offenceCode": "TW01046",
+                "offenceDefinitionId": "99f673ae-9505-37f6-853f-462be00ed38a",
+                "offenceLegislation": "Contrary to byelaw 19 and 31(1) of the Tyne and Wear Metro Byelaws made under sections 58 and 62 of the Tyneside Metropolitan Railway Act 1973.",
+                "offenceTitle": "Occupy reserved seat / berth without a valid ticket on the Tyne and Wear Metro",
+                "orderIndex": 1,
+                "pleas": [],
+                "startDate": "2004-12-09",
+                "verdicts": [],
+                "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+              },
+              {
+                "count": 0,
+                "id": "dce06533-cf23-470f-8158-0287afe8e5f5",
+                "judicialResults": [],
+                "offenceCode": "CA03011",
+                "offenceDefinitionId": "b00b9ed1-18f5-38bd-99e1-e3d7f8d96f7d",
+                "offenceLegislation": "Contrary to section 363(3)(a) and (4) of the Communications Act 2003.",
+                "offenceLegislationWelsh": "Yn groes i adran 363(3)(a) a (4) Deddf Cyfathrebu 2003.",
+                "offenceTitle": "Possess a television set with intent to install / use without a licence",
+                "offenceTitleWelsh": "Meddu ar set deledu gan fwriadu'i osod/ddefnyddio heb drwydded",
+                "orderIndex": 2,
+                "pleas": [],
+                "startDate": "2004-12-09",
+                "verdicts": [],
+                "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+              }
+            ]
+          }
+        ],
+        "hasResultAmended": false,
+        "hearingDays": [
+          {
+            "courtCentreId": "f8254db1-1683-483e-afb3-b87fde5a0a26",
+            "courtRoomId": "9e4932f7-97b2-3010-b942-ddd2624e4dd8",
+            "isCancelled": false,
+            "listedDurationMinutes": 20,
+            "listingSequence": 0,
+            "sittingDay": "2026-03-20T09:01:01.001Z"
+          }
+        ],
+        "hearingListingStatus": "HEARING_INITIALISED",
+        "id": "32069b4b-cc83-4c8b-95fd-50681413f571",
+        "isApplicationHearing": true,
+        "jurisdictionType": "MAGISTRATES",
+        "type": {
+          "description": "First hearing",
+          "id": "4a0e892d-c0c5-3c51-95b8-704d8c781776"
+        }
+      }
+    ],
+    "id": "e5fd29f1-fbce-409a-b451-6a7958c33f5a",
+    "latestHearingJurisdictionType": "MAGISTRATES",
+    "prosecutionCaseIdentifier": {
+      "address": {
+        "address1": "Criminal Justice Department",
+        "address2": "Derbyshire Constabulary",
+        "address3": "Butterley Hall",
+        "address4": "Ripley",
+        "address5": "Derby",
+        "postcode": "DE5 3RS"
+      },
+      "contact": {
+        "primaryEmail": "criminaldataderbyshire@derbyshire.police.uk"
+      },
+      "majorCreditorCode": "PO30",
+      "prosecutionAuthorityCode": "DERPF",
+      "prosecutionAuthorityId": "bdc190e7-c939-37ca-be4b-9f615d6ef40e",
+      "prosecutionAuthorityName": "Derbyshire Police",
+      "prosecutionAuthorityOUCode": "0300000",
+      "caseURN": "52GD7423826"
+    }
+  },
+  "relatedCases": [
+    {
+      "masterDefendantId": "3e5f84fb-4477-4ff6-a2bf-8dfd52ea86f1",
+      "cases": [
+        {
+          "caseId": "8d0fc884-440a-4a01-b7a2-5ce75a5ca5f8",
+          "caseStatus": "ACTIVE",
+          "prosecutionCaseIdentifier": {
+            "prosecutionAuthorityId": "bdc190e7-c939-37ca-be4b-9f615d6ef40e",
+            "prosecutionAuthorityCode": "DERPF",
+            "caseURN": "58GD4158426"
+          },
+          "offences": [
+            {
+              "arrestDate": "2005-11-19",
+              "chargeDate": "2004-12-09",
+              "count": 0,
+              "endorsableFlag": false,
+              "id": "f07707f0-cae7-4551-b600-9962062d400d",
+              "listingNumber": 1,
+              "maxPenalty": "S:L3",
+              "modeOfTrial": "Summary",
+              "offenceCode": "TW01046",
+              "offenceDateCode": 1,
+              "offenceDefinitionId": "99f673ae-9505-37f6-853f-462be00ed38a",
+              "offenceLegislation": "Contrary to byelaw 19 and 31(1) of the Tyne and Wear Metro Byelaws made under sections 58 and 62 of the Tyneside Metropolitan Railway Act 1973.",
+              "offenceTitle": "Occupy reserved seat / berth without a valid ticket on the Tyne and Wear Metro",
+              "orderIndex": 1,
+              "startDate": "2004-12-09",
+              "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+            },
+            {
+              "arrestDate": "2005-11-19",
+              "chargeDate": "2004-12-09",
+              "count": 0,
+              "endorsableFlag": false,
+              "id": "f72ea83a-0c3c-4818-b14b-39889bddf83f",
+              "listingNumber": 1,
+              "maxPenalty": "S:L3",
+              "modeOfTrial": "Summary",
+              "offenceCode": "CA03011",
+              "offenceDateCode": 1,
+              "offenceDefinitionId": "b00b9ed1-18f5-38bd-99e1-e3d7f8d96f7d",
+              "offenceLegislation": "Contrary to section 363(3)(a) and (4) of the Communications Act 2003.",
+              "offenceLegislationWelsh": "Yn groes i adran 363(3)(a) a (4) Deddf Cyfathrebu 2003.",
+              "offenceTitle": "Possess a television set with intent to install / use without a licence",
+              "offenceTitleWelsh": "Meddu ar set deledu gan fwriadu'i osod/ddefnyddio heb drwydded",
+              "orderIndex": 2,
+              "startDate": "2004-12-09",
+              "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+            }
+          ]
+        },
+        {
+          "caseId": "b4980244-4148-4128-9980-f193603c4c97",
+          "caseStatus": "ACTIVE",
+          "prosecutionCaseIdentifier": {
+            "prosecutionAuthorityId": "bdc190e7-c939-37ca-be4b-9f615d6ef40e",
+            "prosecutionAuthorityCode": "DERPF",
+            "caseURN": "67GD2034726"
+          },
+          "offences": [
+            {
+              "arrestDate": "2005-11-19",
+              "chargeDate": "2004-12-09",
+              "count": 0,
+              "endorsableFlag": false,
+              "id": "dee3a39f-69e4-4a4a-9251-615816e6ee6a",
+              "listingNumber": 1,
+              "maxPenalty": "S:L3",
+              "modeOfTrial": "Summary",
+              "offenceCode": "TW01046",
+              "offenceDateCode": 1,
+              "offenceDefinitionId": "99f673ae-9505-37f6-853f-462be00ed38a",
+              "offenceLegislation": "Contrary to byelaw 19 and 31(1) of the Tyne and Wear Metro Byelaws made under sections 58 and 62 of the Tyneside Metropolitan Railway Act 1973.",
+              "offenceTitle": "Occupy reserved seat / berth without a valid ticket on the Tyne and Wear Metro",
+              "orderIndex": 1,
+              "startDate": "2004-12-09",
+              "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+            },
+            {
+              "arrestDate": "2005-11-19",
+              "chargeDate": "2004-12-09",
+              "convictionDate": "2026-03-21",
+              "count": 0,
+              "endorsableFlag": false,
+              "id": "b26dec18-07ac-4cb7-912e-cd1f6e6e9631",
+              "listingNumber": 1,
+              "maxPenalty": "S:L3",
+              "modeOfTrial": "Summary",
+              "offenceCode": "CA03011",
+              "offenceDateCode": 1,
+              "offenceDefinitionId": "b00b9ed1-18f5-38bd-99e1-e3d7f8d96f7d",
+              "offenceLegislation": "Contrary to section 363(3)(a) and (4) of the Communications Act 2003.",
+              "offenceLegislationWelsh": "Yn groes i adran 363(3)(a) a (4) Deddf Cyfathrebu 2003.",
+              "offenceTitle": "Possess a television set with intent to install / use without a licence",
+              "offenceTitleWelsh": "Meddu ar set deledu gan fwriadu'i osod/ddefnyddio heb drwydded",
+              "orderIndex": 2,
+              "startDate": "2004-12-09",
+              "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+            }
+          ]
+        },
+        {
+          "caseId": "107052e8-5999-4829-ae67-90bbe5ca6062",
+          "caseStatus": "ACTIVE",
+          "prosecutionCaseIdentifier": {
+            "prosecutionAuthorityId": "bdc190e7-c939-37ca-be4b-9f615d6ef40e",
+            "prosecutionAuthorityCode": "DERPF",
+            "caseURN": "78GD6560426"
+          },
+          "offences": [
+            {
+              "arrestDate": "2005-11-19",
+              "chargeDate": "2004-12-09",
+              "count": 0,
+              "endorsableFlag": false,
+              "id": "668db876-1c12-432e-9584-6d3654671012",
+              "listingNumber": 1,
+              "maxPenalty": "S:L3",
+              "modeOfTrial": "Summary",
+              "offenceCode": "TW01046",
+              "offenceDateCode": 1,
+              "offenceDefinitionId": "99f673ae-9505-37f6-853f-462be00ed38a",
+              "offenceLegislation": "Contrary to byelaw 19 and 31(1) of the Tyne and Wear Metro Byelaws made under sections 58 and 62 of the Tyneside Metropolitan Railway Act 1973.",
+              "offenceTitle": "Occupy reserved seat / berth without a valid ticket on the Tyne and Wear Metro",
+              "orderIndex": 1,
+              "startDate": "2004-12-09",
+              "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+            },
+            {
+              "arrestDate": "2005-11-19",
+              "chargeDate": "2004-12-09",
+              "count": 0,
+              "endorsableFlag": false,
+              "id": "e91f5f74-bb82-47e8-a278-2b5a881079dc",
+              "listingNumber": 1,
+              "maxPenalty": "S:L3",
+              "modeOfTrial": "Summary",
+              "offenceCode": "CA03011",
+              "offenceDateCode": 1,
+              "offenceDefinitionId": "b00b9ed1-18f5-38bd-99e1-e3d7f8d96f7d",
+              "offenceLegislation": "Contrary to section 363(3)(a) and (4) of the Communications Act 2003.",
+              "offenceLegislationWelsh": "Yn groes i adran 363(3)(a) a (4) Deddf Cyfathrebu 2003.",
+              "offenceTitle": "Possess a television set with intent to install / use without a licence",
+              "offenceTitleWelsh": "Meddu ar set deledu gan fwriadu'i osod/ddefnyddio heb drwydded",
+              "orderIndex": 2,
+              "startDate": "2004-12-09",
+              "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+            }
+          ]
+        },
+        {
+          "caseId": "3fc3833b-1601-4096-840d-c217768a6e86",
+          "caseStatus": "ACTIVE",
+          "prosecutionCaseIdentifier": {
+            "prosecutionAuthorityId": "bdc190e7-c939-37ca-be4b-9f615d6ef40e",
+            "prosecutionAuthorityCode": "DERPF",
+            "caseURN": "46GD1668526"
+          },
+          "offences": [
+            {
+              "arrestDate": "2005-11-19",
+              "chargeDate": "2004-12-09",
+              "count": 0,
+              "endorsableFlag": false,
+              "id": "7a3a9577-eb45-4de6-befb-1230fde5024d",
+              "listingNumber": 1,
+              "maxPenalty": "S:L3",
+              "modeOfTrial": "Summary",
+              "offenceCode": "TW01046",
+              "offenceDateCode": 1,
+              "offenceDefinitionId": "99f673ae-9505-37f6-853f-462be00ed38a",
+              "offenceLegislation": "Contrary to byelaw 19 and 31(1) of the Tyne and Wear Metro Byelaws made under sections 58 and 62 of the Tyneside Metropolitan Railway Act 1973.",
+              "offenceTitle": "Occupy reserved seat / berth without a valid ticket on the Tyne and Wear Metro",
+              "orderIndex": 1,
+              "startDate": "2004-12-09",
+              "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+            },
+            {
+              "arrestDate": "2005-11-19",
+              "chargeDate": "2004-12-09",
+              "count": 0,
+              "endorsableFlag": false,
+              "id": "a3958b34-f17d-44ee-b924-f639f9272ccb",
+              "listingNumber": 1,
+              "maxPenalty": "S:L3",
+              "modeOfTrial": "Summary",
+              "offenceCode": "CA03011",
+              "offenceDateCode": 1,
+              "offenceDefinitionId": "b00b9ed1-18f5-38bd-99e1-e3d7f8d96f7d",
+              "offenceLegislation": "Contrary to section 363(3)(a) and (4) of the Communications Act 2003.",
+              "offenceLegislationWelsh": "Yn groes i adran 363(3)(a) a (4) Deddf Cyfathrebu 2003.",
+              "offenceTitle": "Possess a television set with intent to install / use without a licence",
+              "offenceTitleWelsh": "Meddu ar set deledu gan fwriadu'i osod/ddefnyddio heb drwydded",
+              "orderIndex": 2,
+              "startDate": "2004-12-09",
+              "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "appealsLodgedInfo": {
+    "appealsLodged": false
+  }
+}

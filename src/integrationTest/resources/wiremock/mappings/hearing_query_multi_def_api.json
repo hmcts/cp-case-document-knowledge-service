@@ -1,0 +1,21 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/hearing-query-api/query/api/rest/hearing/hearings",
+    "queryParameters": {
+      "date": { "matches": ".*" },
+      "courtCentreId": {
+        "equalTo": "f8254db1-1683-483e-afb3-b87fde5a0a27"
+      },
+      "roomId": { "matches": ".*" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "hearing_query_api_multi_def_response.json"
+  }
+}

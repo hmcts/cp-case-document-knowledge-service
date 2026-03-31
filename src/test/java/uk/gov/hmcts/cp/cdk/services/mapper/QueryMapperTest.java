@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import uk.gov.hmcts.cp.cdk.domain.Query;
+import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
 import uk.gov.hmcts.cp.openapi.model.cdk.QueryCatalogueItem;
@@ -43,7 +44,7 @@ class QueryMapperTest {
         final UUID queryId = randomUUID();
         final Query query = new Query(queryId, queryLabel, utcNow(), 2);
         final QueryVersionId queryVersionId = new QueryVersionId(queryId, utcNow());
-        final QueryVersion queryVersion = new QueryVersion(queryVersionId, query, userQuery, queryPrompt);
+        final QueryVersion queryVersion = new QueryVersion(queryVersionId, query, userQuery, queryPrompt, QueryLevel.CASE);
 
         // When
         final QueryVersionSummary response = mapper.toVersionSummary(query, queryVersion);

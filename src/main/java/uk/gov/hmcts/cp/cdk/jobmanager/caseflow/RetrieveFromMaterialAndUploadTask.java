@@ -1,5 +1,8 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_CASE_ID;
@@ -22,6 +25,7 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.storage.StorageService;
@@ -62,6 +66,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
     private final UploadProperties uploadProperties;
     private final JobManagerRetryProperties retryProperties;
     private final ExecutionService executionService;
+    private final IngestionProperties ingestionProperties;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -133,9 +138,13 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
             updatedJobData.add(CTX_DOC_ID_KEY, documentId.toString());
             updatedJobData.add(CTX_BLOB_NAME_KEY, blobName);
 
+            final String checkIngestionTask = ingestionProperties.getFeature().isUseMultiDefendant()
+                    ? CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS
+                    : CHECK_INGESTION_STATUS_FOR_DOCUMENT;
+
             ExecutionInfo executionInfoNew = executionInfo()
                     .from(executionInfo)
-                    .withAssignedTaskName(CHECK_INGESTION_STATUS_FOR_DOCUMENT)
+                    .withAssignedTaskName(checkIngestionTask)
                     .withJobData(updatedJobData.build())
                     .withExecutionStatus(ExecutionStatus.STARTED)
                     .build();

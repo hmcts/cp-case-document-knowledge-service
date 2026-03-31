@@ -1,4 +1,5 @@
 {
+  "priority": 10,
   "request": {
     "method": "GET",
     "urlPath": "/progression-query-api/query/api/rest/progression/courtdocumentsearch",

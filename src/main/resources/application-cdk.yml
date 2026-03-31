@@ -28,6 +28,7 @@ cdk:
     feature:
       use-job-manager: ${CP_CDK_FEATURE_USE_JOB_MANAGER:true}
       use-new-upload-document-api: ${CP_CDK_FEATURE_USE_NEW_UPLOAD_DOCUMENT_API:false}
+      use-multi-defendant: ${CP_CDK_FEATURE_USE_MULTI_DEFENDANT:true}
 
     batch:
       partition:
