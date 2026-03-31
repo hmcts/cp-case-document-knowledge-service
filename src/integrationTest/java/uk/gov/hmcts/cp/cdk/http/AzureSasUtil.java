@@ -23,9 +23,12 @@ public final class AzureSasUtil {
 
     public static void main(String[] args) {
 
-        LOGGER.info(sasUrlFromEnv("idpc-ai",
+        /**LOGGER.info(sasUrlFromEnv("idpc-ai",
                 "hello.pdf",   // blob
-                120));
+                120));**/
+
+        LOGGER.info(" url : "+generateSasUrl("documents-new", "destination.pdf"));
+
     }
 
     public static String sasUrlFromEnv(final String container, final String blobName, final int minutes) {
@@ -51,7 +54,8 @@ public final class AzureSasUtil {
     }
 
     public static String generateSasUrl(final String containerName, final String blobName) {
-        final String connectionString = System.getenv("AZURE_STORAGE_CONNECTION_STRING");
+         final String connectionString = System.getenv("AZURE_STORAGE_CONNECTION_STRING");
+
 
         final BlobClient blobClient = new BlobClientBuilder()
                 .connectionString(connectionString)
