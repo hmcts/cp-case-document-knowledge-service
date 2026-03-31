@@ -224,7 +224,8 @@ import org.springframework.http.ResponseEntity;
     @Test
     void start_ingestion_process_executes_all_tasks_successfully() throws Exception {
         // Arrange
-
+        configureFor("localhost", 8089);
+        stubInitiateDocumentUpload("documents-new", "destination.pdf");
 
         final String auditResponse;
         try (BrokerUtil brokerUtil = new BrokerUtil()) {

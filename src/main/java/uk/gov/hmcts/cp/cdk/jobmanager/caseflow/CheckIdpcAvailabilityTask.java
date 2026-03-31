@@ -95,7 +95,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                         info
                 );
 
-                final String retrieveMaterialTask = ingestionProperties.getFeature().isUseNewUploadDocumentApi()
+                final String retrieveMaterialTask = ingestionProperties.getFeature().isUseMultiDefendant()
                         ? RETRIEVE_MATERIAL_AND_UPLOAD
                         : RETRIEVE_FROM_MATERIAL;
 

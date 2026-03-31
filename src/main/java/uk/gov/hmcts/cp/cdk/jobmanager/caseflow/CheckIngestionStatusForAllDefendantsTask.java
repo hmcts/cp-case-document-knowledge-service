@@ -1,11 +1,14 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
 import static jakarta.json.Json.createObjectBuilder;
+import static java.util.Objects.isNull;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_ALL_DOCUMENTS_INGESTION_STATUS;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_DOCUMENT_INGESTION_STATUS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_REFERENCE_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_LATEST_DEFENDANT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERY_LEVEL;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
@@ -67,6 +70,7 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
         final UUID documentId = parseUuidOrNull(jobData.getString("docId", null));
         final UUID caseId = parseUuidOrNull(jobData.getString("caseId", null));
         final String blobName = jobData.getString("blobName", null);
+        final String documentReference = jobData.getString(CTX_DOC_REFERENCE_KEY, null);
         final boolean isLatestDefendant = jobData.getBoolean(CTX_LATEST_DEFENDANT, false);
         final String defendantId = jobData.getString(CTX_DEFENDANT_ID_KEY);
         final Set<String> failureStatuses = Set.of(
@@ -74,18 +78,18 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
                 INVALID_METADATA.name()
         );
 
-        if (documentId == null || blobName == null) {
-            log.error("{} missing required data docId={} blobName={}", CHECK_INGESTION_STATUS_FOR_DOCUMENT, documentId, blobName);
+        if (isNull(documentId) || isNull(documentReference)) {
+            log.error("{} missing required data docId={} documentReference={}", CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS, documentId, documentReference);
             return complete(executionInfo);
         }
 
-        log.info("Polling ingestion status for identifier='{}', docId={}", blobName, documentId);
+        log.info("Polling ingestion status for documentReference='{}', docId={}", documentReference, documentId);
         try {
             final ResponseEntity<@NotNull DocumentIngestionStatusReturnedSuccessfully> response =
-                    documentIngestionStatusApi.documentStatus(blobName);
+                    documentIngestionStatusApi.documentStatusByReference(documentReference);
 
-            if (response == null || !response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-                log.info("Status not available yet for identifier='{}' → retrying", blobName);
+            if (isNull(response) || !response.getStatusCode().is2xxSuccessful() || isNull(response.getBody())) {
+                log.info("Status not available yet for documentReference='{}' → retrying", documentReference);
                 return retry(executionInfo);
             }
 

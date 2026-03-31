@@ -12,6 +12,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_COURTDOC
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOCIDS_ARRAY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_REFERENCE_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_LATEST_DEFENDANT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
@@ -130,7 +131,7 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
                 boolean isLatest = defendantId.equals(latestDefendantId);
                 updatedJobData.add(CTX_LATEST_DEFENDANT, isLatest);
 
-                final String retrieveMaterialTask = ingestionProperties.getFeature().isUseNewUploadDocumentApi()
+                final String retrieveMaterialTask = ingestionProperties.getFeature().isUseMultiDefendant()
                         ? RETRIEVE_MATERIAL_AND_UPLOAD
                         : RETRIEVE_FROM_MATERIAL;
 
