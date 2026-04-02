@@ -3,6 +3,8 @@ package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.normalise;
+import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_FAILED;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SUCCESS;
@@ -51,26 +53,13 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
     private final ExecutionService executionService;
     private final JobManagerRetryProperties retryProperties;
 
-    private static UUID parseUuid(final String raw) {
-        try {
-            return raw != null ? UUID.fromString(raw) : null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private static String normalise(final String value, final int max) {
-        if (value == null) return null;
-        return value.length() <= max ? value : value.substring(0, max);
-    }
-
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
 
         final JsonObject jobData = executionInfo.getJobData();
 
-        final UUID documentId = parseUuid(jobData.getString("docId", null));
-        final UUID caseId = parseUuid(jobData.getString("caseId", null));
+        final UUID documentId = parseUuidOrNull(jobData.getString("docId", null));
+        final UUID caseId = parseUuidOrNull(jobData.getString("caseId", null));
         final String blobName = jobData.getString("blobName", null);
         final Set<String> failureStatuses = Set.of(
                 INGESTION_FAILED.name(),
@@ -111,7 +100,6 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
                     log.debug("{}: No queries resolved; nothing to generate answers.", CHECK_INGESTION_STATUS_FOR_DOCUMENT);
                     candidateQueryIds = new LinkedHashSet<>();
                 } else {
-
                     log.info("Resolved queries size={}", queries.size());
                     queries.forEach(q -> log.info("QueryId={}", q.getQueryId()));
 
@@ -126,11 +114,11 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
                 }
                 log.info("Queries count: {}", candidateQueryIds.size());
                 for (UUID questionId : candidateQueryIds) {
-                    JsonObject singleCaseJobData = Json.createObjectBuilder(jobData)
+                    final JsonObject singleCaseJobData = Json.createObjectBuilder(jobData)
                             .add(CTX_SINGLE_QUERY_ID, questionId.toString())
                             .build();
 
-                    ExecutionInfo executionInfoNew = executionInfo()
+                    final ExecutionInfo executionInfoNew = executionInfo()
                             .from(executionInfo)
                             .withAssignedTaskName(GENERATE_ANSWER_FOR_QUERY)
                             .withJobData(singleCaseJobData)

@@ -13,6 +13,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUI
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.getCourtDocuments;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuid;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
@@ -68,9 +69,8 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
 
         try {
             caseIdUuidOptional = parseUuid(caseIdString);
+            final Optional<LatestMaterialInfo> latest = getCourtDocuments(progressionClient, caseIdUuidOptional.get(), userId);
 
-            final Optional<LatestMaterialInfo> latest =
-                    getCourtDocuments(progressionClient, caseIdUuidOptional.get(), userId);
             latest.ifPresent(info -> {
                 JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
                 updatedJobData.add(CTX_MATERIAL_ID_KEY, info.materialId());
@@ -95,11 +95,11 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                         info
                 );
 
-                final String retrieveMaterialTask = ingestionProperties.getFeature().isUseNewUploadDocumentApi()
+                final String retrieveMaterialTask = ingestionProperties.getFeature().isUseMultiDefendant()
                         ? RETRIEVE_MATERIAL_AND_UPLOAD
                         : RETRIEVE_FROM_MATERIAL;
 
-                ExecutionInfo executionInfoNew = ExecutionInfo.executionInfo()
+                ExecutionInfo executionInfoNew = executionInfo()
                         .from(executionInfo)
                         .withAssignedTaskName(retrieveMaterialTask)
                         .withJobData(updatedJobData.build())
@@ -117,7 +117,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                 );
             });
 
-            return ExecutionInfo.executionInfo()
+            return executionInfo()
                     .from(executionInfo)
                     .withExecutionStatus(ExecutionStatus.COMPLETED)
                     .build();
@@ -128,7 +128,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                     caseIdString, requestId, ex
             );
 
-            return ExecutionInfo.executionInfo()
+            return executionInfo()
                     .from(executionInfo)
                     .withExecutionStatus(ExecutionStatus.INPROGRESS)
                     .withShouldRetry(true)

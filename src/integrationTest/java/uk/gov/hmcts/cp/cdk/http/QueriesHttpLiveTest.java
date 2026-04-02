@@ -6,6 +6,7 @@ import static uk.gov.hmcts.cp.cdk.util.UtilConstants.USER_WITH_PERMISSIONS;
 import static uk.gov.hmcts.cp.cdk.util.UtilConstants.USER_WITH_SYSTEM_USERS_GROUPS;
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
+import uk.gov.hmcts.cp.openapi.model.cdk.QueryLevel;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -62,15 +63,15 @@ class QueriesHttpLiveTest extends AbstractHttpLiveTest {
         }
 
 
-        final ResponseEntity<String> r1 = postQuerySnapshot(queryId, "2025-05-01T12:00:00Z", "Q1 @ t1", "Prompt for Q1 @ t1");
+        final ResponseEntity<String> r1 = postQuerySnapshot(queryId, "2025-05-01T12:00:00Z", "Q1 @ t1", "Prompt for Q1 @ t1", QueryLevel.CASE);
         assertThat(r1.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
 
-        final ResponseEntity<String> r2 = postQuerySnapshot(queryId, "2025-07-01T12:00:00Z", "Q1 @ t2", "Prompt for Q1 @ t2");
+        final ResponseEntity<String> r2 = postQuerySnapshot(queryId, "2025-07-01T12:00:00Z", "Q1 @ t2", "Prompt for Q1 @ t2",QueryLevel.CASE);
         assertThat(r2.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
 
-        final ResponseEntity<String> r3 = postQuerySnapshot(qid1, "2025-08-01T12:00:00Z", "Q1 @ t2", "Prompt for Q1 @ t2");
-        final ResponseEntity<String> r4 = postQuerySnapshot(qid2, "2025-09-01T12:00:00Z", "Q2 @ t2", "Prompt for Q2 @ t2");
-        final ResponseEntity<String> r5 = postQuerySnapshot(qid3, "2025-10-01T12:00:00Z", "Q3 @ t2", "Prompt for Q3 @ t2");
+        final ResponseEntity<String> r3 = postQuerySnapshot(qid1, "2025-08-01T12:00:00Z", "Q1 @ t2", "Prompt for Q1 @ t2",QueryLevel.CASE);
+        final ResponseEntity<String> r4 = postQuerySnapshot(qid2, "2025-09-01T12:00:00Z", "Q2 @ t2", "Prompt for Q2 @ t2",QueryLevel.CASE);
+        final ResponseEntity<String> r5 = postQuerySnapshot(qid3, "2025-10-01T12:00:00Z", "Q3 @ t2", "Prompt for Q3 @ t2",QueryLevel.CASE);
 
         assertThat(r3.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat(r4.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
@@ -86,7 +87,7 @@ class QueriesHttpLiveTest extends AbstractHttpLiveTest {
         ps.executeUpdate();
     }
 
-    private ResponseEntity<String> postQuerySnapshot(final UUID queryId, final String effectiveAt, final String userQuery, final String queryPrompt) {
+    private ResponseEntity<String> postQuerySnapshot(final UUID queryId, final String effectiveAt, final String userQuery, final String queryPrompt, final QueryLevel level) {
         final Map<String, Object> body = new HashMap<>();
         body.put("effectiveAt", effectiveAt);
 
@@ -94,6 +95,7 @@ class QueriesHttpLiveTest extends AbstractHttpLiveTest {
         query.put("queryId", queryId.toString());
         query.put("userQuery", userQuery);
         query.put("queryPrompt", queryPrompt);
+        query.put("level", level);
 
         body.put("queries", List.of(query));
         final HttpHeaders headers = new HttpHeaders();

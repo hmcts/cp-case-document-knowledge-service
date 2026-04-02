@@ -10,6 +10,7 @@ public record LatestMaterialInfo(
         String materialId,
         String materialName,
         ZonedDateTime uploadDateTime,
-        String courtDocumentId
+        String courtDocumentId,
+        String defendantId
 ) {
 }

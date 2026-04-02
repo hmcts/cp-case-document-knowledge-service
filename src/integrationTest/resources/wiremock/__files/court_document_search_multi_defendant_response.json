@@ -1,0 +1,235 @@
+
+{
+  "documentIndices": [
+    {
+      "caseIds": [
+        "e5fd29f1-fbce-409a-b451-6a7958c33f5a"
+      ],
+      "category": "Defendant level",
+      "defendantIds": [
+        "3e5f84fb-4477-4ff6-a2bf-8dfd52ea86f1"
+      ],
+      "document": {
+        "containsFinancialMeans": false,
+        "courtDocumentId": "0102e985-bbba-43bb-a5ca-f4996386d0f7",
+        "documentCategory": {
+          "defendantDocument": {
+            "defendants": [
+              "3e5f84fb-4477-4ff6-a2bf-8dfd52ea86f1"
+            ],
+            "prosecutionCaseId": "e5fd29f1-fbce-409a-b451-6a7958c33f5a"
+          }
+        },
+        "documentTypeDescription": "IDPC bundle",
+        "documentTypeId": "41be14e8-9df5-4b08-80b0-1e670bc80a5b",
+        "documentTypeRBAC": {
+          "deleteUserGroups": [
+            "Second Line Support"
+          ],
+          "downloadUserGroups": [
+            "District Judge",
+            "DJMC",
+            "Deputies",
+            "Defence Users",
+            "Advocates",
+            "Defence Lawyers",
+            "Probation Admin",
+            "Youth Offending Service Admin",
+            "Court Administrators",
+            "Crown Court Admin",
+            "Legal Advisers",
+            "Listing Officers",
+            "Court Clerks",
+            "Court Associate",
+            "CPS",
+            "Second Line Support",
+            "Judge",
+            "Recorders",
+            "Non CPS Prosecutors"
+          ],
+          "readUserGroups": [
+            "District Judge",
+            "DJMC",
+            "Magistrates",
+            "Defence Users",
+            "Advocates",
+            "Defence Lawyers",
+            "Probation Admin",
+            "Youth Offending Service Admin",
+            "Court Administrators",
+            "Crown Court Admin",
+            "Legal Advisers",
+            "Listing Officers",
+            "Court Clerks",
+            "Court Associate",
+            "Second Line Support",
+            "CPS",
+            "Judge",
+            "Recorders",
+            "Non CPS Prosecutors"
+          ],
+          "uploadUserGroups": [
+            "Court Administrators",
+            "Crown Court Admin",
+            "Legal Advisers",
+            "Listing Officers",
+            "Court Clerks",
+            "Court Associate",
+            "CPS",
+            "Second Line Support",
+            "System Users",
+            "Non CPS Prosecutors"
+          ]
+        },
+        "materials": [
+          {
+            "id": "d9165d5d-074a-476d-8cae-df7683e6cc40",
+            "receivedDateTime": "2026-03-20T00:00:00.000Z",
+            "uploadDateTime": "2026-03-20T09:25:59.086Z",
+            "userGroups": [
+              "District Judge",
+              "DJMC",
+              "Magistrates",
+              "Defence Users",
+              "Advocates",
+              "Defence Lawyers",
+              "Probation Admin",
+              "Youth Offending Service Admin",
+              "Court Administrators",
+              "Crown Court Admin",
+              "Legal Advisers",
+              "Listing Officers",
+              "Court Clerks",
+              "Court Associate",
+              "Second Line Support",
+              "CPS",
+              "Judge",
+              "Recorders",
+              "Non CPS Prosecutors"
+            ]
+          }
+        ],
+        "mimeType": "application/pdf",
+        "name": "IDPC",
+        "seqNum": 150
+      },
+      "hearingIds": [],
+      "type": "IDPC bundle"
+    },
+    {
+      "caseIds": [
+        "e5fd29f1-fbce-409a-b451-6a7958c33f5a"
+      ],
+      "category": "Defendant level",
+      "defendantIds": [
+        "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42"
+      ],
+      "document": {
+        "containsFinancialMeans": false,
+        "courtDocumentId": "bd7dbeef-cfad-45ce-8db7-6a2d6462611f",
+        "documentCategory": {
+          "defendantDocument": {
+            "defendants": [
+              "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42"
+            ],
+            "prosecutionCaseId": "e5fd29f1-fbce-409a-b451-6a7958c33f5a"
+          }
+        },
+        "documentTypeDescription": "IDPC bundle",
+        "documentTypeId": "41be14e8-9df5-4b08-80b0-1e670bc80a5b",
+        "documentTypeRBAC": {
+          "deleteUserGroups": [
+            "Second Line Support"
+          ],
+          "downloadUserGroups": [
+            "District Judge",
+            "DJMC",
+            "Deputies",
+            "Defence Users",
+            "Advocates",
+            "Defence Lawyers",
+            "Probation Admin",
+            "Youth Offending Service Admin",
+            "Court Administrators",
+            "Crown Court Admin",
+            "Legal Advisers",
+            "Listing Officers",
+            "Court Clerks",
+            "Court Associate",
+            "CPS",
+            "Second Line Support",
+            "Judge",
+            "Recorders",
+            "Non CPS Prosecutors"
+          ],
+          "readUserGroups": [
+            "District Judge",
+            "DJMC",
+            "Magistrates",
+            "Defence Users",
+            "Advocates",
+            "Defence Lawyers",
+            "Probation Admin",
+            "Youth Offending Service Admin",
+            "Court Administrators",
+            "Crown Court Admin",
+            "Legal Advisers",
+            "Listing Officers",
+            "Court Clerks",
+            "Court Associate",
+            "Second Line Support",
+            "CPS",
+            "Judge",
+            "Recorders",
+            "Non CPS Prosecutors"
+          ],
+          "uploadUserGroups": [
+            "Court Administrators",
+            "Crown Court Admin",
+            "Legal Advisers",
+            "Listing Officers",
+            "Court Clerks",
+            "Court Associate",
+            "CPS",
+            "Second Line Support",
+            "System Users",
+            "Non CPS Prosecutors"
+          ]
+        },
+        "materials": [
+          {
+            "id": "7bc0c67d-89e1-4d6d-8087-5e4bb62e3049",
+            "receivedDateTime": "2026-03-20T00:00:00.000Z",
+            "uploadDateTime": "2026-03-20T09:25:02.116Z",
+            "userGroups": [
+              "District Judge",
+              "DJMC",
+              "Magistrates",
+              "Defence Users",
+              "Advocates",
+              "Defence Lawyers",
+              "Probation Admin",
+              "Youth Offending Service Admin",
+              "Court Administrators",
+              "Crown Court Admin",
+              "Legal Advisers",
+              "Listing Officers",
+              "Court Clerks",
+              "Court Associate",
+              "Second Line Support",
+              "CPS",
+              "Judge",
+              "Recorders",
+              "Non CPS Prosecutors"
+            ]
+          }
+        ],
+        "mimeType": "application/pdf",
+        "name": "IDPC",
+        "seqNum": 150
+      },
+      "hearingIds": [],
+      "type": "IDPC bundle"
+    }
+  ]
+}

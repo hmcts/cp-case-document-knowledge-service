@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -16,6 +17,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUI
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
+import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.storage.StorageService;
@@ -54,6 +56,11 @@ class RetrieveFromMaterialAndUploadTaskTest {
     private ExecutionService executionService;
     @Mock
     private JobManagerRetryProperties retryProperties;
+    @Mock
+    private IngestionProperties ingestionProperties;
+
+    @Mock
+    private IngestionProperties.Feature feature;
 
     @Captor
     private ArgumentCaptor<ExecutionInfo> executionInfoCaptor;
@@ -76,7 +83,8 @@ class RetrieveFromMaterialAndUploadTaskTest {
                 caseDocumentRepository,
                 uploadProperties,
                 retryProperties,
-                executionService
+                executionService,
+                ingestionProperties
         );
 
         caseId = UUID.randomUUID();
@@ -102,6 +110,8 @@ class RetrieveFromMaterialAndUploadTaskTest {
     @Test
     void shouldUploadDocumentAndScheduleNextTask() throws Exception {
 
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
         when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
         when(uploadProperties.fileExtension()).thenReturn(".pdf");
         when(uploadProperties.contentType()).thenReturn("application/pdf");

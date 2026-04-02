@@ -4,6 +4,7 @@ package uk.gov.hmcts.cp.cdk.clients.progression;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCaseEligibilityInfo;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,6 +18,14 @@ public interface ProgressionClient {
      * @return An Optional containing the latest material info, or empty if none found.
      */
     Optional<LatestMaterialInfo> getCourtDocuments(UUID caseId, String userId);
+
+    /**
+     * Retrieves the all court documents related to all defendants  material information for a given case.
+     *
+     * @param caseId The unique case identifier.
+     * @return An List containing the  material info, or empty if none found.
+     */
+    List<LatestMaterialInfo> getCourtDocumentsForAllDefendants(UUID caseId, String userId);
 
     /**
      * Retrieves a signed download URL for a given material ID.

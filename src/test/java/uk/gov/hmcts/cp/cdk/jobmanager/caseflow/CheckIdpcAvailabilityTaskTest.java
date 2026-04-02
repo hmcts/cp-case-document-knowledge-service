@@ -150,6 +150,7 @@ class CheckIdpcAvailabilityTaskTest {
                 materialId.toString(),
                 "Material A",
                 ZonedDateTime.now(),
+                UUID.randomUUID().toString(),
                 UUID.randomUUID().toString()
         );
 
@@ -182,6 +183,7 @@ class CheckIdpcAvailabilityTaskTest {
                 materialId.toString(),
                 "Material A",
                 ZonedDateTime.now(),
+                UUID.randomUUID().toString(),
                 UUID.randomUUID().toString()
         );
 

@@ -1,0 +1,124 @@
+{
+  "hearingSummaries": [
+
+    {
+      "courtApplicationSummaries": [
+        {
+          "applicant": {
+            "firstName": "Modesto",
+            "id": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+            "lastName": "Fisher"
+          },
+          "applicationReference": "52GD7423826",
+          "caseSummaries": [
+            {
+              "id": "e5fd29f1-fbce-409a-b451-6a7958c33f5a",
+              "prosecutionCaseIdentifier": {
+                "prosecutionAuthorityCode": "DERPF",
+                "prosecutionAuthorityId": "bdc190e7-c939-37ca-be4b-9f615d6ef40e",
+                "caseURN": "52GD7423826"
+              }
+            }
+          ],
+          "id": "03a8ba29-4fb5-4dba-bfa7-d609cf5ff0d8",
+          "respondents": [],
+          "subject": {
+            "firstName": "Modesto",
+            "id": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+            "lastName": "Fisher",
+            "masterDefendantId": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42"
+          },
+          "type": {
+            "legislation": "In accordance with section 97 of the Magistrates' Courts Act 1980.",
+            "type": "Application for a witness summons",
+            "typeWelsh": "Cais am w?s tyst"
+          }
+        }
+      ],
+      "courtCentre": {
+        "id": "f8254db1-1683-483e-afb3-b87fde5a0a26",
+        "name": "Lavender Hill Magistrates' Court",
+        "roomId": "9e4932f7-97b2-3010-b942-ddd2624e4dd8",
+        "roomName": "Courtroom 01"
+      },
+      "hasSharedResults": false,
+      "hearingDays": [
+        {
+          "courtCentreId": "f8254db1-1683-483e-afb3-b87fde5a0a26",
+          "courtRoomId": "9e4932f7-97b2-3010-b942-ddd2624e4dd8",
+          "isCancelled": false,
+          "listedDurationMinutes": 20,
+          "listingSequence": 0,
+          "sittingDay": "2026-03-20T09:01:01.001Z"
+        }
+      ],
+      "hearingLanguage": "ENGLISH",
+      "id": "32069b4b-cc83-4c8b-95fd-50681413f571",
+      "isGroupProceedings": false,
+      "jurisdictionType": "MAGISTRATES",
+      "prosecutionCaseSummaries": [
+        {
+          "defendants": [
+            {
+              "courtProceedingsInitiated": "2026-03-20T00:58:48.054Z",
+              "firstName": "Modesto",
+              "id": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+              "lastName": "Fisher",
+              "masterDefendantId": "b5cf0375-4b66-48f2-ae6a-97f5cb9c2e42",
+              "offences": [
+                {
+                  "id": "7fae6e7b-70a4-4549-b0a2-7f27b04dbc41",
+                  "offenceTitle": "Occupy reserved seat / berth without a valid ticket on the Tyne and Wear Metro",
+                  "reportingRestrictions": [],
+                  "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+                },
+                {
+                  "id": "4bce707c-7c6e-45e7-9631-4bc80135bc17",
+                  "offenceTitle": "Use a television set without a licence",
+                  "offenceTitleWelsh": "Defnyddio set deledu heb drwydded",
+                  "reportingRestrictions": [],
+                  "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+                }
+              ],
+              "synonym": "is this from aliases ?"
+            },
+            {
+              "courtProceedingsInitiated": "2026-03-20T00:58:48.055Z",
+              "firstName": "Jay",
+              "id": "3e5f84fb-4477-4ff6-a2bf-8dfd52ea86f1",
+              "lastName": "Prohaska",
+              "masterDefendantId": "3e5f84fb-4477-4ff6-a2bf-8dfd52ea86f1",
+              "offences": [
+                {
+                  "id": "45866a55-7790-4e38-bd0e-a8b1463f92d7",
+                  "offenceTitle": "Occupy reserved seat / berth without a valid ticket on the Tyne and Wear Metro",
+                  "reportingRestrictions": [],
+                  "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+                },
+                {
+                  "id": "dce06533-cf23-470f-8158-0287afe8e5f5",
+                  "offenceTitle": "Possess a television set with intent to install / use without a licence",
+                  "offenceTitleWelsh": "Meddu ar set deledu gan fwriadu'i osod/ddefnyddio heb drwydded",
+                  "reportingRestrictions": [],
+                  "wording": "Has a violent past and fear that he will commit further offences and interfere with witnesse"
+                }
+              ],
+              "synonym": "is this from aliases ?"
+            }
+          ],
+          "id": "e5fd29f1-fbce-409a-b451-6a7958c33f5a",
+          "prosecutionCaseIdentifier": {
+            "prosecutionAuthorityCode": "DERPF",
+            "prosecutionAuthorityId": "bdc190e7-c939-37ca-be4b-9f615d6ef40e",
+            "caseURN": "52GD7423826"
+          }
+        }
+      ],
+      "type": {
+        "description": "First hearing",
+        "id": "4a0e892d-c0c5-3c51-95b8-704d8c781776"
+      }
+    }
+
+  ]
+}

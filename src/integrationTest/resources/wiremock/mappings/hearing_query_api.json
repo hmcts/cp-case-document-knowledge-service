@@ -1,17 +1,12 @@
 {
+  "priority": 10,
   "request": {
     "method": "GET",
     "urlPath": "/hearing-query-api/query/api/rest/hearing/hearings",
     "queryParameters": {
-      "date": {
-        "matches": ".*"
-      },
-      "courtCentreId": {
-        "matches": ".*"
-      },
-      "roomId": {
-        "matches": ".*"
-      }
+      "date": { "matches": ".*" },
+      "courtCentreId": { "matches": ".*" },
+      "roomId": { "matches": ".*" }
     }
   },
   "response": {
