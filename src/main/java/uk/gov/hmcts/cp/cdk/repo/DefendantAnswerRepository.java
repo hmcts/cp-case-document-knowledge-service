@@ -54,7 +54,7 @@ public interface DefendantAnswerRepository extends JpaRepository<DefendantAnswer
     long countDistinctCasesForQuery(UUID queryId);
 
     @Query(value = """
-            SELECT a.*
+            SELECT DISTINCT ON (a.defendant_id) a.*
               FROM defendant_answers a
              WHERE a.case_id = :caseId
                AND a.query_id = :queryId
