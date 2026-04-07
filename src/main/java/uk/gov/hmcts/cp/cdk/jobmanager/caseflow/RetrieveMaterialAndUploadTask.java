@@ -7,7 +7,6 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_DOCUMENT_INGESTION_STATUS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPLOAD;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_CASE_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_DEFENDANT_ID;
@@ -117,7 +116,8 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
             //materialName passed as documentName (friendly)
             final String today = utcNow().format(ofPattern(uploadProperties.datePattern()));
             final List<MetadataFilter> documentMetadata = createUploadMetadata(caseId, defendantId, materialId, today);
-            final FileStorageLocationReturnedSuccessfully fileStorageLocation = initiateDocumentUpload(documentId, materialName, documentMetadata);
+            final List<UUID> supersededDocumentList = caseDocumentRepository.findSupersededDocuments(caseId, defendantId);
+            final FileStorageLocationReturnedSuccessfully fileStorageLocation = initiateDocumentUpload(documentId, materialName, documentMetadata, supersededDocumentList);
 
             final DocumentBlobMetadata documentBlobMetadata = storageService.copyFromUrl(downloadUrl, fileStorageLocation.getStorageUrl());
             final String blobUrl = nonNull(documentBlobMetadata) ? documentBlobMetadata.blobUrl() : UNKNOWN_BLOB_URL;
@@ -217,11 +217,16 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
         }
     }
 
-    private FileStorageLocationReturnedSuccessfully initiateDocumentUpload(final UUID documentId, final String materialName, final List<MetadataFilter> documentMetadata) {
-        final DocumentUploadRequest documentUploadRequest = new DocumentUploadRequest();
-        documentUploadRequest.setDocumentId(documentId.toString());
-        documentUploadRequest.setDocumentName(materialName);
-        documentUploadRequest.setMetadataFilter(documentMetadata);
+    private FileStorageLocationReturnedSuccessfully initiateDocumentUpload(final UUID documentId, final String materialName,
+                                                                           final List<MetadataFilter> documentMetadata, final List<UUID> supersededDocumentList) {
+        final DocumentUploadRequest documentUploadRequest = new DocumentUploadRequest()
+                .documentId(documentId.toString())
+                .documentName(materialName)
+                .metadataFilter(documentMetadata);
+
+        if (!supersededDocumentList.isEmpty()) {
+            documentUploadRequest.setOverwrites(supersededDocumentList.stream().map(UUID::toString).toList());
+        }
 
         final ResponseEntity<@NotNull FileStorageLocationReturnedSuccessfully> fileStorageLocationEntity = documentIngestionInitiationApi.initiateDocumentUpload(documentUploadRequest);
         return fileStorageLocationEntity.getBody();
