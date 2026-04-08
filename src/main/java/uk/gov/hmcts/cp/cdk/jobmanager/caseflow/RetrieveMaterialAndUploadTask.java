@@ -113,10 +113,9 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
             final String downloadUrl = fetchDownloadUrl(materialId, userIdForExternalCalls, requestId);
             log.info("downloadUrl generated :{} ", downloadUrl);
 
-            //materialName passed as documentName (friendly)
             final String today = utcNow().format(ofPattern(uploadProperties.datePattern()));
             final List<MetadataFilter> documentMetadata = createUploadMetadata(caseId, defendantId, materialId, today);
-            final List<UUID> supersededDocumentList = caseDocumentRepository.findSupersededDocuments(caseId, defendantId);
+            final List<UUID> supersededDocumentList = getSupersededDocuments(caseId, defendantId);
             final FileStorageLocationReturnedSuccessfully fileStorageLocation = initiateDocumentUpload(documentId, materialName, documentMetadata, supersededDocumentList);
 
             final DocumentBlobMetadata documentBlobMetadata = storageService.copyFromUrl(downloadUrl, fileStorageLocation.getStorageUrl());
@@ -232,4 +231,10 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
         return fileStorageLocationEntity.getBody();
     }
 
+    private List<UUID> getSupersededDocuments(final UUID caseId, final UUID defendantId) {
+        final List<UUID> supersededDocuments = caseDocumentRepository.findSupersededDocuments(caseId, defendantId);
+        return supersededDocuments.isEmpty()
+                ? caseDocumentRepository.findSupersededDocuments(caseId)
+                : supersededDocuments;
+    }
 }

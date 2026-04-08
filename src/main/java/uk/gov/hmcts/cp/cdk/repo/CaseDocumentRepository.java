@@ -24,5 +24,14 @@ public interface CaseDocumentRepository extends JpaRepository<CaseDocument, UUID
             """, nativeQuery = true)
     List<UUID> findSupersededDocuments(UUID caseId, UUID defendantId);
 
+    @Query(value = """
+             SELECT distinct(cd.doc_id)
+               FROM case_documents cd 
+             WHERE cd.case_id = :caseId 
+               AND cd.defendant_id IS NULL 
+               AND cd.ingestion_phase = 'INGESTED'
+            """, nativeQuery = true)
+    List<UUID> findSupersededDocuments(UUID caseId);
+
 }
 

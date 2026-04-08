@@ -34,7 +34,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-//@Import(CaseDocumentRepository.class)
 class CaseDocumentRepositoryTest {
 
     @jakarta.annotation.Resource
@@ -102,6 +101,31 @@ class CaseDocumentRepositoryTest {
 
         assertThat(result).isEmpty();
     }
+
+    @Test
+    void shouldReturnSupersededDocumentsByCaseId() {
+        final UUID caseId = UUID.randomUUID();
+        final UUID docId1 = UUID.randomUUID();
+        final UUID docId2 = UUID.randomUUID();
+
+        persist(docId1, caseId, null, INGESTED);
+        persist(docId2, caseId, null, INGESTED);
+
+        final List<UUID> result = repository.findSupersededDocuments(caseId);
+
+        assertThat(result).hasSize(2).containsExactlyInAnyOrder(docId1, docId2);
+    }
+
+    @Test
+    void shouldReturnSupersededDocumentsByCaseIdAndExcludeRowsWithDefendantId() {
+        final UUID caseId = UUID.randomUUID();
+        persist(randomUUID(), caseId, randomUUID(), INGESTED);
+
+        final List<UUID> result = repository.findSupersededDocuments(caseId);
+
+        assertThat(result).isEmpty();
+    }
+
 
     private void persist(final UUID docId, final UUID caseId, final UUID defendantId, final DocumentIngestionPhase phase) {
         jdbc.update("""
