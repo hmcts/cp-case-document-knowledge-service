@@ -44,6 +44,13 @@ public class DocumentIdResolver {
       FROM case_documents
      WHERE doc_id = :doc_id
     """;
+
+    final String SQL_FIND_INGESTION_STATUS_ALL_DOCS = """
+        SELECT DISTINCT doc_id
+          FROM case_documents
+         WHERE doc_id IN (:doc_ids)
+           AND ingestion_phase = 'INGESTED'
+        """;
     private final NamedParameterJdbcTemplate jdbc;
 
     /**
@@ -105,6 +112,30 @@ public class DocumentIdResolver {
         } catch (Exception e) {
             log.error("Failed to fetch ingestion status for docId={}", docId, e);
             return Optional.empty();
+        }
+    }
+
+    /**
+     * Checks if all given docIds have ingestion_phase = 'INGESTED'.
+     * Returns true only if all documents are INGESTED; false otherwise.
+     */
+    public boolean findIngestionStatusForAllDocs(final List<UUID> docIds) {
+        if (docIds == null || docIds.isEmpty()) {
+            return false;
+        }
+        try {
+            final MapSqlParameterSource params = new MapSqlParameterSource()
+                    .addValue("doc_ids", docIds);
+
+            final List<UUID> ingestedDocs = jdbc.query(SQL_FIND_INGESTION_STATUS_ALL_DOCS, params,
+                    (rs, rowNum) -> (UUID) rs.getObject("doc_id"));
+
+            // If number of ingested distinct docs matches the input list, all are INGESTED
+            return ingestedDocs.size() == docIds.size();
+
+        } catch (Exception e) {
+            log.error("Failed to check ingestion status for docIds={}", docIds, e);
+            return false;
         }
     }
 }

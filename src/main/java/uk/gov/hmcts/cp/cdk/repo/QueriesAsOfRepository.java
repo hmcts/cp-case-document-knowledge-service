@@ -40,12 +40,14 @@ public interface QueriesAsOfRepository extends JpaRepository<uk.gov.hmcts.cp.cdk
                   cqs.status::text      AS status,
                   cqs.status_at         AS statusAt,
                   q.display_order       AS displayOrder,
+                  q.is_active           AS isActive,
                   ld.level::text        AS "level"
                 FROM queries q
                 JOIN latest_def ld
                   ON ld.query_id = q.query_id AND ld.rn = 1
                 LEFT JOIN case_query_status cqs
                   ON cqs.query_id = q.query_id AND cqs.case_id = :caseId
+                WHERE q.is_active
                 ORDER BY q.display_order ASC, q.query_id
             """,
             nativeQuery = true)
@@ -75,6 +77,7 @@ public interface QueriesAsOfRepository extends JpaRepository<uk.gov.hmcts.cp.cdk
                   cqs.status::text      AS status,
                   cqs.status_at         AS statusAt,
                   q.display_order       AS displayOrder,
+                  q.is_active           AS isActive,
                   ld.level::text        AS "level"
                 FROM queries q
                 JOIN latest_def ld
@@ -82,6 +85,7 @@ public interface QueriesAsOfRepository extends JpaRepository<uk.gov.hmcts.cp.cdk
                 LEFT JOIN case_query_status cqs
                   ON cqs.query_id = q.query_id AND cqs.case_id = :caseId
                 WHERE q.query_id = :queryId
+                AND q.is_active
             """,
             nativeQuery = true)
     QueriesAsOfRepository.QueryAsOfView getOneForCaseAsOf(@Param("caseId") UUID caseId,
@@ -98,6 +102,7 @@ public interface QueriesAsOfRepository extends JpaRepository<uk.gov.hmcts.cp.cdk
             String status,
             Instant statusAt,
             Integer displayOrder,
+            Boolean isActive,
             String level) {
     }
 }

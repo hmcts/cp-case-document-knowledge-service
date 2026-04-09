@@ -62,7 +62,7 @@ class AnswerServiceTest {
         final QueryVersionId vid1 = new QueryVersionId();
         vid1.setEffectiveAt(createdAt.minusMinutes(1));
         version1.setQueryVersionId(vid1);
-        version1.setQuery(new Query(queryId, "query-label", utcNow(), 1));
+        version1.setQuery(new Query(queryId, "query-label", utcNow(), 1,true));
         version1.setUserQuery("user query text");
 
         when(queryVersionRepository.findAll()).thenReturn(List.of(version1));
@@ -94,7 +94,7 @@ class AnswerServiceTest {
         final QueryVersionId vid1 = new QueryVersionId();
         vid1.setEffectiveAt(createdAt.minusMinutes(1));
         version1.setQueryVersionId(vid1);
-        version1.setQuery(new Query(queryId, "query-label", utcNow(), 1));
+        version1.setQuery(new Query(queryId, "query-label", utcNow(), 1,true));
         version1.setUserQuery("user query text");
 
         when(queryVersionRepository.findAll()).thenReturn(List.of(version1));

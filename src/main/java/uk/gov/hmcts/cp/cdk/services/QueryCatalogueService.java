@@ -7,6 +7,7 @@ import uk.gov.hmcts.cp.openapi.model.cdk.LabelUpdateRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.QueryCatalogueItem;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -49,18 +50,20 @@ public class QueryCatalogueService {
         if (body == null || body.getLabel() == null || body.getLabel().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "label must not be blank");
         }
-
         final String newLabel = body.getLabel().trim();
         final Integer newOrder = body.getOrder();
+        final boolean isActive = Optional.ofNullable(body.getIsActive()).orElse(true);
         Query query = queryRepository.findById(queryId).orElseGet(() -> {
             final Query created = new Query();
             created.setQueryId(queryId);
             created.setDisplayOrder(newOrder);
+            created.setIsActive(isActive);
             return created;
         });
 
         query.setLabel(newLabel);
         query.setDisplayOrder(newOrder);
+        query.setIsActive(isActive);
         query = queryRepository.saveAndFlush(query);
 
         return mapper.toCatalogueItem(query);

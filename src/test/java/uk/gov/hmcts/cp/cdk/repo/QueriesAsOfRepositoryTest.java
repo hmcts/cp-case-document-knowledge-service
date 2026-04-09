@@ -83,7 +83,7 @@ class QueriesAsOfRepositoryTest {
         final OffsetDateTime t1 = OffsetDateTime.parse("2025-05-01T11:58:00Z");
         final OffsetDateTime t2 = OffsetDateTime.parse("2025-05-01T11:59:00Z");
 
-        final Query q = new Query(qid, "Defendant Position", OffsetDateTime.now(), 200);
+        final Query q = new Query(qid, "Defendant Position", OffsetDateTime.now(), 200,true);
         queryRepo.saveAndFlush(q);
 
         final QueryVersion v1 = new QueryVersion(new QueryVersionId(qid, t1), q, "def v1", "prompt v1", QueryLevel.CASE);
@@ -115,6 +115,7 @@ class QueriesAsOfRepositoryTest {
         assertEquals("def v2", r.userQuery());
         assertEquals("prompt v2", r.queryPrompt());
         assertEquals("ANSWER_NOT_AVAILABLE", r.status());
+        assertEquals(true, r.isActive());
         assertThat(r.statusAt()).isNotNull();
         assertEquals(200, r.displayOrder());
         assertEquals(OffsetDateTime.parse("2025-05-01T11:59:00Z").toInstant(), r.effectiveAt());

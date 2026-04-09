@@ -3,13 +3,12 @@ package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 import static jakarta.json.Json.createObjectBuilder;
 import static java.util.Objects.isNull;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_ALL_DOCUMENTS_INGESTION_STATUS;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_DOCUMENT_INGESTION_STATUS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_REFERENCE_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_LATEST_DEFENDANT;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERYIDS_ARRAY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERY_LEVEL;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.normalise;
@@ -42,6 +41,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -135,42 +136,49 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
                 final List<UUID> caseAllDocsQueries = queriesByLevel.getOrDefault(QueryLevel.CASE_ALL_DOCUMENTS.toString(), List.of());
                 if (isLatestDefendant && !caseAllDocsQueries.isEmpty()) {
 
-                    for (UUID questionId : caseAllDocsQueries) {
+                    final JsonArrayBuilder queryIdsArrayBuilder = Json.createArrayBuilder();
+
+                    caseAllDocsQueries.forEach(queryId -> {
+                        queryIdsArrayBuilder.add(queryId.toString());
+                    });
+
+                    final JsonArray queryIdsArray = queryIdsArrayBuilder.build();
+
                         final JsonObject singleCaseJobData = createObjectBuilder(jobData)
-                                .add(CTX_SINGLE_QUERY_ID, questionId.toString())
+                                .add(CTX_QUERYIDS_ARRAY, queryIdsArray)
                                 .add(CTX_QUERY_LEVEL, QueryLevel.CASE_ALL_DOCUMENTS.toString())
                                 .build();
 
-                        final ExecutionInfo executionInfoNew = executionInfo()
-                                .from(executionInfo)
-                                .withAssignedTaskName(CHECK_ALL_DOCUMENTS_INGESTION_STATUS)
-                                .withJobData(singleCaseJobData)
-                                .withExecutionStatus(ExecutionStatus.STARTED)
-                                .build();
+                    final ExecutionInfo executionInfoNew = executionInfo()
+                            .from(executionInfo)
+                            .withAssignedTaskName(CHECK_ALL_DOCUMENTS_INGESTION_STATUS)
+                            .withJobData(singleCaseJobData)
+                            .withExecutionStatus(ExecutionStatus.STARTED)
+                            .build();
 
-                        executionService.executeWith(executionInfoNew);
+                    executionService.executeWith(executionInfoNew);
 
-                        log.info("Created {} for docId={} questionId={} ", GENERATE_ANSWER_FOR_QUERY, documentId, questionId);
-                    }
+                    log.info("Created {} for docId={} questionId's array={} ", CHECK_ALL_DOCUMENTS_INGESTION_STATUS, documentId, queryIdsArray);
+
                 }
 
                 final List<UUID> defendantQueries = queriesByLevel.getOrDefault(QueryLevel.DEFENDANT.toString(), List.of());
                 if (!defendantQueries.isEmpty()) {
-                        for (UUID queryId : defendantQueries) {
-                            JsonObject job = createObjectBuilder(jobData)
-                                    .add(CTX_SINGLE_QUERY_ID, queryId.toString())
-                                    .add(CTX_QUERY_LEVEL, QueryLevel.DEFENDANT.toString())
-                                    .build();
-                            executionService.executeWith(
-                                    executionInfo()
-                                            .from(executionInfo)
-                                            .withAssignedTaskName(GENERATE_ANSWER_FOR_QUERY)
-                                            .withJobData(job)
-                                            .withExecutionStatus(ExecutionStatus.STARTED)
-                                            .build()
-                            );
-                        }
-                    log.info("Executed DEFENDANT level queries for defendant {} ",defendantId);
+                    for (UUID queryId : defendantQueries) {
+                        JsonObject job = createObjectBuilder(jobData)
+                                .add(CTX_SINGLE_QUERY_ID, queryId.toString())
+                                .add(CTX_QUERY_LEVEL, QueryLevel.DEFENDANT.toString())
+                                .build();
+                        executionService.executeWith(
+                                executionInfo()
+                                        .from(executionInfo)
+                                        .withAssignedTaskName(GENERATE_ANSWER_FOR_QUERY)
+                                        .withJobData(job)
+                                        .withExecutionStatus(ExecutionStatus.STARTED)
+                                        .build()
+                        );
+                    }
+                    log.info("Executed DEFENDANT level queries for defendant {} ", defendantId);
                 }
 
                 return complete(executionInfo);
