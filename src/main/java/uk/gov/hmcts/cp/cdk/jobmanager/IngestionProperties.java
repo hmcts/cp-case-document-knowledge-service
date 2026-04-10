@@ -1,12 +1,10 @@
 package uk.gov.hmcts.cp.cdk.jobmanager;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 /**
  * Binds cdk.ingestion.* properties.
  */
-@Component
 @ConfigurationProperties(prefix = "cdk.ingestion")
 public class IngestionProperties {
 
