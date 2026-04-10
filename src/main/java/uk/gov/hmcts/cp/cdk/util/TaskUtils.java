@@ -1,7 +1,5 @@
 package uk.gov.hmcts.cp.cdk.util;
 
-import static java.util.Objects.nonNull;
-
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
@@ -13,7 +11,6 @@ import java.util.UUID;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.item.ExecutionContext;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 @Slf4j
@@ -116,44 +113,6 @@ public class TaskUtils {
                 .addValue("query_id", queryId)
                 .addValue("doc_id", documentId)
                 .addValue("version", version);
-    }
-
-    // ---------- ExecutionContext helpers ----------
-
-    /**
-     * Reads a string from step context first, falling back to job context.
-     * Returns null if not found. Logs nothing (safe, common path).
-     */
-    public static String getStringFromContexts(final ExecutionContext stepContext,
-                                               final ExecutionContext jobContext,
-                                               final String key) {
-        String value = null;
-        if (nonNull(stepContext) && stepContext.containsKey(key)) {
-            value = stepContext.getString(key);
-        } else if (nonNull(jobContext) && jobContext.containsKey(key)) {
-            value = jobContext.getString(key);
-        }
-        return value;
-    }
-
-    /**
-     * Reads a boolean flag from a context key. Accepts Boolean or String values.
-     * Returns false if absent or of unexpected type; logs on unexpected types.
-     */
-    public static boolean getBooleanFromContext(final ExecutionContext context, final String key) {
-        boolean result = false;
-        if (context != null && context.containsKey(key)) {
-            final Object value = context.get(key);
-            if (value instanceof Boolean boolValue) {
-                result = boolValue;
-            } else if (value instanceof String stringValue) {
-                result = Boolean.parseBoolean(stringValue);
-            } else {
-                log.warn("Unexpected type for boolean context key '{}': {}", key,
-                        value == null ? "null" : value.getClass().getName());
-            }
-        }
-        return result;
     }
 
     // ---------- Safe external lookups ----------

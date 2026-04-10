@@ -1,8 +1,6 @@
 package uk.gov.hmcts.cp.cdk.config;
 
-import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.services.IngestionProcessor;
-import uk.gov.hmcts.cp.cdk.services.IngestionService;
 import uk.gov.hmcts.cp.cdk.services.JobManagerService;
 
 import java.time.Clock;
@@ -21,13 +19,7 @@ public class TimeConfig {
      * Selects the correct IngestionProcessor implementation based on feature flag.
      */
     @Bean
-    public IngestionProcessor ingestionProcessor(JobManagerService jobManagerService,
-                                                 IngestionService ingestionService,
-                                                 IngestionProperties ingestionProperties) {
-        if (ingestionProperties.getFeature().isUseJobManager()) {
-            return jobManagerService;
-        } else {
-            return ingestionService;
-        }
+    public IngestionProcessor ingestionProcessor(JobManagerService jobManagerService) {
+        return jobManagerService;
     }
 }

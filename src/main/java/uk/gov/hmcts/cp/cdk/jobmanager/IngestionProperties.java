@@ -1,10 +1,12 @@
 package uk.gov.hmcts.cp.cdk.jobmanager;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
 /**
  * Binds cdk.ingestion.* properties.
  */
+@Component
 @ConfigurationProperties(prefix = "cdk.ingestion")
 public class IngestionProperties {
 
@@ -85,17 +87,8 @@ public class IngestionProperties {
     }
 
     public static class Feature {
-        private boolean useJobManager = true;
         private boolean useNewUploadDocumentApi = true;
         private boolean useMultiDefendant = true;
-
-        public boolean isUseJobManager() {
-            return useJobManager;
-        }
-
-        public void setUseJobManager(final boolean useJobManager) {
-            this.useJobManager = useJobManager;
-        }
 
         public boolean isUseNewUploadDocumentApi() {
             return useNewUploadDocumentApi;
