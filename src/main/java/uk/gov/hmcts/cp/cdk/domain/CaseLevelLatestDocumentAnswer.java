@@ -1,10 +1,5 @@
 package uk.gov.hmcts.cp.cdk.domain;
 
-import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
-
-import java.time.OffsetDateTime;
-import java.util.UUID;
-
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
 import jakarta.persistence.Column;
@@ -12,7 +7,6 @@ import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

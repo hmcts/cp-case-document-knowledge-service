@@ -22,13 +22,13 @@ public class ApimAuthHeaderService {
 
     private final AzureTokenService azureTokenService;
 
-    public void applyCommonHeaders(HttpHeaders httpHeaders, Map<String, String> headers) {
+    public void applyCommonHeaders(final HttpHeaders httpHeaders, final Map<String, String> headers) {
         if (headers != null) {
             headers.forEach(httpHeaders::add);
         }
     }
 
-    public void applyAuthHeaders(HttpHeaders httpHeaders, RagClientProperties properties) {
+    public void applyAuthHeaders(final HttpHeaders httpHeaders, final RagClientProperties properties) {
         final String mode = Optional.ofNullable(properties.getAuth())
                 .map(RagClientProperties.Auth::getMode)
                 .orElse(SUBSCRIPTION_KEY)

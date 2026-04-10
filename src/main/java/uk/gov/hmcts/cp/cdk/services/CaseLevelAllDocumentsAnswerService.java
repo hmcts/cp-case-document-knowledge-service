@@ -1,9 +1,7 @@
 package uk.gov.hmcts.cp.cdk.services;
 
 
-
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.GLOBAL_UPDATE_CASE_QUERY_STATUS;
-import static uk.gov.hmcts.cp.cdk.util.TaskUtils.buildCaseStatusParams;
 
 import java.util.UUID;
 
@@ -39,11 +37,11 @@ public class CaseLevelAllDocumentsAnswerService {
     """;
 
     @Transactional
-    public void upsert(UUID caseId, UUID queryId, String answer, String llmInput) {
+    public void upsert(final UUID caseId, final UUID queryId, final String answer, final String llmInput) {
 
-        int version = getVersionNumber(caseId, queryId);
+        final int version = getVersionNumber(caseId, queryId);
 
-        var params = new MapSqlParameterSource()
+        final MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("case_id", caseId)
                 .addValue("query_id", queryId)
                 .addValue("version", version)

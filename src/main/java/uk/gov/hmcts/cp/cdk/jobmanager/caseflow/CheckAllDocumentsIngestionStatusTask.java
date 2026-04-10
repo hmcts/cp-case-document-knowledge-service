@@ -5,12 +5,9 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_ALL_DOCUMENTS_INGES
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOCIDS_ARRAY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERYIDS_ARRAY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERY_LEVEL;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
-import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
-import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
@@ -54,7 +51,7 @@ public class CheckAllDocumentsIngestionStatusTask implements ExecutableTask {
             log.warn("No docIds found in context. Skipping processing.");
             return complete(executionInfo);
         }
-        boolean allDocsIngested = documentIdResolver.findIngestionStatusForAllDocs(docIds);
+        final boolean allDocsIngested = documentIdResolver.findIngestionStatusForAllDocs(docIds);
 
         if (!allDocsIngested) {
             log.info("Not all documents are INGESTED yet. Will retry.");
@@ -80,7 +77,6 @@ public class CheckAllDocumentsIngestionStatusTask implements ExecutableTask {
                     .build();
 
             executionService.executeWith(executionInfoNew);
-
         }
 
         return executionInfo()
@@ -91,7 +87,7 @@ public class CheckAllDocumentsIngestionStatusTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        final var retry = retryProperties.getVerifyDocumentStatus();
+        final JobManagerRetryProperties.RetryConfig retry = retryProperties.getVerifyDocumentStatus();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())

@@ -162,7 +162,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        final var retry = retryProperties.getQuestionsRetry();
+        final JobManagerRetryProperties.RetryConfig retry = retryProperties.getQuestionsRetry();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())
@@ -193,8 +193,4 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
 
         return EMPTY_STRING;
     }
-
-
-
-
 }

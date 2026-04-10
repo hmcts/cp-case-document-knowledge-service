@@ -2,7 +2,6 @@ package uk.gov.hmcts.cp.cdk.services;
 
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.buildAnswerParams;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.buildCaseStatusParams;
-import static uk.gov.hmcts.cp.cdk.util.TaskUtils.buildReservationParams;
 
 import java.util.UUID;
 
@@ -18,12 +17,15 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AnswerGenerationService {
 
+    /* default */
     static final String NEXT_VERSION_SQL = """
             SELECT COALESCE(MAX(a.version), 0) + 1
             FROM answers a
             WHERE a.case_id = :case_id
               AND a.query_id = :query_id
             """;
+
+    /* default */
     static final String SQL_UPSERT_ANSWER =
             "INSERT INTO answers(case_id, query_id, version, created_at, answer, llm_input, doc_id) " +
                     "VALUES (:case_id, :query_id, :version, NOW(), :answer, :llm_input, :doc_id) " +
@@ -33,6 +35,7 @@ public class AnswerGenerationService {
                     "  doc_id = EXCLUDED.doc_id, " +
                     "  created_at = EXCLUDED.created_at";
 
+    /* default */
     static final String SQL_UPDATE_CASE_QUERY_STATUS =
             "INSERT INTO case_query_status (case_id, query_id, status, status_at, doc_id, last_answer_version, last_answer_at)" +
                     "VALUES (:case_id, :query_id, 'ANSWER_AVAILABLE', NOW(), :doc_id, :version, NOW())" +

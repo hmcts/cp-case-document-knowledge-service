@@ -1,14 +1,10 @@
 package uk.gov.hmcts.cp.cdk.clients.rag;
 
-import static uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi.PATH_DOCUMENT_STATUS_BY_REFERENCE;
-
 import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionInitiationApi;
-import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
 import uk.gov.hmcts.cp.openapi.model.DocumentUploadRequest;
 import uk.gov.hmcts.cp.openapi.model.FileStorageLocationReturnedSuccessfully;
-import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullyAsynchronously;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;

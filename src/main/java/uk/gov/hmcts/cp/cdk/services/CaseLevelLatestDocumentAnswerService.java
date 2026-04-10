@@ -38,12 +38,12 @@ public class CaseLevelLatestDocumentAnswerService {
     """;
 
     @Transactional
-    public void upsert(UUID caseId, UUID queryId, String answer,
-                       String llmInput, UUID docId) {
+    public void upsert(final UUID caseId, final UUID queryId, final String answer,
+                       final String llmInput, final UUID docId) {
 
-        int version = getVersionNumber(caseId, queryId);
+        final int version = getVersionNumber(caseId, queryId);
 
-        var params = new MapSqlParameterSource()
+        final MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("case_id", caseId)
                 .addValue("query_id", queryId)
                 .addValue("version", version)

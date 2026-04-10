@@ -140,7 +140,7 @@ public class CheckDocumentIngestionStatusTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        var retry = retryProperties.getVerifyDocumentStatus();
+        final JobManagerRetryProperties.RetryConfig retry = retryProperties.getVerifyDocumentStatus();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())

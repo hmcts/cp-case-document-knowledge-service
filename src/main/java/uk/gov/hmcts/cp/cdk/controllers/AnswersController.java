@@ -7,7 +7,6 @@ import uk.gov.hmcts.cp.openapi.model.cdk.AnswerWithLlmResponse;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswersResponse;
 
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.UUID;
 
 import lombok.RequiredArgsConstructor;

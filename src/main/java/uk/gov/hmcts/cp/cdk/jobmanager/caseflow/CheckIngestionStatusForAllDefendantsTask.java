@@ -138,9 +138,7 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
 
                     final JsonArrayBuilder queryIdsArrayBuilder = Json.createArrayBuilder();
 
-                    caseAllDocsQueries.forEach(queryId -> {
-                        queryIdsArrayBuilder.add(queryId.toString());
-                    });
+                    caseAllDocsQueries.forEach(queryId -> queryIdsArrayBuilder.add(queryId.toString()));
 
                     final JsonArray queryIdsArray = queryIdsArrayBuilder.build();
 
@@ -218,7 +216,7 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        final var retry = retryProperties.getVerifyDocumentStatus();
+        final JobManagerRetryProperties.RetryConfig retry = retryProperties.getVerifyDocumentStatus();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())

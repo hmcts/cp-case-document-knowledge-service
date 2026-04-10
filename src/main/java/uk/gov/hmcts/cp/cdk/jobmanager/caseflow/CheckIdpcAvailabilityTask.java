@@ -65,7 +65,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
         final String userId = jobData.getString(CPPUID, null);
         final String defendantId = jobData.getString(CTX_DEFENDANT_ID_KEY, null);
         final String requestId = jobData.getString("requestId", "unknown");
-        Optional<UUID> caseIdUuidOptional;
+        final Optional<UUID> caseIdUuidOptional;
 
         try {
             caseIdUuidOptional = parseUuid(caseIdString);
@@ -99,7 +99,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                         ? RETRIEVE_MATERIAL_AND_UPLOAD
                         : RETRIEVE_FROM_MATERIAL;
 
-                ExecutionInfo executionInfoNew = executionInfo()
+                final ExecutionInfo executionInfoNew = executionInfo()
                         .from(executionInfo)
                         .withAssignedTaskName(retrieveMaterialTask)
                         .withJobData(updatedJobData.build())
@@ -123,10 +123,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
                     .build();
 
         } catch (Exception ex) {
-            log.error(
-                    "{} failed. caseId={}, requestId={}", CHECK_IDPC_AVAILABILITY,
-                    caseIdString, requestId, ex
-            );
+            log.error("{} failed. caseId={}, requestId={}", CHECK_IDPC_AVAILABILITY, caseIdString, requestId, ex);
 
             return executionInfo()
                     .from(executionInfo)
@@ -138,7 +135,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        final var retry = retryProperties.getDefaultRetry();
+        final JobManagerRetryProperties.RetryConfig retry = retryProperties.getDefaultRetry();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())

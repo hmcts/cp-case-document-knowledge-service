@@ -1,6 +1,5 @@
 package uk.gov.hmcts.cp.cdk.repo;
 
-import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
 
