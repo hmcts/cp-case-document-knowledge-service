@@ -26,7 +26,6 @@ cdk:
     queue-capacity: ${CP_CDK_INGESTION_QUEUE_CAPACITY:200}
 
     feature:
-      use-new-upload-document-api: ${CP_CDK_FEATURE_USE_NEW_UPLOAD_DOCUMENT_API:false}
       use-multi-defendant: ${CP_CDK_FEATURE_USE_MULTI_DEFENDANT:true}
 
     batch:

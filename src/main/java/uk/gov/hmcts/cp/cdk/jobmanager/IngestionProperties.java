@@ -85,16 +85,8 @@ public class IngestionProperties {
     }
 
     public static class Feature {
-        private boolean useNewUploadDocumentApi = true;
         private boolean useMultiDefendant = true;
 
-        public boolean isUseNewUploadDocumentApi() {
-            return useNewUploadDocumentApi;
-        }
-
-        public void setUseNewUploadDocumentApi(final boolean useNewUploadDocumentApi) {
-            this.useNewUploadDocumentApi = useNewUploadDocumentApi;
-        }
         public boolean isUseMultiDefendant() {
             return useMultiDefendant;
         }
