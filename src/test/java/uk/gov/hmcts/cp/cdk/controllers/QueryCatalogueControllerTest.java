@@ -125,4 +125,32 @@ class QueryCatalogueControllerTest {
                 )
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    @DisplayName("Set Query Catalogue Label updates label for inactive query")
+    void setQueryCatalogueLabel_updates_label_for_inactive_query() throws Exception {
+        final QueryCatalogueService service = Mockito.mock(QueryCatalogueService.class);
+        final QueryCatalogueController controller = new QueryCatalogueController(service);
+        final MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        final UUID id = UUID.fromString("33333333-3333-3333-3333-333333333333");
+
+        final QueryCatalogueItem updated = new QueryCatalogueItem();
+        updated.setQueryId(id);
+        updated.setIsActive(false);
+        updated.setLabel("Inactive Updated Label");
+
+        when(service.updateLabel(Mockito.eq(id), Mockito.any(LabelUpdateRequest.class)))
+                .thenReturn(updated);
+
+        mvc.perform(
+                        put("/query-catalogue/{queryId}/label", id)
+                                .contentType(VND_TYPE_JSON)
+                                .content("{\"label\":\"Inactive Updated Label\", \"order\":200,\"isActive\":false}")
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.queryId").value(id.toString()))
+                .andExpect(jsonPath("$.label").value("Inactive Updated Label"))
+                .andExpect(jsonPath("$.isActive").value(false));
+    }
 }

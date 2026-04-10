@@ -16,6 +16,7 @@ public interface QueryMapper {
         item.setQueryId(query.getQueryId());
         item.setLabel(query.getLabel());
         item.setOrder(query.getDisplayOrder());
+        item.setIsActive(query.getIsActive());
         return item;
     }
 

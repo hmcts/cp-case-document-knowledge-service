@@ -11,6 +11,7 @@ public final class JobManagerKeys {
     public static final String CTX_DEFENDANT_COUNT= "defendantCount";
     public static final String CTX_LATEST_DEFENDANT= "latestDefendant";
     public static final String CTX_DOCIDS_ARRAY= "docIdsList";
+    public static final String CTX_QUERYIDS_ARRAY= "queryIdsList";
     public static final String CTX_QUERY_LEVEL= "queryLevel";
 
     public static final String CTX_COURTDOCUMENT_ID_KEY = "courtDocumentId";

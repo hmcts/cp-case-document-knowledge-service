@@ -24,7 +24,7 @@ class QueryMapperTest {
         // Given
         final String queryLabel = "query1";
         final UUID queryId = randomUUID();
-        final Query query = new Query(queryId, queryLabel, utcNow(), 2);
+        final Query query = new Query(queryId, queryLabel, utcNow(), 2,true);
 
         // When
         final QueryCatalogueItem response = mapper.toCatalogueItem(query);
@@ -42,7 +42,7 @@ class QueryMapperTest {
         final String userQuery = "user query";
         final String queryPrompt = "query prompt";
         final UUID queryId = randomUUID();
-        final Query query = new Query(queryId, queryLabel, utcNow(), 2);
+        final Query query = new Query(queryId, queryLabel, utcNow(), 2,true);
         final QueryVersionId queryVersionId = new QueryVersionId(queryId, utcNow());
         final QueryVersion queryVersion = new QueryVersion(queryVersionId, query, userQuery, queryPrompt, QueryLevel.CASE);
 

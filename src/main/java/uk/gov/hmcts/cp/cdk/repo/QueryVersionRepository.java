@@ -33,6 +33,7 @@ public interface QueryVersionRepository extends JpaRepository<QueryVersion, Quer
                   ORDER BY v.effective_at DESC
                   LIMIT 1
               ) v ON TRUE
+              WHERE q.is_active
              ORDER BY q.query_id
             """, nativeQuery = true)
     List<SnapshotDefinition> snapshotDefinitionsAsOf(OffsetDateTime asOf);

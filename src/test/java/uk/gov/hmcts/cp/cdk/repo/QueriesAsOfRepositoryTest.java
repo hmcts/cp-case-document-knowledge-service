@@ -83,7 +83,7 @@ class QueriesAsOfRepositoryTest {
         final OffsetDateTime t1 = OffsetDateTime.parse("2025-05-01T11:58:00Z");
         final OffsetDateTime t2 = OffsetDateTime.parse("2025-05-01T11:59:00Z");
 
-        final Query q = new Query(qid, "Defendant Position", OffsetDateTime.now(), 200);
+        final Query q = new Query(qid, "Defendant Position", OffsetDateTime.now(), 200,true);
         queryRepo.saveAndFlush(q);
 
         final QueryVersion v1 = new QueryVersion(new QueryVersionId(qid, t1), q, "def v1", "prompt v1", QueryLevel.CASE);
@@ -115,6 +115,7 @@ class QueriesAsOfRepositoryTest {
         assertEquals("def v2", r.userQuery());
         assertEquals("prompt v2", r.queryPrompt());
         assertEquals("ANSWER_NOT_AVAILABLE", r.status());
+        assertEquals(true, r.isActive());
         assertThat(r.statusAt()).isNotNull();
         assertEquals(200, r.displayOrder());
         assertEquals(OffsetDateTime.parse("2025-05-01T11:59:00Z").toInstant(), r.effectiveAt());
@@ -128,5 +129,44 @@ class QueriesAsOfRepositoryTest {
         assertNotNull(oneForCaseAsOf);
         assertEquals(qid, oneForCaseAsOf.queryId());
         assertEquals(caseId, oneForCaseAsOf.caseId());
+    }
+
+    @Test
+    @DisplayName("List For Case As Of does not return inactive queries")
+    void listForCaseAsOf_excludes_inactive_query() {
+        final UUID inactiveQid = UUID.randomUUID();
+        final OffsetDateTime t1 = OffsetDateTime.parse("2025-05-01T11:58:00Z");
+
+        final Query inactiveQuery = new Query(inactiveQid, "Inactive Query", OffsetDateTime.now(), 300, false);
+        queryRepo.saveAndFlush(inactiveQuery);
+
+        final QueryVersion v1 = new QueryVersion(
+                new QueryVersionId(inactiveQid, t1),
+                inactiveQuery,
+                "inactive def",
+                "inactive prompt",
+                QueryLevel.CASE
+        );
+        versionRepo.saveAndFlush(v1);
+
+        final CaseQueryStatus cqs = new CaseQueryStatus();
+        cqs.setCaseId(caseId);
+        cqs.setQueryId(inactiveQid);
+        cqs.setStatus(QueryLifecycleStatus.ANSWER_NOT_AVAILABLE);
+        em.persist(cqs);
+        em.flush();
+
+        final OffsetDateTime asOf = OffsetDateTime.parse("2025-05-01T12:00:00Z");
+
+        final List<QueriesAsOfRepository.QueryAsOfView> results =
+                repo.listForCaseAsOf(caseId, asOf);
+
+        assertThat(results).isNotEmpty();
+
+        // Assert inactive query is NOT returned
+        final boolean exists = results.stream()
+                .anyMatch(r -> r.queryId().equals(inactiveQid));
+
+        assertThat(exists).isFalse();
     }
 }
