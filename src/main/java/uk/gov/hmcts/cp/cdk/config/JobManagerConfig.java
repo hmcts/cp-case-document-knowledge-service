@@ -38,8 +38,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties({
         StorageProperties.class,
         UploadProperties.class,
-        IngestionProperties.class,
-        VerifySchedulerProperties.class
+        IngestionProperties.class
 })
 public class JobManagerConfig {
 
