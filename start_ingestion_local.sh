@@ -26,10 +26,8 @@ done
 echo "[stub] WireMock healthy after ${elapsed}s"
 
 # ── Register stubs ────────────────────────────────
-echo "[stub] Registering stubs [START]..."
-gradle runStubs --debug 2>&1 | grep -i wiremock
-echo "[stub] Registering stubs [END]..."
-
+echo "[stub] Registering stubs..."
+gradle runStubs -q 2>&1 | grep -i wiremock
 
 # ── Check application is healthy ──────────────────
 echo "[app] Checking application health..."
