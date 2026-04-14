@@ -16,8 +16,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration(proxyBeanMethods = false)
 class TestTracingConfig {
 
+    @Value("${spring.application.name:app}")
+    private String applicationName;
+
     @Bean
-    public HandlerInterceptor tracingInterceptor(@Value("${spring.application.name:app}") String applicationName) {
+    public HandlerInterceptor tracingInterceptor() {
         return new HandlerInterceptor() {
             @Override
             public boolean preHandle(HttpServletRequest request,

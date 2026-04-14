@@ -15,24 +15,15 @@ import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@DataJpaTest(
-        properties = {
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.flyway.enabled=true",
-                "spring.jpa.properties.hibernate.connection.provider_disables_autocommit=false"
-        }
-)
+@DataJpaTest
 @Testcontainers
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CaseDocumentRepositoryTest {
 
@@ -46,27 +37,12 @@ class CaseDocumentRepositoryTest {
     private EntityManager em;
 
     @Container
+    @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>("postgres:16-alpine")
                     .withDatabaseName("cdk")
                     .withUsername("postgres")
                     .withPassword("postgres");
-
-    static {
-        POSTGRES.start();
-    }
-
-    @DynamicPropertySource
-    static void dbProps(final DynamicPropertyRegistry r) {
-        r.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        r.add("spring.datasource.username", POSTGRES::getUsername);
-        r.add("spring.datasource.password", POSTGRES::getPassword);
-        r.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-        r.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
-        // belt-and-braces; harmless if not needed
-        r.add("spring.jpa.properties.hibernate.hbm2ddl.auto", () -> "create-drop");
-        r.add("spring.sql.init.mode", () -> "never");
-    }
 
     @Test
     @DisplayName("Should return distinct doc_ids for matching caseId, defendantId and INGESTED phase")
@@ -133,7 +109,7 @@ class CaseDocumentRepositoryTest {
                     (doc_id, case_id, material_id, source, doc_name, 
                      blob_uri, content_type, size_bytes, sha256_hex, 
                      uploaded_at, ingestion_phase, ingestion_phase_at, defendant_id, courtdoc_id, created_at)
-                    VALUES(?, ?, ?, 'IDPC', '', '', '', 0, '', now(), ?::document_ingestion_phase_enum, now(), ?, ?, now())
+                    VALUES(?, ?, ?, 'IDPC', '', 'http://blob_uri', '', 0, null, now(), ?::document_ingestion_phase_enum, now(), ?, ?, now())
                 """, docId, caseId, randomUUID(), phase.name(), defendantId, randomUUID());
     }
 }
