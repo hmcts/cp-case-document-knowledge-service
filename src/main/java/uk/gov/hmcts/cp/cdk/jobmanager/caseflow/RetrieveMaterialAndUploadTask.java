@@ -174,7 +174,7 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        final var retry = retryProperties.getDefaultRetry();
+        final JobManagerRetryProperties.RetryConfig retry = retryProperties.getDefaultRetry();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())

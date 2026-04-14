@@ -1,11 +1,11 @@
 package uk.gov.hmcts.cp.cdk.domain;
 
+import java.util.UUID;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.util.UUID;
 
 @MappedSuperclass
 @Getter

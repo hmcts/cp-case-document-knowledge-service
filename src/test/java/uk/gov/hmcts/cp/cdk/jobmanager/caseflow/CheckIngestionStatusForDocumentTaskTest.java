@@ -10,12 +10,12 @@ import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 
-import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+import uk.gov.hmcts.cp.cdk.services.QueryResolver;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus;
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;

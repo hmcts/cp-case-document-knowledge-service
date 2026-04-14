@@ -50,9 +50,9 @@ public class AnswerService {
             final AnswerRepository answerRepository,
             final QueryVersionRepository queryVersionRepository,
             final AnswerMapper mapper,
-            CaseLevelLatestDocumentAnswerRepository latestDocRepo,
-            CaseLevelAllDocumentsAnswerRepository allDocsRepo,
-            DefendantAnswerRepository defendantRepo
+            final CaseLevelLatestDocumentAnswerRepository latestDocRepo,
+            final CaseLevelAllDocumentsAnswerRepository allDocsRepo,
+            final DefendantAnswerRepository defendantRepo
 
     ) {
         this.answerRepository = answerRepository;
@@ -63,12 +63,12 @@ public class AnswerService {
         this.defendantRepo = defendantRepo;
     }
 
-    public AnswersResponse getAnswers(UUID queryId, UUID caseId, Integer version, OffsetDateTime at) {
+    public AnswersResponse getAnswers(final UUID queryId, final UUID caseId, final Integer version, final OffsetDateTime at) {
 
-        QueryVersion latest = queryVersionRepository.findLatestByQueryId(queryId)
+        final QueryVersion latest = queryVersionRepository.findLatestByQueryId(queryId)
                 .orElseThrow(() -> new IllegalArgumentException("No QueryVersion found for queryId " + queryId));
 
-        QueryLevel level = latest.getLevel();
+        final QueryLevel level = latest.getLevel();
         final OffsetDateTime asOf = Optional.ofNullable(at).orElse(utcNow());
 
         List<?> answers =List.of();
@@ -101,9 +101,9 @@ public class AnswerService {
             answers = (answerEntity != null) ? List.of(answerEntity) : List.of();
         }
 
-        List<AnswerResponse> answerResponses = mapToAnswerResponses(answers);
+        final List<AnswerResponse> answerResponses = mapToAnswerResponses(answers);
 
-        return new AnswersResponse(at,answerResponses);
+        return new AnswersResponse(at, answerResponses);
     }
 
     public AnswerResponse getAnswer(
@@ -168,7 +168,7 @@ public class AnswerService {
     }
 
 
-    private List<AnswerResponse> mapToAnswerResponses(List<?> answers) {
+    private List<AnswerResponse> mapToAnswerResponses(final List<?> answers) {
         return answers.stream()
                 .map(answer -> {
                     UUID queryId;
@@ -176,7 +176,6 @@ public class AnswerService {
                     String answerText;
                     Integer version;
                     UUID defendantId = null;
-                    String status = null;
 
                     if (answer instanceof CaseLevelAllDocumentsAnswer caseAnswer) {
                         queryId = caseAnswer.getAnswerId().getQueryId();
@@ -205,9 +204,9 @@ public class AnswerService {
                         throw new IllegalArgumentException("Unknown answer type: " + answer.getClass());
                     }
 
-                    String userQueryText = resolveUserQueryText(queryId, createdAt);
+                    final String userQueryText = resolveUserQueryText(queryId, createdAt);
 
-                    AnswerResponse answerRes = new AnswerResponse();
+                    final AnswerResponse answerRes = new AnswerResponse();
                     answerRes.setQueryId(queryId);
                     answerRes.setCreatedAt(createdAt);
                     answerRes.setAnswer(answerText);

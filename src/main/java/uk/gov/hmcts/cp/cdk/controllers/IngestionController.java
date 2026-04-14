@@ -51,7 +51,7 @@ public class IngestionController implements IngestionApi {
         final String headerName = cqrsClientProperties.headers().cjsCppuid();
         final String cppuid = RequestUtils.requireHeader(headerName);
 
-        IngestionProcessResponse resp = ingestionProcessor.startIngestionProcess(cppuid, ingestionProcessRequest);
+        final IngestionProcessResponse resp = ingestionProcessor.startIngestionProcess(cppuid, ingestionProcessRequest);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED).contentType(VND_INGESTION).body(resp);
     }

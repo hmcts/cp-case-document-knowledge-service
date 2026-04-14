@@ -96,7 +96,7 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
                 response = new UserQueryAnswerReturnedSuccessfullyAsynchronously();
             }
 
-            String safeTransactionIdForLog = transactionId == null
+            final String safeTransactionIdForLog = transactionId == null
                     ? "null"
                     : transactionId
                     .replace('\n', '_')

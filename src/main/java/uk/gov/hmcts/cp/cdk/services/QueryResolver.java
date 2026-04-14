@@ -1,4 +1,4 @@
-package uk.gov.hmcts.cp.cdk.batch.support;
+package uk.gov.hmcts.cp.cdk.services;
 
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.repo.QueryRepository;

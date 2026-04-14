@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
+import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +45,7 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
 
-        final var jobData = executionInfo.getJobData();
+        final JsonObject jobData = executionInfo.getJobData();
 
         final String caseIdStr = jobData.getString(CTX_CASE_ID_KEY, null);
         final String cppuid = jobData.getString(CPPUID, null);
@@ -118,7 +119,7 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        final var retry = retryProperties.getDefaultRetry();
+        final JobManagerRetryProperties.RetryConfig retry = retryProperties.getDefaultRetry();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())

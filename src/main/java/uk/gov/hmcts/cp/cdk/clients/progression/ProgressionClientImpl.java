@@ -4,6 +4,7 @@ import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.CourtDocumentSearchResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.Defendant;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCase;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCaseEligibilityInfo;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCaseResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.UrlResponse;
@@ -121,8 +122,8 @@ public class ProgressionClientImpl implements ProgressionClient {
             return Optional.empty();
         }
 
-        final var prosecutionCase = response.prosecutionCase();
-        final var defendants = prosecutionCase.defendants();
+        final ProsecutionCase prosecutionCase = response.prosecutionCase();
+        final List<Defendant> defendants = prosecutionCase.defendants();
 
         if (defendants == null || defendants.isEmpty()) {
             return Optional.of(
@@ -130,14 +131,12 @@ public class ProgressionClientImpl implements ProgressionClient {
             );
         }
 
-        final var defendantIds = defendants.stream()
+        final List<String> defendantIds = defendants.stream()
                 .map(Defendant::id)
                 .filter(Objects::nonNull)
                 .toList();
 
-        return Optional.of(
-                new ProsecutionCaseEligibilityInfo(prosecutionCase.id(), defendantIds)
-        );
+        return Optional.of(new ProsecutionCaseEligibilityInfo(prosecutionCase.id(), defendantIds));
     }
 
 

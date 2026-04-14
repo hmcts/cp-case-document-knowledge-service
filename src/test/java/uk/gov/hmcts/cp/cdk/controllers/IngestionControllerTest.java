@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -144,33 +143,6 @@ class IngestionControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(VND))
                 .andExpect(jsonPath("$.message", containsString("caseIngestionJob")));
-    }
-
-    @Test
-    @DisplayName("ResponseStatusException BAD_REQUEST -> 400 vendor error")
-    void start_invalidParams_400() throws Exception {
-        IngestionService service = mock(IngestionService.class);
-        final IngestionProcessor ingestionProcessor = mock(IngestionProcessor.class, Mockito.RETURNS_DEEP_STUBS);
-        MockMvc mvc = mvc(service, ingestionProcessor);
-
-        when(service.startIngestionProcess(anyString(), any(IngestionProcessRequest.class)))
-                .thenThrow(new ResponseStatusException(BAD_REQUEST, "invalid parameters"));
-
-        String body = """
-                {
-                  "courtCentreId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-                  "roomId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-                  "date": "not-a-date"
-                }
-                """;
-
-        mvc.perform(post("/ingestions/start")
-                        .contentType(VND).accept(VND)
-                        .header(HEADER_NAME, HEADER_VALUE)
-                        .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(VND))
-                .andExpect(jsonPath("$.message", containsString("invalid parameters")));
     }
 
     @Test

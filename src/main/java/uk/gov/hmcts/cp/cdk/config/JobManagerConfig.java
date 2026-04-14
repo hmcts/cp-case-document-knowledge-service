@@ -1,8 +1,7 @@
-package uk.gov.hmcts.cp.cdk.batch;
+package uk.gov.hmcts.cp.cdk.config;
 
 import static java.util.Objects.requireNonNull;
 
-import uk.gov.hmcts.cp.cdk.config.VerifySchedulerProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.storage.AzureBlobStorageService;
 import uk.gov.hmcts.cp.cdk.storage.StorageProperties;
@@ -26,17 +25,11 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.core.task.TaskExecutor;
-import org.springframework.retry.backoff.ExponentialBackOffPolicy;
-import org.springframework.retry.policy.SimpleRetryPolicy;
-import org.springframework.retry.support.RetryTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
 
 /**
- * Core batch infrastructure configuration:
- * - RetryTemplate for tasklets
- * - TaskExecutors for partitioning
+ * Core infrastructure configuration:
  * - Azure Blob Storage client wiring
  */
 @Slf4j
@@ -45,86 +38,12 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @EnableConfigurationProperties({
         StorageProperties.class,
         UploadProperties.class,
-        IngestionProperties.class,
-        PartitioningProperties.class,
-        VerifySchedulerProperties.class
+        IngestionProperties.class
 })
-public class BatchConfig {
+public class JobManagerConfig {
 
     private static final String CONNECTION_STRING_MODE = "connection-string";
     private static final String MANAGED_IDENTITY_MODE = "managed-identity";
-
-    private final IngestionProperties ingestionProperties;
-
-    public BatchConfig(final IngestionProperties ingestionProperties) {
-        this.ingestionProperties = ingestionProperties;
-    }
-
-    @Bean
-    public RetryTemplate retryTemplate() {
-        final RetryTemplate retryTemplate = new RetryTemplate();
-
-        final SimpleRetryPolicy simpleRetryPolicy =
-                new SimpleRetryPolicy(ingestionProperties.getRetry().getMaxAttempts());
-
-        final ExponentialBackOffPolicy exponentialBackOffPolicy = new ExponentialBackOffPolicy();
-        exponentialBackOffPolicy.setInitialInterval(
-                ingestionProperties.getRetry().getBackoff().getInitialMs());
-        exponentialBackOffPolicy.setMultiplier(2.0);
-        exponentialBackOffPolicy.setMaxInterval(
-                ingestionProperties.getRetry().getBackoff().getMaxMs());
-
-        retryTemplate.setRetryPolicy(simpleRetryPolicy);
-        retryTemplate.setBackOffPolicy(exponentialBackOffPolicy);
-        return retryTemplate;
-    }
-
-    /**
-     * Primary executor for ingestion and case-level partitioning.
-     * Any unqualified TaskExecutor injection (e.g. in services) will use this.
-     */
-    @Bean(name = "ingestionTaskExecutor")
-    @Primary
-    @ConditionalOnMissingBean(name = "ingestionTaskExecutor")
-    public TaskExecutor ingestionTaskExecutor() {
-        final ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
-        threadPoolTaskExecutor.setThreadNamePrefix("ingestion-");
-        threadPoolTaskExecutor.setCorePoolSize(ingestionProperties.getCorePoolSize());
-        threadPoolTaskExecutor.setMaxPoolSize(ingestionProperties.getMaxPoolSize());
-        threadPoolTaskExecutor.setQueueCapacity(ingestionProperties.getQueueCapacity());
-        threadPoolTaskExecutor.setWaitForTasksToCompleteOnShutdown(true);
-        threadPoolTaskExecutor.setAwaitTerminationSeconds(30);
-        threadPoolTaskExecutor.initialize();
-        return threadPoolTaskExecutor;
-    }
-
-    /**
-     * Dedicated executor for query-level partitioning in step 6.
-     * Keeps nested partitions from contending with the ingestion pool.
-     */
-    @Bean(name = "queryPartitionTaskExecutor")
-    @ConditionalOnMissingBean(name = "queryPartitionTaskExecutor")
-    public TaskExecutor queryPartitionTaskExecutor(final PartitioningProperties partitioningProperties) {
-        final ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
-        threadPoolTaskExecutor.setThreadNamePrefix("query-partition-");
-
-        final int corePoolSize = Math.min(
-                ingestionProperties.getCorePoolSize(),
-                Math.max(1, partitioningProperties.queryGridSize())
-        );
-        final int maxPoolSize = Math.min(
-                ingestionProperties.getMaxPoolSize(),
-                Math.max(corePoolSize, partitioningProperties.queryGridSize())
-        );
-
-        threadPoolTaskExecutor.setCorePoolSize(corePoolSize);
-        threadPoolTaskExecutor.setMaxPoolSize(maxPoolSize);
-        threadPoolTaskExecutor.setQueueCapacity(ingestionProperties.getQueueCapacity());
-        threadPoolTaskExecutor.setWaitForTasksToCompleteOnShutdown(true);
-        threadPoolTaskExecutor.setAwaitTerminationSeconds(30);
-        threadPoolTaskExecutor.initialize();
-        return threadPoolTaskExecutor;
-    }
 
     @Bean
     @Primary

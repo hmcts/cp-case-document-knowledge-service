@@ -1,7 +1,7 @@
 package uk.gov.hmcts.cp.cdk.repo;
 
-import uk.gov.hmcts.cp.cdk.domain.CaseLevelLatestDocumentAnswer;
 import uk.gov.hmcts.cp.cdk.domain.AnswerId;
+import uk.gov.hmcts.cp.cdk.domain.CaseLevelLatestDocumentAnswer;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;

@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DocumentIdResolver {
 
+    /* default */
     static final String SQL_FIND_EXISTING_DOC = """
             SELECT doc_id
               FROM case_documents
@@ -29,6 +30,7 @@ public class DocumentIdResolver {
              LIMIT 1
             """;
 
+    /* default */
     static final String SQL_FIND_EXISTING_DOC_FOR_DEFENDANT = """
         SELECT doc_id
           FROM case_documents
@@ -39,18 +41,22 @@ public class DocumentIdResolver {
          ORDER BY ingestion_phase_at DESC
          LIMIT 1
         """;
+
+    /* default */
     static final String SQL_FIND_INGESTION_STATUS = """
     SELECT ingestion_phase
       FROM case_documents
      WHERE doc_id = :doc_id
     """;
 
-    final String SQL_FIND_INGESTION_STATUS_ALL_DOCS = """
+    /* default */
+    static final String SQL_FIND_INGESTION_STATUS_ALL_DOCS = """
         SELECT DISTINCT doc_id
           FROM case_documents
          WHERE doc_id IN (:doc_ids)
            AND ingestion_phase = 'INGESTED'
         """;
+
     private final NamedParameterJdbcTemplate jdbc;
 
     /**

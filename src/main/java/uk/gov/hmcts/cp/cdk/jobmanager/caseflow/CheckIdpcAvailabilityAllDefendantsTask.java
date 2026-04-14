@@ -12,7 +12,6 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_COURTDOC
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOCIDS_ARRAY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_REFERENCE_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_LATEST_DEFENDANT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
@@ -44,6 +43,8 @@ import java.util.UUID;
 import java.util.stream.IntStream;
 
 import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 import lombok.RequiredArgsConstructor;
@@ -109,12 +110,12 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
                     .orElse(null);
             log.info("Latest defendant identified: {}", latestDefendantId);
 
-            var docIdsArrayBuilder = Json.createArrayBuilder();
+            final JsonArrayBuilder docIdsArrayBuilder = Json.createArrayBuilder();
             defendantToDocIdMap.forEach((defendantId, docId) -> {
                 docIdsArrayBuilder.add(docId);
             });
 
-            var docIdsArray = docIdsArrayBuilder.build();
+            final JsonArray docIdsArray = docIdsArrayBuilder.build();
 
             for (LatestMaterialInfo info : materials) {
                 final String defendantId = info.defendantId();
@@ -170,7 +171,7 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        final var retry = retryProperties.getDefaultRetry();
+        final JobManagerRetryProperties.RetryConfig retry = retryProperties.getDefaultRetry();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())

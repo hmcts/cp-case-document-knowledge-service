@@ -1,7 +1,5 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_DOCUMENT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
@@ -169,7 +167,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        final var retry = retryProperties.getDefaultRetry();
+        final JobManagerRetryProperties.RetryConfig retry = retryProperties.getDefaultRetry();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())

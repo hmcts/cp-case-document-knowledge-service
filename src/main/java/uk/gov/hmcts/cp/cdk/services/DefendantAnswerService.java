@@ -40,12 +40,12 @@ public class DefendantAnswerService {
 
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     @Transactional
-    public void upsert(UUID caseId, UUID queryId, UUID defendantId,
-                       String answer, String llmInput, UUID docId) {
+    public void upsert(final UUID caseId, final UUID queryId, final UUID defendantId,
+                       final String answer, final String llmInput, final UUID docId) {
 
-        int version = getVersionNumberWithDefendentId(caseId, queryId, defendantId);
+        final int version = getVersionNumberWithDefendentId(caseId, queryId, defendantId);
 
-        var params = new MapSqlParameterSource()
+        final MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("case_id", caseId)
                 .addValue("query_id", queryId)
                 .addValue("defendant_id", defendantId)

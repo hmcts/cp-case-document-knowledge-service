@@ -11,11 +11,11 @@ import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SU
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INVALID_METADATA;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
-import uk.gov.hmcts.cp.cdk.batch.support.QueryResolver;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
+import uk.gov.hmcts.cp.cdk.services.QueryResolver;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
@@ -158,7 +158,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
 
     @Override
     public Optional<List<Long>> getRetryDurationsInSecs() {
-        final var retry = retryProperties.getVerifyDocumentStatus();
+        final JobManagerRetryProperties.RetryConfig retry = retryProperties.getVerifyDocumentStatus();
         return Optional.of(
                 IntStream.range(0, retry.getMaxAttempts())
                         .mapToLong(i -> retry.getDelaySeconds())

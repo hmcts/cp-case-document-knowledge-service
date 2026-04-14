@@ -3,8 +3,6 @@ package uk.gov.hmcts.cp.cdk.jobmanager;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-
 @Component
 @ConfigurationProperties(prefix = "cdk.jobmanager.retry")
 public class JobManagerRetryProperties {
@@ -17,7 +15,7 @@ public class JobManagerRetryProperties {
         return defaultRetry;
     }
 
-    public void setDefaultRetry(RetryConfig defaultRetry) {
+    public void setDefaultRetry(final RetryConfig defaultRetry) {
         this.defaultRetry = defaultRetry;
     }
 
@@ -25,7 +23,7 @@ public class JobManagerRetryProperties {
         return verifyDocumentStatus;
     }
 
-    public void setVerifyDocumentStatus(RetryConfig verifyDocumentStatus) {
+    public void setVerifyDocumentStatus(final RetryConfig verifyDocumentStatus) {
         this.verifyDocumentStatus = verifyDocumentStatus;
     }
 
@@ -33,7 +31,7 @@ public class JobManagerRetryProperties {
         return questionsRetry;
     }
 
-    public void setQuestionsRetry(RetryConfig questionsRetry) {
+    public void setQuestionsRetry(final RetryConfig questionsRetry) {
         this.questionsRetry = questionsRetry;
     }
 
@@ -45,7 +43,7 @@ public class JobManagerRetryProperties {
             return maxAttempts;
         }
 
-        public void setMaxAttempts(int maxAttempts) {
+        public void setMaxAttempts(final int maxAttempts) {
             this.maxAttempts = maxAttempts;
         }
 
@@ -53,7 +51,7 @@ public class JobManagerRetryProperties {
             return delaySeconds;
         }
 
-        public void setDelaySeconds(long delaySeconds) {
+        public void setDelaySeconds(final long delaySeconds) {
             this.delaySeconds = delaySeconds;
         }
     }

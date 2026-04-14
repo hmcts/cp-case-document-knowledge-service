@@ -13,7 +13,7 @@ public class PermissionConstants {
     }
 
     public static String[] accessToIntelligencePermissions() {
-        ObjectNode intelligencePermissionObj = new ObjectMapper().createObjectNode();
+        final ObjectNode intelligencePermissionObj = new ObjectMapper().createObjectNode();
         intelligencePermissionObj.put(OBJECT_STR, INTELLIGENCE_ACCESS);
         intelligencePermissionObj.put(ACTION_STR, ACTION);
         return new String[]{intelligencePermissionObj.toString()};

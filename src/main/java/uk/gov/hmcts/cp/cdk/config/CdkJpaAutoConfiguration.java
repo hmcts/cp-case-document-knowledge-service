@@ -17,7 +17,7 @@ public class CdkJpaAutoConfiguration {
 
     static final class PersistencePackagesRegistrar implements ImportBeanDefinitionRegistrar {
         @Override
-        public void registerBeanDefinitions(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
+        public void registerBeanDefinitions(final AnnotationMetadata metadata, final BeanDefinitionRegistry registry) {
             // for general base-package defaults (repositories, etc.)
             AutoConfigurationPackages.register(registry, CdkPersistenceMarker.class.getPackageName());
             // for JPA entity scanning

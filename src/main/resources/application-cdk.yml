@@ -26,8 +26,6 @@ cdk:
     queue-capacity: ${CP_CDK_INGESTION_QUEUE_CAPACITY:200}
 
     feature:
-      use-job-manager: ${CP_CDK_FEATURE_USE_JOB_MANAGER:true}
-      use-new-upload-document-api: ${CP_CDK_FEATURE_USE_NEW_UPLOAD_DOCUMENT_API:false}
       use-multi-defendant: ${CP_CDK_FEATURE_USE_MULTI_DEFENDANT:true}
 
     batch:
@@ -35,21 +33,6 @@ cdk:
         case-grid-size: ${CDK_INGESTION_BATCH_PARTITION_CASE_GRID_SIZE:8}
         query-grid-size: ${CDK_INGESTION_BATCH_PARTITION_QUERY_GRID_SIZE:4}
         filter-grid-size: ${CDK_INGESTION_BATCH_PARTITION_FILTER_GRID_SIZE:4}
-
-    verify:
-      scheduler:
-        enabled: ${CP_CDK_VERIFY_SCHEDULER_ENABLED:true}
-        delay-ms: ${CP_CDK_VERIFY_SCHEDULER_DELAY_MS:5000}
-        batch-size: ${CP_CDK_VERIFY_SCHEDULER_BATCH_SIZE:1}
-        max-attempts: ${CP_CDK_VERIFY_SCHEDULER_MAX_ATTEMPTS:3000}
-        lock-ttl-ms: ${CP_CDK_VERIFY_SCHEDULER_LOCK_TTL_MS:10000}
-
-    retry:
-      # fixed name so it’s actually “max attempts”, not “max wait”
-      max-attempts: ${CDK_RETRY_MAX_ATTEMPTS:10}
-      backoff:
-        initial-ms: ${CDK_RETRY_BACKOFF_INITIAL_MS:1000}
-        max-ms: ${CDK_RETRY_BACKOFF_MAX_MS:15000}
 
     upload:
       blob-prefix: ${CDK_UPLOAD_BLOB_PREFIX:cases}

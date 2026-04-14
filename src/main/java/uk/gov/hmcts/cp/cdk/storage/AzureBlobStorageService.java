@@ -27,8 +27,6 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class AzureBlobStorageService implements StorageService {
 
-    private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
-
     private final BlobContainerClient blobContainerClient;
     private final long pollIntervalMs;
     private final long timeoutSeconds;

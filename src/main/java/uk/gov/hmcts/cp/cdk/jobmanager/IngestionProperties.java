@@ -85,25 +85,8 @@ public class IngestionProperties {
     }
 
     public static class Feature {
-        private boolean useJobManager = true;
-        private boolean useNewUploadDocumentApi = true;
         private boolean useMultiDefendant = true;
 
-        public boolean isUseJobManager() {
-            return useJobManager;
-        }
-
-        public void setUseJobManager(final boolean useJobManager) {
-            this.useJobManager = useJobManager;
-        }
-
-        public boolean isUseNewUploadDocumentApi() {
-            return useNewUploadDocumentApi;
-        }
-
-        public void setUseNewUploadDocumentApi(final boolean useNewUploadDocumentApi) {
-            this.useNewUploadDocumentApi = useNewUploadDocumentApi;
-        }
         public boolean isUseMultiDefendant() {
             return useMultiDefendant;
         }
