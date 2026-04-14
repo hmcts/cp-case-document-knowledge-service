@@ -8,15 +8,12 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static jakarta.json.Json.createObjectBuilder;
 import static java.util.UUID.randomUUID;
 import static org.apache.http.HttpStatus.SC_ACCEPTED;
-import static org.slf4j.LoggerFactory.getLogger;
 import static uk.gov.hmcts.cp.cdk.http.AzureSasUtil.generateSasUrl;
 
 import jakarta.json.JsonObject;
-import org.slf4j.Logger;
 
 public class DocumentIngestionInitiationApiStub {
 
-    private static final Logger LOGGER = getLogger(DocumentIngestionInitiationApiStub.class);
     private static final String INITIATE_DOCUMENT_UPLOAD = "/document-upload";
     public static final String APPLICATION_JSON = "application/json";
 
@@ -28,7 +25,6 @@ public class DocumentIngestionInitiationApiStub {
     public static void stubInitiateDocumentUpload(final String containerName, final String blobName) {
 
         final String sasStorageUrl = generateSasUrl(containerName, blobName);
-        LOGGER.info("Stub:: sasStorageUrl: {}", sasStorageUrl);
 
         final JsonObject responseJson = createObjectBuilder()
                 .add("storageUrl", sasStorageUrl)
