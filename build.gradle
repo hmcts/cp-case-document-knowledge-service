@@ -9,10 +9,10 @@ plugins {
     id 'pmd'
     id 'maven-publish'
     id 'com.github.ben-manes.versions' version '0.53.0'
-    id 'org.cyclonedx.bom' version '3.0.1'
-    id 'au.com.dius.pact' version '4.6.17'
-    id 'com.gorylenko.gradle-git-properties' version '2.5.3'
-    id 'com.avast.gradle.docker-compose' version '0.17.19'
+    id 'org.cyclonedx.bom' version '3.2.4'
+    id 'au.com.dius.pact' version '4.6.20'
+    id 'com.gorylenko.gradle-git-properties' version '2.5.7'
+    id 'com.avast.gradle.docker-compose' version '0.17.21'
 }
 
 group = 'uk.gov.hmcts.cp'
@@ -174,11 +174,11 @@ dependencies {
 
 
     // Testcontainers (BOM)
-    testImplementation("org.springframework.boot:spring-boot-testcontainers:4.0.2")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers:4.0.5")
     testImplementation 'org.testcontainers:postgresql:1.21.4'
     testImplementation 'org.testcontainers:junit-jupiter:1.21.4'
     // Something badly wrong here if we need testcontainers in none test build
-    implementation "org.testcontainers:testcontainers:2.0.3"
+    implementation "org.testcontainers:testcontainers:2.0.4"
 
     // Lombok
     compileOnly "org.projectlombok:lombok:${vers.lombok}"
