@@ -4,16 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import uk.gov.hmcts.cp.cdk.controllers.GlobalExceptionHandler;
+
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -22,31 +20,26 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.HandlerInterceptor;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-@WebMvcTest
-@AutoConfigureMockMvc(addFilters = false)
-@Import({
-        TracingIntegrationTest.TestTracingConfig.class,
-        TracingIntegrationTest.TracingProbeController.class
-})
 @TestPropertySource(properties = {
         "spring.application.name=case-document-knowledge-service",
         "jwt.filter.enabled=false",
         "spring.main.lazy-initialization=true",
         "server.servlet.context-path="
 })
+@WebMvcTest(controllers = TracingProbeController.class,
+        excludeFilters = {@ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = GlobalExceptionHandler.class)}
+)
+@Import(TestTracingConfig.class)
 @Slf4j
 class TracingIntegrationTest {
 
@@ -128,36 +121,6 @@ class TracingIntegrationTest {
 
         assertThat(result.getResponse().getHeader("traceId")).isEqualTo(fields.get("traceId"));
         assertThat(result.getResponse().getHeader("spanId")).isEqualTo(fields.get("spanId"));
-    }
-
-    /**
-     * Test-only tracing: sets traceId/spanId in MDC + response headers; adds applicationName.
-     */
-    @Configuration
-    static class TestTracingConfig implements WebMvcConfigurer {
-        @Value("${spring.application.name:app}")
-        private String applicationName;
-
-        @Override
-        public void addInterceptors(InterceptorRegistry registry) {
-            registry.addInterceptor(new HandlerInterceptor() {
-                @Override
-                public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler) {
-                    String traceId = Optional.ofNullable(req.getHeader("traceId"))
-                            .filter(s -> !s.isBlank()).orElse(UUID.randomUUID().toString());
-                    String spanId = Optional.ofNullable(req.getHeader("spanId"))
-                            .filter(s -> !s.isBlank()).orElse(UUID.randomUUID().toString());
-
-                    MDC.put("traceId", traceId);
-                    MDC.put("spanId", spanId);
-                    MDC.put("applicationName", applicationName);
-
-                    res.setHeader("traceId", traceId);
-                    res.setHeader("spanId", spanId);
-                    return true;
-                }
-            });
-        }
     }
 
     /**
