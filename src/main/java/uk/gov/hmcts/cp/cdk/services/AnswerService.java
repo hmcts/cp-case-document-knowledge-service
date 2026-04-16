@@ -71,7 +71,7 @@ public class AnswerService {
         final QueryLevel level = latest.getLevel();
         final OffsetDateTime asOf = Optional.ofNullable(at).orElse(utcNow());
 
-        List<?> answers =List.of();
+        List<?> answers = List.of();
         if (level != null) {
             switch (level) {
                 case CASE:
@@ -97,7 +97,7 @@ public class AnswerService {
             }
         }
         if (answers == null || answers.isEmpty()) {
-            Answer answerEntity = resolveAnswer(queryId, caseId, version, asOf);
+            final Answer answerEntity = resolveAnswer(queryId, caseId, version, asOf);
             answers = (answerEntity != null) ? List.of(answerEntity) : List.of();
         }
 
@@ -128,7 +128,7 @@ public class AnswerService {
         return mapper.toAnswerWithLlm(answerEntity, userQueryText);
     }
 
-    private Answer resolveAnswer(
+    Answer resolveAnswer(
             final UUID queryId,
             final UUID caseIdOrNull,
             final Integer versionOrNull,

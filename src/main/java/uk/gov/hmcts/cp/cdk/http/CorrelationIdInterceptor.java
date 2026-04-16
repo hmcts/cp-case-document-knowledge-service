@@ -19,7 +19,7 @@ public class CorrelationIdInterceptor implements ClientHttpRequestInterceptor {
         String cid = request.getHeaders().getFirst(HEADER);
         if (cid == null || cid.isBlank()) {
             cid = UUID.randomUUID().toString();
-            request.getHeaders().add(HEADER, cid);
+            request.getHeaders().set(HEADER, cid);
         }
         MDC.put(MDC_KEY, cid);
         try {
