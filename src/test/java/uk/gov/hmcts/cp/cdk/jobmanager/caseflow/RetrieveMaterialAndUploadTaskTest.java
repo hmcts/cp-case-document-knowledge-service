@@ -1,5 +1,6 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
+import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -30,6 +31,7 @@ import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
 import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -96,12 +98,12 @@ public class RetrieveMaterialAndUploadTaskTest {
                 ingestionProperties
         );
 
-        documentId = UUID.randomUUID();
+        documentId = randomUUID();
 
         jobData = Json.createObjectBuilder()
-                .add(CTX_CASE_ID_KEY, UUID.randomUUID().toString())
-                .add(CTX_DEFENDANT_ID_KEY, UUID.randomUUID().toString())
-                .add(CTX_MATERIAL_ID_KEY, UUID.randomUUID().toString())
+                .add(CTX_CASE_ID_KEY, randomUUID().toString())
+                .add(CTX_DEFENDANT_ID_KEY, randomUUID().toString())
+                .add(CTX_MATERIAL_ID_KEY, randomUUID().toString())
                 .add(CTX_DOC_ID_KEY, documentId.toString())
                 .add(CTX_MATERIAL_NAME, "Material A")
                 .add(CPPUID, "user-123")
@@ -158,5 +160,78 @@ public class RetrieveMaterialAndUploadTaskTest {
 
         assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
         verifyNoInteractions(storageService, caseDocumentRepository, executionService);
+    }
+
+    @Test
+    void shouldRetryWhenDownloadUrlEmpty() {
+        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.empty());
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.INPROGRESS);
+        assertThat(result.isShouldRetry()).isTrue();
+    }
+
+    @Test
+    void shouldRetryOnException() {
+        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenThrow(new RuntimeException("boom"));
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.INPROGRESS);
+        assertThat(result.isShouldRetry()).isTrue();
+    }
+
+    @Test
+    void shouldHandleNullBlobMetadata() {
+        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.of("url"));
+        when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
+        when(caseDocumentRepository.findSupersededDocuments(any(), any())).thenReturn(List.of());
+        when(documentIngestionInitiationApi.initiateDocumentUpload(any()))
+                .thenReturn(ResponseEntity.ok(new FileStorageLocationReturnedSuccessfully("storage-url", "doc-ref")));
+
+        when(storageService.copyFromUrl(any(), any())).thenReturn(null);
+        when(caseDocumentRepository.findById(any())).thenReturn(Optional.empty());
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(true);
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+    }
+
+    @Test
+    void shouldFallbackToCaseLevelSupersededDocs() {
+        final UUID caseId = randomUUID();
+        final UUID defendantId = randomUUID();
+        when(caseDocumentRepository.findSupersededDocuments(caseId, defendantId)).thenReturn(List.of());
+
+        when(caseDocumentRepository.findSupersededDocuments(caseId)).thenReturn(List.of(randomUUID()));
+        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.of("url"));
+        when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
+        when(documentIngestionInitiationApi.initiateDocumentUpload(any()))
+                .thenReturn(ResponseEntity.ok(
+                        new FileStorageLocationReturnedSuccessfully("storage-url", "doc-ref")
+                ));
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(true);
+
+        when(storageService.copyFromUrl(any(), any())).thenReturn(new DocumentBlobMetadata("url", "name", 1L));
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+    }
+
+    @Test
+    void shouldReturnRetryDurations() {
+        final JobManagerRetryProperties.RetryConfig retryConfig = new JobManagerRetryProperties.RetryConfig();
+        retryConfig.setMaxAttempts(3);
+        retryConfig.setDelaySeconds(10);
+        when(retryProperties.getDefaultRetry()).thenReturn(retryConfig);
+
+        final List<Long> durations = task.getRetryDurationsInSecs().orElseThrow();
+
+        assertThat(durations).isEqualTo(List.of(10L, 10L, 10L));
     }
 }

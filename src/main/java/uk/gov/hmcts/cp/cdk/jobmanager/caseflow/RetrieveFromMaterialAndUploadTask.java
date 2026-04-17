@@ -131,7 +131,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
             log.info("Saved CaseDocument docId={}, caseId={}, materialId={}, sizeBytes={}, blobUri={}, requestId={}",
                     documentId, caseId, materialId, sizeBytes, blobUrl, requestId);
 
-            JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
+            final JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
 
             updatedJobData.add(CTX_DOC_ID_KEY, documentId.toString());
             updatedJobData.add(CTX_BLOB_NAME_KEY, blobName);
@@ -140,7 +140,7 @@ public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
                     ? CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS
                     : CHECK_INGESTION_STATUS_FOR_DOCUMENT;
 
-            ExecutionInfo executionInfoNew = executionInfo()
+            final ExecutionInfo executionInfoNew = executionInfo()
                     .from(executionInfo)
                     .withAssignedTaskName(checkIngestionTask)
                     .withJobData(updatedJobData.build())
