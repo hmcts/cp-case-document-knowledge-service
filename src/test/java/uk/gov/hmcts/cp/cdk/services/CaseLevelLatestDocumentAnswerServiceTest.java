@@ -48,7 +48,6 @@ class CaseLevelLatestDocumentAnswerServiceTest {
     void shouldUpsertSuccessfully() {
         // given
         when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Integer.class))).thenReturn(1);
-        when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Integer.class))).thenReturn(1);
 
         // when
         service.upsert(caseId, queryId, "answer", "llm-input", docId);
