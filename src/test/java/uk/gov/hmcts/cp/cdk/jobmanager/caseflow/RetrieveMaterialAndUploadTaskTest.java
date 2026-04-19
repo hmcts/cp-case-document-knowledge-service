@@ -1,5 +1,6 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
+import static jakarta.json.Json.createObjectBuilder;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,8 +16,12 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_K
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
+import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
+import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.COMPLETED;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
+import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
@@ -35,7 +40,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -83,6 +87,8 @@ public class RetrieveMaterialAndUploadTaskTest {
     private ResponseEntity<@NotNull FileStorageLocationReturnedSuccessfully> responseEntity;
     @Mock
     private FileStorageLocationReturnedSuccessfully storageLocation;
+    @Captor
+    private ArgumentCaptor<CaseDocument> caseDocumentCaptor;
 
     @BeforeEach
     void setUp() {
@@ -100,7 +106,7 @@ public class RetrieveMaterialAndUploadTaskTest {
 
         documentId = randomUUID();
 
-        jobData = Json.createObjectBuilder()
+        jobData = createObjectBuilder()
                 .add(CTX_CASE_ID_KEY, randomUUID().toString())
                 .add(CTX_DEFENDANT_ID_KEY, randomUUID().toString())
                 .add(CTX_MATERIAL_ID_KEY, randomUUID().toString())
@@ -110,11 +116,27 @@ public class RetrieveMaterialAndUploadTaskTest {
                 .add("requestId", "req-1")
                 .build();
 
-        executionInfo = ExecutionInfo.executionInfo()
+        executionInfo = executionInfo()
                 .withJobData(jobData)
                 .withAssignedTaskName(RETRIEVE_FROM_MATERIAL)
                 .withAssignedTaskStartTime(ZonedDateTime.now())
                 .build();
+    }
+
+    @Test
+    void shouldReturnCompletedWhenMissingRequiredJobData() {
+        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.empty());
+
+        final ExecutionInfo result = task.execute(executionInfo()
+                .withJobData(createObjectBuilder()
+                        .add(CPPUID, "user-123")
+                        .add("requestId", "req-1")
+                        .build())
+                .withAssignedTaskName(RETRIEVE_FROM_MATERIAL)
+                .withAssignedTaskStartTime(ZonedDateTime.now())
+                .build());
+
+        assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
     }
 
     @Test
@@ -138,7 +160,7 @@ public class RetrieveMaterialAndUploadTaskTest {
 
         ExecutionInfo result;
         result = task.execute(executionInfo);
-        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+        assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
 
         // Verify next task scheduled
         verify(executionService).executeWith(executionInfoCaptor.capture());
@@ -152,13 +174,13 @@ public class RetrieveMaterialAndUploadTaskTest {
 
     @Test
     void shouldCompleteImmediately_whenMissingUserId() {
-        JsonObject badJobData = Json.createObjectBuilder(jobData)
+        JsonObject badJobData = createObjectBuilder(jobData)
                 .remove(CPPUID)
                 .build();
-        ExecutionInfo badExecutionInfo = ExecutionInfo.executionInfo().withJobData(badJobData).build();
+        ExecutionInfo badExecutionInfo = executionInfo().withJobData(badJobData).build();
         ExecutionInfo result = task.execute(badExecutionInfo);
 
-        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+        assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
         verifyNoInteractions(storageService, caseDocumentRepository, executionService);
     }
 
@@ -197,7 +219,30 @@ public class RetrieveMaterialAndUploadTaskTest {
 
         final ExecutionInfo result = task.execute(executionInfo);
 
-        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+        assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
+    }
+
+    @Test
+    void shouldSaveDocumentUploadedWhenCopyUrlSuccessful() {
+        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.of("url"));
+        when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
+        when(caseDocumentRepository.findSupersededDocuments(any(), any())).thenReturn(List.of());
+        when(documentIngestionInitiationApi.initiateDocumentUpload(any()))
+                .thenReturn(ResponseEntity.ok(new FileStorageLocationReturnedSuccessfully("storage-url", "doc-ref")));
+
+        when(storageService.copyFromUrl(any(), any())).thenReturn(new DocumentBlobMetadata("https://storage.blob/blob1", "document-id_120326.pdf", 12345L));
+        when(caseDocumentRepository.findById(any())).thenReturn(Optional.of(new CaseDocument()));
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(true);
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        verify(caseDocumentRepository).saveAndFlush(caseDocumentCaptor.capture());
+        assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
+
+        final CaseDocument savedCaseDocument = caseDocumentCaptor.getValue();
+        assertThat(savedCaseDocument.getIngestionPhase()).isEqualTo(DocumentIngestionPhase.UPLOADED);
+        assertThat(savedCaseDocument.getBlobUri()).isEqualTo("https://storage.blob/blob1");
     }
 
     @Test
@@ -220,7 +265,7 @@ public class RetrieveMaterialAndUploadTaskTest {
 
         final ExecutionInfo result = task.execute(executionInfo);
 
-        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+        assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
     }
 
     @Test

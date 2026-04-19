@@ -25,6 +25,7 @@ import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
@@ -123,16 +124,8 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
             final String blobName = nonNull(documentBlobMetadata) ? documentBlobMetadata.blobName() : UNKNOWN_BLOB_NAME;
             final long sizeBytes = nonNull(documentBlobMetadata) ? documentBlobMetadata.blobSize() : UNKNOWN_SIZE_BYTES;
 
-            caseDocumentRepository.findById(documentId).ifPresent(doc -> {
-                doc.setDocName(blobName);
-                doc.setBlobUri(blobUrl);
-                doc.setContentType(uploadProperties.contentType());
-                doc.setSizeBytes(sizeBytes);
-                doc.setUploadedAt(utcNow());
-                doc.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
-                doc.setIngestionPhaseAt(utcNow());
-                caseDocumentRepository.saveAndFlush(doc);
-            });
+            caseDocumentRepository.findById(documentId).ifPresent(doc ->
+                    saveDocumentUploaded(doc, blobName, blobUrl, sizeBytes));
 
             log.info("Saved CaseDocument docId={}, caseId={}, materialId={}, sizeBytes={}, blobUri={}, requestId={}",
                     documentId, caseId, materialId, sizeBytes, blobUrl, requestId);
@@ -236,5 +229,16 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
         return supersededDocuments.isEmpty()
                 ? caseDocumentRepository.findSupersededDocuments(caseId)
                 : supersededDocuments;
+    }
+
+    private void saveDocumentUploaded(final CaseDocument doc, final String blobName, final String blobUrl, final long sizeBytes) {
+        doc.setDocName(blobName);
+        doc.setBlobUri(blobUrl);
+        doc.setContentType(uploadProperties.contentType());
+        doc.setSizeBytes(sizeBytes);
+        doc.setUploadedAt(utcNow());
+        doc.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
+        doc.setIngestionPhaseAt(utcNow());
+        caseDocumentRepository.saveAndFlush(doc);
     }
 }

@@ -203,4 +203,15 @@ class CheckIdpcAvailabilityAllDefendantsTaskTest {
                 .isTrue();
     }
 
+    @Test
+    void shouldReturnRetryDurations() {
+        final JobManagerRetryProperties.RetryConfig retryConfig = new JobManagerRetryProperties.RetryConfig();
+        retryConfig.setMaxAttempts(3);
+        retryConfig.setDelaySeconds(10);
+        when(retryProperties.getDefaultRetry()).thenReturn(retryConfig);
+
+        final List<Long> durations = task.getRetryDurationsInSecs().orElseThrow();
+
+        assertThat(durations).isEqualTo(List.of(10L, 10L, 10L));
+    }
 }
