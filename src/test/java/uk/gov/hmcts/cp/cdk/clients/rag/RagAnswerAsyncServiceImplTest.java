@@ -1,11 +1,13 @@
 package uk.gov.hmcts.cp.cdk.clients.rag;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATED;
@@ -36,6 +38,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -241,6 +244,43 @@ class RagAnswerAsyncServiceImplTest {
 
         assertThat(response.getStatusCode().value()).isEqualTo(500);
         assertThat(response.getBody().getErrorMessage()).isEqualTo("Internal server error");
+    }
+
+    @Test
+    void shouldThrowRagClientException_onHttpStatusCodeException() {
+
+        // given
+        mockGetRequest();
+        final HttpStatusCodeException httpException = mock(HttpStatusCodeException.class);
+        when(httpException.getStatusCode()).thenReturn(org.springframework.http.HttpStatus.BAD_REQUEST);
+        when(httpException.getStatusText()).thenReturn("Bad Request");
+        when(httpException.getResponseBodyAsString(UTF_8)).thenReturn("error-body");
+        when(responseSpec.body(UserQueryAnswerReturnedSuccessfullyAsynchronously.class)).thenThrow(httpException);
+
+        // when
+        final RagClientException thrown = assertThrows(RagClientException.class,
+                () -> service.answerUserQueryStatus("tx-123", true));
+
+        // then
+        assertThat(thrown.getMessage().contains("RAG Async answer status API error")).isTrue();
+        assertThat(thrown.getMessage().contains("400")).isTrue();
+        assertThat(thrown.getMessage().contains("Bad Request")).isTrue();
+        assertThat(thrown.getMessage().contains("error-body")).isTrue();
+    }
+
+    @Test
+    void shouldThrowRagClientException_onGenericException() {
+        // given
+        mockGetRequest();
+        when(responseSpec.body(UserQueryAnswerReturnedSuccessfullyAsynchronously.class)).thenThrow(new RuntimeException("boom"));
+
+        // when
+        final RagClientException thrown = assertThrows(RagClientException.class,
+                () -> service.answerUserQueryStatus("tx-123", false));
+
+        // then
+        assertThat(thrown.getMessage()).isEqualTo("Failed to call RAG Async answer status API");
+        assertThat(thrown.getCause() instanceof RuntimeException).isTrue();
     }
 
     @SuppressWarnings("unchecked")

@@ -1,5 +1,7 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
+import static jakarta.json.Json.createObjectBuilder;
+import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.times;
@@ -9,11 +11,13 @@ import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_ALL_DOCUMENTS_INGESTION_STATUS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_REFERENCE_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_LATEST_DEFENDANT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERYIDS_ARRAY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
+import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
@@ -78,7 +82,25 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
                 retryProperties
         );
 
-        documentId = UUID.randomUUID();
+        documentId = randomUUID();
+    }
+
+    @Test
+    void shouldComplete_whenDocIdMissing() {
+        final JsonObject jobData = createObjectBuilder()
+                .add(CTX_CASE_ID_KEY, randomUUID().toString())
+                .add(CTX_DEFENDANT_ID_KEY, randomUUID().toString())
+                .build();
+
+        final ExecutionInfo result = task.execute(executionInfo()
+                .withJobData(jobData)
+                .withAssignedTaskName(CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS)
+                .withAssignedTaskStartTime(ZonedDateTime.now())
+                .withExecutionStatus(ExecutionStatus.INPROGRESS)
+                .build());
+
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+        assertThat(result.isShouldRetry()).isFalse();
     }
 
     @Test
@@ -92,9 +114,9 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
         CaseDocument doc = new CaseDocument();
         when(caseDocumentRepository.findById(documentId)).thenReturn(Optional.of(doc));
 
-        UUID caseQueryId = UUID.randomUUID();
-        UUID caseAllDocsQueryId = UUID.randomUUID();
-        UUID defendantQueryId = UUID.randomUUID();
+        UUID caseQueryId = randomUUID();
+        UUID caseAllDocsQueryId = randomUUID();
+        UUID defendantQueryId = randomUUID();
 
         QueryVersionRepository.SnapshotDefinition caseDef =
                 new QueryVersionRepository.SnapshotDefinition(caseQueryId, "lable1", "query1", "prompt1", Instant.now(), QueryLevel.CASE.toString());
@@ -111,13 +133,13 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
         JsonObject jobData = Json.createObjectBuilder()
                 .add("docId", documentId.toString())
                 .add("blobName", "blob-123")
-                .add("caseId", UUID.randomUUID().toString())
+                .add("caseId", randomUUID().toString())
                 .add(CTX_DOC_REFERENCE_KEY, "ref-123")
                 .add(CTX_LATEST_DEFENDANT, true)
-                .add(CTX_DEFENDANT_ID_KEY, UUID.randomUUID().toString())
+                .add(CTX_DEFENDANT_ID_KEY, randomUUID().toString())
                 .build();
 
-        ExecutionInfo executionInfo = ExecutionInfo.executionInfo()
+        ExecutionInfo executionInfo = executionInfo()
                 .withJobData(jobData)
                 .withAssignedTaskName(CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS)
                 .withAssignedTaskStartTime(ZonedDateTime.now())
@@ -172,10 +194,10 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
                 .add("docId", documentId.toString())
                 .add("blobName", "blob-123")
                 .add(CTX_DOC_REFERENCE_KEY, "ref-123")
-                .add(CTX_DEFENDANT_ID_KEY, UUID.randomUUID().toString())
+                .add(CTX_DEFENDANT_ID_KEY, randomUUID().toString())
                 .build();
 
-        ExecutionInfo executionInfo = ExecutionInfo.executionInfo()
+        ExecutionInfo executionInfo = executionInfo()
                 .withJobData(jobData)
                 .withAssignedTaskName(CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS)
                 .withAssignedTaskStartTime(ZonedDateTime.now())
@@ -188,5 +210,17 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
         assertThat(result.isShouldRetry()).isTrue();
 
         verifyNoInteractions(caseDocumentRepository, executionService);
+    }
+
+    @Test
+    void shouldReturnRetryDurations() {
+        final JobManagerRetryProperties.RetryConfig retryConfig = new JobManagerRetryProperties.RetryConfig();
+        retryConfig.setMaxAttempts(3);
+        retryConfig.setDelaySeconds(10);
+        when(retryProperties.getVerifyDocumentStatus()).thenReturn(retryConfig);
+
+        final List<Long> durations = task.getRetryDurationsInSecs().orElseThrow();
+
+        assertThat(durations).isEqualTo(List.of(10L, 10L, 10L));
     }
 }

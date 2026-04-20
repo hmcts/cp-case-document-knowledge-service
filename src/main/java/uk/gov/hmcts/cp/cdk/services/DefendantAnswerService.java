@@ -43,7 +43,7 @@ public class DefendantAnswerService {
     public void upsert(final UUID caseId, final UUID queryId, final UUID defendantId,
                        final String answer, final String llmInput, final UUID docId) {
 
-        final int version = getVersionNumberWithDefendentId(caseId, queryId, defendantId);
+        final Integer version = getVersionNumberWithDefendentId(caseId, queryId, defendantId);
 
         final MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("case_id", caseId)

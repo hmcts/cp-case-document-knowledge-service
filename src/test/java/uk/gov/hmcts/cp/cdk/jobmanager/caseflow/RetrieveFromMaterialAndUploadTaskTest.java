@@ -2,7 +2,6 @@ package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -16,7 +15,6 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
@@ -27,9 +25,11 @@ import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
 import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -147,5 +147,54 @@ class RetrieveFromMaterialAndUploadTaskTest {
 
         assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
         verifyNoInteractions(storageService, caseDocumentRepository, executionService);
+    }
+
+    @Test
+    void shouldRetryWhenDownloadUrlMissing() {
+        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.empty());
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.INPROGRESS);
+        assertThat(result.isShouldRetry()).isTrue();
+    }
+
+    @Test
+    void shouldRetryOnException() {
+        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenThrow(new RuntimeException("Error!!"));
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.INPROGRESS);
+        assertThat(result.isShouldRetry()).isTrue();
+    }
+
+    @Test
+    void shouldReturnRetryDurations() {
+        final JobManagerRetryProperties.RetryConfig retryConfig = new JobManagerRetryProperties.RetryConfig();
+        retryConfig.setMaxAttempts(3);
+        retryConfig.setDelaySeconds(10);
+        when(retryProperties.getDefaultRetry()).thenReturn(retryConfig);
+
+        final List<Long> durations = task.getRetryDurationsInSecs().orElseThrow();
+
+        assertThat(durations).isEqualTo(List.of(10L, 10L, 10L));
+    }
+
+    @Test
+    void shouldNotFailWhenDocumentNotFound() throws JsonProcessingException {
+        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.of("url"));
+        when(storageService.copyFromUrl(any(), any(), any())).thenReturn("blob-url");
+        when(storageService.getBlobSize(any())).thenReturn(1L);
+        when(caseDocumentRepository.findById(any())).thenReturn(Optional.empty());
+        when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
+        when(uploadProperties.fileExtension()).thenReturn(".pdf");
+        when(objectMapper.writeValueAsString(any())).thenReturn("{\"metadata\":\"caseId\"}");
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(true);
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
     }
 }

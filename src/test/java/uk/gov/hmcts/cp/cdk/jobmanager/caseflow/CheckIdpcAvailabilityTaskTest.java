@@ -107,6 +107,7 @@ class CheckIdpcAvailabilityTaskTest {
 
         verifyNoInteractions(progressionClient, executionService, documentIdResolver);
     }
+
     @Test
     void shouldComplete_whenUserIdMissing() {
         JsonObject jobData = createObjectBuilder()
@@ -119,7 +120,6 @@ class CheckIdpcAvailabilityTaskTest {
         assertThat(result.isShouldRetry()).isFalse();
 
     }
-
 
     @Test
     void shouldComplete_whenNoLatestMaterial() {
