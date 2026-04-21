@@ -31,6 +31,7 @@ import uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus;
 import uk.gov.hmcts.cp.openapi.model.DocumentChunk;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullyAsynchronously;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
+import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 
 import java.util.List;
 import java.util.UUID;
@@ -92,6 +93,9 @@ class CheckStatusOfAnswerGenerationTaskTest {
     @Mock
     private IngestionProperties.Feature feature;
 
+    @Mock
+    private ExecutionService executionService;
+
     private ExecutionInfo executionInfo;
     private UUID transactionId;
     private UUID caseId;
@@ -100,7 +104,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @BeforeEach
     void setUp() {
-        task = new CheckStatusOfAnswerGenerationTask(api, objectMapper, retryProperties, answerGenerationService,caseLevelAllDocumentsAnswerService,caseLevelLatestDocumentAnswerService,defendantAnswerService,ingestionProperties);
+        task = new CheckStatusOfAnswerGenerationTask(api, objectMapper, retryProperties, answerGenerationService,caseLevelAllDocumentsAnswerService,caseLevelLatestDocumentAnswerService,defendantAnswerService,ingestionProperties,executionService);
         transactionId = UUID.randomUUID();
         caseId = UUID.randomUUID();
         queryId = UUID.randomUUID();
@@ -209,6 +213,11 @@ class CheckStatusOfAnswerGenerationTaskTest {
         when(body.getStatus()).thenReturn(ANSWER_GENERATION_FAILED);
         when(ingestionProperties.getFeature()).thenReturn(feature);
         when(feature.isUseMultiDefendant()).thenReturn(false);
+
+        JobManagerRetryProperties.RetryConfig retryConfig = new JobManagerRetryProperties.RetryConfig();
+        retryConfig.setMaxAttempts(3);
+
+        when(retryProperties.getQuestionsRetry()).thenReturn(retryConfig);
         final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.ok(body);
 
         when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(response);
@@ -224,5 +233,47 @@ class CheckStatusOfAnswerGenerationTaskTest {
         assertThat(result.getExecutionStatus()).isEqualTo(INPROGRESS);
 
         assertThat(result.isShouldRetry()).isTrue();
+    }
+
+    @Test
+    void shouldTriggerRetryTask_whenAnswerGenerationFailed_andRetriesRemain() {
+        when(body.getStatus()).thenReturn(ANSWER_GENERATION_FAILED);
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
+
+        JobManagerRetryProperties.RetryConfig retryConfig = new JobManagerRetryProperties.RetryConfig();
+        retryConfig.setMaxAttempts(3);
+        when(retryProperties.getQuestionsRetry()).thenReturn(retryConfig);
+
+        final ResponseEntity<UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.ok(body);
+        when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(response);
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        verify(executionService).executeWith(any(ExecutionInfo.class));
+
+        assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
+        assertThat(result.isShouldRetry()).isFalse();
+    }
+
+    @Test
+    void shouldNotRetry_whenMaxRetriesReached() {
+        when(body.getStatus()).thenReturn(ANSWER_GENERATION_FAILED);
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
+
+        JobManagerRetryProperties.RetryConfig retryConfig = new JobManagerRetryProperties.RetryConfig();
+        retryConfig.setMaxAttempts(0); // already at max
+        when(retryProperties.getQuestionsRetry()).thenReturn(retryConfig);
+
+        final ResponseEntity<UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.ok(body);
+        when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(response);
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        verifyNoInteractions(executionService);
+
+        assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
+        assertThat(result.isShouldRetry()).isFalse();
     }
 }

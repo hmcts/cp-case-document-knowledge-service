@@ -1,7 +1,10 @@
 package uk.gov.hmcts.cp.cdk.jobmanager.queryflow;
 
+import static jakarta.json.Json.createObjectBuilder;
 import static java.util.Objects.isNull;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_STATUS_OF_ANSWER_GENERATION;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_ANSWER_RETRY_COUNT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
@@ -28,6 +31,7 @@ import uk.gov.hmcts.cp.openapi.model.DocumentChunk;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerReturnedSuccessfullyAsynchronously;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
+import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
 import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
@@ -63,6 +67,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
     private final CaseLevelLatestDocumentAnswerService caseLevelLatestDocumentAnswerService;
     private final DefendantAnswerService defendantAnswerService;
     private final IngestionProperties ingestionProperties;
+    private final ExecutionService executionService;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -147,6 +152,35 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
             if (ANSWER_GENERATION_FAILED == answerResponseBody.getStatus()) {
                 log.info("Answer Generation Failed for caseId={}, docId={}, queryId={}, transactionId={}, task completed.",
                         caseId, documentId, queryId, transactionId);
+
+                final int retryCount = jobData.containsKey(CTX_ANSWER_RETRY_COUNT)
+                        ? jobData.getInt(CTX_ANSWER_RETRY_COUNT)
+                        : 0;
+
+                final int maxRetries = retryProperties.getQuestionsRetry().getMaxAttempts();
+
+                if (retryCount < maxRetries) {
+
+                    log.info("Answer generation failed. Retrying {}/{} for transactionId={}",
+                            retryCount + 1, maxRetries, transactionId);
+
+                    final JsonObject singleCaseJobData = createObjectBuilder(jobData)
+                            .add(CTX_ANSWER_RETRY_COUNT, retryCount + 1)
+                            .build();
+
+                    final ExecutionInfo executionInfoNew = executionInfo()
+                            .from(executionInfo)
+                            .withAssignedTaskName(GENERATE_ANSWER_FOR_QUERY)
+                            .withJobData(singleCaseJobData)
+                            .withExecutionStatus(ExecutionStatus.STARTED)
+                            .build();
+
+                    executionService.executeWith(executionInfoNew);
+
+                } else {
+                    log.warn("Max retries reached for caseId={}, queryId={}, transactionId={}",
+                            caseId, queryId, transactionId);
+                }
             }
 
             return executionInfo()

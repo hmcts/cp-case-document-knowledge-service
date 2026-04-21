@@ -1,0 +1,9 @@
+{
+  "transactionId": "c44576d4-ee3a-436e-b042-e867747171da",
+  "status": "ANSWER_GENERATION_FAILED",
+  "userQuery": "give me a chronology of the facts of the offences",
+  "llmResponse": "Error occurred during response genration",
+  "queryPrompt": "give from this doucment",
+  "responseGenerationTime": "2026-01-22T14:21:37.041126800Z",
+  "responseGenerationDuration": 12846
+}

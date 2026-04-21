@@ -1,0 +1,14 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/answer-user-query-async-status/b4562684-9209-3ec4-a544-7f80dabd94d8"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "answer_for_transaction_failed_response.json"
+  }
+}
