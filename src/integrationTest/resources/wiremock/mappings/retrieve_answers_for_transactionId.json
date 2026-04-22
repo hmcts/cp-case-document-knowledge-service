@@ -1,4 +1,5 @@
 {
+  "priority": 10,
   "request": {
     "method": "GET",
     "urlPathPattern": "/answer-user-query-async-status/.*"

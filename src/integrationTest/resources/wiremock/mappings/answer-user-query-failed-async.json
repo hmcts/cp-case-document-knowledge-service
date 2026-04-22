@@ -1,0 +1,19 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/answer-user-query-async",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.userQuery == 'Show any clear inconstancies in the witnesses evidence?')]"
+      }
+    ]
+  },
+  "response": {
+    "status": 202,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "answer_user_query_async_failed_response.json"
+  }
+}
