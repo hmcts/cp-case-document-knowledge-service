@@ -83,9 +83,9 @@ class CheckStatusOfAnswerGenerationTaskTest {
     @Mock
     private CaseLevelAllDocumentsAnswerService caseLevelAllDocumentsAnswerService;
     @Mock
-    private  CaseLevelLatestDocumentAnswerService caseLevelLatestDocumentAnswerService;
+    private CaseLevelLatestDocumentAnswerService caseLevelLatestDocumentAnswerService;
     @Mock
-    private  DefendantAnswerService defendantAnswerService;
+    private DefendantAnswerService defendantAnswerService;
 
     @Mock
     private IngestionProperties ingestionProperties;
@@ -104,7 +104,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @BeforeEach
     void setUp() {
-        task = new CheckStatusOfAnswerGenerationTask(api, objectMapper, retryProperties, answerGenerationService,caseLevelAllDocumentsAnswerService,caseLevelLatestDocumentAnswerService,defendantAnswerService,ingestionProperties,executionService);
+        task = new CheckStatusOfAnswerGenerationTask(api, objectMapper, retryProperties, answerGenerationService, caseLevelAllDocumentsAnswerService, caseLevelLatestDocumentAnswerService, defendantAnswerService, ingestionProperties, executionService);
         transactionId = UUID.randomUUID();
         caseId = UUID.randomUUID();
         queryId = UUID.randomUUID();
@@ -214,7 +214,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
         when(ingestionProperties.getFeature()).thenReturn(feature);
         when(feature.isUseMultiDefendant()).thenReturn(false);
 
-        JobManagerRetryProperties.RetryConfig retryConfig = new JobManagerRetryProperties.RetryConfig();
+        final JobManagerRetryProperties.RetryConfig  retryConfig = new JobManagerRetryProperties.RetryConfig();
         retryConfig.setMaxAttempts(3);
 
         when(retryProperties.getQuestionsRetry()).thenReturn(retryConfig);
@@ -241,7 +241,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
         when(ingestionProperties.getFeature()).thenReturn(feature);
         when(feature.isUseMultiDefendant()).thenReturn(false);
 
-        JobManagerRetryProperties.RetryConfig retryConfig = new JobManagerRetryProperties.RetryConfig();
+        final JobManagerRetryProperties.RetryConfig retryConfig = new JobManagerRetryProperties.RetryConfig();
         retryConfig.setMaxAttempts(3);
         when(retryProperties.getQuestionsRetry()).thenReturn(retryConfig);
 
@@ -262,7 +262,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
         when(ingestionProperties.getFeature()).thenReturn(feature);
         when(feature.isUseMultiDefendant()).thenReturn(false);
 
-        JobManagerRetryProperties.RetryConfig retryConfig = new JobManagerRetryProperties.RetryConfig();
+        final JobManagerRetryProperties.RetryConfig retryConfig = new JobManagerRetryProperties.RetryConfig();
         retryConfig.setMaxAttempts(0); // already at max
         when(retryProperties.getQuestionsRetry()).thenReturn(retryConfig);
 
