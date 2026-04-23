@@ -401,6 +401,11 @@ publishing {
     }
 }
 
+task runStubs(type: JavaExec) {
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    mainClass = 'uk.gov.hmcts.cp.cdk.stub.DocumentIngestionInitiationApiStub'
+}
+
 /* ------------ Dev helper ------------ */
 tasks.register('printVersions') {
     doLast {
