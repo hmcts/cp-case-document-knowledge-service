@@ -186,6 +186,55 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
     }
 
     @Test
+    void shouldUpdateIngestionPhase_whenIngestionFailedDueToFileExceedingSizeLimit() {
+        final DocumentIngestionStatusReturnedSuccessfully body = new DocumentIngestionStatusReturnedSuccessfully();
+        body.setStatus(DocumentIngestionStatus.FILE_SIZE_OVER_LIMIT);
+
+        when(documentIngestionStatusApi.documentStatusByReference("ref-123")).thenReturn(ResponseEntity.ok(body));
+
+        final CaseDocument doc = new CaseDocument();
+        when(caseDocumentRepository.findById(documentId)).thenReturn(Optional.of(doc));
+
+        final UUID caseQueryId = randomUUID();
+        final UUID caseAllDocsQueryId = randomUUID();
+        final UUID defendantQueryId = randomUUID();
+
+        QueryVersionRepository.SnapshotDefinition caseDef =
+                new QueryVersionRepository.SnapshotDefinition(caseQueryId, "lable1", "query1", "prompt1", Instant.now(), QueryLevel.CASE.toString());
+
+        QueryVersionRepository.SnapshotDefinition caseAllDocsDef =
+                new QueryVersionRepository.SnapshotDefinition(caseAllDocsQueryId, "lable2", "query2", "prompt2", Instant.now(), QueryLevel.CASE_ALL_DOCUMENTS.toString());
+
+        QueryVersionRepository.SnapshotDefinition defendantDef =
+                new QueryVersionRepository.SnapshotDefinition(defendantQueryId, "lable3", "query3", "prompt3", Instant.now(), QueryLevel.DEFENDANT.toString());
+
+        when(queryVersionRepository.snapshotDefinitionsAsOf(any()))
+                .thenReturn(List.of(caseDef, caseAllDocsDef, defendantDef));
+
+        final JsonObject jobData = Json.createObjectBuilder()
+                .add("docId", documentId.toString())
+                .add("blobName", "blob-123")
+                .add("caseId", randomUUID().toString())
+                .add(CTX_DOC_REFERENCE_KEY, "ref-123")
+                .add(CTX_LATEST_DEFENDANT, true)
+                .add(CTX_DEFENDANT_ID_KEY, randomUUID().toString())
+                .build();
+
+        final ExecutionInfo executionInfo = executionInfo()
+                .withJobData(jobData)
+                .withAssignedTaskName(CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS)
+                .withAssignedTaskStartTime(ZonedDateTime.now())
+                .withExecutionStatus(ExecutionStatus.INPROGRESS)
+                .build();
+
+        ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(doc.getIngestionPhase()).isEqualTo(DocumentIngestionPhase.EXCEEDED_FILE_SIZE_LIMIT);
+        verify(caseDocumentRepository).saveAndFlush(doc);
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+    }
+
+    @Test
     void shouldRetry_whenApiThrowsException() {
         when(documentIngestionStatusApi.documentStatusByReference("ref-123"))
                 .thenThrow(new RuntimeException("downstream failure"));

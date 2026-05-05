@@ -2,6 +2,8 @@ package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
 import static jakarta.json.Json.createObjectBuilder;
 import static java.util.Objects.isNull;
+import static uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase.EXCEEDED_FILE_SIZE_LIMIT;
+import static uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase.FAILED;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_ALL_DOCUMENTS_INGESTION_STATUS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
@@ -14,6 +16,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_Q
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.normalise;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.FILE_SIZE_OVER_LIMIT;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_FAILED;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SUCCESS;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INVALID_METADATA;
@@ -76,7 +79,8 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
         final String defendantId = jobData.getString(CTX_DEFENDANT_ID_KEY);
         final Set<String> failureStatuses = Set.of(
                 INGESTION_FAILED.name(),
-                INVALID_METADATA.name()
+                INVALID_METADATA.name(),
+                FILE_SIZE_OVER_LIMIT.name()
         );
 
         if (isNull(documentId) || isNull(documentReference)) {
@@ -103,6 +107,7 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
 
             final String status = normalise(rawStatus, 255);
 
+            //
             if (INGESTION_SUCCESS.name().equalsIgnoreCase(status)) {
 
                 updateIngestionPhase(documentId, DocumentIngestionPhase.INGESTED);
@@ -181,8 +186,9 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
 
                 return complete(executionInfo);
             } else if (failureStatuses.contains(status.toUpperCase())) {
-
-                updateIngestionPhase(documentId, DocumentIngestionPhase.FAILED);
+                final DocumentIngestionPhase failedStatus = FILE_SIZE_OVER_LIMIT.name().equals(status.toUpperCase())
+                        ? EXCEEDED_FILE_SIZE_LIMIT : FAILED;
+                updateIngestionPhase(documentId, failedStatus);
                 log.error(
                         "ingestion FAILED for identifier='{}' reason='{}' (caseId={}, docId={}).",
                         blobName,
