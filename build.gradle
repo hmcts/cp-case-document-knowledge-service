@@ -33,7 +33,7 @@ apply {
 /* ------------ Java toolchain ------------ */
 java {
     toolchain {
-        def defaultVersion = (findProperty("JAVA_VERSION") ?: "21") as int
+        def defaultVersion = (findProperty("JAVA_VERSION") ?: "25") as int
         def providedVersion = System.getProperty("JAVA_VERSION") ?: System.getenv("JAVA_VERSION")
         languageVersion = JavaLanguageVersion.of(providedVersion ? providedVersion as int : defaultVersion)
     }
