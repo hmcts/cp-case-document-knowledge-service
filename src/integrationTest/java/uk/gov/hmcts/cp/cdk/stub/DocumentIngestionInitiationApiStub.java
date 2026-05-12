@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.stub;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.configureFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
@@ -16,9 +17,15 @@ public class DocumentIngestionInitiationApiStub {
     private static final String INITIATE_DOCUMENT_UPLOAD = "/document-upload";
     public static final String APPLICATION_JSON = "application/json";
 
+    public static void setupStubs() {
+        configureFor("localhost", 8089);
+        stubInitiateDocumentUpload("documents-new", "destination" + randomUUID() + ".pdf");
+    }
+
     public static void stubInitiateDocumentUpload(final String containerName, final String blobName) {
 
         final String sasStorageUrl = generateSasUrl(containerName, blobName);
+
         final JsonObject responseJson = createObjectBuilder()
                 .add("storageUrl", sasStorageUrl)
                 .add("documentReference", randomUUID().toString())
@@ -32,4 +39,7 @@ public class DocumentIngestionInitiationApiStub {
                 ));
     }
 
+    public static void main(String[] args) {
+        setupStubs();
+    }
 }
