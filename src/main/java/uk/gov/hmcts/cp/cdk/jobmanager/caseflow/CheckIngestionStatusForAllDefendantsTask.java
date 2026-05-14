@@ -70,7 +70,7 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
 
         final JsonObject jobData = executionInfo.getJobData();
-
+        final Integer latestRetryCount = executionInfo.getRetryAttemptsRemaining();
         final UUID documentId = parseUuidOrNull(jobData.getString("docId", null));
         final UUID caseId = parseUuidOrNull(jobData.getString("caseId", null));
         final String blobName = jobData.getString("blobName", null);
@@ -147,10 +147,10 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
 
                     final JsonArray queryIdsArray = queryIdsArrayBuilder.build();
 
-                        final JsonObject singleCaseJobData = createObjectBuilder(jobData)
-                                .add(CTX_QUERYIDS_ARRAY, queryIdsArray)
-                                .add(CTX_QUERY_LEVEL, QueryLevel.CASE_ALL_DOCUMENTS.toString())
-                                .build();
+                    final JsonObject singleCaseJobData = createObjectBuilder(jobData)
+                            .add(CTX_QUERYIDS_ARRAY, queryIdsArray)
+                            .add(CTX_QUERY_LEVEL, QueryLevel.CASE_ALL_DOCUMENTS.toString())
+                            .build();
 
                     final ExecutionInfo executionInfoNew = executionInfo()
                             .from(executionInfo)
@@ -207,7 +207,10 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
             );
             return retry(executionInfo);
         }
-        log.debug("Ingestion status not complete for identifier='{}' → retrying", blobName);
+        log.info("Ingestion status not complete for identifier='{}' → retrying", blobName);
+        if (latestRetryCount == 1) {
+            updateIngestionPhase(documentId, FAILED);
+        }
         return retry(executionInfo);
     }
 
