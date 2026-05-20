@@ -112,12 +112,12 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
         try {
 
             final String downloadUrl = fetchDownloadUrl(materialId, userIdForExternalCalls, requestId);
-            log.info("downloadUrl generated :{} ", downloadUrl);
 
             final String today = utcNow().format(ofPattern(uploadProperties.datePattern()));
             final List<MetadataFilter> documentMetadata = createUploadMetadata(caseId, defendantId, materialId, today);
             final List<UUID> supersededDocumentList = getSupersededDocuments(caseId, defendantId);
             final FileStorageLocationReturnedSuccessfully fileStorageLocation = initiateDocumentUpload(documentId, materialName, documentMetadata, supersededDocumentList);
+            log.info("downloadUrl generated: {}, destinationUrl: {} ", downloadUrl, fileStorageLocation.getStorageUrl());
 
             final DocumentBlobMetadata documentBlobMetadata = storageService.copyFromUrl(downloadUrl, fileStorageLocation.getStorageUrl());
             final String blobUrl = nonNull(documentBlobMetadata) ? documentBlobMetadata.blobUrl() : UNKNOWN_BLOB_URL;
