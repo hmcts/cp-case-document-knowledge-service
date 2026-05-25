@@ -136,10 +136,8 @@ class JobManagerServiceTest {
         ArgumentCaptor<ScheduledIngestionRequest> captor =
                 ArgumentCaptor.forClass(ScheduledIngestionRequest.class);
 
-
         jobManagerService.startIngestionProcess(cppuid, request);
 
-        // then
         verify(scheduledIngestionRequestRepository).save(captor.capture());
 
         ScheduledIngestionRequest saved = captor.getValue();
