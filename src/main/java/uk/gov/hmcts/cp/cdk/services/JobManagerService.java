@@ -3,6 +3,8 @@ package uk.gov.hmcts.cp.cdk.services;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GET_CASES_FOR_HEARING;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
+import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
+import uk.gov.hmcts.cp.cdk.repo.ScheduledIngestionRequestRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
@@ -27,6 +29,22 @@ import org.springframework.stereotype.Service;
 public class JobManagerService implements IngestionProcessor {
 
     private final ExecutionService executor;
+    private final ScheduledIngestionRequestRepository scheduledIngestionRequestRepository;
+
+    private static String sanitizeForLog(final String value) {
+        if (value == null) {
+            return null;
+        }
+        final StringBuilder sanitized = new StringBuilder(value.length());
+        value.codePoints().forEach(cp -> {
+            if (Character.isISOControl(cp)) {
+                sanitized.append('?');
+            } else {
+                sanitized.appendCodePoint(cp);
+            }
+        });
+        return sanitized.toString();
+    }
 
     @Override
     public IngestionProcessResponse startIngestionProcess(final String cppuid,
@@ -46,6 +64,32 @@ public class JobManagerService implements IngestionProcessor {
         final IngestionProcessResponse response = new IngestionProcessResponse();
         response.setLastUpdated(OffsetDateTime.now());
         final String safeCppuid = sanitizeForLog(cppuid);
+
+        // Only persist if not already exists
+        boolean alreadyExists =
+                scheduledIngestionRequestRepository
+                        .existsByCourtCentreIdAndCourtRoomIdAndHearingDate(
+                                request.getCourtCentreId(),
+                                request.getRoomId(),
+                                request.getDate()
+                        );
+
+        if (!alreadyExists) {
+            ScheduledIngestionRequest entity = new ScheduledIngestionRequest();
+            entity.setId(UUID.randomUUID());
+            entity.setCourtCentreId(request.getCourtCentreId());
+            entity.setCourtRoomId(request.getRoomId());
+            entity.setHearingDate(request.getDate());
+            entity.setCppuid(UUID.fromString(cppuid));
+            entity.setCreatedAt(OffsetDateTime.now());
+
+            scheduledIngestionRequestRepository.save(entity);
+
+            log.info("Persisted ScheduledIngestionRequest for courtCentreId={}, roomId={}, hearingDate ={}", request.getCourtCentreId(), request.getRoomId(), request.getDate());
+        } else {
+            log.info("ScheduledIngestionRequest already exists for courtCentreId={}, roomId={}, hearingDate={}",
+                    request.getCourtCentreId(), request.getRoomId(), request.getDate());
+        }
 
         try {
             final ExecutionInfo executionInfo = executionInfo()
@@ -74,20 +118,5 @@ public class JobManagerService implements IngestionProcessor {
 
 
         return response;
-    }
-
-    private static String sanitizeForLog(final String value) {
-        if (value == null) {
-            return null;
-        }
-        final StringBuilder sanitized = new StringBuilder(value.length());
-        value.codePoints().forEach(cp -> {
-            if (Character.isISOControl(cp)) {
-                sanitized.append('?');
-            } else {
-                sanitized.appendCodePoint(cp);
-            }
-        });
-        return sanitized.toString();
     }
 }
