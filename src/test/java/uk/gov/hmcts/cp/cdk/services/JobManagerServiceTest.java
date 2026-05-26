@@ -8,8 +8,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase.FAILED;
 
+import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
+import uk.gov.hmcts.cp.cdk.repo.ScheduledIngestionRequestRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
@@ -31,14 +34,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class JobManagerServiceTest {
 
+    private static final String cppuid = "a085e359-6069-4694-8820-7810e7dfe762";
     @Mock
     private ExecutionService executor;
-
+    @Mock
+    private ScheduledIngestionRequestRepository scheduledIngestionRequestRepository;
     @InjectMocks
     private JobManagerService jobManagerService;
-
     private IngestionProcessRequest request;
-
     @Captor
     private ArgumentCaptor<ExecutionInfo> captor;
 
@@ -52,8 +55,6 @@ class JobManagerServiceTest {
 
     @Test
     void shouldStartIngestionProcessSuccessfully() {
-        // given
-        final String cppuid = "test-cppuid";
 
         // when
         final IngestionProcessResponse response = jobManagerService.startIngestionProcess(cppuid, request);
@@ -68,8 +69,6 @@ class JobManagerServiceTest {
 
     @Test
     void shouldPopulateExecutionInfoCorrectly() {
-        // given
-        final String cppuid = "test-cppuid";
 
         // when
         jobManagerService.startIngestionProcess(cppuid, request);
@@ -91,8 +90,6 @@ class JobManagerServiceTest {
     @Test
     void shouldReturnFailedResponseWhenExecutorThrowsException() {
 
-        // given
-        final String cppuid = "test-cppuid";
         doThrow(new RuntimeException("boom")).when(executor).executeWith(any(ExecutionInfo.class));
 
         // when
@@ -118,8 +115,6 @@ class JobManagerServiceTest {
 
     @Test
     void shouldSetLastUpdatedTimestamp() {
-        // given
-        final String cppuid = "test-cppuid";
 
         // when
         final IngestionProcessResponse response = jobManagerService.startIngestionProcess(cppuid, request);
@@ -127,5 +122,28 @@ class JobManagerServiceTest {
         // then
         assertThat(response.getLastUpdated()).isNotNull();
         assertThat(response.getLastUpdated().isBefore(OffsetDateTime.now().plusSeconds(1))).isTrue();
+    }
+
+    @Test
+    void shouldPersistCorrectScheduledIngestionRequestData() {
+
+        when(scheduledIngestionRequestRepository
+                .existsByCourtCentreIdAndCourtRoomIdAndHearingDate(
+                        any(), any(), any()
+                )
+        ).thenReturn(false);
+
+        ArgumentCaptor<ScheduledIngestionRequest> captor =
+                ArgumentCaptor.forClass(ScheduledIngestionRequest.class);
+
+        jobManagerService.startIngestionProcess(cppuid, request);
+
+        verify(scheduledIngestionRequestRepository).save(captor.capture());
+
+        ScheduledIngestionRequest saved = captor.getValue();
+
+        assertThat(saved.getCourtCentreId()).isEqualTo(request.getCourtCentreId());
+        assertThat(saved.getCourtRoomId()).isEqualTo(request.getRoomId());
+        assertThat(saved.getHearingDate()).isEqualTo(request.getDate());
     }
 }
