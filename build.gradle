@@ -102,7 +102,8 @@ ext.vers = [
         cpAuthFilter      : findProperty('version.cpAuthFilter'),
         cpAuditFilter     : findProperty('version.cpAuditFilter'),
         jobManager        : findProperty('version.jobManager'),
-        wiremock          : findProperty('version.wiremock')
+        wiremock          : findProperty('version.wiremock'),
+        shedlock          : findProperty('version.shedlock')
 
 ]
 
@@ -172,6 +173,9 @@ dependencies {
     //jobManager
     implementation "uk.gov.hmcts.cp:task-manager-service:${vers.jobManager}"
 
+    //shedlock
+    implementation("net.javacrumbs.shedlock:shedlock-spring:$vers.shedlock")
+    implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:$vers.shedlock")
 
     // Testcontainers (BOM)
     testImplementation("org.springframework.boot:spring-boot-testcontainers:4.0.2")
