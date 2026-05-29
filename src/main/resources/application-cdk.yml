@@ -55,3 +55,10 @@ cdk:
 taskmanager:
   schema:
     enabled=true:
+
+scheduler:
+  intraday-discovery:
+    name: "intradayDiscoveryScheduler"
+    cron: "0 0/10 7-19 * * MON-FRI"  # every 10 min, Mon–Fri, 07:00–19:50
+    lock-at-least-for: "PT8M"
+    lock-at-most-for: "PT9M"

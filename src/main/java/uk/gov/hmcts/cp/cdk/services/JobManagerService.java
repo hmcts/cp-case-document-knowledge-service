@@ -92,14 +92,7 @@ public class JobManagerService implements IngestionProcessor {
         }
 
         try {
-            final ExecutionInfo executionInfo = executionInfo()
-                    .withAssignedTaskName(GET_CASES_FOR_HEARING)
-                    .withAssignedTaskStartTime(ZonedDateTime.now())
-                    .withJobData(jobData)
-                    .withExecutionStatus(ExecutionStatus.STARTED)
-                    .build();
-
-            executor.executeWith(executionInfo);
+            dispatchCaseDocumentIngestionTasks(jobData);
             log.info("Case ingestion process started via JobManager. requestId={}, cppuid={}", requestId, safeCppuid);
 
             response.setPhase(IngestionProcessPhase.STARTED);
@@ -118,5 +111,16 @@ public class JobManagerService implements IngestionProcessor {
 
 
         return response;
+    }
+
+    void dispatchCaseDocumentIngestionTasks(final JsonObject jobData) {
+        final ExecutionInfo executionInfo = executionInfo()
+                .withAssignedTaskName(GET_CASES_FOR_HEARING)
+                .withAssignedTaskStartTime(ZonedDateTime.now())
+                .withJobData(jobData)
+                .withExecutionStatus(ExecutionStatus.STARTED)
+                .build();
+
+        executor.executeWith(executionInfo);
     }
 }
