@@ -41,6 +41,9 @@ class DocumentIdResolverTest {
     @Captor
     private ArgumentCaptor<RowMapper<?>> rowMapper;
 
+    @Captor
+    private ArgumentCaptor<String> sqlQueryCaptor;
+
     @Test
     void testResolveExistingDocId_found() {
         UUID caseId = randomUUID();
@@ -55,10 +58,11 @@ class DocumentIdResolverTest {
         assertEquals(docId, result.get());
 
         // verify correct SQL and params were passed
-        verify(jdbc).query(eq(DocumentIdResolver.SQL_FIND_EXISTING_DOC), captor.capture(), rowMapper.capture());
+        verify(jdbc).query(sqlQueryCaptor.capture(), captor.capture(), rowMapper.capture());
         MapSqlParameterSource params = captor.getValue();
         assertEquals(caseId, params.getValue("case_id"));
         assertEquals(materialId, params.getValue("material_id"));
+        assertThat(sqlQueryCaptor.getValue()).contains("'UPLOADED','INGESTED','WAITING_FOR_UPLOAD','EXCEEDED_FILE_SIZE_LIMIT'");
     }
 
     @Test
@@ -105,6 +109,17 @@ class DocumentIdResolverTest {
         final Optional<UUID> result = resolver.resolveExistingDocIdForDefendant(randomUUID(), randomUUID(), randomUUID());
 
         assertThat(result.isEmpty()).isTrue();
+    }
+
+    @Test
+    void should_findDocumentsWithListOfIngestionPhases() {
+        when(jdbc.query(anyString(), ArgumentMatchers.<MapSqlParameterSource>any(), ArgumentMatchers.<RowMapper<UUID>>any())).thenReturn(List.of());
+
+        resolver.resolveExistingDocIdForDefendant(randomUUID(), randomUUID(), randomUUID());
+
+        verify(jdbc).query(sqlQueryCaptor.capture(), ArgumentMatchers.<MapSqlParameterSource>any(), ArgumentMatchers.<RowMapper<UUID>>any());
+
+        assertThat(sqlQueryCaptor.getValue()).contains("'UPLOADED','INGESTED','WAITING_FOR_UPLOAD','EXCEEDED_FILE_SIZE_LIMIT'");
     }
 
     @Test
