@@ -33,6 +33,7 @@ class IntradayDiscoverySchedulerLiveTest extends AbstractHttpLiveTest {
 
     private static final String LOCK_NAME = "intradayDiscoveryScheduler";
     private static final String HEARINGS_PATH = "/hearing-query-api/query/api/rest/hearing/hearings";
+    private static final String COURT_CENTRE_ID = "courtCentreId";
 
     @Test
     void scheduler_shouldAcquireShedLock_andPopulateShedlockTable() throws SQLException {
@@ -94,18 +95,18 @@ class IntradayDiscoverySchedulerLiveTest extends AbstractHttpLiveTest {
                     .pollInterval(Duration.ofSeconds(5))
                     .until(() ->
                         !findAll(getRequestedFor(urlPathEqualTo(HEARINGS_PATH))
-                                .withQueryParam("courtCentreId", equalTo(courtCentreId1.toString()))).isEmpty()
+                                .withQueryParam(COURT_CENTRE_ID, equalTo(courtCentreId1.toString()))).isEmpty()
                         &&
                         !findAll(getRequestedFor(urlPathEqualTo(HEARINGS_PATH))
-                                .withQueryParam("courtCentreId", equalTo(courtCentreId2.toString()))).isEmpty()
+                                .withQueryParam(COURT_CENTRE_ID, equalTo(courtCentreId2.toString()))).isEmpty()
                     );
 
             assertThat(findAll(getRequestedFor(urlPathEqualTo(HEARINGS_PATH))
-                    .withQueryParam("courtCentreId", equalTo(courtCentreId1.toString()))))
+                    .withQueryParam(COURT_CENTRE_ID, equalTo(courtCentreId1.toString()))))
                     .as("hearing API must be called for courtCentreId1 seeded row")
                     .isNotEmpty();
             assertThat(findAll(getRequestedFor(urlPathEqualTo(HEARINGS_PATH))
-                    .withQueryParam("courtCentreId", equalTo(courtCentreId2.toString()))))
+                    .withQueryParam(COURT_CENTRE_ID, equalTo(courtCentreId2.toString()))))
                     .as("hearing API must be called for courtCentreId2 seeded row")
                     .isNotEmpty();
         } finally {
