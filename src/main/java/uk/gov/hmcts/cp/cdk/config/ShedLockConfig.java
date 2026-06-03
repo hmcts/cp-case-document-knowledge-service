@@ -1,5 +1,7 @@
 package uk.gov.hmcts.cp.cdk.config;
 
+import static net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock.InterceptMode.PROXY_METHOD;
+
 import java.time.Clock;
 
 import javax.sql.DataSource;
@@ -14,7 +16,7 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 @Configuration
-@EnableSchedulerLock(defaultLockAtMostFor = "PT30S", interceptMode = EnableSchedulerLock.InterceptMode.PROXY_METHOD)
+@EnableSchedulerLock(defaultLockAtMostFor = "PT30S", interceptMode = PROXY_METHOD)
 public class ShedLockConfig {
 
     @Bean
