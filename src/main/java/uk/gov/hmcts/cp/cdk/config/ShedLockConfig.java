@@ -14,7 +14,7 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 @Configuration
-@EnableSchedulerLock(defaultLockAtMostFor = "PT30S")
+@EnableSchedulerLock(defaultLockAtMostFor = "PT30S", interceptMode = EnableSchedulerLock.InterceptMode.PROXY_METHOD)
 public class ShedLockConfig {
 
     @Bean
@@ -27,7 +27,7 @@ public class ShedLockConfig {
     // This scheduler uses platform threads with daemon=false so the process stays up.
     @Bean
     public TaskScheduler taskScheduler() {
-        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        final ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
         scheduler.setPoolSize(10);
         scheduler.setThreadNamePrefix("scheduler-");
         scheduler.setDaemon(false);
