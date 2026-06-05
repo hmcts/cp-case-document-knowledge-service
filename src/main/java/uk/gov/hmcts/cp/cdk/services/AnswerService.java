@@ -6,9 +6,11 @@ import uk.gov.hmcts.cp.cdk.domain.Answer;
 import uk.gov.hmcts.cp.cdk.domain.CaseLevelAllDocumentsAnswer;
 import uk.gov.hmcts.cp.cdk.domain.CaseLevelLatestDocumentAnswer;
 import uk.gov.hmcts.cp.cdk.domain.DefendantAnswer;
+import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.repo.AnswerRepository;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.CaseLevelAllDocumentsAnswerRepository;
 import uk.gov.hmcts.cp.cdk.repo.CaseLevelLatestDocumentAnswerRepository;
 import uk.gov.hmcts.cp.cdk.repo.DefendantAnswerRepository;
@@ -43,7 +45,7 @@ public class AnswerService {
     private final CaseLevelLatestDocumentAnswerRepository latestDocRepo;
     private final CaseLevelAllDocumentsAnswerRepository allDocsRepo;
     private final DefendantAnswerRepository defendantRepo;
-
+    private final CaseDocumentRepository caseDocumentRepository;
 
 
     public AnswerService(
@@ -52,7 +54,8 @@ public class AnswerService {
             final AnswerMapper mapper,
             final CaseLevelLatestDocumentAnswerRepository latestDocRepo,
             final CaseLevelAllDocumentsAnswerRepository allDocsRepo,
-            final DefendantAnswerRepository defendantRepo
+            final DefendantAnswerRepository defendantRepo,
+            final CaseDocumentRepository caseDocumentRepository
 
     ) {
         this.answerRepository = answerRepository;
@@ -61,6 +64,7 @@ public class AnswerService {
         this.latestDocRepo = latestDocRepo;
         this.allDocsRepo = allDocsRepo;
         this.defendantRepo = defendantRepo;
+        this.caseDocumentRepository = caseDocumentRepository;
     }
 
     public AnswersResponse getAnswers(final UUID queryId, final UUID caseId, final Integer version, final OffsetDateTime at) {
@@ -81,14 +85,12 @@ public class AnswerService {
                     break;
 
                 case CASE_ALL_DOCUMENTS:
-                    log.info("INSIDE CASE_ALL_DOCUMENTS branch");
                     answers = allDocsRepo.findLatestAsOfForCase(caseId, queryId, asOf)
                             .map(List::of)
                             .orElseGet(List::of);
                     break;
 
                 case DEFENDANT:
-                    log.info("INSIDE DEFENDANT branch");
                     answers = defendantRepo.findAllAsOfForCase(caseId, queryId, asOf);
                     break;
 
@@ -152,9 +154,21 @@ public class AnswerService {
         }
         return maybeAnswer.orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
-                        "Query not found for case=" + caseIdOrNull + ", queryId=" + queryId
+                        resolveErrorMessage(caseIdOrNull)
                 )
         );
+    }
+
+    private String resolveErrorMessage(UUID caseId) {
+        if (caseId == null) {
+            return ErrorMessage.ANSWER_NOT_FOUND.name();
+        }
+
+        return caseDocumentRepository
+                .findFirstByCaseIdOrderByUploadedAtDesc(caseId)
+                .filter(doc -> doc.getIngestionPhase() == DocumentIngestionPhase.EXCEEDED_FILE_SIZE_LIMIT)
+                .map(doc -> ErrorMessage.IDPC_FILE_TOO_LARGE.name())
+                .orElse(ErrorMessage.ANSWER_NOT_FOUND.name());
     }
 
     private String resolveUserQueryText(final UUID queryId, final OffsetDateTime createdAt) {
@@ -193,14 +207,12 @@ public class AnswerService {
                         answerText = defAnswer.getAnswerText();
                         version = defAnswer.getAnswerId().getVersion();
                         defendantId = defAnswer.getAnswerId().getDefendantId();
-                    }
-                    else if (answer instanceof Answer baseAnswer) {
+                    } else if (answer instanceof Answer baseAnswer) {
                         queryId = baseAnswer.getAnswerId().getQueryId();
                         createdAt = baseAnswer.getCreatedAt();
                         answerText = baseAnswer.getAnswerText();
                         version = baseAnswer.getAnswerId().getVersion();
-                    }
-                    else {
+                    } else {
                         throw new IllegalArgumentException("Unknown answer type: " + answer.getClass());
                     }
 
