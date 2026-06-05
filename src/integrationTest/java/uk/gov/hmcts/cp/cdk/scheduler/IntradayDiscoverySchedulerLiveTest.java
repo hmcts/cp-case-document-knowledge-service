@@ -8,6 +8,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static java.util.UUID.fromString;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
+import static uk.gov.hmcts.cp.cdk.stub.HearingQueryApiStub.stubGetHearingsReturnsEmptyHearingSummaries;
 import static uk.gov.hmcts.cp.cdk.util.UtilConstants.USER_WITH_PERMISSIONS;
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
@@ -85,9 +86,13 @@ class IntradayDiscoverySchedulerLiveTest extends AbstractHttpLiveTest {
         final UUID id2 = randomUUID();
         final UUID cppuid = fromString(USER_WITH_PERMISSIONS);
         final LocalDate today = LocalDate.now();
+        final UUID roomId1 = randomUUID();
+        final UUID roomId2 = randomUUID();
 
-        insertScheduledIngestionRequest(id1, cppuid, courtCentreId1, randomUUID(), today);
-        insertScheduledIngestionRequest(id2, cppuid, courtCentreId2, randomUUID(), today);
+        insertScheduledIngestionRequest(id1, cppuid, courtCentreId1, roomId1, today);
+        insertScheduledIngestionRequest(id2, cppuid, courtCentreId2, roomId1, today);
+        stubGetHearingsReturnsEmptyHearingSummaries(courtCentreId1.toString(), roomId1.toString());
+        stubGetHearingsReturnsEmptyHearingSummaries(courtCentreId2.toString(), roomId2.toString());
 
         try {
             Awaitility.await()
