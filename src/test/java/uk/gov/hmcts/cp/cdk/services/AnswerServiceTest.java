@@ -15,15 +15,18 @@ import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import uk.gov.hmcts.cp.cdk.domain.Answer;
 import uk.gov.hmcts.cp.cdk.domain.AnswerId;
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.CaseLevelAllDocumentsAnswer;
 import uk.gov.hmcts.cp.cdk.domain.CaseLevelLatestDocumentAnswer;
 import uk.gov.hmcts.cp.cdk.domain.DefendantAnswer;
 import uk.gov.hmcts.cp.cdk.domain.DefendantAnswerId;
+import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.domain.Query;
 import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersion;
 import uk.gov.hmcts.cp.cdk.domain.QueryVersionId;
 import uk.gov.hmcts.cp.cdk.repo.AnswerRepository;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.CaseLevelAllDocumentsAnswerRepository;
 import uk.gov.hmcts.cp.cdk.repo.CaseLevelLatestDocumentAnswerRepository;
 import uk.gov.hmcts.cp.cdk.repo.DefendantAnswerRepository;
@@ -65,6 +68,9 @@ class AnswerServiceTest {
     @Mock
     private DefendantAnswerRepository defendantRepo;
 
+    @Mock
+    private CaseDocumentRepository caseDocumentRepository;
+
     @InjectMocks
     private AnswerService service;
 
@@ -101,7 +107,7 @@ class AnswerServiceTest {
         final QueryVersionId vid1 = new QueryVersionId();
         vid1.setEffectiveAt(createdAt.minusMinutes(1));
         version1.setQueryVersionId(vid1);
-        version1.setQuery(new Query(queryId, "query-label", utcNow(), 1,true));
+        version1.setQuery(new Query(queryId, "query-label", utcNow(), 1, true));
         version1.setUserQuery("user query text");
 
         when(queryVersionRepository.findAll()).thenReturn(List.of(version1));
@@ -133,7 +139,7 @@ class AnswerServiceTest {
         final QueryVersionId vid1 = new QueryVersionId();
         vid1.setEffectiveAt(createdAt.minusMinutes(1));
         version1.setQueryVersionId(vid1);
-        version1.setQuery(new Query(queryId, "query-label", utcNow(), 1,true));
+        version1.setQuery(new Query(queryId, "query-label", utcNow(), 1, true));
         version1.setUserQuery("user query text");
 
         when(queryVersionRepository.findAll()).thenReturn(List.of(version1));
@@ -150,6 +156,9 @@ class AnswerServiceTest {
         final UUID queryId = UUID.randomUUID();
         final UUID caseId = UUID.randomUUID();
 
+        when(caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId))
+                .thenReturn(Optional.empty());
+
         when(answerRepository.findByCaseAndVersion(caseId, queryId, 1))
                 .thenReturn(Optional.empty());
 
@@ -157,7 +166,7 @@ class AnswerServiceTest {
                 () -> service.getAnswer(queryId, caseId, 1, null));
 
         assertThat(ex.getStatusCode()).isEqualTo(NOT_FOUND);
-        assertThat(ex.getReason().contains(queryId.toString())).isTrue();
+        assertThat(ex.getReason()).isEqualTo(ErrorMessage.ANSWER_NOT_FOUND.toString());
     }
 
     @Test
@@ -273,5 +282,29 @@ class AnswerServiceTest {
 
         assertThat(response).isNotNull();
         verify(spyService).resolveAnswer(eq(queryId), eq(caseId), any(), any());
+    }
+
+    @Test
+    void getAnswer_shouldReturnFileTooLarge_whenLatestDocumentExceedsLimit() {
+        final UUID queryId = UUID.randomUUID();
+        final UUID caseId = UUID.randomUUID();
+
+        when(answerRepository.findByCaseAndVersion(caseId, queryId, 1))
+                .thenReturn(Optional.empty());
+
+        final CaseDocument doc = new CaseDocument();
+        doc.setCaseId(caseId);
+        doc.setIngestionPhase(DocumentIngestionPhase.EXCEEDED_FILE_SIZE_LIMIT);
+
+        when(caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId))
+                .thenReturn(Optional.of(doc));
+
+        final ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> service.getAnswer(queryId, caseId, 1, null)
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(NOT_FOUND);
+        assertThat(ex.getReason()).isEqualTo(ErrorMessage.IDPC_FILE_TOO_LARGE.toString());
     }
 }

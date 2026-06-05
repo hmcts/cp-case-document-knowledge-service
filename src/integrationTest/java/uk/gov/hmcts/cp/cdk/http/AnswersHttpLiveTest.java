@@ -224,8 +224,8 @@ import org.springframework.web.client.HttpClientErrorException;
             } catch (HttpClientErrorException.NotFound ex) {
                 assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
                 assertThat(ex.getResponseBodyAsString())
-                        .contains("Query not found for case=" + caseId)
-                        .contains("queryId=" + nonExistentQueryId);
+                        .contains("\"error\":\"404\"")
+                        .contains("\"message\":\"ANSWER_NOT_FOUND\"");
             }
         }
     }
