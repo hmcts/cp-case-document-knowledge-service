@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -197,5 +196,25 @@ class DocumentIdResolverTest {
         final boolean result = resolver.findIngestionStatusForAllDocs(input);
 
         assertThat(result).isFalse();
+    }
+
+    @Test
+    void shouldCheckIngestedAndExceededFileSizeLimitStatuses() {
+        final List<UUID> input = List.of(UUID.randomUUID());
+
+        when(jdbc.query(anyString(),
+                ArgumentMatchers.<MapSqlParameterSource>any(),
+                ArgumentMatchers.<RowMapper<UUID>>any()))
+                .thenReturn(input);
+
+        resolver.findIngestionStatusForAllDocs(input);
+
+        verify(jdbc).query(
+                sqlQueryCaptor.capture(),
+                ArgumentMatchers.<MapSqlParameterSource>any(),
+                ArgumentMatchers.<RowMapper<UUID>>any());
+
+        assertThat(sqlQueryCaptor.getValue())
+                .contains("'INGESTED','EXCEEDED_FILE_SIZE_LIMIT'");
     }
 }

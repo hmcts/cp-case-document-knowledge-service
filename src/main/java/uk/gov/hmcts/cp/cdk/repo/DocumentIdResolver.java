@@ -54,7 +54,7 @@ public class DocumentIdResolver {
         SELECT DISTINCT doc_id
           FROM case_documents
          WHERE doc_id IN (:doc_ids)
-           AND ingestion_phase = 'INGESTED'
+           AND ingestion_phase IN ('INGESTED','EXCEEDED_FILE_SIZE_LIMIT')
         """;
 
     private final NamedParameterJdbcTemplate jdbc;
