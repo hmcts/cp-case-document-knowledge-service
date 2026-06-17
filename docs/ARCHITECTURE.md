@@ -15,14 +15,15 @@
 |---|---|
 | Language / runtime | **Java 21**, **Spring Boot 4.x** (4.0.5), Spring MVC, Spring Data JPA |
 | Persistence | **PostgreSQL 16** + **Flyway** (append-only `V1000–V1007`), HikariCP, Hibernate `ddl-auto=validate`, `open-in-view=false` |
-| Async / messaging | **ActiveMQ Artemis** (JMS, TLS) via the CPP **`task-manager-service:1.0.9`** library; Spring Batch metadata present |
+| Async / messaging | **ActiveMQ Artemis** (JMS, TLS) via the CPP **`task-manager-service:1.0.10`** library; Spring Batch metadata present |
+| Distributed locking | **ShedLock** 6.6.0 (`shedlock-spring` + `shedlock-provider-jdbc-template`); PROXY_METHOD mode; backed by `shedlock` table (V1010) |
 | External calls | Apache HttpClient5 + Spring `RestClient` (pooled: 200 total / 50 per route) |
 | Cloud / storage | **Azure Blob Storage** (server-side copy), **Azure Managed Identity**, APIM front door; Azurite locally |
 | AI | RAG service (`api-cp-ai-rag:0.0.11`) — sync + async answer, ingestion initiation + status |
 | API contract | OpenAPI-first from external artifact `api-cp-crime-caseadmin-case-document-knowledge:0.0.8`; Springdoc UI |
 | AuthN/Z | **Drools** rules (`/acl/cdks-rules.drl`) enforced by MOJ **`cp-auth-rules-filter:1.0.7`** (filter, not controllers); user identity via `CJSCPPUID` header |
 | Observability | JSON logs (Logstash encoder, stdout), Actuator, Prometheus/Micrometer, OTLP tracing (off by default) |
-| Build / quality | **Gradle 9**, PMD, JaCoCo, CycloneDX SBOM, Pact; `integrationTest` sourceSet (compose-backed) |
+| Build / quality | **Gradle 8.14**, PMD, JaCoCo, CycloneDX SBOM, Pact; `integrationTest` sourceSet (compose-backed) |
 | CI/CD | GitHub Actions (build/publish, CodeQL + DAST/ZAP, Gitleaks secrets, PMD) → triggers ADO pipeline 460 |
 | Context path / port | `/casedocumentknowledge-service` on `8082` |
 
@@ -147,7 +148,8 @@ Outbound calls add correlation via `CorrelationIdInterceptor`; `RestClientFactor
 ## 5. Domain model & persistence
 
 **Aggregates:** `Query` (+ `QueryVersion`, temporal `effective_at`), `CaseDocument` (ingestion lifecycle),
-four `Answer` variants, `CaseQueryStatus` (read-state), `DocumentVerificationTask` (retry/lock queue).
+four `Answer` variants, `CaseQueryStatus` (read-state), `DocumentVerificationTask` (retry/lock queue),
+`ScheduledIngestionRequest` (court_centre_id, court_room_id, hearing_date, cppuid — used by the scheduler to re-trigger ingestion on existing rooms).
 
 ```mermaid
 erDiagram
@@ -166,6 +168,7 @@ erDiagram
     CASE_DOCUMENTS { uuid doc_id PK }
     ANSWERS { uuid case_id }
     CASE_QUERY_STATUS { uuid case_id }
+    SCHEDULED_INGESTION_REQUEST { uuid id PK }
 ```
 
 **Answer granularities (4 tables / `query_level_enum`):** `Answer` (generic), `DefendantAnswer`
@@ -184,7 +187,8 @@ Postgres advisory locks (`next_answer_version`). Entity/repo packages are wired 
 
 **Migrations:** V1000 Spring Batch metadata · V1001 core AI schema (queries, documents, answers, views,
 functions, trigger) · V1002 display_order · V1003 document_verification_task · V1004 defendant/court doc ·
-V1005 created_at + WAITING_FOR_UPLOAD · V1006 query levels + multi-answer tables · V1007 is_active.
+V1005 created_at + WAITING_FOR_UPLOAD · V1006 query levels + multi-answer tables · V1007 is_active
+· V1008 EXCEEDED_FILE_SIZE_LIMIT enum value · V1009 scheduled_ingestion_request table (+ unique constraint uq_sir_business_key, index idx_sir_hearing_date) · V1010 shedlock table.
 
 ---
 
@@ -233,6 +237,9 @@ flowchart TD
     H -->|FAILED → retry| G
     H -->|GENERATED| persist([persist Answer + citations])
 ```
+
+**Scheduler-triggered entry (intraday discovery):**
+`IntradayDiscoveryScheduler` runs on cron `0 0/10 7-19 * * MON-FRI` (every 10 min, Mon–Fri, 07:00–19:50 UTC), guarded by ShedLock (`lockAtLeastFor=PT8M`, `lockAtMostFor=PT9M`). It calls `DiscoveryService.runIntradayDiscovery()`, which queries `ScheduledIngestionRequest` for today's hearing date and dispatches the same task chain (starting at `GET_CASES_FOR_HEARING`) for each room. This targets late-arriving IDPCs, schedule changes, and late list additions.
 
 **Retry profiles:** default 3×20s; `verify-document-status` 50×5s (~4 min ingestion polling);
 `questions-retry` 100×10s (~16 min answer polling). Terminal failures set phase `FAILED` and stop the branch.
@@ -336,11 +343,12 @@ Azure Artifacts → trigger ADO pipeline 460); `codeql.yml` (SAST + SBOM + ZAP D
 | Repositories (JPA + native) | `repo/` |
 | Services | `services/` (+ `mapper/`) |
 | Async tasks | `jobmanager/{caseflow,hearing,queryflow,support}/`, `TaskNames` |
+| Scheduled ingestion | `scheduler/IntradayDiscoveryScheduler`, `scheduler/SchedulerProperties`, `services/DiscoveryService`, `repo/ScheduledIngestionRequestRepository`, `domain/ScheduledIngestionRequest` |
 | Integration clients | `clients/{hearing,progression,rag,common,config}/` |
 | Azure Blob storage | `storage/` |
 | HTTP plumbing | `http/`, `filters/tracing/` |
 | Configuration | `config/`, `src/main/resources/application*.yml`, `logback-spring.xml` |
-| DB schema | `src/main/resources/db/migration/V1000–V1007` |
+| DB schema | `src/main/resources/db/migration/V1000–V1010` |
 | Authorization rules | `src/main/resources/acl/cdks-rules.drl` |
 | Build / CI | `build.gradle`, `docker/`, `.github/workflows/` |
 

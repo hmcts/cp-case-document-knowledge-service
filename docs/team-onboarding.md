@@ -104,7 +104,7 @@ Then   Claude (event-flow-mapper) produces a stage-by-stage map: controller → 
 
 ### Example D — Review a database migration (CSDK = Flyway, append-only)
 ```gherkin
-Given  I added src/main/resources/db/migration/V1008__add_xyz.sql
+Given  I added src/main/resources/db/migration/V1011__add_xyz.sql
 When   I say: "Review my new Flyway migration — is it safe and append-only?"
 Then   Claude checks it doesn't edit a shipped migration, is forward-only, and
        won't break existing data

@@ -3,17 +3,34 @@
 *Demo artifact. Traced from source in `case-document-knowledge-service`. This is the kind of output the
 `event-flow-mapper` agent produces; captured here so it can be reviewed and shared.*
 
-**Scope:** what happens from `POST .../ingestion` through document upload, status polling, and the hand-off
-to answer generation.
+**Scope:** two entry points both feed the same async task chain — (A) the HTTP `POST .../ingestion` endpoint (on-demand) and (B) the `IntradayDiscoveryScheduler` (intraday, cron-triggered). Both paths converge at task ① `GET_CASES_FOR_HEARING`.
+
+---
+
+## Entry points
+
+### A — On-demand (HTTP-triggered)
+`POST .../ingestion/start` → `IngestionController` → `JobManagerService` → enqueues ① `GET_CASES_FOR_HEARING`.
+Returns `202 ACCEPTED` immediately. See the flow diagram below.
+
+### B — Intraday discovery (scheduler-triggered)
+`IntradayDiscoveryScheduler` fires on cron `0 0/10 7-19 * * MON-FRI` (every 10 min, Mon–Fri, 07:00–19:50).
+Guarded by **ShedLock** (`lockAtLeastFor=PT8M`, `lockAtMostFor=PT9M`) so only one instance runs cluster-wide.
+Calls `DiscoveryService.runIntradayDiscovery()`:
+1. Reads `scheduled_ingestion_request` WHERE `hearing_date = today`.
+2. For each row, builds a `jobData` JSON (same shape as the HTTP path: `cppuid`, `requestId`, `courtCentreId`, `roomId`, `date`).
+3. Calls `JobManagerService.dispatchCaseDocumentIngestionTasks(jobData)` — enters the same task chain at ①.
+
+**Purpose:** catches late-arriving IDPCs, schedule changes, and late list additions during court hours.
 
 ---
 
 ## Flow diagram
 
 ```
-HTTP (sync)                          ASYNC TASK CHAIN (CPP taskmanager / ExecutionService)
-───────────                          ─────────────────────────────────────────────────────
-POST .../ingestion
+ENTRY A — HTTP (sync)                ASYNC TASK CHAIN (CPP taskmanager / ExecutionService)
+─────────────────────                ─────────────────────────────────────────────────────
+POST .../ingestion/start
   │ requires CJS-CPPUID header
   ▼
 IngestionController                  ① GET_CASES_FOR_HEARING            (hearing/GetCasesForHearingTask)
@@ -81,6 +98,7 @@ GET .../ingestion/{caseId} → IngestionController.getIngestionStatus()
   `IngestionStatusViewRepository` and the `GET .../ingestion/{caseId}` endpoint.
 - **Success fans out** into per-query answer generation — ingestion hands off to the query/answer flow.
 - **Retries with backoff** are configured via `JobManagerRetryProperties` (e.g. `getVerifyDocumentStatus`).
+- **Two entry points, one task chain.** The HTTP `POST /ingestions/start` (on-demand) and the `IntradayDiscoveryScheduler` (cron, every 10 min Mon–Fri during court hours) both call `JobManagerService.dispatchCaseDocumentIngestionTasks()` and enter the same `GET_CASES_FOR_HEARING` task chain. The scheduler path reads from the `scheduled_ingestion_request` table (`V1009`), guarded by ShedLock (`V1010`) so exactly one node fires cluster-wide.
 
 ---
 
@@ -94,3 +112,9 @@ GET .../ingestion/{caseId} → IngestionController.getIngestionStatus()
 - `clients/rag/ApimDocumentIngestionClient.java`, `ApimDocumentIngestionStatusClient.java` — APIM/RAG calls
 - `jobmanager/TaskNames.java` — task-name constants
 - `domain/DocumentIngestionPhase.java` — phase enum
+- `scheduler/IntradayDiscoveryScheduler.java` — cron-triggered intraday discovery
+- `services/DiscoveryService.java` — reads `scheduled_ingestion_request`, dispatches tasks
+- `domain/ScheduledIngestionRequest.java` + `repo/ScheduledIngestionRequestRepository.java` — persistence
+- `config/ShedLockConfig.java` — PROXY_METHOD ShedLock configuration
+- `src/main/resources/db/migration/V1009__case_documents_scheduled_ingestion_request.sql` — scheduler table
+- `src/main/resources/db/migration/V1010__create_shedlock_table.sql` — ShedLock table

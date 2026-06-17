@@ -27,18 +27,22 @@ Load on demand:
 
 ## Tech stack & layout (ground truth for this repo)
 
-- **Java 21**, **Spring Boot 4.0.0-M2**, Spring MVC, Spring Data JPA
-- **PostgreSQL 16** + **Flyway** migrations (`src/main/resources/db/migration`, versioned `V1000+`)
+- **Java 21**, **Spring Boot 4.0.5**, Spring MVC, Spring Data JPA
+- **PostgreSQL 16** + **Flyway** migrations (`src/main/resources/db/migration`, versioned `V1000–V1010`)
 - **Gradle 9** build; quality gates **PMD** + **JaCoCo**
 - Observability: Actuator health, **Prometheus** (Micrometer), **OTLP** tracing, structured **JSON logs** (`logback-spring.xml`)
 - Async/eventing: **ActiveMQ Artemis** (JMS); Spring Batch job metadata (`V1000__spring_batch_metadata.sql`)
-- Local infra via **Docker Compose** (Postgres, Artemis, Azurite, WireMock)
+- Distributed locking: **ShedLock** (`shedlock-spring` + `shedlock-provider-jdbc-template`); table created by `V1010__create_shedlock_table.sql`
+- Local infra via **Docker Compose** (Postgres, Artemis, Azurite, azurite-seed, WireMock, app)
 - Base package: **`uk.gov.hmcts.cp.cdk`** · service context path: `/casedocumentknowledge-service` (port 8082 locally)
 
 Key areas:
 - `clients/` — external CPP integrations: `hearing`, `progression`, `rag` (via **APIM**, authenticated with **Azure Managed Identity** — `clients/common/AzureIdentityConfig`, `AzureTokenService`, `ApimAuthHeaderService`)
-- `controllers/` — `Answers`, `Document`, `Ingestion`, `Queries`, `QueryCatalogue`; access control in `controllers/accesscontrol/` + `resources/acl/`
+- `controllers/` — `Answers`, `Document`, `Ingestion`, `Queries`, `QueryCatalogue`; access control in `controllers/accesscontrol/` + `resources/acl/`; exception handling in `controllers/exception/`
 - `jobmanager/` — `caseflow`, `hearing`, `queryflow` orchestration tasks
+- `scheduler/` — `IntradayDiscoveryScheduler` + `SchedulerProperties` (ShedLock-guarded scheduled ingestion)
+- `filters/tracing/` — request tracing filters
+- `config/`, `http/`, `util/` — Spring configuration, HTTP utilities, shared helpers
 - `domain/`, `repo/`, `services/`, `storage/`
 
 ## Build, test & quality commands (use these — do not invent)
@@ -46,12 +50,19 @@ Key areas:
 ```bash
 gradle clean build                      # full build incl. unit + integration tests
 gradle test                             # unit tests only (failFast)
-gradle integration                      # integration tests (spins up docker-compose: artemis, db, azurite, wiremock, app)
+gradle integration                      # integration tests (spins up docker-compose: artemis, db, azurite, azurite-seed, wiremock, app)
 gradle pmdMain pmdTest jacocoTestReport # quality reports (build/reports/{pmd,jacoco})
 gradle dependencyInsight --dependency <group-or-module>
 ```
-CI runs `./gradlew build -DARTEFACT_VERSION=...` plus CodeQL and a secrets scanner
-(`.github/workflows/`). `check`/`build` depend on `integration`, so integration tests are not optional.
+CI runs `./gradlew build -DARTEFACT_VERSION=...` plus CodeQL, code-analysis, and a secrets scanner
+(`.github/workflows/` — six workflows: `ci-build-publish`, `ci-draft`, `ci-released`, `code-analysis`, `codeql`, `secrets-scanner`).
+`check`/`build` depend on `integration`, so integration tests are not optional.
+
+Source sets:
+- `main` — production code
+- `test` — JUnit 5 unit tests (Testcontainers PostgreSQL available)
+- `integrationTest` — REST Assured / WireMock / compose-backed ITs (`src/integrationTest/`)
+- `pactVerificationTest` — consumer-driven contract tests via the `au.com.dius.pact` plugin (`src/pactVerificationTest/`)
 
 ---
 
@@ -77,7 +88,7 @@ Run in order. Do not skip or reorder. Halt at every human gate before proceeding
 | Capability | When to use it here |
 |-----------|---------------------|
 | `review-pr` (skill) | Every PR — CPP standards, Spring Boot, Azure, logging |
-| `cpp-test-authoring` (skill) | Add/extend tests — JUnit 5 unit tests and the `integrationTest` sourceSet (REST Assured / WireMock / compose-backed) |
+| `cpp-test-authoring` (skill) | Add/extend tests — JUnit 5 unit tests, the `integrationTest` sourceSet (REST Assured / WireMock / compose-backed), and `pactVerificationTest` for contract tests |
 | `dependency-audit` (skill) | Before merging dependency bumps; complements CodeQL + secrets-scanner |
 | `event-flow-mapper` (agent) | Tracing case/document events across `clients/*` and `jobmanager/{caseflow,hearing,queryflow}` (Artemis JMS flows) |
 | `migration-reviewer` (agent) | **Any change under `db/migration`** — Flyway migrations are append-only and versioned |
