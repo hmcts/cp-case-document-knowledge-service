@@ -16,14 +16,15 @@ This is an HMCTS engineering project. All work must comply with HMCTS engineerin
 Service Manual, and MOJ security and accessibility requirements.
 
 Always load before any pipeline stage:
-- `context/tech-stack.md`
-- `context/hmcts-standards.md`
-- `context/azure-cloud-native.md` — Cloud-Native posture and Shared Responsibility Model on Azure.
-- `context/logging-standards.md` — mandatory JSON logging for Spring Boot services.
+- `.claude/context/csdk-context.md` — **single source of truth**: stack, packages, integrations, API surface, hard rules. Load this first.
+- `.claude/context/tech-stack.md`
+- `.claude/context/hmcts-standards.md`
+- `.claude/context/azure-cloud-native.md` — Cloud-Native posture and Shared Responsibility Model on Azure.
+- `.claude/context/logging-standards.md` — mandatory JSON logging for Spring Boot services.
 
 Load on demand:
-- `context/azure-sdk-guide.md` — when touching any Azure integration (this service uses Managed Identity; see `clients/common/Azure*`).
-- `context/cloud-adoption-rationale.md` — only when lock-in / cloud-cost trade-offs or an ADR require it. Do not auto-load.
+- `.claude/context/azure-sdk-guide.md` — when touching any Azure integration (this service uses Managed Identity; see `clients/common/Azure*`).
+- `.claude/context/cloud-adoption-rationale.md` — only when lock-in / cloud-cost trade-offs or an ADR require it. Do not auto-load.
 
 ## Tech stack & layout (ground truth for this repo)
 

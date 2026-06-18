@@ -53,7 +53,7 @@ approve at every gate.**
 ## 3. Get started (3 commands, once per person)
 
 ```
-/plugin marketplace add /media/ssaa/extra/moj/csdk/agentic-plugins-marketplace-main
+/plugin marketplace add hmcts/agentic-plugins-marketplace
 /plugin install hmcts-sdlc-orchestrator@agentic-plugins-marketplace
 /reload-plugins
 ```
