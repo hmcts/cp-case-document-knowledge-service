@@ -25,7 +25,7 @@ Before writing a single line of code, internalise these:
   case content, document bodies, or user data.
 - **Azure via Managed Identity** — use the existing `Azure*` / APIM client pattern in `clients/common/`.
   Never introduce connection strings, SAS tokens, or account keys.
-- **Flyway append-only** — next migration after V1010 is `V1011__<description>.sql`. Never edit a
+- **Flyway append-only** — next migration after V1011 is `V1012__<description>.sql`. Never edit a
   shipped `V*.sql`.
 - **PMD and JaCoCo must pass** — do not lower thresholds. If PMD raises a false positive, use the
   exact suppression: `@SuppressWarnings("PMD.<RuleName>") // <reason>`.
@@ -63,6 +63,49 @@ Rules:
 - For `CJSCPPUID` header: `RequestUtils.requireHeader(cqrsClientProperties.headers().cjsCppuid())`.
 - Access control lives in `cdks-rules.drl` (Drools, evaluated by the auth filter) — **not** in the
   controller. See §7 below for how to add a rule.
+
+#### OpenAPI spec — pre-implementation gate (read before writing any controller)
+
+The generated interfaces and DTOs come from a single artifact declared in `gradle.properties`:
+
+```
+version.cdk=0.0.8
+```
+
+Used in `build.gradle` as:
+
+```
+implementation "uk.gov.hmcts.cp:api-cp-crime-caseadmin-case-document-knowledge:${vers.cdk}"
+```
+
+Generated packages in that JAR:
+- **Interfaces**: `uk.gov.hmcts.cp.openapi.api.cdk.<Name>Api` — one per API group
+- **DTOs / models**: `uk.gov.hmcts.cp.openapi.model.cdk.<ClassName>`
+
+Current interfaces in `0.0.8`: `AnswersApi`, `DocumentApi`, `IngestionApi`, `QueriesApi`, `QueryCatalogueApi`.
+
+**Before writing a single line of controller code, verify the interface exists:**
+
+```bash
+jar tf ~/.gradle/caches/modules-2/files-2.1/uk.gov.hmcts.cp/api-cp-crime-caseadmin-case-document-knowledge/$(grep version.cdk gradle.properties | cut -d= -f2)/*.jar \
+  | grep "Api\.class"
+```
+
+**If the `*Api` interface for your new endpoint is absent:**
+
+1. **Stop. Do not write `@PostMapping`, `@GetMapping`, or hand-authored DTO classes.**
+2. Raise a blocker ticket against the OpenAPI spec repository
+   (`api-cp-crime-caseadmin-case-document-knowledge`). The new path and request/response shapes
+   must be added to the spec first.
+3. Once the spec is updated and a new artifact version is published:
+   - Bump `version.cdk` in `gradle.properties`
+   - Run `./gradlew compileJava` to confirm the new interface and model classes are available
+   - Then implement the controller against the generated types
+4. If the story is time-boxed and the spec update is blocked, **flag it as an open question** in
+   the PR and do not ship the controller in that PR.
+
+This gate applies to both interfaces (`*Api`) and DTOs (`*Request`, `*Response`). Never hand-write
+classes that duplicate what the generated artifact should provide.
 
 ### 2. Services
 
@@ -278,7 +321,7 @@ For system-only actions (no user permission check):
 ### 8. Flyway migrations
 
 File naming: `src/main/resources/db/migration/V<N>__<snake_case_description>.sql`
-Current highest: `V1010`. Next new migration: **V1011**.
+Current highest: `V1011`. Next new migration: **V1012**.
 
 Rules:
 - One logical change per file.
@@ -450,9 +493,19 @@ Rules:
 
 Before opening a PR, verify every item:
 
-- [ ] Controller implements the generated `*Api` interface — no `@GetMapping` / `@PostMapping` hand-coded
+- [ ] **[HARD GATE — run this first]** Confirm the `*Api` interface exists in the generated artifact
+  before writing any controller code:
+  ```bash
+  jar tf ~/.gradle/caches/modules-2/files-2.1/uk.gov.hmcts.cp/api-cp-crime-caseadmin-case-document-knowledge/$(grep version.cdk gradle.properties | cut -d= -f2)/*.jar \
+    | grep "Api\.class"
+  ```
+  If your interface is absent: stop, raise a blocker ticket against the spec repo, do not hand-write
+  the controller. See §1 "OpenAPI spec — pre-implementation gate" above.
+- [ ] Controller implements the generated `*Api` interface and uses generated model classes from
+  `uk.gov.hmcts.cp.openapi.model.cdk.*` — no hand-written `@GetMapping` / `@PostMapping` and no
+  hand-authored DTO classes in `controllers/dto/`
 - [ ] Access control rule added to `cdks-rules.drl` for new action names
-- [ ] New Flyway migration named `V<next>__<description>.sql` (currently next = **V1011**)
+- [ ] New Flyway migration named `V<next>__<description>.sql` (currently next = **V1012**)
 - [ ] All timestamps use `utcNow()` from `TimeUtils`, not `LocalDateTime.now()` or `new Date()`
 - [ ] No `System.out.println`, no logging of case content or document bodies
 - [ ] No connection strings, SAS tokens, or account keys anywhere
