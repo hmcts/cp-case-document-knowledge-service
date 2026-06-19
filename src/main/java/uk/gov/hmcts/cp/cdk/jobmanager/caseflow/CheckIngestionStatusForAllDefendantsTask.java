@@ -2,6 +2,8 @@ package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
 import static jakarta.json.Json.createObjectBuilder;
 import static java.util.Objects.isNull;
+import static uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase.EXCEEDED_FILE_SIZE_LIMIT;
+import static uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase.FAILED;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_ALL_DOCUMENTS_INGESTION_STATUS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
@@ -14,6 +16,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_Q
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.normalise;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
+import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.FILE_SIZE_OVER_LIMIT;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_FAILED;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INGESTION_SUCCESS;
 import static uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatus.INVALID_METADATA;
@@ -33,6 +36,7 @@ import uk.gov.hmcts.cp.taskmanager.service.task.ExecutableTask;
 import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -57,6 +61,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask {
 
+    private static final int LAST_RETRY_COUNT = 1;
     private final DocumentIngestionStatusApi documentIngestionStatusApi;
     private final CaseDocumentRepository caseDocumentRepository;
     private final QueryVersionRepository queryVersionRepository;
@@ -76,7 +81,8 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
         final String defendantId = jobData.getString(CTX_DEFENDANT_ID_KEY);
         final Set<String> failureStatuses = Set.of(
                 INGESTION_FAILED.name(),
-                INVALID_METADATA.name()
+                INVALID_METADATA.name(),
+                FILE_SIZE_OVER_LIMIT.name()
         );
 
         if (isNull(documentId) || isNull(documentReference)) {
@@ -114,7 +120,7 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
 
                 if (isLatestDefendant && !caseQueries.isEmpty()) {
 
-                    for (UUID questionId : caseQueries) {
+                    for (final UUID questionId : caseQueries) {
                         final JsonObject singleCaseJobData = createObjectBuilder(jobData)
                                 .add(CTX_SINGLE_QUERY_ID, questionId.toString())
                                 .add(CTX_QUERY_LEVEL, QueryLevel.CASE.toString())
@@ -162,8 +168,8 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
 
                 final List<UUID> defendantQueries = queriesByLevel.getOrDefault(QueryLevel.DEFENDANT.toString(), List.of());
                 if (!defendantQueries.isEmpty()) {
-                    for (UUID queryId : defendantQueries) {
-                        JsonObject job = createObjectBuilder(jobData)
+                    for (final UUID queryId : defendantQueries) {
+                        final JsonObject job = createObjectBuilder(jobData)
                                 .add(CTX_SINGLE_QUERY_ID, queryId.toString())
                                 .add(CTX_QUERY_LEVEL, QueryLevel.DEFENDANT.toString())
                                 .build();
@@ -180,9 +186,10 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
                 }
 
                 return complete(executionInfo);
-            } else if (failureStatuses.contains(status.toUpperCase())) {
-
-                updateIngestionPhase(documentId, DocumentIngestionPhase.FAILED);
+            } else if (failureStatuses.contains(status.toUpperCase(Locale.ROOT))) {
+                final DocumentIngestionPhase failedStatus = FILE_SIZE_OVER_LIMIT.name().equals(status.toUpperCase(Locale.ROOT))
+                        ? EXCEEDED_FILE_SIZE_LIMIT : FAILED;
+                updateIngestionPhase(documentId, failedStatus);
                 log.error(
                         "ingestion FAILED for identifier='{}' reason='{}' (caseId={}, docId={}).",
                         blobName,
@@ -202,7 +209,7 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
             return retry(executionInfo);
         }
         log.info("Ingestion status not complete for identifier='{}' → retrying", blobName);
-        if (latestRetryCount == 1) {
+        if (latestRetryCount == LAST_RETRY_COUNT) {
             updateIngestionPhase(documentId, FAILED);
         }
         return retry(executionInfo);

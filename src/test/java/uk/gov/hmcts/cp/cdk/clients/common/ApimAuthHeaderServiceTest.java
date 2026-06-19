@@ -66,7 +66,7 @@ class ApimAuthHeaderServiceTest {
     void shouldThrow_whenAadScopeMissing() {
         final HttpHeaders httpHeaders = new HttpHeaders();
         final RagClientProperties properties = mock(RagClientProperties.class);
-        final RagClientProperties.Auth auth = mock(RagClientProperties.Auth.class);
+        final RagClientProperties.Authentication auth = mock(RagClientProperties.Authentication.class);
 
         when(properties.getAuth()).thenReturn(auth);
         when(auth.getMode()).thenReturn("aad");
@@ -110,7 +110,7 @@ class ApimAuthHeaderServiceTest {
     void shouldThrow_whenUnsupportedMode() {
         final HttpHeaders httpHeaders = new HttpHeaders();
         final RagClientProperties properties = mock(RagClientProperties.class);
-        final RagClientProperties.Auth auth = mock(RagClientProperties.Auth.class);
+        final RagClientProperties.Authentication auth = mock(RagClientProperties.Authentication.class);
 
         when(properties.getAuth()).thenReturn(auth);
         when(auth.getMode()).thenReturn("invalid-mode");
@@ -120,20 +120,20 @@ class ApimAuthHeaderServiceTest {
 
     private RagClientProperties mockAadProperties(String scope) {
         final RagClientProperties properties = mock(RagClientProperties.class);
-        final RagClientProperties.Auth auth = mock(RagClientProperties.Auth.class);
-        final RagClientProperties.Auth.Aad aad = mock(RagClientProperties.Auth.Aad.class);
+        final RagClientProperties.Authentication auth = mock(RagClientProperties.Authentication.class);
+        final RagClientProperties.Authentication.AadConfig aadConfig = mock(RagClientProperties.Authentication.AadConfig.class);
 
         when(properties.getAuth()).thenReturn(auth);
         when(auth.getMode()).thenReturn("aad");
-        when(auth.getAad()).thenReturn(aad);
-        when(aad.getScope()).thenReturn(scope);
+        when(auth.getAad()).thenReturn(aadConfig);
+        when(aadConfig.getScope()).thenReturn(scope);
 
         return properties;
     }
 
     private RagClientProperties mockSubscriptionKeyProperties(String key, Map<String, String> headers) {
         final RagClientProperties properties = mock(RagClientProperties.class);
-        final RagClientProperties.Auth auth = mock(RagClientProperties.Auth.class);
+        final RagClientProperties.Authentication auth = mock(RagClientProperties.Authentication.class);
 
         when(properties.getAuth()).thenReturn(auth);
         when(auth.getMode()).thenReturn("subscription-key");

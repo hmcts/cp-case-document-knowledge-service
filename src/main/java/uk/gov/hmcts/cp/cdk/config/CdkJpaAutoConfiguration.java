@@ -15,6 +15,7 @@ import org.springframework.core.type.AnnotationMetadata;
 @Import(CdkJpaAutoConfiguration.PersistencePackagesRegistrar.class)
 public class CdkJpaAutoConfiguration {
 
+    /* package */
     static final class PersistencePackagesRegistrar implements ImportBeanDefinitionRegistrar {
         @Override
         public void registerBeanDefinitions(final AnnotationMetadata metadata, final BeanDefinitionRegistry registry) {

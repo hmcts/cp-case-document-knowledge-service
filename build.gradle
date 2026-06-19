@@ -103,7 +103,8 @@ ext.vers = [
         cpAuditFilter     : findProperty('version.cpAuditFilter'),
         jobManager        : findProperty('version.jobManager'),
         wiremock          : findProperty('version.wiremock'),
-        shedlock          : findProperty('version.shedlock')
+        shedlock          : findProperty('version.shedlock'),
+        pmd               : findProperty('version.pmd')
 
 ]
 

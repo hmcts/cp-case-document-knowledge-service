@@ -73,7 +73,7 @@ public class CheckIdpcAvailabilityTask implements ExecutableTask {
             final Optional<LatestMaterialInfo> latest = getCourtDocuments(progressionClient, caseIdUuidOptional.get(), userId);
 
             latest.ifPresent(info -> {
-                JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
+                final JsonObjectBuilder updatedJobData = Json.createObjectBuilder(jobData);
                 updatedJobData.add(CTX_MATERIAL_ID_KEY, info.materialId());
                 updatedJobData.add(CTX_MATERIAL_NAME, MaterialNameValidator.truncateMaterialName(info.materialName()));
                 updatedJobData.add(CTX_MATERIAL_NAME, info.materialName());
