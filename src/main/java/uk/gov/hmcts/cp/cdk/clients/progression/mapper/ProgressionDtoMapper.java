@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 public class ProgressionDtoMapper {
 
     private static final String DOC_NAME_DEFAULT = "IDPC";
+    private static final int SINGLE_DEFENDANT_COUNT = 1;
 
     private final String documentTypeIdFilter;
 
@@ -69,7 +70,7 @@ public class ProgressionDtoMapper {
 
         String defendantId = null;
         if (documentIndex.defendantIds() != null && !documentIndex.defendantIds().isEmpty()) {
-            if (documentIndex.defendantIds().size() > 1) {
+            if (documentIndex.defendantIds().size() > SINGLE_DEFENDANT_COUNT) {
                 log.warn("Multiple defendantIds found for caseIds={}: {}. Using first.",
                         documentIndex.caseIds(), documentIndex.defendantIds());
             }

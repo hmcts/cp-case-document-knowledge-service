@@ -159,7 +159,7 @@ public class AnswerService {
         );
     }
 
-    private String resolveErrorMessage(UUID caseId) {
+    private String resolveErrorMessage(final UUID caseId) {
         if (caseId == null) {
             return ErrorMessage.ANSWER_NOT_FOUND.name();
         }

@@ -6,6 +6,7 @@ import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -131,13 +132,15 @@ public class TaskUtils {
     }
 
     public static String normalise(final String value, final int max) {
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
         return value.length() <= max ? value : value.substring(0, max);
     }
 
-    public static  QueryLevel parseQueryLevel(String levelStr) {
+    public static  QueryLevel parseQueryLevel(final String levelStr) {
         try {
-            return levelStr == null ? null : QueryLevel.valueOf(levelStr.toUpperCase());
+            return levelStr == null ? null : QueryLevel.valueOf(levelStr.toUpperCase(Locale.ROOT));
         } catch (Exception e) {
             log.warn("Invalid query level: {}", levelStr);
             return null;

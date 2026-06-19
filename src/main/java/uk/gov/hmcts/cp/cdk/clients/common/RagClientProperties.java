@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.clients.common;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import jakarta.validation.constraints.NotBlank;
@@ -61,7 +62,7 @@ public class RagClientProperties {
                 this.mode = SUBSCRIPTION_KEY;
                 return;
             }
-            final String normalized = mode.trim().toLowerCase();
+            final String normalized = mode.trim().toLowerCase(Locale.ROOT);
             if (!SUBSCRIPTION_KEY.equals(normalized) && !AAD.equals(normalized)) {
                 throw new IllegalArgumentException("Unsupported rag.client.auth.mode: " + mode);
             }

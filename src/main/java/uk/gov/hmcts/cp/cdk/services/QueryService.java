@@ -93,7 +93,7 @@ public class QueryService {
         return querySummary;
     }
 
-    private static uk.gov.hmcts.cp.openapi.model.cdk.QueryLevel mapLevel(String level) {
+    private static uk.gov.hmcts.cp.openapi.model.cdk.QueryLevel mapLevel(final String level) {
         if (level == null) {
             return null;
         }
