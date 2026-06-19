@@ -30,14 +30,14 @@ public class ApimAuthHeaderService {
 
     public void applyAuthHeaders(final HttpHeaders httpHeaders, final RagClientProperties properties) {
         final String mode = Optional.ofNullable(properties.getAuth())
-                .map(RagClientProperties.Auth::getMode)
+                .map(RagClientProperties.Authentication::getMode)
                 .orElse(SUBSCRIPTION_KEY)
                 .toLowerCase(Locale.ROOT);
 
         switch (mode) {
             case AAD -> {
                 final String scope = Optional.ofNullable(properties.getAuth().getAad())
-                        .map(RagClientProperties.Auth.Aad::getScope)
+                        .map(RagClientProperties.Authentication.AadConfig::getScope)
                         .orElseThrow(() -> new IllegalStateException("rag.client.auth.aad.scope is required when rag.client.auth.mode=aad"));
                 final String accessToken = azureTokenService.getAccessToken(scope);
                 httpHeaders.add("Authorization", "Bearer " + accessToken);

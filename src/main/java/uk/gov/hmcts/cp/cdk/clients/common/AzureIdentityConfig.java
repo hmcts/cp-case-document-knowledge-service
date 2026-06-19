@@ -19,7 +19,7 @@ public class AzureIdentityConfig {
     public TokenCredential tokenCredential() {
         DefaultAzureCredentialBuilder builder = new DefaultAzureCredentialBuilder();
 
-        final RagClientProperties.Auth auth = ragClientProperties.getAuth();
+        final RagClientProperties.Authentication auth = ragClientProperties.getAuth();
         if (auth != null && AAD.equalsIgnoreCase(auth.getMode()) && auth.getAad() != null) {
             final String configuredClientId = auth.getAad().getClientId();
             final String configuredTenantId = auth.getAad().getTenantId();

@@ -65,7 +65,7 @@ public class CheckAllDocumentsIngestionStatusTask implements ExecutableTask {
                 .toList()
                 : List.of();
 
-        for (UUID queryId : queryIds) {
+        for (final UUID queryId : queryIds) {
             final JsonObject singleCaseJobData = createObjectBuilder(jobData)
                     .add(CTX_SINGLE_QUERY_ID, queryId.toString())
                     .build();
