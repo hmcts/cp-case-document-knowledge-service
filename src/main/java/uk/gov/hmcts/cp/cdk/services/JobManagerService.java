@@ -66,7 +66,7 @@ public class JobManagerService implements IngestionProcessor {
         final String safeCppuid = sanitizeForLog(cppuid);
 
         // Only persist if not already exists
-        boolean alreadyExists =
+        final boolean alreadyExists =
                 scheduledIngestionRequestRepository
                         .existsByCourtCentreIdAndCourtRoomIdAndHearingDate(
                                 request.getCourtCentreId(),
@@ -74,8 +74,11 @@ public class JobManagerService implements IngestionProcessor {
                                 request.getDate()
                         );
 
-        if (!alreadyExists) {
-            ScheduledIngestionRequest entity = new ScheduledIngestionRequest();
+        if (alreadyExists) {
+            log.info("ScheduledIngestionRequest already exists for courtCentreId={}, roomId={}, hearingDate={}",
+                    request.getCourtCentreId(), request.getRoomId(), request.getDate());
+        } else {
+            final ScheduledIngestionRequest entity = new ScheduledIngestionRequest();
             entity.setId(UUID.randomUUID());
             entity.setCourtCentreId(request.getCourtCentreId());
             entity.setCourtRoomId(request.getRoomId());
@@ -84,11 +87,7 @@ public class JobManagerService implements IngestionProcessor {
             entity.setCreatedAt(OffsetDateTime.now());
 
             scheduledIngestionRequestRepository.save(entity);
-
             log.info("Persisted ScheduledIngestionRequest for courtCentreId={}, roomId={}, hearingDate ={}", request.getCourtCentreId(), request.getRoomId(), request.getDate());
-        } else {
-            log.info("ScheduledIngestionRequest already exists for courtCentreId={}, roomId={}, hearingDate={}",
-                    request.getCourtCentreId(), request.getRoomId(), request.getDate());
         }
 
         try {
@@ -113,6 +112,7 @@ public class JobManagerService implements IngestionProcessor {
         return response;
     }
 
+    /* package */
     void dispatchCaseDocumentIngestionTasks(final JsonObject jobData) {
         final ExecutionInfo executionInfo = executionInfo()
                 .withAssignedTaskName(GET_CASES_FOR_HEARING)

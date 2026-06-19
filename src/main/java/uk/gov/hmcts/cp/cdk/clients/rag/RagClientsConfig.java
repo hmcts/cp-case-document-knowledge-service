@@ -20,27 +20,30 @@ import org.springframework.web.client.RestClient;
 @EnableConfigurationProperties({RagClientProperties.class})
 public class RagClientsConfig {
 
+    private static final String SUBSCRIPTION_KEY = "subscription-key";
+    private static final String RAG_REST_CLIENT = "ragRestClient";
+
     @Bean
     @ConditionalOnMissingBean(DocumentInformationSummarisedSynchronouslyApi.class)
     public DocumentInformationSummarisedSynchronouslyApi ragAnswerService(
-            @Qualifier("ragRestClient") final RestClient ragRestClient,
+            @Qualifier(RAG_REST_CLIENT) final RestClient ragRestClient,
             final RagClientProperties ragClientProperties,
             final ApimAuthHeaderService apimAuthHeaderService) {
 
         log.info("Creating DocumentInformationSummarisedSynchronouslyApi client (RAG Answer Service) with auth mode={}",
-                ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : "subscription-key");
+                ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : SUBSCRIPTION_KEY);
         return new RagAnswerServiceImpl(ragRestClient, ragClientProperties, apimAuthHeaderService);
     }
 
     @Bean
     @ConditionalOnMissingBean(DocumentInformationSummarisedAsynchronouslyApi.class)
     public DocumentInformationSummarisedAsynchronouslyApi ragAnswerServiceAsync(
-            @Qualifier("ragRestClient") final RestClient ragRestClient,
+            @Qualifier(RAG_REST_CLIENT) final RestClient ragRestClient,
             final RagClientProperties ragClientProperties,
             final ApimAuthHeaderService apimAuthHeaderService) {
 
         log.info("Creating DocumentInformationSummarisedAsynchronouslyApi client (RAG Async Answer Service) with auth mode={}",
-                ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : "subscription-key");
+                ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : SUBSCRIPTION_KEY);
 
         return new RagAnswerAsyncServiceImpl(ragRestClient, ragClientProperties, apimAuthHeaderService);
     }
@@ -48,24 +51,24 @@ public class RagClientsConfig {
     @Bean
     @ConditionalOnMissingBean(DocumentIngestionStatusApi.class)
     public DocumentIngestionStatusApi documentIngestionStatusApi(
-            @Qualifier("ragRestClient") final RestClient ragRestClient,
+            @Qualifier(RAG_REST_CLIENT) final RestClient ragRestClient,
             final RagClientProperties ragClientProperties,
             final ApimAuthHeaderService apimAuthHeaderService) {
 
         log.info("Creating DocumentIngestionStatusApi client with auth mode={}",
-                ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : "subscription-key");
+                ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : SUBSCRIPTION_KEY);
         return new ApimDocumentIngestionStatusClient(ragRestClient, ragClientProperties, apimAuthHeaderService);
     }
 
     @Bean
     @ConditionalOnMissingBean(DocumentIngestionInitiationApi.class)
     public DocumentIngestionInitiationApi documentIngestionInitiationApi(
-            @Qualifier("ragRestClient") final RestClient ragRestClient,
+            @Qualifier(RAG_REST_CLIENT) final RestClient ragRestClient,
             final RagClientProperties ragClientProperties,
             final ApimAuthHeaderService apimAuthHeaderService) {
 
         log.info("Creating DocumentIngestionApi client with auth mode={}",
-                ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : "subscription-key");
+                ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : SUBSCRIPTION_KEY);
         return new ApimDocumentIngestionClient(ragRestClient, ragClientProperties, apimAuthHeaderService);
     }
 }

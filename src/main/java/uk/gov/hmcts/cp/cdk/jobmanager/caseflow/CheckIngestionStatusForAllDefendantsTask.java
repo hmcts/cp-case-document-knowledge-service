@@ -121,7 +121,7 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
 
                 if (isLatestDefendant && !caseQueries.isEmpty()) {
 
-                    for (UUID questionId : caseQueries) {
+                    for (final UUID questionId : caseQueries) {
                         final JsonObject singleCaseJobData = createObjectBuilder(jobData)
                                 .add(CTX_SINGLE_QUERY_ID, questionId.toString())
                                 .add(CTX_QUERY_LEVEL, QueryLevel.CASE.toString())
@@ -169,8 +169,8 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
 
                 final List<UUID> defendantQueries = queriesByLevel.getOrDefault(QueryLevel.DEFENDANT.toString(), List.of());
                 if (!defendantQueries.isEmpty()) {
-                    for (UUID queryId : defendantQueries) {
-                        JsonObject job = createObjectBuilder(jobData)
+                    for (final UUID queryId : defendantQueries) {
+                        final JsonObject job = createObjectBuilder(jobData)
                                 .add(CTX_SINGLE_QUERY_ID, queryId.toString())
                                 .add(CTX_QUERY_LEVEL, QueryLevel.DEFENDANT.toString())
                                 .build();

@@ -77,26 +77,15 @@ public class AnswerService {
 
         List<?> answers = List.of();
         if (level != null) {
-            switch (level) {
-                case CASE:
-                    answers = latestDocRepo.findLatestAsOfForCase(caseId, queryId, asOf)
-                            .map(List::of)
-                            .orElseGet(List::of);
-                    break;
-
-                case CASE_ALL_DOCUMENTS:
-                    answers = allDocsRepo.findLatestAsOfForCase(caseId, queryId, asOf)
-                            .map(List::of)
-                            .orElseGet(List::of);
-                    break;
-
-                case DEFENDANT:
-                    answers = defendantRepo.findAllAsOfForCase(caseId, queryId, asOf);
-                    break;
-
-                default:
-                    throw new IllegalArgumentException("Unsupported QueryLevel: " + level);
-            }
+            answers = switch (level) {
+                case CASE -> latestDocRepo.findLatestAsOfForCase(caseId, queryId, asOf)
+                        .map(List::of)
+                        .orElseGet(List::of);
+                case CASE_ALL_DOCUMENTS -> allDocsRepo.findLatestAsOfForCase(caseId, queryId, asOf)
+                        .map(List::of)
+                        .orElseGet(List::of);
+                case DEFENDANT -> defendantRepo.findAllAsOfForCase(caseId, queryId, asOf);
+            };
         }
         if (answers == null || answers.isEmpty()) {
             final Answer answerEntity = resolveAnswer(queryId, caseId, version, asOf);
@@ -130,6 +119,7 @@ public class AnswerService {
         return mapper.toAnswerWithLlm(answerEntity, userQueryText);
     }
 
+    /* package */
     Answer resolveAnswer(
             final UUID queryId,
             final UUID caseIdOrNull,
@@ -185,50 +175,44 @@ public class AnswerService {
     private List<AnswerResponse> mapToAnswerResponses(final List<?> answers) {
         return answers.stream()
                 .map(answer -> {
-                    UUID queryId;
-                    OffsetDateTime createdAt;
-                    String answerText;
-                    Integer version;
-                    UUID defendantId = null;
-
                     if (answer instanceof CaseLevelAllDocumentsAnswer caseAnswer) {
-                        queryId = caseAnswer.getAnswerId().getQueryId();
-                        createdAt = caseAnswer.getCreatedAt();
-                        answerText = caseAnswer.getAnswerText();
-                        version = caseAnswer.getAnswerId().getVersion();
+                        return getAnswerResponse(caseAnswer.getAnswerId().getQueryId(),
+                                caseAnswer.getCreatedAt(), caseAnswer.getAnswerText(),
+                                caseAnswer.getAnswerId().getVersion(), null);
                     } else if (answer instanceof CaseLevelLatestDocumentAnswer latestAnswer) {
-                        queryId = latestAnswer.getAnswerId().getQueryId();
-                        createdAt = latestAnswer.getCreatedAt();
-                        answerText = latestAnswer.getAnswerText();
-                        version = latestAnswer.getAnswerId().getVersion();
+                        return getAnswerResponse(latestAnswer.getAnswerId().getQueryId(),
+                                latestAnswer.getCreatedAt(), latestAnswer.getAnswerText(),
+                                latestAnswer.getAnswerId().getVersion(), null);
                     } else if (answer instanceof DefendantAnswer defAnswer) {
-                        queryId = defAnswer.getAnswerId().getQueryId();
-                        createdAt = defAnswer.getCreatedAt();
-                        answerText = defAnswer.getAnswerText();
-                        version = defAnswer.getAnswerId().getVersion();
-                        defendantId = defAnswer.getAnswerId().getDefendantId();
+                        return getAnswerResponse(defAnswer.getAnswerId().getQueryId(),
+                                defAnswer.getCreatedAt(), defAnswer.getAnswerText(),
+                                defAnswer.getAnswerId().getVersion(), defAnswer.getAnswerId().getDefendantId());
                     } else if (answer instanceof Answer baseAnswer) {
-                        queryId = baseAnswer.getAnswerId().getQueryId();
-                        createdAt = baseAnswer.getCreatedAt();
-                        answerText = baseAnswer.getAnswerText();
-                        version = baseAnswer.getAnswerId().getVersion();
+                        return getAnswerResponse(baseAnswer.getAnswerId().getQueryId(), baseAnswer.getCreatedAt(),
+                                baseAnswer.getAnswerText(), baseAnswer.getAnswerId().getVersion(), null);
                     } else {
                         throw new IllegalArgumentException("Unknown answer type: " + answer.getClass());
                     }
 
-                    final String userQueryText = resolveUserQueryText(queryId, createdAt);
-
-                    final AnswerResponse answerRes = new AnswerResponse();
-                    answerRes.setQueryId(queryId);
-                    answerRes.setCreatedAt(createdAt);
-                    answerRes.setAnswer(answerText);
-                    answerRes.setVersion(version);
-                    answerRes.setDefendantId(defendantId != null ? defendantId.toString() : null);
-                    //dto.setStatus(status);
-                    answerRes.setUserQuery(userQueryText);
-
-                    return answerRes;
                 })
                 .toList();
+    }
+
+    private AnswerResponse getAnswerResponse(final UUID queryId, final OffsetDateTime createdAt,
+                                             final String answerText, final Integer version,
+                                             final UUID defendantId) {
+
+        final String userQueryText = resolveUserQueryText(queryId, createdAt);
+
+        final AnswerResponse answerRes = new AnswerResponse();
+        answerRes.setQueryId(queryId);
+        answerRes.setCreatedAt(createdAt);
+        answerRes.setAnswer(answerText);
+        answerRes.setVersion(version);
+        answerRes.setDefendantId(defendantId != null ? defendantId.toString() : null);
+        //dto.setStatus(status);
+        answerRes.setUserQuery(userQueryText);
+
+        return answerRes;
     }
 }

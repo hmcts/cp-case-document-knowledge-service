@@ -114,7 +114,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
                     }
                 }
                 log.info("Queries count: {}", candidateQueryIds.size());
-                for (UUID questionId : candidateQueryIds) {
+                for (final UUID questionId : candidateQueryIds) {
                     final JsonObject singleCaseJobData = Json.createObjectBuilder(jobData)
                             .add(CTX_SINGLE_QUERY_ID, questionId.toString())
                             .build();
