@@ -39,4 +39,4 @@ ENV JAVA_OPTS="\
 
 USER app
 # pick the Boot fat jar (exclude '-plain.jar')
-ENTRYPOINT ["sh","-c","exec java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -jar $(ls /app/*.jar | grep -v 'plain' | head -n1)"]
+ENTRYPOINT ["sh","-c","exec java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -jar $(ls /app/*.jar | grep -v 'plain\\|javadoc\\|sources' | head -n1)"]
