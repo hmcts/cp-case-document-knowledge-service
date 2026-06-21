@@ -62,9 +62,12 @@ jobs:
           gradle build cyclonedxBom -x test -x integration
 
       - name: Print PMD violations
-        if: failure()
+        if: always()
         run: |
-          echo "===== PMD REPORT ====="
+          echo "===== PMD REPORT FILES ====="
+          find build/reports/pmd -type f || true
+
+          echo "===== PMD XML REPORT ====="
           cat build/reports/pmd/integrationTest.xml || true
 
       # ℹ️ Command-line programs to run using the OS shell.
