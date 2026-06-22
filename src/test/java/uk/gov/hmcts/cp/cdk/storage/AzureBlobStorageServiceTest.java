@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.never;
@@ -23,7 +22,6 @@ import com.azure.storage.blob.BlobClientBuilder;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobCopyInfo;
 import com.azure.storage.blob.models.BlobProperties;
-import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.models.CopyStatusType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -141,6 +139,7 @@ class AzureBlobStorageServiceTest {
                                  when(mock.buildClient()).thenReturn(destClient);
                              })) {
 
+            when(destClient.exists()).thenReturn(false);
             when(destClient.beginCopy(any())).thenReturn(poller);
             when(poller.waitForCompletion(any())).thenReturn(pollResponse);
             when(pollResponse.getValue()).thenReturn(copyInfo);
@@ -159,22 +158,21 @@ class AzureBlobStorageServiceTest {
     }
 
     @Test
-    void shouldThrowBlobStorageException_whenAlreadyExists() {
+    void shouldReturnNull_whenAlreadyExists() {
         final BlobClient destClient = mock(BlobClient.class);
 
-        try (MockedConstruction<BlobClientBuilder> mocked = mockConstruction(BlobClientBuilder.class,
+        try (MockedConstruction<BlobClientBuilder> mocked =
+                     mockConstruction(BlobClientBuilder.class,
                              (mock, context) -> {
                                  when(mock.endpoint(anyString())).thenReturn(mock);
                                  when(mock.buildClient()).thenReturn(destClient);
                              })) {
-            final BlobStorageException exception = mock(BlobStorageException.class);
-            when(exception.getStatusCode()).thenReturn(412);
-            doThrow(exception).when(destClient).beginCopy(any());
 
-            final BlobStorageException blobStorageException = assertThrows(BlobStorageException.class,
-                    () -> service.copyFromUrl("src", "http://container/blob"));
+            when(destClient.exists()).thenReturn(true);
 
-            assertThat(blobStorageException.getStatusCode()).isEqualTo(412);
+            final DocumentBlobMetadata result = service.copyFromUrl("src", "http://container/blob");
+
+            assertThat(result).isNull();
         }
     }
 

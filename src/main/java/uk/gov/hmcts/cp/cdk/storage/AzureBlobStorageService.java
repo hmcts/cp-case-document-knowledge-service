@@ -16,7 +16,6 @@ import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobClientBuilder;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobCopyInfo;
-import com.azure.storage.blob.models.BlobRequestConditions;
 import com.azure.storage.blob.models.CopyStatusType;
 import com.azure.storage.blob.options.BlobBeginCopyOptions;
 import lombok.extern.slf4j.Slf4j;
@@ -121,34 +120,48 @@ public class AzureBlobStorageService implements StorageService {
                 .endpoint(destinationUrl)
                 .buildClient();
 
-        final BlobBeginCopyOptions copyOptions = new BlobBeginCopyOptions(sourceUrl)
-                .setDestinationRequestConditions(new BlobRequestConditions().setIfNoneMatch("*"))
-                .setPollInterval(Duration.ofMillis(pollIntervalMs));
+        final BlobBeginCopyOptions copyOptions =
+                new BlobBeginCopyOptions(sourceUrl).setPollInterval(Duration.ofMillis(pollIntervalMs));
+
 
         try {
-            final SyncPoller<BlobCopyInfo, Void> syncPoller = destinationBlobClient.beginCopy(copyOptions);
-            final BlobCopyInfo blobCopyInfo = syncPoller.waitForCompletion(Duration.ofSeconds(timeoutSeconds)).getValue();
-            final CopyStatusType copyStatus = blobCopyInfo.getCopyStatus();
+            final boolean existsFlag = destinationBlobClient.exists();
+            log.info("initiating copyFromUrl with sourceUrl={}. destinationUrl={}, existsFlag={}", sourceUrl, destinationUrl, existsFlag);
 
-            log.info("Blob copy from source to destination completed with status {}. blob={}", copyStatus, blobName);
+            if (existsFlag) {
+                log.info("Do nothing; Blob already exists before copy. blob={}", blobName);
+            } else {
+                try {
+                    final SyncPoller<BlobCopyInfo, Void> syncPoller = destinationBlobClient.beginCopy(copyOptions);
+                    final BlobCopyInfo blobCopyInfo = syncPoller.waitForCompletion(Duration.ofSeconds(timeoutSeconds)).getValue();
+                    final CopyStatusType copyStatus = blobCopyInfo.getCopyStatus();
 
-            if (copyStatus == CopyStatusType.ABORTED || copyStatus == CopyStatusType.FAILED) {
-                throw new IllegalStateException("Blob copy from source to destination failed: " + copyStatus);
+                    log.info("Blob copy from source to destination completed with status {}. blob={}", copyStatus, blobName);
+
+                    if (copyStatus == CopyStatusType.ABORTED || copyStatus == CopyStatusType.FAILED) {
+                        throw new IllegalStateException("Blob copy from source to destination failed: " + copyStatus);
+                    }
+
+                    final String blobUrl = destinationBlobClient.getBlobUrl();
+                    log.info("Azure copy from source to destination successful. blob={}, url={}", blobName, blobUrl);
+                    return new DocumentBlobMetadata(blobUrl, blobName, destinationBlobClient.getProperties().getBlobSize());
+
+                } catch (final RuntimeException runtimeException) {
+                    if (runtimeException.getCause() instanceof TimeoutException) {
+                        final String message = "Timed out after " + timeoutSeconds + "s waiting for blob copy to succeed";
+                        log.error("Timeout error - {} . blob={}", message, blobName);
+                        throw new IllegalStateException(message);
+                    }
+                    log.error("Unexpected error during blob copy. blob={}", blobName, runtimeException);
+                    throw runtimeException;
+                }
             }
-
-            final String blobUrl = destinationBlobClient.getBlobUrl();
-            log.info("Azure copy from source to destination successful. blob={}, url={}", blobName, blobUrl);
-            return new DocumentBlobMetadata(blobUrl, blobName, destinationBlobClient.getProperties().getBlobSize());
-
-        } catch (final RuntimeException runtimeException) {
-            if (runtimeException.getCause() instanceof TimeoutException) {
-                final String message = "Timed out after " + timeoutSeconds + "s waiting for blob copy to succeed";
-                log.error("Timeout error - {} . blob={}", message, blobName);
-                throw new IllegalStateException(message);
-            }
-            log.error("Unexpected error during blob copy. blob={}", blobName, runtimeException);
-            throw runtimeException;
+        } catch (final RuntimeException existsException) {
+            log.warn("exists check failed . blob={}", blobName, existsException);
+            throw existsException;
         }
+
+        return null;
     }
 
     @Override

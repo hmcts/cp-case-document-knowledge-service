@@ -29,7 +29,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-
+import org.springframework.web.client.RestClientException;
 
 
 /**
@@ -225,7 +225,7 @@ import org.springframework.http.ResponseEntity;
     void start_ingestion_process_executes_all_tasks_successfully() throws Exception {
         // Arrange
         configureFor("localhost", 8089);
-        stubInitiateDocumentUpload("documents-new", "destination.pdf");
+        stubInitiateDocumentUpload("documents-new", "destination.pdf", 3);
 
         final String auditResponse;
         try (BrokerUtil brokerUtil = new BrokerUtil()) {
@@ -302,7 +302,7 @@ import org.springframework.http.ResponseEntity;
                                 v1Response.getBody().contains(ANSWER) &&
                                 v1Response.getBody().contains(VERSION);
 
-                    } catch (Exception ignored) {
+                    } catch (RestClientException ignored) {
 
                     }
 
@@ -326,7 +326,7 @@ import org.springframework.http.ResponseEntity;
                                 v2Response.getBody().contains(ANSWER) &&
                                 v2Response.getBody().contains(VERSION);
 
-                    } catch (Exception ignored) {
+                    } catch (RestClientException ignored) {
 
                     }
 
@@ -340,7 +340,7 @@ import org.springframework.http.ResponseEntity;
     void start_ingestion_process_executes_all_tasks_successfully_using_new_upload_api() throws Exception {
         // Arrange
         configureFor("localhost", 8089);
-        stubInitiateDocumentUpload("documents-new", "destination.pdf");
+        stubInitiateDocumentUpload("documents-new", "destination.pdf", 3);
 
         final String auditResponse;
         try (BrokerUtil brokerUtil = new BrokerUtil()) {
@@ -415,7 +415,7 @@ import org.springframework.http.ResponseEntity;
                                 v1Response.getBody().contains(ANSWER) &&
                                 v1Response.getBody().contains(VERSION);
 
-                    } catch (Exception ignored) {
+                    } catch (RestClientException ignored) {
 
                     }
 
@@ -439,7 +439,7 @@ import org.springframework.http.ResponseEntity;
                                 v2Response.getBody().contains(ANSWER) &&
                                 v2Response.getBody().contains(VERSION);
 
-                    } catch (Exception ignored) {
+                    } catch (RestClientException ignored) {
 
                     }
 
