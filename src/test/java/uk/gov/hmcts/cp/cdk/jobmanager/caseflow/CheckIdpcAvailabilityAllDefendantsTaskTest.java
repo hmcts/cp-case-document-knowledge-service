@@ -13,6 +13,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOCIDS_ARRAY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_LATEST_DEFENDANT;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
@@ -42,6 +43,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class CheckIdpcAvailabilityAllDefendantsTaskTest {
 
+    public static final int EXPECTED_SIZE = 50;
     private CheckIdpcAvailabilityAllDefendantsTask task;
 
     @Mock
@@ -213,5 +215,136 @@ class CheckIdpcAvailabilityAllDefendantsTaskTest {
         final List<Long> durations = task.getRetryDurationsInSecs().orElseThrow();
 
         assertThat(durations).isEqualTo(List.of(10L, 10L, 10L));
+    }
+
+    @Test
+    void shouldNotTruncateMaterialName_whenExactly50Characters() {
+        String materialName = "12345678901234567890123456789012345678901234567890"; // 50 chars
+
+        UUID materialId = UUID.randomUUID();
+        UUID defendantId = UUID.randomUUID();
+
+        LatestMaterialInfo info = new LatestMaterialInfo(
+                List.of(caseId),
+                "doc",
+                "desc",
+                materialId.toString(),
+                materialName,
+                ZonedDateTime.now(),
+                UUID.randomUUID().toString(),
+                defendantId.toString()
+        );
+
+        JsonObject jobData = createObjectBuilder()
+                .add(CTX_CASE_ID_KEY, caseId)
+                .add(CPPUID, userId)
+                .build();
+
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
+
+        when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
+                .thenReturn(List.of(info));
+
+        when(documentIdResolver.resolveExistingDocIdForDefendant(any(), any(), any()))
+                .thenReturn(Optional.empty());
+
+        task.execute(executionInfo(jobData));
+
+        verify(executionService).executeWith(captor.capture());
+
+        assertThat(
+                captor.getValue().getJobData().getString(CTX_MATERIAL_NAME)
+        ).isEqualTo(materialName);
+    }
+
+    @Test
+    void shouldTruncateMaterialNameAndPreservePdfExtension() {
+        String materialName =
+                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.pdf";
+
+        UUID materialId = UUID.randomUUID();
+        UUID defendantId = UUID.randomUUID();
+
+        LatestMaterialInfo info = new LatestMaterialInfo(
+                List.of(caseId),
+                "doc",
+                "desc",
+                materialId.toString(),
+                materialName,
+                ZonedDateTime.now(),
+                UUID.randomUUID().toString(),
+                defendantId.toString()
+        );
+
+        JsonObject jobData = createObjectBuilder()
+                .add(CTX_CASE_ID_KEY, caseId)
+                .add(CPPUID, userId)
+                .build();
+
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
+
+        when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
+                .thenReturn(List.of(info));
+
+        when(documentIdResolver.resolveExistingDocIdForDefendant(any(), any(), any()))
+                .thenReturn(Optional.empty());
+
+        task.execute(executionInfo(jobData));
+
+        verify(executionService).executeWith(captor.capture());
+
+        String actualName =
+                captor.getValue().getJobData().getString(CTX_MATERIAL_NAME);
+
+        assertThat(actualName)
+                .endsWith(".pdf")
+                .hasSize(EXPECTED_SIZE);
+    }
+
+    @Test
+    void shouldTruncateMaterialNameWithoutExtension() {
+        String materialName =
+                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+
+        UUID materialId = UUID.randomUUID();
+        UUID defendantId = UUID.randomUUID();
+
+        LatestMaterialInfo info = new LatestMaterialInfo(
+                List.of(caseId),
+                "doc",
+                "desc",
+                materialId.toString(),
+                materialName,
+                ZonedDateTime.now(),
+                UUID.randomUUID().toString(),
+                defendantId.toString()
+        );
+
+        JsonObject jobData = createObjectBuilder()
+                .add(CTX_CASE_ID_KEY, caseId)
+                .add(CPPUID, userId)
+                .build();
+
+        when(ingestionProperties.getFeature()).thenReturn(feature);
+        when(feature.isUseMultiDefendant()).thenReturn(false);
+
+        when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
+                .thenReturn(List.of(info));
+
+        when(documentIdResolver.resolveExistingDocIdForDefendant(any(), any(), any()))
+                .thenReturn(Optional.empty());
+
+        task.execute(executionInfo(jobData));
+
+        verify(executionService).executeWith(captor.capture());
+
+        String actualName =
+                captor.getValue().getJobData().getString(CTX_MATERIAL_NAME);
+
+        assertThat(actualName)
+                .hasSize(EXPECTED_SIZE)
+                .doesNotEndWith(".pdf");
     }
 }
