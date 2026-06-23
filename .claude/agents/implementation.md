@@ -64,9 +64,13 @@ Rules:
 - Access control lives in `cdks-rules.drl` (Drools, evaluated by the auth filter) — **not** in the
   controller. See §7 below for how to add a rule.
 
-#### OpenAPI spec — pre-implementation gate (read before writing any controller)
+#### OpenAPI spec — HARD GATE (verify before writing any file in CSDK)
 
-The generated interfaces and DTOs come from a single artifact declared in `gradle.properties`:
+`api-cp-crime-caseadmin-case-document-knowledge` is a **separate repository owned by a different
+team.** CSDK does not raise PRs or make changes there. All CSDK code is derived from whatever that
+repo publishes — never the other way round.
+
+The generated interfaces and DTOs come from the artifact declared in `gradle.properties`:
 
 ```
 version.cdk=0.0.8
@@ -84,28 +88,27 @@ Generated packages in that JAR:
 
 Current interfaces in `0.0.8`: `AnswersApi`, `DocumentApi`, `IngestionApi`, `QueriesApi`, `QueryCatalogueApi`.
 
-**Before writing a single line of controller code, verify the interface exists:**
+**Verify the interface exists before writing a single line of code in CSDK:**
 
 ```bash
 jar tf ~/.gradle/caches/modules-2/files-2.1/uk.gov.hmcts.cp/api-cp-crime-caseadmin-case-document-knowledge/$(grep version.cdk gradle.properties | cut -d= -f2)/*.jar \
   | grep "Api\.class"
 ```
 
-**If the `*Api` interface for your new endpoint is absent:**
+**If the `*Api` interface for your new endpoint is absent — stop and surface a blocker:**
 
-1. **Stop. Do not write `@PostMapping`, `@GetMapping`, or hand-authored DTO classes.**
-2. Raise a blocker ticket against the OpenAPI spec repository
-   (`api-cp-crime-caseadmin-case-document-knowledge`). The new path and request/response shapes
-   must be added to the spec first.
-3. Once the spec is updated and a new artifact version is published:
+1. Do not create any file in this repo — no controller, service, entity, migration, mapper, or test.
+2. Flag as a blocker: the external spec artifact must be updated and a new version published
+   before CSDK implementation can begin. Surface this in the PR description or story comments;
+   do not ship partial CSDK code for this feature.
+3. Once a new artifact version is available that contains the required `*Api` interface:
    - Bump `version.cdk` in `gradle.properties`
-   - Run `./gradlew compileJava` to confirm the new interface and model classes are available
-   - Then implement the controller against the generated types
-4. If the story is time-boxed and the spec update is blocked, **flag it as an open question** in
-   the PR and do not ship the controller in that PR.
+   - Run `./gradlew compileJava` to confirm the interface and model classes resolve
+   - Then implement controller, service, entity, migration, mapper, and tests in CSDK
 
 This gate applies to both interfaces (`*Api`) and DTOs (`*Request`, `*Response`). Never hand-write
-classes that duplicate what the generated artifact should provide.
+classes that duplicate what the generated artifact should provide. Never write `@PostMapping`,
+`@GetMapping`, or hand-authored DTOs — not even as a temporary placeholder.
 
 ### 2. Services
 
