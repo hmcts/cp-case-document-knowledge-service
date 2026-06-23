@@ -13,6 +13,119 @@ abstractions. Code is not "done" until `./gradlew test` and `./gradlew integrati
 
 ---
 
+## TDD implementation order — mandatory
+
+Each phase below requires **explicit user instruction** before starting. Do not advance to the
+next phase without being asked. Never write production code before the user has confirmed that
+the failing tests for that layer are in place.
+
+### Phase 1 — Confirm the `*Api` interface (hard gate)
+
+Before any file is created, run the JAR inspection from §1. If the interface is absent, stop
+completely — no stub, no test, no migration. Raise a blocker and wait for user direction.
+
+### Phase 2 — Controller stub (when instructed)
+
+Create the controller implementing the `*Api` interface with every method body returning
+`NOT_IMPLEMENTED`. The project must compile. No business logic.
+
+```java
+@Slf4j
+@RestController
+public class FooController implements FooApi {
+
+    private final FooService service;
+    private final FooMapper mapper;
+
+    public FooController(final FooService service, final FooMapper mapper) {
+        this.service = service;
+        this.mapper = mapper;
+    }
+
+    @Override
+    public ResponseEntity<FooResponse> createFoo(final FooRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    }
+}
+```
+
+Stop here and wait for the user to instruct Phase 3.
+
+### Phase 3 — Failing unit tests (when instructed)
+
+Write `src/test/java/.../controllers/FooControllerTest` using `MockMvcBuilders.standaloneSetup()`.
+
+Minimum coverage:
+
+| Test | Expected outcome |
+|------|-----------------|
+| Happy path | 201 / 200 with correct response body |
+| Duplicate / conflict | 409 with error message |
+| Malformed body | 400 |
+
+Run and confirm every new test fails:
+
+```bash
+./gradlew test --tests "*.FooControllerTest"
+```
+
+If a test passes at this stage, the test is wrong — fix the assertion before proceeding.
+
+Stop here and wait for the user to instruct Phase 4.
+
+### Phase 4 — Failing integration test (when instructed)
+
+Write `src/integrationTest/java/.../FooHttpLiveTest` extending `AbstractHttpLiveTest`.
+Cover the happy path end-to-end against the full compose stack.
+
+The test must fail because the stub returns 501. Confirm:
+
+```bash
+./gradlew integration --tests "*.FooHttpLiveTest"
+```
+
+Stop here and wait for the user to instruct Phase 5.
+
+### Phase 5 — Inner-layer tests then implementation (when instructed per layer)
+
+For each layer, write the unit test first, confirm it fails, then implement. The user will
+instruct which layer to work on; do not implement a layer that has not been explicitly requested.
+
+Order:
+
+1. Migration (`V<N>__<desc>.sql`) — validate DDL with `./gradlew flywayMigrate` against the
+   test DB; no unit test required.
+2. Entity (`domain/`) → `@DataJpaTest` repository test (confirm failing) → entity + repository.
+3. Service (`services/`) → Mockito service test (confirm failing) → service implementation.
+4. Mapper (`services/mapper/`) → mapper unit test (confirm failing) → mapper implementation.
+5. Exception handler (`controllers/exception/`) → unit test (confirm failing) → implementation.
+
+After each layer: run `./gradlew test --tests "*.<ClassName>*"` and confirm green before
+moving to the next.
+
+### Phase 6 — Controller implementation (when instructed)
+
+Replace the stub `NOT_IMPLEMENTED` body with real delegation to the service. Run:
+
+```bash
+./gradlew test --tests "*.FooControllerTest"
+./gradlew integration --tests "*.FooHttpLiveTest"
+```
+
+Stop here and wait for the user to instruct Phase 7.
+
+### Phase 7 — Full suite and quality gates (when instructed)
+
+```bash
+./gradlew test
+./gradlew integration
+./gradlew pmdMain pmdTest jacocoTestReport
+```
+
+Fix PMD violations. Do not lower JaCoCo thresholds.
+
+---
+
 ## Non-negotiable rules (from CLAUDE.md)
 
 Before writing a single line of code, internalise these:
