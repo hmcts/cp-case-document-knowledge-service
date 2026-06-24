@@ -7,6 +7,5 @@ public enum DocumentIngestionPhase {
     UPLOADED,
     INGESTING,
     INGESTED,
-    FAILED,
-    EXCEEDED_FILE_SIZE_LIMIT
+    FAILED
 }
