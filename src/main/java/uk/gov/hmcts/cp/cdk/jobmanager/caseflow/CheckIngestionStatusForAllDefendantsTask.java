@@ -109,7 +109,6 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
 
             final String status = normalise(rawStatus, 255);
 
-            //
             if (INGESTION_SUCCESS.name().equalsIgnoreCase(status)) {
 
                 updateIngestionPhase(documentId, DocumentIngestionPhase.INGESTED);

@@ -28,6 +28,7 @@ import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
+import uk.gov.hmcts.cp.cdk.util.MaterialNameValidator;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
 import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
@@ -125,7 +126,7 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
                 final JsonObjectBuilder updatedJobData = createObjectBuilder(jobData);
                 updatedJobData.add(CTX_DOC_ID_KEY, defendantToDocIdMap.get(defendantId));
                 updatedJobData.add(CTX_MATERIAL_ID_KEY, info.materialId());
-                updatedJobData.add(CTX_MATERIAL_NAME, info.materialName());
+                updatedJobData.add(CTX_MATERIAL_NAME, MaterialNameValidator.truncateMaterialName(info.materialName()));
                 updatedJobData.add(CTX_DEFENDANT_ID_KEY, info.defendantId());
                 updatedJobData.add(CTX_COURTDOCUMENT_ID_KEY, info.courtDocumentId());
                 updatedJobData.add(CTX_DOCIDS_ARRAY, docIdsArray);
