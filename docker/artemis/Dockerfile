@@ -1,4 +1,4 @@
-FROM eclipse-temurin:25-jdk
+FROM eclipse-temurin:25-jre
 
 SHELL ["/bin/sh", "-c"]
 WORKDIR /opt

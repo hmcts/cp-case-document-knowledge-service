@@ -1,20 +1,10 @@
 # docker/Dockerfile
-FROM eclipse-temurin:25-jdk
+FROM eclipse-temurin:25-jre
 
 USER root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-
-# --- Import broker CAs into default JVM truststore (cacerts) ---
-
-COPY docker/certs/truststore.jks /tmp/truststore.jks
-RUN set -e; \
-    echo "Merging truststore into JVM cacerts..."; \
-    keytool -importkeystore -noprompt \
-      -srckeystore /tmp/truststore.jks -srcstoretype JKS -srcstorepass changeit \
-      -destkeystore "$JAVA_HOME/lib/security/cacerts" -deststorepass changeit; \
-    rm -f /tmp/truststore.jks
 
 # Non-root user + app dir
 RUN groupadd --system app \
