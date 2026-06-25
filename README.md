@@ -1,7 +1,7 @@
 # case-document-knowledge-service
 
 **AI-powered answers for case documents — every response cited and auditable.**  
-Spring Boot 4 (Java 21), PostgreSQL + Flyway, production-ready observability, and CI-friendly *
+Spring Boot 4 (Java 25), PostgreSQL + Flyway, production-ready observability, and CI-friendly *
 *Gradle** build.
 
 ---
@@ -40,7 +40,7 @@ Spring Boot 4 (Java 21), PostgreSQL + Flyway, production-ready observability, an
 
 ## Tech stack
 
-- **Java 21**, **Spring Boot 4.0.0-M2**
+- **Java 25**, **Spring Boot 4.0.0-M2**
 - Spring MVC, Spring Data JPA, **PostgreSQL 16**, Flyway
 - Micrometer + **Prometheus**, OpenTelemetry OTLP exporter
 - Gradle 9, PMD, JaCoCo
@@ -68,7 +68,7 @@ Spring Boot 4 (Java 21), PostgreSQL + Flyway, production-ready observability, an
 
 ## Prerequisites
 
-- Java **21**
+- Java **25**
 - Docker Engine **v27+** and **Docker Compose v2** (`docker compose` CLI)
 - Nothing else required — use the Gradle (`gradle`)
 
@@ -107,7 +107,7 @@ By default the app starts on **:8082** and looks for Postgres at **localhost:554
 see [Configuration](#configuration)).
 
 ```bash
-# Start with your local Java 21
+# Start with your local Java 25
 gradle bootRun
 ```
 
