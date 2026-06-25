@@ -26,6 +26,7 @@ import uk.gov.hmcts.cp.taskmanager.service.task.Task;
 
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -113,7 +114,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
                     }
                 }
                 log.info("Queries count: {}", candidateQueryIds.size());
-                for (UUID questionId : candidateQueryIds) {
+                for (final UUID questionId : candidateQueryIds) {
                     final JsonObject singleCaseJobData = Json.createObjectBuilder(jobData)
                             .add(CTX_SINGLE_QUERY_ID, questionId.toString())
                             .build();
@@ -131,7 +132,7 @@ public class CheckIngestionStatusForDocumentTask implements ExecutableTask {
                 }
 
                 return complete(executionInfo);
-            } else if (failureStatuses.contains(status.toUpperCase())) {
+            } else if (failureStatuses.contains(status.toUpperCase(Locale.ROOT))) {
 
                 updateIngestionPhase(documentId, DocumentIngestionPhase.FAILED);
                 log.error(

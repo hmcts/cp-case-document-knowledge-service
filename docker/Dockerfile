@@ -1,5 +1,5 @@
 # docker/Dockerfile
-FROM eclipse-temurin:21-jdk
+FROM eclipse-temurin:25-jdk
 
 USER root
 RUN apt-get update \

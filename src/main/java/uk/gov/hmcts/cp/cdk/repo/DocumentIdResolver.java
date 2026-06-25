@@ -25,7 +25,7 @@ public class DocumentIdResolver {
               FROM case_documents
              WHERE case_id = :case_id
                AND material_id = :material_id
-               AND ingestion_phase IN ('UPLOADED','INGESTED','WAITING_FOR_UPLOAD')
+               AND ingestion_phase IN ('UPLOADED','INGESTED','WAITING_FOR_UPLOAD','EXCEEDED_FILE_SIZE_LIMIT')
              ORDER BY ingestion_phase_at DESC
              LIMIT 1
             """;
@@ -37,7 +37,7 @@ public class DocumentIdResolver {
          WHERE case_id = :case_id
            AND material_id = :material_id
            AND defendant_id = :defendant_id
-           AND ingestion_phase IN ('UPLOADED','INGESTED','WAITING_FOR_UPLOAD')
+           AND ingestion_phase IN ('UPLOADED','INGESTED','WAITING_FOR_UPLOAD','EXCEEDED_FILE_SIZE_LIMIT')
          ORDER BY ingestion_phase_at DESC
          LIMIT 1
         """;
@@ -54,7 +54,7 @@ public class DocumentIdResolver {
         SELECT DISTINCT doc_id
           FROM case_documents
          WHERE doc_id IN (:doc_ids)
-           AND ingestion_phase = 'INGESTED'
+           AND ingestion_phase IN ('INGESTED','EXCEEDED_FILE_SIZE_LIMIT')
         """;
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -83,7 +83,7 @@ public class DocumentIdResolver {
      * Attempts to resolve an existing document id for the given case, material, and defendant.
      * Never throws; logs and returns {@link Optional#empty()} on error.
      */
-    public Optional<UUID> resolveExistingDocIdForDefendant(final UUID caseId,
+    public Optional<UUID>  resolveExistingDocIdForDefendant(final UUID caseId,
                                                            final UUID materialId,
                                                            final UUID defendantId) {
         Optional<UUID> result = Optional.empty();

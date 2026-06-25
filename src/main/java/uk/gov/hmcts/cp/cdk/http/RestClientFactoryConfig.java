@@ -78,7 +78,9 @@ public class RestClientFactoryConfig {
 
             final boolean overrideTimeouts = (connectTimeout != null) || (readTimeout != null);
 
+            @SuppressWarnings("PMD.CloseResource")
             final CloseableHttpClient clientForThis;
+
             if (overrideTimeouts) {
                 final Duration ct = (connectTimeout != null) ? connectTimeout : THREE_MIN;
                 final Duration rt = (readTimeout != null) ? readTimeout : THREE_MIN;

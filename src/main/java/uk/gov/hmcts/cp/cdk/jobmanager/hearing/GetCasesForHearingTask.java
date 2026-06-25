@@ -97,8 +97,8 @@ public class GetCasesForHearingTask implements ExecutableTask {
                         .build();
             }
 
-            for (String caseId : caseIds) {
-                JsonObject singleCaseJobData = createObjectBuilder(jobData)
+            for (final String caseId : caseIds) {
+                final JsonObject singleCaseJobData = createObjectBuilder(jobData)
                         .add(CTX_CASE_ID_KEY, caseId)
                         .build();
 

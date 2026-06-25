@@ -19,7 +19,7 @@ public class TimeConfig {
      * Selects the correct IngestionProcessor implementation based on feature flag.
      */
     @Bean
-    public IngestionProcessor ingestionProcessor(JobManagerService jobManagerService) {
+    public IngestionProcessor ingestionProcessor(final JobManagerService jobManagerService) {
         return jobManagerService;
     }
 }

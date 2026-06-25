@@ -75,7 +75,7 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
         final String caseIdString = jobData.getString(CTX_CASE_ID_KEY, null);
         final String userId = jobData.getString(CPPUID, null);
         final String requestId = jobData.getString("requestId", "unknown");
-        Optional<UUID> caseIdUuidOptional;
+        final Optional<UUID> caseIdUuidOptional;
 
         try {
             caseIdUuidOptional = parseUuid(caseIdString);
@@ -84,7 +84,7 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
                     progressionClient.getCourtDocumentsForAllDefendants(caseIdUuidOptional.get(), userId);
             final Map<String, String> defendantToDocIdMap = new HashMap<>();
 
-            for (LatestMaterialInfo info : materials) {
+            for (final LatestMaterialInfo info : materials) {
                 final UUID materialUuid = fromString(info.materialId());
                 final UUID defendantUuid = fromString(info.defendantId());
                 final Optional<UUID> existingDocUuid =
@@ -118,7 +118,7 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
 
             final JsonArray docIdsArray = docIdsArrayBuilder.build();
 
-            for (LatestMaterialInfo info : materials) {
+            for (final LatestMaterialInfo info : materials) {
                 final String defendantId = info.defendantId();
                 if (!defendantToDocIdMap.containsKey(defendantId)) {
                     continue;
@@ -130,7 +130,7 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
                 updatedJobData.add(CTX_DEFENDANT_ID_KEY, info.defendantId());
                 updatedJobData.add(CTX_COURTDOCUMENT_ID_KEY, info.courtDocumentId());
                 updatedJobData.add(CTX_DOCIDS_ARRAY, docIdsArray);
-                boolean isLatest = defendantId.equals(latestDefendantId);
+                final boolean isLatest = defendantId.equals(latestDefendantId);
                 updatedJobData.add(CTX_LATEST_DEFENDANT, isLatest);
 
                 final String retrieveMaterialTask = ingestionProperties.getFeature().isUseMultiDefendant()

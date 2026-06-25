@@ -33,7 +33,7 @@ apply {
 /* ------------ Java toolchain ------------ */
 java {
     toolchain {
-        def defaultVersion = (findProperty("JAVA_VERSION") ?: "21") as int
+        def defaultVersion = (findProperty("JAVA_VERSION") ?: "25") as int
         def providedVersion = System.getProperty("JAVA_VERSION") ?: System.getenv("JAVA_VERSION")
         languageVersion = JavaLanguageVersion.of(providedVersion ? providedVersion as int : defaultVersion)
     }
@@ -102,7 +102,9 @@ ext.vers = [
         cpAuthFilter      : findProperty('version.cpAuthFilter'),
         cpAuditFilter     : findProperty('version.cpAuditFilter'),
         jobManager        : findProperty('version.jobManager'),
-        wiremock          : findProperty('version.wiremock')
+        wiremock          : findProperty('version.wiremock'),
+        shedlock          : findProperty('version.shedlock'),
+        pmd               : findProperty('version.pmd')
 
 ]
 
@@ -172,6 +174,9 @@ dependencies {
     //jobManager
     implementation "uk.gov.hmcts.cp:task-manager-service:${vers.jobManager}"
 
+    //shedlock
+    implementation("net.javacrumbs.shedlock:shedlock-spring:$vers.shedlock")
+    implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:$vers.shedlock")
 
     // Testcontainers (BOM)
     testImplementation("org.springframework.boot:spring-boot-testcontainers:4.0.2")

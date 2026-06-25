@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.clients.common;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import jakarta.validation.constraints.NotBlank;
@@ -33,9 +34,9 @@ public class RagClientProperties {
     /**
      * Authentication configuration. Defaults to subscription-key.
      */
-    private Auth auth = new Auth();
+    private Authentication auth = new Authentication();
 
-    public static class Auth {
+    public static class Authentication {
 
         /**
          * Auth mode: "subscription-key" or "aad".
@@ -50,7 +51,7 @@ public class RagClientProperties {
         /**
          * AAD-specific configuration. Used when mode=aad.
          */
-        private Aad aad = new Aad();
+        private AadConfig aadConfig = new AadConfig();
 
         public String getMode() {
             return mode;
@@ -61,7 +62,7 @@ public class RagClientProperties {
                 this.mode = SUBSCRIPTION_KEY;
                 return;
             }
-            final String normalized = mode.trim().toLowerCase();
+            final String normalized = mode.trim().toLowerCase(Locale.ROOT);
             if (!SUBSCRIPTION_KEY.equals(normalized) && !AAD.equals(normalized)) {
                 throw new IllegalArgumentException("Unsupported rag.client.auth.mode: " + mode);
             }
@@ -77,15 +78,15 @@ public class RagClientProperties {
             this.subscriptionKey = subscriptionKey;
         }
 
-        public Aad getAad() {
-            return aad;
+        public AadConfig getAad() {
+            return aadConfig;
         }
 
-        public void setAad(final Aad aad) {
-            this.aad = aad;
+        public void setAad(final AadConfig aadConfig) {
+            this.aadConfig = aadConfig;
         }
 
-        public static class Aad {
+        public static class AadConfig {
 
             /**
              * Required when mode=aad. Must be the Application ID URI of the API with '/.default' suffix.
@@ -163,11 +164,11 @@ public class RagClientProperties {
         this.headers = headers;
     }
 
-    public Auth getAuth() {
+    public Authentication getAuth() {
         return auth;
     }
 
-    public void setAuth(final Auth auth) {
+    public void setAuth(final Authentication auth) {
         this.auth = auth;
     }
 
