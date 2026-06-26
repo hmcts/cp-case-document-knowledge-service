@@ -9,13 +9,13 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_CASE_ELIGIBILITY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCaseEligibilityInfo;
-import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
@@ -48,21 +48,15 @@ class CheckCaseEligibilityTaskTest {
     @Mock
     private JobManagerRetryProperties retryProperties;
 
-    @Mock
-    private IngestionProperties ingestionProperties;
-
     @Captor
     private ArgumentCaptor<ExecutionInfo> captor;
 
     private ExecutionInfo executionInfo;
     private UUID caseId;
 
-    @Mock
-    private IngestionProperties.Feature feature;
-
     @BeforeEach
     void setUp() {
-        task = new CheckCaseEligibilityTask(executionService, progressionClient,retryProperties,ingestionProperties);
+        task = new CheckCaseEligibilityTask(executionService, progressionClient,retryProperties);
 
         caseId = UUID.randomUUID();
 
@@ -103,14 +97,11 @@ class CheckCaseEligibilityTaskTest {
     }
 
     @Test
-    void shouldComplete_whenMoreThanOneDefendant() {
-
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
+    void shouldComplete_whenNoDefendant() {
         ProsecutionCaseEligibilityInfo info =
                 new ProsecutionCaseEligibilityInfo(
                         caseId.toString(),
-                        List.of("def-1", "def-2")
+                        List.of()
                 );
 
         when(progressionClient.getProsecutionCaseEligibilityInfo(caseId, "cppuid-123"))
@@ -132,9 +123,6 @@ class CheckCaseEligibilityTaskTest {
 
         when(progressionClient.getProsecutionCaseEligibilityInfo(caseId, "cppuid-123"))
                 .thenReturn(Optional.of(info));
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(true);
-
         ExecutionInfo result = task.execute(executionInfo);
 
         assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
@@ -151,9 +139,6 @@ class CheckCaseEligibilityTaskTest {
 
         when(progressionClient.getProsecutionCaseEligibilityInfo(caseId, "cppuid-123"))
                 .thenReturn(Optional.of(info));
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
-
         ExecutionInfo result = task.execute(executionInfo);
 
         // current task completed
@@ -163,7 +148,7 @@ class CheckCaseEligibilityTaskTest {
         verify(executionService).executeWith(captor.capture());
         ExecutionInfo nextTask = captor.getValue();
 
-        assertThat(nextTask.getAssignedTaskName()).isEqualTo(CHECK_IDPC_AVAILABILITY);
+        assertThat(nextTask.getAssignedTaskName()).isEqualTo(CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS);
         assertThat(nextTask.getExecutionStatus()).isEqualTo(ExecutionStatus.STARTED);
     }
 

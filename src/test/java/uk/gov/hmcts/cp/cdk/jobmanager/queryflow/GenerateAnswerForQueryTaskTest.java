@@ -16,7 +16,6 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_Q
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
-import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.UserQueryAnswerRequestAccepted;
@@ -56,11 +55,6 @@ class GenerateAnswerForQueryTaskTest {
     private UserQueryAnswerRequestAccepted body;
     @Captor
     private ArgumentCaptor<ExecutionInfo> captor;
-    @Mock
-    private IngestionProperties ingestionProperties;
-
-    @Mock
-    private IngestionProperties.Feature feature;
 
     private UUID caseId;
     private UUID docId;
@@ -72,7 +66,7 @@ class GenerateAnswerForQueryTaskTest {
         caseId = UUID.randomUUID();
         docId = UUID.randomUUID();
         queryId = UUID.randomUUID();
-        task = new GenerateAnswerForQueryTask(queryDefinitionLatestRepository, api, executionService,ingestionProperties);
+        task = new GenerateAnswerForQueryTask(queryDefinitionLatestRepository, api, executionService);
 
         final JsonObject jobData = createObjectBuilder()
                 .add(CTX_CASE_ID_KEY, caseId.toString())
@@ -91,8 +85,6 @@ class GenerateAnswerForQueryTaskTest {
     @Test
     void shouldComplete_whenAnyIdentifierIsMissing() {
         final ExecutionInfo input = executionInfo().withJobData(Json.createObjectBuilder().build()).build();
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
         final ExecutionInfo result = task.execute(input);
 
         assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
@@ -102,8 +94,6 @@ class GenerateAnswerForQueryTaskTest {
 
     @Test
     void shouldComplete_whenQueryDefinitionNotFound() {
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
         when(queryDefinitionLatestRepository.findByQueryId(queryId)).thenReturn(Optional.empty());
 
         final ExecutionInfo result = task.execute(executionInfo);
@@ -115,8 +105,6 @@ class GenerateAnswerForQueryTaskTest {
 
     @Test
     void shouldStartAsyncRagAndScheduleNextTask() {
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
         when(qdl.getUserQuery()).thenReturn("user query");
         when(qdl.getQueryPrompt()).thenReturn("prompt");
         when(queryDefinitionLatestRepository.findByQueryId(queryId)).thenReturn(Optional.of(qdl));
@@ -141,8 +129,6 @@ class GenerateAnswerForQueryTaskTest {
 
     @Test
     void shouldRetry_whenApiReturnsNullBody() {
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
         when(queryDefinitionLatestRepository.findByQueryId(queryId)).thenReturn(Optional.of(qdl));
         final ResponseEntity<@NotNull UserQueryAnswerRequestAccepted> response = ResponseEntity.ok(null);
         when(api.answerUserQueryAsync(any())).thenReturn(response);
@@ -156,8 +142,6 @@ class GenerateAnswerForQueryTaskTest {
     @Test
     void shouldRetry_whenApiThrowsException() {
         when(queryDefinitionLatestRepository.findByQueryId(queryId)).thenReturn(Optional.of(qdl));
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
         when(api.answerUserQueryAsync(any())).thenThrow(new RuntimeException("boom"));
 
         final ExecutionInfo result = task.execute(executionInfo);

@@ -20,7 +20,6 @@ import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERA
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
-import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.services.AnswerGenerationService;
 import uk.gov.hmcts.cp.cdk.services.CaseLevelAllDocumentsAnswerService;
@@ -66,7 +65,6 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
     private final CaseLevelAllDocumentsAnswerService caseLevelAllDocumentsAnswerService;
     private final CaseLevelLatestDocumentAnswerService caseLevelLatestDocumentAnswerService;
     private final DefendantAnswerService defendantAnswerService;
-    private final IngestionProperties ingestionProperties;
     private final ExecutionService executionService;
 
     @Override
@@ -74,7 +72,6 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
 
         final JsonObject jobData = executionInfo.getJobData();
         final UUID transactionId = parseUuidOrNull(jobData.getString(CTX_RAG_TRANSACTION_ID, null));
-        final boolean isUseMultiDefendant = ingestionProperties.getFeature().isUseMultiDefendant();
 
         try {
             final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> userQueryAnswerResponse = documentInformationSummarisedAsynchronouslyApi.answerUserQueryStatus(transactionId.toString(), true);
@@ -99,8 +96,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
 
             if (ANSWER_GENERATED == answerResponseBody.getStatus()) {
                 final String llmInputJson = getLlmJson(answerResponseBody.getDocumentChunks(), caseId, documentId, queryId);
-                if (isUseMultiDefendant) {
-                    switch (level) {
+                switch (level) {
                         case QueryLevel.CASE:
                             caseLevelLatestDocumentAnswerService.upsert(
                                     caseId,
@@ -140,9 +136,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                             );
                             break;
                     }
-                } else {
-                    answerGenerationService.upsertAnswer(caseId, queryId, answerResponseBody.getLlmResponse(), llmInputJson, documentId);
-                }
+
 
                 log.info("Answer Generation updated in the DB for caseId={}, docId={}, queryId={}, transactionId={}, task completed.",
                         caseId, documentId, queryId, transactionId);

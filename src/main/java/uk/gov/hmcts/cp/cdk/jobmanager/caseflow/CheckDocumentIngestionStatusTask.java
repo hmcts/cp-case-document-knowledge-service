@@ -47,6 +47,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @Task(CHECK_DOCUMENT_INGESTION_STATUS)
 @Slf4j
+//TODO remove
 public class CheckDocumentIngestionStatusTask implements ExecutableTask {
 
     private final DocumentIngestionStatusApi documentIngestionStatusApi;

@@ -51,6 +51,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Task(RETRIEVE_FROM_MATERIAL)
+//TODO remove
 public class RetrieveFromMaterialAndUploadTask implements ExecutableTask {
 
     private static final long UNKNOWN_SIZE_BYTES = -1L;

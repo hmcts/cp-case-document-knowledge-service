@@ -25,6 +25,7 @@ cdk:
     max-pool-size: ${CP_CDK_INGESTION_MAX_POOL_SIZE:20}
     queue-capacity: ${CP_CDK_INGESTION_QUEUE_CAPACITY:200}
 
+
     feature:
       use-multi-defendant: ${CP_CDK_FEATURE_USE_MULTI_DEFENDANT:true}
 

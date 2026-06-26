@@ -7,7 +7,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_DOCUMENT_INGESTION_STATUS;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_BLOB_NAME_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
@@ -22,7 +22,6 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.COMPLETED;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
-import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.storage.DocumentBlobMetadata;
@@ -67,14 +66,6 @@ public class RetrieveMaterialAndUploadTaskTest {
     @Mock
     private DocumentIngestionInitiationApi documentIngestionInitiationApi;
 
-    @Mock
-    private IngestionProperties ingestionProperties;
-
-    @Mock
-    private IngestionProperties.Feature feature;
-
-
-
     @Captor
     private ArgumentCaptor<ExecutionInfo> executionInfoCaptor;
 
@@ -100,8 +91,7 @@ public class RetrieveMaterialAndUploadTaskTest {
                 uploadProperties,
                 retryProperties,
                 executionService,
-                documentIngestionInitiationApi,
-                ingestionProperties
+                documentIngestionInitiationApi
         );
 
         documentId = randomUUID();
@@ -142,13 +132,9 @@ public class RetrieveMaterialAndUploadTaskTest {
     @Test
     void shouldUploadDocumentAndScheduleNextTask() {
 
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
         when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
         when(uploadProperties.fileExtension()).thenReturn(".pdf");
         when(uploadProperties.contentType()).thenReturn("application/pdf");
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
         when(progressionClient.getMaterialDownloadUrl(any(), any()))
                 .thenReturn(Optional.of("https://progression/download/url"));
 
@@ -166,7 +152,7 @@ public class RetrieveMaterialAndUploadTaskTest {
         verify(executionService).executeWith(executionInfoCaptor.capture());
         ExecutionInfo nextTask = executionInfoCaptor.getValue();
 
-        assertThat(nextTask.getAssignedTaskName()).isEqualTo(CHECK_DOCUMENT_INGESTION_STATUS);
+        assertThat(nextTask.getAssignedTaskName()).isEqualTo(CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS);
         assertThat(nextTask.getExecutionStatus()).isEqualTo(ExecutionStatus.STARTED);
         assertThat(nextTask.getJobData().getString(CTX_DOC_ID_KEY)).isEqualTo(documentId.toString());
         assertThat(nextTask.getJobData().containsKey(CTX_BLOB_NAME_KEY)).isTrue();
@@ -214,8 +200,6 @@ public class RetrieveMaterialAndUploadTaskTest {
 
         when(storageService.copyFromUrl(any(), any())).thenReturn(null);
         when(caseDocumentRepository.findById(any())).thenReturn(Optional.empty());
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(true);
 
         final ExecutionInfo result = task.execute(executionInfo);
 
@@ -232,8 +216,6 @@ public class RetrieveMaterialAndUploadTaskTest {
 
         when(storageService.copyFromUrl(any(), any())).thenReturn(new DocumentBlobMetadata("https://storage.blob/blob1", "document-id_120326.pdf", 12345L));
         when(caseDocumentRepository.findById(any())).thenReturn(Optional.of(new CaseDocument()));
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(true);
 
         final ExecutionInfo result = task.execute(executionInfo);
 
@@ -258,8 +240,6 @@ public class RetrieveMaterialAndUploadTaskTest {
                 .thenReturn(ResponseEntity.ok(
                         new FileStorageLocationReturnedSuccessfully("storage-url", "doc-ref")
                 ));
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(true);
 
         when(storageService.copyFromUrl(any(), any())).thenReturn(new DocumentBlobMetadata("url", "name", 1L));
 

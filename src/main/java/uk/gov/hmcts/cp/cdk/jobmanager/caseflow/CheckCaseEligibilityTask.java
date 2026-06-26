@@ -2,7 +2,6 @@ package uk.gov.hmcts.cp.cdk.jobmanager.caseflow;
 
 import static jakarta.json.Json.createObjectBuilder;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_CASE_ELIGIBILITY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_COUNT;
@@ -12,7 +11,6 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCaseEligibilityInfo;
-import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
@@ -40,7 +38,6 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
     private final ExecutionService executionService;
     private final ProgressionClient progressionClient;
     private final JobManagerRetryProperties retryProperties;
-    private final IngestionProperties ingestionProperties;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -69,20 +66,13 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
 
             final ProsecutionCaseEligibilityInfo info = eligibilityInfo.get();
             final int defendantCount = info.defendantCount();
-            final boolean isUseMultiDefendant = ingestionProperties.getFeature().isUseMultiDefendant();
 
-            if (defendantCount < 1
-                    || (defendantCount > 1 && !isUseMultiDefendant)) {
-
-                log.info("Case {} has {} defendants. Not eligible to proceed. Completing task.", caseId, defendantCount);
+            if (defendantCount < 1) {
+                log.info("Case {} has no defendants. Not eligible to proceed. Completing task.", caseId);
                 return complete(executionInfo);
             }
 
-            final String checkIdpcTask = isUseMultiDefendant
-                    ? CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS
-                    : CHECK_IDPC_AVAILABILITY;
-
-            log.info("Case {} has exactly 1 defendant. Proceeding to {}.", caseId, checkIdpcTask);
+            log.info("Case {} has {} defendants. Proceeding to {}.", caseId, defendantCount, CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS);
 
             final JsonObjectBuilder updatedJobData = createObjectBuilder(jobData);
             updatedJobData.add(CTX_DEFENDANT_ID_KEY, info.defendantIds().getFirst());
@@ -90,7 +80,7 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
 
             final ExecutionInfo executionInfoNew = executionInfo()
                     .from(executionInfo)
-                    .withAssignedTaskName(checkIdpcTask)
+                    .withAssignedTaskName(CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS)
                     .withJobData(updatedJobData.build())
                     .withExecutionStatus(ExecutionStatus.STARTED)
                     .build();

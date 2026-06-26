@@ -46,6 +46,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Task(CHECK_IDPC_AVAILABILITY)
+//TODO remove
 public class CheckIdpcAvailabilityTask implements ExecutableTask {
 
     public static final String DEFAULT_BLOB_URI = "default_blob_uri";

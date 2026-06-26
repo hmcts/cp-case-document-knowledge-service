@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPLOAD;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOCIDS_ARRAY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
@@ -18,7 +19,6 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUI
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
-import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
@@ -56,11 +56,6 @@ class CheckIdpcAvailabilityAllDefendantsTaskTest {
     private JobManagerRetryProperties retryProperties;
     @Mock
     private CaseDocumentRepository caseDocumentRepository;
-    @Mock
-    private IngestionProperties ingestionProperties;
-    @Mock
-    private IngestionProperties.Feature feature;
-
     @Captor
     private ArgumentCaptor<ExecutionInfo> captor;
 
@@ -74,8 +69,7 @@ class CheckIdpcAvailabilityAllDefendantsTaskTest {
                 executionService,
                 documentIdResolver,
                 retryProperties,
-                caseDocumentRepository,
-                ingestionProperties
+                caseDocumentRepository
         );
 
         caseId = UUID.randomUUID().toString();
@@ -176,9 +170,6 @@ class CheckIdpcAvailabilityAllDefendantsTaskTest {
                 .add(CPPUID, userId)
                 .build();
 
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
-
         when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
                 .thenReturn(List.of(m1, m2));
 
@@ -194,7 +185,7 @@ class CheckIdpcAvailabilityAllDefendantsTaskTest {
         List<ExecutionInfo> executions = captor.getAllValues();
 
         for (ExecutionInfo exec : executions) {
-            assertThat(exec.getAssignedTaskName()).isEqualTo(RETRIEVE_FROM_MATERIAL);
+            assertThat(exec.getAssignedTaskName()).isEqualTo(RETRIEVE_MATERIAL_AND_UPLOAD);
             assertThat(exec.getExecutionStatus()).isEqualTo(ExecutionStatus.STARTED);
             assertThat(exec.getJobData().containsKey(CTX_DOC_ID_KEY)).isTrue();
             assertThat(exec.getJobData().containsKey(CTX_DOCIDS_ARRAY)).isTrue();
@@ -240,9 +231,6 @@ class CheckIdpcAvailabilityAllDefendantsTaskTest {
                 .add(CPPUID, userId)
                 .build();
 
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
-
         when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
                 .thenReturn(List.of(info));
 
@@ -281,9 +269,6 @@ class CheckIdpcAvailabilityAllDefendantsTaskTest {
                 .add(CTX_CASE_ID_KEY, caseId)
                 .add(CPPUID, userId)
                 .build();
-
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
 
         when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
                 .thenReturn(List.of(info));
@@ -326,9 +311,6 @@ class CheckIdpcAvailabilityAllDefendantsTaskTest {
                 .add(CTX_CASE_ID_KEY, caseId)
                 .add(CPPUID, userId)
                 .build();
-
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
 
         when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
                 .thenReturn(List.of(info));
