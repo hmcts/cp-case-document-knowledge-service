@@ -8,15 +8,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "cdk.ingestion")
 public class IngestionProperties {
 
-    private final Feature feature = new Feature();
     private final Retry retry = new Retry();
     private int corePoolSize = 25;
     private int maxPoolSize = 30;
     private int queueCapacity = 128;
-
-    public Feature getFeature() {
-        return feature;
-    }
 
     public int getCorePoolSize() {
         return corePoolSize;
@@ -81,18 +76,6 @@ public class IngestionProperties {
             public void setMaxMs(final long maxMs) {
                 this.maxMs = maxMs;
             }
-        }
-    }
-
-    public static class Feature {
-        private boolean useMultiDefendant = true;
-
-        public boolean isUseMultiDefendant() {
-            return useMultiDefendant;
-        }
-
-        public void setUseMultiDefendant(final boolean useMultiDefendant) {
-            this.useMultiDefendant = useMultiDefendant;
         }
     }
 }

@@ -8,7 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_FROM_MATERIAL;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPLOAD;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_BLOB_NAME_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
@@ -108,7 +108,7 @@ public class RetrieveMaterialAndUploadTaskTest {
 
         executionInfo = executionInfo()
                 .withJobData(jobData)
-                .withAssignedTaskName(RETRIEVE_FROM_MATERIAL)
+                .withAssignedTaskName(RETRIEVE_MATERIAL_AND_UPLOAD)
                 .withAssignedTaskStartTime(ZonedDateTime.now())
                 .build();
     }
@@ -122,7 +122,7 @@ public class RetrieveMaterialAndUploadTaskTest {
                         .add(CPPUID, "user-123")
                         .add("requestId", "req-1")
                         .build())
-                .withAssignedTaskName(RETRIEVE_FROM_MATERIAL)
+                .withAssignedTaskName(RETRIEVE_MATERIAL_AND_UPLOAD)
                 .withAssignedTaskStartTime(ZonedDateTime.now())
                 .build());
 

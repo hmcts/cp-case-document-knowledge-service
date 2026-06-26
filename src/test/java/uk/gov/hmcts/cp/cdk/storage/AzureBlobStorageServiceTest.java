@@ -1,19 +1,15 @@
 package uk.gov.hmcts.cp.cdk.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 import com.azure.core.util.polling.PollResponse;
@@ -43,7 +39,6 @@ class AzureBlobStorageServiceTest {
     private BlobClient blobClient;
     @Mock
     private StorageProperties storageProperties;
-
     @Mock
     private SyncPoller<BlobCopyInfo, Void> poller;
     @Mock
@@ -52,6 +47,8 @@ class AzureBlobStorageServiceTest {
     private BlobCopyInfo copyInfo;
     @Mock
     private BlobProperties blobProperties;
+    @Mock
+    private BlobClient destClient;
 
     private AzureBlobStorageService service;
 
@@ -60,80 +57,94 @@ class AzureBlobStorageServiceTest {
         when(storageProperties.copyPollIntervalMs()).thenReturn(100L);
         when(storageProperties.copyTimeoutSeconds()).thenReturn(10L);
 
-        when(containerClient.getBlobContainerName()).thenReturn("container");
-
         service = new AzureBlobStorageService(containerClient, storageProperties);
     }
 
     @MockitoSettings(strictness = Strictness.LENIENT)
     @Test
     void shouldThrow_whenSourceUrlBlank() {
-        assertThrows(IllegalArgumentException.class, () -> service.copyFromUrl(" ", "dest", Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> service.copyFromUrl(" ", "dest"));
     }
 
+    @MockitoSettings(strictness = Strictness.LENIENT)
     @Test
     void shouldReturnEmpty_whenBlobAlreadyExists() {
-        mockBlobExists(true);
+        try (MockedConstruction<BlobClientBuilder> mocked =
+                     mockConstruction(BlobClientBuilder.class,
+                             (mock, context) -> {
+                                 when(mock.endpoint(anyString())).thenReturn(mock);
+                                 when(mock.buildClient()).thenReturn(destClient);
+                             })) {
 
-        final String result = service.copyFromUrl("http://source", "path", Map.of());
+            BlobStorageException exception = mock(BlobStorageException.class);
+            when(exception.getStatusCode()).thenReturn(412);
+            when(destClient.beginCopy(any())).thenThrow(exception);
 
-        assertEquals("", result);
-        verify(blobClient, never()).beginCopy(any());
-    }
-
-    @Test
-    void shouldCopySuccessfully() {
-        mockBlobExists(false);
-        mockSuccessfulCopy(CopyStatusType.SUCCESS);
-
-        when(blobClient.getBlobUrl()).thenReturn("http://blob");
-
-        final String result = service.copyFromUrl("http://source", "path", Map.of());
-
-        assertEquals("http://blob", result);
+            assertThrows(BlobStorageException.class,
+                    () -> service.copyFromUrl("http://source", "http://dest"));
+            verify(destClient).beginCopy(any());
+        }
     }
 
     @Test
     void shouldThrow_whenCopyFailed() {
-        mockBlobExists(false);
-        mockSuccessfulCopy(CopyStatusType.FAILED);
+        try (MockedConstruction<BlobClientBuilder> mocked =
+                     mockConstruction(BlobClientBuilder.class,
+                             (mock, context) -> {
+                                 when(mock.endpoint(anyString())).thenReturn(mock);
+                                 when(mock.buildClient()).thenReturn(destClient);
+                             })) {
 
-        assertThrows(IllegalStateException.class, () -> service.copyFromUrl("http://source", "path", Map.of()));
+            when(destClient.beginCopy(any())).thenReturn(poller);
+            when(poller.waitForCompletion(any())).thenReturn(pollResponse);
+            when(pollResponse.getValue()).thenReturn(copyInfo);
+            when(copyInfo.getCopyStatus()).thenReturn(CopyStatusType.FAILED);
+
+            assertThrows(IllegalStateException.class, () -> service.copyFromUrl("http://source", "http://dest"));
+        }
     }
 
     @Test
     void shouldThrow_whenCopyAborted() {
-        mockBlobExists(false);
-        mockSuccessfulCopy(CopyStatusType.ABORTED);
+        try (MockedConstruction<BlobClientBuilder> mocked =
+                     mockConstruction(BlobClientBuilder.class,
+                             (mock, context) -> {
+                                 when(mock.endpoint(anyString())).thenReturn(mock);
+                                 when(mock.buildClient()).thenReturn(destClient);
+                             })) {
 
-        assertThrows(IllegalStateException.class,
-                () -> service.copyFromUrl("http://source", "path", Map.of()));
+            when(destClient.beginCopy(any())).thenReturn(poller);
+            when(poller.waitForCompletion(any())).thenReturn(pollResponse);
+            when(pollResponse.getValue()).thenReturn(copyInfo);
+            when(copyInfo.getCopyStatus()).thenReturn(CopyStatusType.ABORTED);
+
+            assertThrows(IllegalStateException.class,
+                    () -> service.copyFromUrl("http://source", "path"));
+        }
     }
 
+    @MockitoSettings(strictness = Strictness.LENIENT)
     @Test
     void shouldThrowTimeoutException() {
-        mockBlobExists(false);
+        try (MockedConstruction<BlobClientBuilder> mocked =
+                     mockConstruction(BlobClientBuilder.class,
+                             (mock, context) -> {
+                                 when(mock.endpoint(anyString())).thenReturn(mock);
+                                 when(mock.buildClient()).thenReturn(destClient);
+                             })) {
 
-        when(blobClient.beginCopy(any())).thenReturn(poller);
-        when(poller.waitForCompletion(any())).thenThrow(new RuntimeException(new TimeoutException()));
+            when(destClient.beginCopy(any())).thenReturn(poller);
+            when(poller.waitForCompletion(any())).thenReturn(pollResponse);
+            when(pollResponse.getValue()).thenReturn(copyInfo);
+            when(poller.waitForCompletion(any())).thenThrow(new RuntimeException(new TimeoutException()));
 
-        assertThrows(IllegalStateException.class, () -> service.copyFromUrl("http://source", "path", Map.of()));
-    }
+            assertThrows(IllegalStateException.class, () -> service.copyFromUrl("http://source", "path"));
+        }
 
-    @Test
-    void shouldApplyMetadata_whenProvided() {
-        mockBlobExists(false);
-        mockSuccessfulCopy(CopyStatusType.SUCCESS);
-
-        service.copyFromUrl("http://source", "path", Map.of("KEY", "value"));
-
-        verify(blobClient).beginCopy(argThat(options -> options.getMetadata().containsKey("key")));
     }
 
     @Test
     void shouldReturnMetadata_whenCopySuccessful() {
-        final BlobClient destClient = mock(BlobClient.class);
-
         try (MockedConstruction<BlobClientBuilder> mocked =
                      mockConstruction(BlobClientBuilder.class,
                              (mock, context) -> {
@@ -160,8 +171,6 @@ class AzureBlobStorageServiceTest {
 
     @Test
     void shouldThrowBlobStorageException_whenAlreadyExists() {
-        final BlobClient destClient = mock(BlobClient.class);
-
         try (MockedConstruction<BlobClientBuilder> mocked = mockConstruction(BlobClientBuilder.class,
                              (mock, context) -> {
                                  when(mock.endpoint(anyString())).thenReturn(mock);
@@ -210,16 +219,4 @@ class AzureBlobStorageServiceTest {
                 () -> service.getBlobSize("path"));
     }
 
-    private void mockBlobExists(final boolean exists) {
-        when(containerClient.getBlobClient(anyString())).thenReturn(blobClient);
-        when(blobClient.exists()).thenReturn(exists);
-    }
-
-    private void mockSuccessfulCopy(final CopyStatusType status) {
-        when(containerClient.getBlobClient(anyString())).thenReturn(blobClient);
-        when(blobClient.beginCopy(any())).thenReturn(poller);
-        when(poller.waitForCompletion(any())).thenReturn(pollResponse);
-        when(pollResponse.getValue()).thenReturn(copyInfo);
-        when(copyInfo.getCopyStatus()).thenReturn(status);
-    }
 }
