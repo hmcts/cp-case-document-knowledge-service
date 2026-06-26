@@ -97,17 +97,6 @@ public class AnswerService {
         return new AnswersResponse(at, answerResponses);
     }
 
-    public AnswerResponse getAnswer(
-            final UUID queryId,
-            final UUID caseIdOrNull,
-            final Integer versionOrNull,
-            final OffsetDateTime asOfOrNull
-    ) {
-        final Answer answerEntity = resolveAnswer(queryId, caseIdOrNull, versionOrNull, asOfOrNull);
-        final String userQueryText = resolveUserQueryText(queryId, answerEntity.getCreatedAt());
-        return mapper.toAnswerResponse(answerEntity, userQueryText);
-    }
-
     public AnswerWithLlmResponse getAnswerWithLlm(
             final UUID queryId,
             final UUID caseIdOrNull,

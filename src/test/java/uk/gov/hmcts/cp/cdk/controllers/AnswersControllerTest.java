@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import uk.gov.hmcts.cp.cdk.services.AnswerService;
-import uk.gov.hmcts.cp.openapi.model.cdk.AnswerResponse;
 import uk.gov.hmcts.cp.openapi.model.cdk.AnswerWithLlmResponse;
 
 import java.time.OffsetDateTime;
@@ -26,70 +25,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 class AnswersControllerTest {
 
     public final String VND_TYPE_JSON = "application/vnd.casedocumentknowledge-service.answers+json";
-
-    @Test
-    @DisplayName("Get Answer By Case And Query latest returns answer")
-    void getAnswerByCaseAndQuery_latest_returns_answer() throws Exception {
-        final AnswerService service = Mockito.mock(AnswerService.class);
-        final AnswersController controller = new AnswersController(service);
-        final MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
-
-        final UUID caseId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-        final UUID queryId = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
-
-        final AnswerResponse resp = new AnswerResponse();
-        resp.setQueryId(queryId);
-        resp.setUserQuery("UQ");
-        resp.setAnswer("A");
-        resp.setVersion(2);
-        resp.setCreatedAt(OffsetDateTime.parse("2025-05-01T12:00:00Z"));
-
-        when(service.getAnswer(eq(queryId), eq(caseId), isNull(), isNull()))
-                .thenReturn(resp);
-
-        mvc.perform(get("/answers/{caseId}/{queryId}", caseId, queryId)
-                        .accept(VND_TYPE_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(VND_TYPE_JSON))
-                .andExpect(jsonPath("$.queryId").value(queryId.toString()))
-                .andExpect(jsonPath("$.version").value(2));
-
-        verify(service).getAnswer(eq(queryId), eq(caseId), isNull(), isNull());
-    }
-
-    @Test
-    @DisplayName("Get Answer By Case And Query with Version and as Of returns answer")
-    void getAnswerByCaseAndQuery_withVersion_and_asOf_returns_answer() throws Exception {
-        final AnswerService service = Mockito.mock(AnswerService.class);
-        final AnswersController controller = new AnswersController(service);
-        final MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
-
-        final UUID caseId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-        final UUID queryId = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
-        final String asOfStr = "2025-01-02T03:04:05Z";
-        final OffsetDateTime asOf = OffsetDateTime.parse(asOfStr);
-
-        final AnswerResponse resp = new AnswerResponse();
-        resp.setQueryId(queryId);
-        resp.setUserQuery("UQ");
-        resp.setAnswer("A2");
-        resp.setVersion(3);
-        resp.setCreatedAt(asOf);
-
-        when(service.getAnswer(eq(queryId), eq(caseId), eq(3), eq(asOf)))
-                .thenReturn(resp);
-
-        mvc.perform(get("/answers/{caseId}/{queryId}", caseId, queryId)
-                        .param("version", "3")
-                        .param("at", asOfStr)
-                        .accept(VND_TYPE_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(VND_TYPE_JSON))
-                .andExpect(jsonPath("$.queryId").value(queryId.toString()))
-                .andExpect(jsonPath("$.version").value(3));
-
-        verify(service).getAnswer(eq(queryId), eq(caseId), eq(3), eq(asOf));
-    }
 
     @Test
     @DisplayName("Get Answer With Llm By Case And Query latest returns answer with llm")

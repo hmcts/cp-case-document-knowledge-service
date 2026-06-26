@@ -37,7 +37,7 @@ import org.springframework.web.client.HttpClientErrorException;
  */
  class AnswersHttpLiveTest extends AbstractHttpLiveTest {
 
-    public static final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.answers+json");
+    public static final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.answers.v2+json");
     public static final MediaType VND_TYPE_JSON_QUERIES = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
     public static final String ANSWERS = "/answers/";
     public static final String CONTENT = "content";
@@ -185,7 +185,7 @@ import org.springframework.web.client.HttpClientErrorException;
                             && "casedocumentknowledge-service-api".equals(json.get("component").asText())
                             && caseId.equals(fromString(json.get(CONTENT).get("caseId").asText()))
                             && queryId.equals(fromString(json.get(CONTENT).get("queryId").asText()))
-                            && "application/vnd.casedocumentknowledge-service.answers+json".equals(json.get(CONTENT).get(METADATA).get(NAME).asText())
+                            && "application/vnd.casedocumentknowledge-service.answers.v2+json".equals(json.get(CONTENT).get(METADATA).get(NAME).asText())
                             && "audit.events.audit-recorded".equals(json.get(METADATA).get(NAME).asText())
             );
             assertNotNull(auditRequest);
@@ -196,7 +196,7 @@ import org.springframework.web.client.HttpClientErrorException;
                             && "casedocumentknowledge-service-api".equals(json.get("component").asText())
                             && "Answer v2".equals(json.get(CONTENT).get("answer").asText())
                             && !json.get(CONTENT).has("llmInput")
-                            && "application/vnd.casedocumentknowledge-service.answers+json".equals(json.get(CONTENT).get(METADATA).get(NAME).asText())
+                            && "application/vnd.casedocumentknowledge-service.answers.v2+json".equals(json.get(CONTENT).get(METADATA).get(NAME).asText())
                             && "audit.events.audit-recorded".equals(json.get(METADATA).get(NAME).asText())
             );
             assertNotNull(auditResponse);

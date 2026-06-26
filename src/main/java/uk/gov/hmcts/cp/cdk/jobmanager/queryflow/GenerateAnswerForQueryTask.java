@@ -66,7 +66,6 @@ public class GenerateAnswerForQueryTask implements ExecutableTask {
         }
         final QueryLevel level = parseQueryLevel(levelStr);
         final MetadataFilter filter;
-        //TODO check with ravi
         if (level == QueryLevel.CASE_ALL_DOCUMENTS) {
             filter = new MetadataFilter()
                     .key(META_CASE_ID)
