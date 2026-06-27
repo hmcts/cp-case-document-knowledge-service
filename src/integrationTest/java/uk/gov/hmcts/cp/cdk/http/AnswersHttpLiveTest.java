@@ -37,19 +37,27 @@ import org.springframework.web.client.HttpClientErrorException;
  */
  class AnswersHttpLiveTest extends AbstractHttpLiveTest {
 
-    public static final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.answers.v2+json");
-    public static final MediaType VND_TYPE_JSON_QUERIES = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
-    public static final String ANSWERS = "/answers/";
-    public static final String CONTENT = "content";
-    public static final String METADATA = "_metadata";
-    public static final String NAME = "name";
+    private static final MediaType VND_TYPE_JSON = MediaType.valueOf("application/vnd.casedocumentknowledge-service.answers.v2+json");
+    private static final MediaType VND_TYPE_JSON_WITH_LLM = MediaType.valueOf("application/vnd.casedocumentknowledge-service.answers+json");
+    private static final MediaType VND_TYPE_JSON_QUERIES = MediaType.valueOf("application/vnd.casedocumentknowledge-service.queries+json");
+    private static final String ANSWERS = "/answers/";
+    private static final String ANSWERS_V2 = "/v2/cases/";
+    private static final String QUERIES = "/queries/";
+    private static final String ANSWERS_SUFFIX = "/answers";
+    private static final String CONTENT = "content";
+    private static final String METADATA = "_metadata";
+    private static final String NAME = "name";
+    private static final String ANSWERS_STR = "answers";
+
     private UUID caseId;
     private UUID queryId;
+    private UUID noAnswerQueryId;
 
     @BeforeEach
     void seedDb() throws Exception {
         caseId = UUID.randomUUID();
         queryId = UUID.randomUUID();
+        noAnswerQueryId = UUID.randomUUID();
 
         final OffsetDateTime v1Eff = OffsetDateTime.parse("2025-06-01T12:00:00Z");
         final OffsetDateTime v2Eff = OffsetDateTime.parse("2025-06-02T12:00:00Z");
@@ -126,6 +134,22 @@ import org.springframework.web.client.HttpClientErrorException;
                 ps.executeUpdate();
             }
 
+            // 5) query with a version but no answers — used by get_latest_answer_not_found
+            try (PreparedStatement ps = c.prepareStatement(
+                    "INSERT INTO queries (query_id, label, created_at) VALUES (?, 'No Answer Query', ?)")) {
+                ps.setObject(1, noAnswerQueryId);
+                ps.setObject(2, OffsetDateTime.now(ZoneOffset.UTC));
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps = c.prepareStatement(
+                    "INSERT INTO query_versions (query_id, effective_at, user_query, query_prompt) VALUES (?, ?, ?, ?)")) {
+                ps.setObject(1, noAnswerQueryId);
+                ps.setObject(2, OffsetDateTime.parse("2025-06-01T12:00:00Z"));
+                ps.setString(3, "No answer query");
+                ps.setString(4, "No answer prompt");
+                ps.executeUpdate();
+            }
+
         }
     }
 
@@ -155,6 +179,16 @@ import org.springframework.web.client.HttpClientErrorException;
                 ps.setObject(1, queryId);
                 ps.executeUpdate();
             }
+            try (PreparedStatement ps = c.prepareStatement(
+                    "DELETE FROM query_versions WHERE query_id = ?")) {
+                ps.setObject(1, noAnswerQueryId);
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps = c.prepareStatement(
+                    "DELETE FROM queries WHERE query_id = ?")) {
+                ps.setObject(1, noAnswerQueryId);
+                ps.executeUpdate();
+            }
         }
     }
 
@@ -167,7 +201,7 @@ import org.springframework.web.client.HttpClientErrorException;
             headers.setAccept(List.of(VND_TYPE_JSON));
 
             final ResponseEntity<String> response = http.exchange(
-                    baseUrl + ANSWERS + caseId + "/" + queryId,
+                    baseUrl + ANSWERS_V2 + caseId + QUERIES + queryId + ANSWERS_SUFFIX,
                     HttpMethod.GET,
                     new HttpEntity<>(headers),
                     String.class
@@ -194,8 +228,10 @@ import org.springframework.web.client.HttpClientErrorException;
                     json.has(CONTENT)
                             && "casedocumentknowledge-service".equals(json.get("origin").asText())
                             && "casedocumentknowledge-service-api".equals(json.get("component").asText())
-                            && "Answer v2".equals(json.get(CONTENT).get("answer").asText())
-                            && !json.get(CONTENT).has("llmInput")
+                            && json.get(CONTENT).has(ANSWERS_STR)
+                            && json.get(CONTENT).get(ANSWERS_STR).size() > 0
+                            && "Answer v2".equals(json.get(CONTENT).get(ANSWERS_STR).get(0).get("answer").asText())
+                            && !json.get(CONTENT).get(ANSWERS_STR).get(0).has("llmInput")
                             && "application/vnd.casedocumentknowledge-service.answers.v2+json".equals(json.get(CONTENT).get(METADATA).get(NAME).asText())
                             && "audit.events.audit-recorded".equals(json.get(METADATA).get(NAME).asText())
             );
@@ -211,11 +247,9 @@ import org.springframework.web.client.HttpClientErrorException;
             final HttpHeaders headers = new HttpHeaders();
             headers.setAccept(List.of(VND_TYPE_JSON));
 
-            final UUID nonExistentQueryId = UUID.randomUUID();
-
             try {
                 http.exchange(
-                        baseUrl + ANSWERS + caseId + "/" + nonExistentQueryId,
+                        baseUrl + ANSWERS_V2 + caseId + QUERIES + noAnswerQueryId + ANSWERS_SUFFIX,
                         HttpMethod.GET,
                         new HttpEntity<>(headers),
                         String.class
@@ -237,7 +271,7 @@ import org.springframework.web.client.HttpClientErrorException;
         headers.setAccept(List.of(VND_TYPE_JSON));
 
         final ResponseEntity<String> response = http.exchange(
-                baseUrl + ANSWERS + caseId + "/" + queryId + "?version=1",
+                baseUrl + ANSWERS_V2 + caseId + QUERIES + queryId + ANSWERS_SUFFIX + "?version=1",
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
                 String.class
@@ -259,7 +293,7 @@ import org.springframework.web.client.HttpClientErrorException;
 
         final HttpEntity<Void> req = new HttpEntity<>(headers);
 
-        final String url = baseUrl + ANSWERS+ caseId + "/" + queryId + "?version=1";
+        final String url = baseUrl + ANSWERS_V2 + caseId + QUERIES + queryId + ANSWERS_SUFFIX + "?version=1";
 
         final ResponseEntity<Void> resp = http.exchange(
                 url,
@@ -273,7 +307,7 @@ import org.springframework.web.client.HttpClientErrorException;
     @Test
     void get_answer_with_llm_latest() {
         final HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(List.of(VND_TYPE_JSON));
+        headers.setAccept(List.of(VND_TYPE_JSON_WITH_LLM));
         headers.set(CJSCPPUID, USER_WITH_PERMISSIONS);
         final ResponseEntity<String> response = http.exchange(
                 baseUrl + ANSWERS + caseId + "/" + queryId + "/with-llm",
