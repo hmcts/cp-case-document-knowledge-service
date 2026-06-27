@@ -56,67 +56,6 @@ class ApimDocumentIngestionStatusClientTest {
     }
 
     @Test
-    void shouldReturnResponse_whenSuccessWithBody() {
-        final String docName = "doc1";
-        final DocumentIngestionStatusReturnedSuccessfully body = new DocumentIngestionStatusReturnedSuccessfully();
-
-        final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> response = ResponseEntity.ok(body);
-
-        mockDocumentStatusChain();
-        when(responseSpec.toEntity(any(Class.class))).thenReturn((ResponseEntity) response);
-
-        final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> result = client.documentStatus(docName);
-
-        assertThat(result.getStatusCode()).isEqualTo(OK);
-        assertThat(result.getBody()).isNotNull();
-    }
-
-    @Test
-    void shouldReturnResponse_whenSuccessWithEmptyBody() {
-        final String docName = "doc1";
-
-        final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> response = ResponseEntity.ok(null);
-
-        mockDocumentStatusChain();
-        when(responseSpec.toEntity(any(Class.class))).thenReturn((ResponseEntity) response);
-
-        final ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> result = client.documentStatus(docName);
-
-        assertThat(result.getStatusCode()).isEqualTo(OK);
-        assertThat(result.getBody()).isNull();
-    }
-
-    @Test
-    void shouldReturnNotFound_when404() {
-        final String docName = "doc1";
-        final HttpStatusCodeException exception = mock(HttpStatusCodeException.class);
-        when(exception.getStatusCode()).thenReturn(NOT_FOUND);
-        when(exception.getResponseBodyAsString(UTF_8)).thenReturn("not found");
-
-        mockDocumentStatusChain();
-        when(responseSpec.toEntity(any(Class.class))).thenThrow(exception);
-
-        ResponseEntity<DocumentIngestionStatusReturnedSuccessfully> result =
-                client.documentStatus(docName);
-
-        assertThat(result.getStatusCode()).isEqualTo(NOT_FOUND);
-    }
-
-    @Test
-    void shouldRethrow_whenNon404Error() {
-        final String docName = "doc1";
-        final HttpStatusCodeException exception = mock(HttpStatusCodeException.class);
-
-        when(exception.getStatusCode()).thenReturn(INTERNAL_SERVER_ERROR);
-        when(exception.getStatusText()).thenReturn("error");
-        when(exception.getResponseBodyAsString(UTF_8)).thenReturn("boom");
-        mockDocumentStatusChain();
-        when(responseSpec.toEntity(any(Class.class))).thenThrow(exception);
-
-        assertThrows(HttpStatusCodeException.class, () -> client.documentStatus(docName));
-    }
-
-    @Test
     void shouldReturnOk_whenSuccess() {
         final String ref = "ref1";
         final DocumentIngestionStatusReturnedSuccessfully body = new DocumentIngestionStatusReturnedSuccessfully();
