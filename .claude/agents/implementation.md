@@ -130,8 +130,9 @@ Fix PMD violations. Do not lower JaCoCo thresholds.
 
 Before writing a single line of code, internalise these:
 
-- **Every AI answer must be cited** — any change to answer generation or RAG flow must preserve
-  `doc_id` citation and `llm_input` audit column. An answer without a verifiable citation is a defect.
+- **Do not drop RAG response fields** — CSDK persists and surfaces what the RAG service returns; it
+  does not generate answers or validate citations. Any change to persistence or mapping must preserve
+  all RAG response fields (`doc_id`, `llm_input`, etc.). Dropping or transforming these fields is a defect.
 - **No PII** in code, tests, logs, or WireMock stubs. Use synthetic UUIDs:
   `UUID.nameUUIDFromBytes("test-purpose".getBytes(StandardCharsets.UTF_8))` for stable IDs.
 - **JSON logging only** — `log.debug/info/warn/error(...)` via SLF4J. Never `System.out`. Never log

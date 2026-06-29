@@ -7,10 +7,12 @@
 
 ## Project context
 
-**case-document-knowledge-service (CSDK)** — AI/RAG-powered answers for Crime Common Platform case
-documents. **Every answer must be cited and auditable.** This service reads court/case material and
-returns generated answers; correctness, traceability, and data protection are first-order concerns,
-not afterthoughts.
+**case-document-knowledge-service (CSDK)** — persists and surfaces AI/RAG-generated answers for
+Crime Common Platform case documents. The service orchestrates document ingestion into the RAG
+pipeline, stores the responses it receives, and serves them back via REST API. Answer generation
+and citation production are the responsibility of the upstream RAG service; CSDK must not drop or
+alter the response data (including source fields) when persisting or mapping to API responses.
+Data protection and traceability are first-order concerns.
 
 This is an HMCTS engineering project. All work must comply with HMCTS engineering standards, the GDS
 Service Manual, and MOJ security and accessibility requirements.
@@ -104,7 +106,7 @@ docs/pipeline/
 
 - **Never proceed past a human gate** without explicit confirmation.
 - **Never invent requirements, ACs, or test data** — flag unknowns as open questions. Every story needs a linked Jira ticket before the test stage.
-- **Citations & auditability are mandatory** — any change to answer generation/RAG flow must preserve source citations and the audit trail. An answer without a verifiable citation is a defect.
+- **Preserve RAG response data** — any change to the ingestion or answer-serving flow must not drop or transform source fields returned by the RAG service (e.g. `doc_id`, `llm_input`). Citation production is the RAG service's responsibility; CSDK's responsibility is not to lose that data.
 - **No PII / case data / court reference numbers** in artefacts, prompts, logs, or test fixtures. Use synthetic data; WireMock stubs and Azurite seed data must be non-real.
 - **JSON logging to stdout is mandatory** (`logback-spring.xml`). No `System.out`; no logging of case content or document bodies. See `context/logging-standards.md`.
 - **Azure via Managed Identity only.** Connection strings, SAS tokens, and account keys are not permitted in code, config, env vars, or compose files. Use the existing `Azure*`/APIM client pattern. See `context/azure-sdk-guide.md`.
