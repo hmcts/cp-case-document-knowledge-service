@@ -6,9 +6,6 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 import com.azure.core.util.polling.SyncPoller;
@@ -35,17 +32,6 @@ public class AzureBlobStorageService implements StorageService {
         this.blobContainerClient = requireNonNull(blobContainerClient, "blobContainerClient");
         this.pollIntervalMs = storageProperties.copyPollIntervalMs() != null ? storageProperties.copyPollIntervalMs() : 1_000L;
         this.timeoutSeconds = storageProperties.copyTimeoutSeconds() != null ? storageProperties.copyTimeoutSeconds() : 120L;
-    }
-
-    private static Map<String, String> normalizeMetadataKeys(final Map<String, String> metadata) {
-        final Map<String, String> normalized = new HashMap<>();
-        if (metadata != null) {
-            for (final Map.Entry<String, String> entry : metadata.entrySet()) {
-                final String key = entry.getKey() == null ? "" : entry.getKey().trim().toLowerCase(Locale.ROOT);
-                normalized.put(key, entry.getValue());
-            }
-        }
-        return normalized;
     }
 
     @Override
