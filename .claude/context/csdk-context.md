@@ -23,7 +23,7 @@ Every answer must be cited, auditable, and free of PII. Classified OFFICIAL-SENS
 | `services/` | Business logic: answer generation, query management, document discovery, ingestion orchestration |
 | `domain/` | 22 JPA entities: `Query`, `QueryVersion`, `CaseDocument`, `CaseQueryStatus`, answer variants, `DocumentVerificationTask`, `ScheduledIngestionRequest` |
 | `repo/` | 13 JPA repositories |
-| `jobmanager/` | Long-running task orchestration via Task Manager service: `caseflow/`, `queryflow/`, `hearing/` |
+| `jobmanager/` | Long-running task orchestration via Task Manager service: `caseflow/` (5 multi-defendant tasks), `queryflow/`, `hearing/` |
 | `scheduler/` | `IntradayDiscoveryScheduler` — every 10 min, Mon–Fri 07:00–19:50, ShedLock-guarded |
 | `clients/` | External integrations: `rag/` (AI), `hearing/`, `progression/`, `common/` (Azure auth + APIM) |
 | `storage/` | `AzureBlobStorageService` — all blob operations go here |
@@ -36,7 +36,7 @@ Every answer must be cited, auditable, and free of PII. Classified OFFICIAL-SENS
 
 | Service | Client class | Auth | Timeout |
 |---------|-------------|------|---------|
-| RAG (AI) | `ApimDocumentIngestionClient`, `RagAnswerServiceImpl` | APIM / AAD token | 180 s read |
+| RAG (AI) | `ApimDocumentIngestionClient`, `ApimDocumentIngestionStatusClient`, `RagAnswerServiceImpl`, `RagAnswerAsyncServiceImpl` | APIM / AAD token | 180 s read |
 | Hearing API | `HearingClientImpl` | APIM / AAD token | 15 s read |
 | Progression API | `ProgressionClientImpl` | APIM / AAD token | 15 s read |
 | Azure Blob | `AzureBlobStorageService` | Managed Identity | — |
@@ -50,7 +50,6 @@ All APIM calls: `RestClientFactoryConfig` → `CorrelationIdInterceptor` → `Ap
 
 | Endpoint | Method |
 |----------|--------|
-| `/cases/{caseId}/queries/{queryId}/answers` | GET |
 | `/cases/{caseId}/queries/{queryId}/answers/with-llm` | GET |
 | `/cases/{caseId}/queries/{queryId}/answers/list` | GET |
 | `/documents/{docId}/material-content-url` | GET |
@@ -88,7 +87,7 @@ All APIM calls: `RestClientFactoryConfig` → `CorrelationIdInterceptor` → `Ap
 
 1. **No PII / case content in logs, tests, or artefacts** — use synthetic data; Azurite seed and WireMock stubs must be non-real.
 2. **Azure via Managed Identity only** — no connection strings, SAS tokens, or account keys anywhere.
-3. **Flyway migrations are append-only** — never edit a shipped `V*.sql`; add the next version.
+3. **Flyway migrations are append-only** — never edit a shipped `V*.sql`; add the next version. Current highest: `V1010`; next is `V1011`.
 4. **Every answer must cite its source** — changes to RAG/answer flow must preserve the citation chain.
 5. **JSON logging to stdout only** — `logback-spring.xml`; never log document content, answer text, or CJSCPPUID values.
 6. **PMD + JaCoCo must pass** — do not lower thresholds.

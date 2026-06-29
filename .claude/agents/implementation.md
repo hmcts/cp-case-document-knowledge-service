@@ -138,7 +138,7 @@ Before writing a single line of code, internalise these:
   case content, document bodies, or user data.
 - **Azure via Managed Identity** — use the existing `Azure*` / APIM client pattern in `clients/common/`.
   Never introduce connection strings, SAS tokens, or account keys.
-- **Flyway append-only** — next migration after V1011 is `V1012__<description>.sql`. Never edit a
+- **Flyway append-only** — next migration after V1010 is `V1011__<description>.sql`. Never edit a
   shipped `V*.sql`.
 - **PMD and JaCoCo must pass** — do not lower thresholds. If PMD raises a false positive, use the
   exact suppression: `@SuppressWarnings("PMD.<RuleName>") // <reason>`.
@@ -186,7 +186,7 @@ repo publishes — never the other way round.
 The generated interfaces and DTOs come from the artifact declared in `gradle.properties`:
 
 ```
-version.cdk=0.0.8
+version.cdk=0.0.9
 ```
 
 Used in `build.gradle` as:
@@ -199,7 +199,7 @@ Generated packages in that JAR:
 - **Interfaces**: `uk.gov.hmcts.cp.openapi.api.cdk.<Name>Api` — one per API group
 - **DTOs / models**: `uk.gov.hmcts.cp.openapi.model.cdk.<ClassName>`
 
-Current interfaces in `0.0.8`: `AnswersApi`, `DocumentApi`, `IngestionApi`, `QueriesApi`, `QueryCatalogueApi`.
+Current interfaces in `0.0.9`: `AnswersApi`, `DocumentApi`, `IngestionApi`, `QueriesApi`, `QueryCatalogueApi`.
 
 **Verify the interface exists before writing a single line of code in CSDK:**
 
@@ -411,7 +411,6 @@ Rules:
 - On terminal skip (ineligible case etc.): return `COMPLETED` silently.
 - To enqueue the next task: build a new `ExecutionInfo` with the updated `jobData` and call
   `executionService.executeWith(next)`. Then return `complete(executionInfo)` from the current task.
-- For `use-multi-defendant` branching: read `ingestionProperties.getFeature().isUseMultiDefendant()`.
 
 ### 7. Access control (Drools rules)
 
@@ -437,7 +436,7 @@ For system-only actions (no user permission check):
 ### 8. Flyway migrations
 
 File naming: `src/main/resources/db/migration/V<N>__<snake_case_description>.sql`
-Current highest: `V1011`. Next new migration: **V1012**.
+Current highest: `V1010`. Next new migration: **V1011**.
 
 Rules:
 - One logical change per file.
@@ -621,7 +620,7 @@ Before opening a PR, verify every item:
   `uk.gov.hmcts.cp.openapi.model.cdk.*` — no hand-written `@GetMapping` / `@PostMapping` and no
   hand-authored DTO classes in `controllers/dto/`
 - [ ] Access control rule added to `cdks-rules.drl` for new action names
-- [ ] New Flyway migration named `V<next>__<description>.sql` (currently next = **V1012**)
+- [ ] New Flyway migration named `V<next>__<description>.sql` (currently next = **V1011**)
 - [ ] All timestamps use `utcNow()` from `TimeUtils`, not `LocalDateTime.now()` or `new Date()`
 - [ ] No `System.out.println`, no logging of case content or document bodies
 - [ ] No connection strings, SAS tokens, or account keys anywhere
@@ -654,7 +653,7 @@ uk.gov.hmcts.cp.cdk
 ├── filters/tracing/     TracingFilter
 ├── http/                RestClientFactoryConfig, CorrelationIdInterceptor
 ├── jobmanager/
-│   ├── caseflow/        Task chain: eligibility → IDPC → retrieve → ingestion status
+│   ├── caseflow/        Task chain (multi-defendant): eligibility → IDPC all-defendants → retrieve → ingestion-status (all-defendants + all-docs)
 │   ├── hearing/         GetCasesForHearingTask
 │   ├── queryflow/       GenerateAnswer + CheckStatus tasks
 │   └── support/         JobManagerKeys, BlobMetadataKeys

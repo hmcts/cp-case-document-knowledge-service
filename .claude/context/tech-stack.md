@@ -96,8 +96,8 @@ All APIM calls carry a subscription key or AAD token injected by `ApimAuthHeader
 
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
-| `api-cp-crime-caseadmin-case-document-knowledge` | 0.0.8 | OpenAPI models for CSDK own API |
-| `api-cp-ai-rag` | 0.0.11 | RAG service API models |
+| `api-cp-crime-caseadmin-case-document-knowledge` | 0.0.9 | OpenAPI models for CSDK own API |
+| `api-cp-ai-rag` | 0.0.12 | RAG service API models |
 | `cp-auth-rules-filter` | 1.0.7 | Drools-based HTTP authorization |
 | `cp-audit-filter-springboot` | 1.0.5 | Audit event filter (publishes to Artemis) |
 | `task-manager-service` | 1.0.10 | Job/task orchestration client |
@@ -199,7 +199,6 @@ Integration testing adds: `artemis`, `azurite`, `azurite-seed`, `wiremock`.
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/cases/{caseId}/queries/{queryId}/answers` | GET | Retrieve answer |
 | `/cases/{caseId}/queries/{queryId}/answers/with-llm` | GET | Answer with LLM metadata |
 | `/cases/{caseId}/queries/{queryId}/answers/list` | GET | Multiple answers |
 | `/documents/{docId}/material-content-url` | GET | SAS-signed Azure Blob URI |
