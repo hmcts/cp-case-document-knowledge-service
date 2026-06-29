@@ -67,7 +67,7 @@
 |-----------|---------|------|
 | Blob Storage | `azure-storage-blob` 12.32.0 | Managed Identity (or Azurite locally) |
 | Azure Identity | `azure-identity` 1.14.1 | `DefaultAzureCredential` |
-| APIM (RAG + CQRS) | `ApimAuthHeaderService` / `AzureTokenService` | Managed Identity AAD token |
+| APIM (RAG, Hearing, Progression) | `ApimAuthHeaderService` / `AzureTokenService` | Managed Identity AAD token |
 
 Storage modes (configured via `cp.cdk.storage.mode`):
 - `managed-identity` — production
