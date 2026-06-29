@@ -18,7 +18,6 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
 import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
-import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
@@ -50,7 +49,6 @@ public class GenerateAnswerForQueryTask implements ExecutableTask {
     private final QueryDefinitionLatestRepository queryDefinitionLatestRepository;
     private final DocumentInformationSummarisedAsynchronouslyApi documentInformationSummarisedAsynchronouslyApi;
     private final ExecutionService executionService;
-    private final IngestionProperties ingestionProperties;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -59,7 +57,6 @@ public class GenerateAnswerForQueryTask implements ExecutableTask {
         final UUID caseId = parseUuidOrNull(jobData.getString(CTX_CASE_ID_KEY, null));
         final UUID docId = parseUuidOrNull(jobData.getString(CTX_DOC_ID_KEY, null));
         final UUID queryId = parseUuidOrNull(jobData.getString(CTX_SINGLE_QUERY_ID, null));
-        final boolean isUseMultiDefendant = ingestionProperties.getFeature().isUseMultiDefendant();
         final String levelStr = jobData.getString(CTX_QUERY_LEVEL, null);
 
 
@@ -69,7 +66,7 @@ public class GenerateAnswerForQueryTask implements ExecutableTask {
         }
         final QueryLevel level = parseQueryLevel(levelStr);
         final MetadataFilter filter;
-        if (isUseMultiDefendant && level == QueryLevel.CASE_ALL_DOCUMENTS) {
+        if (level == QueryLevel.CASE_ALL_DOCUMENTS) {
             filter = new MetadataFilter()
                     .key(META_CASE_ID)
                     .value(caseId.toString());

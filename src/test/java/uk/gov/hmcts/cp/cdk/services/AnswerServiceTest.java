@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -88,38 +89,6 @@ class AnswerServiceTest {
     }
 
     @Test
-    void getAnswer_shouldReturnMappedAnswer() {
-        final UUID queryId = UUID.randomUUID();
-        final UUID caseId = UUID.randomUUID();
-        final Integer version = 1;
-        OffsetDateTime createdAt = OffsetDateTime.now();
-
-        final Answer answer = new Answer();
-        answer.setCreatedAt(createdAt);
-
-        final AnswerResponse response = new AnswerResponse();
-
-        // Stub repository and mapper
-        when(answerRepository.findByCaseAndVersion(caseId, queryId, version))
-                .thenReturn(Optional.of(answer));
-
-        final QueryVersion version1 = new QueryVersion();
-        final QueryVersionId vid1 = new QueryVersionId();
-        vid1.setEffectiveAt(createdAt.minusMinutes(1));
-        version1.setQueryVersionId(vid1);
-        version1.setQuery(new Query(queryId, "query-label", utcNow(), 1, true));
-        version1.setUserQuery("user query text");
-
-        when(queryVersionRepository.findAll()).thenReturn(List.of(version1));
-        when(mapper.toAnswerResponse(answer, "user query text")).thenReturn(response);
-
-        final AnswerResponse result = service.getAnswer(queryId, caseId, version, null);
-
-        assertSame(response, result);
-    }
-
-
-    @Test
     void getAnswerWhenVersionIsNull_shouldReturnMappedAnswer() {
         final UUID queryId = UUID.randomUUID();
         final UUID caseId = UUID.randomUUID();
@@ -128,9 +97,10 @@ class AnswerServiceTest {
         final OffsetDateTime createdAt = OffsetDateTime.now();
 
         final Answer answer = new Answer();
+        answer.setAnswerId(new AnswerId(caseId, queryId, version));
         answer.setCreatedAt(createdAt);
 
-        final AnswerResponse response = new AnswerResponse();
+        final AnswerResponse response = new AnswerResponse(queryId, "user query text", null, version, createdAt);
 
         // Stub repository and mapper
         when(answerRepository.findLatestAsOfForCase(caseId, queryId, asOf)).thenReturn(Optional.of(answer));
@@ -142,13 +112,17 @@ class AnswerServiceTest {
         version1.setQuery(new Query(queryId, "query-label", utcNow(), 1, true));
         version1.setUserQuery("user query text");
 
+        final QueryVersion queryVersion = mock(QueryVersion.class);
+        when(queryVersionRepository.findLatestByQueryId(queryId)).thenReturn(Optional.of(queryVersion));
+        when(queryVersion.getLevel()).thenReturn(null);
         when(queryVersionRepository.findAll()).thenReturn(List.of(version1));
         when(mapper.toAnswerResponse(answer, "user query text")).thenReturn(response);
 
 
-        final AnswerResponse result = service.getAnswer(queryId, caseId, version, asOf);
+        final AnswersResponse result = service.getAnswers(queryId, caseId, version, asOf);
 
-        assertSame(response, result);
+        assertThat(result.getAnswers().size()).isEqualTo(1);
+        assertEquals(response, result.getAnswers().get(0));
     }
 
     @Test
@@ -156,14 +130,16 @@ class AnswerServiceTest {
         final UUID queryId = UUID.randomUUID();
         final UUID caseId = UUID.randomUUID();
 
+        final QueryVersion queryVersion = mock(QueryVersion.class);
+        when(queryVersionRepository.findLatestByQueryId(queryId)).thenReturn(Optional.of(queryVersion));
+        when(queryVersion.getLevel()).thenReturn(null);
         when(caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId))
                 .thenReturn(Optional.empty());
-
         when(answerRepository.findByCaseAndVersion(caseId, queryId, 1))
                 .thenReturn(Optional.empty());
 
         final ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.getAnswer(queryId, caseId, 1, null));
+                () -> service.getAnswers(queryId, caseId, 1, null));
 
         assertThat(ex.getStatusCode()).isEqualTo(NOT_FOUND);
         assertThat(ex.getReason()).isEqualTo(ErrorMessage.ANSWER_NOT_FOUND.toString());
@@ -172,11 +148,13 @@ class AnswerServiceTest {
     @Test
     void getAnswer_shouldThrowIllegalArgumentException_whenMultipleCases() {
         final UUID queryId = UUID.randomUUID();
-
+        final QueryVersion queryVersion = mock(QueryVersion.class);
+        when(queryVersionRepository.findLatestByQueryId(queryId)).thenReturn(Optional.of(queryVersion));
+        when(queryVersion.getLevel()).thenReturn(null);
         when(answerRepository.countDistinctCasesForQuery(queryId)).thenReturn(5L);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> service.getAnswer(queryId, null, null, null));
+                () -> service.getAnswers(queryId, null, null, null));
 
         assertThat(ex.getMessage().contains("Multiple cases exist")).isTrue();
     }
@@ -288,20 +266,24 @@ class AnswerServiceTest {
     void getAnswer_shouldReturnFileTooLarge_whenLatestDocumentExceedsLimit() {
         final UUID queryId = UUID.randomUUID();
         final UUID caseId = UUID.randomUUID();
+        final QueryVersion queryVersion = mock(QueryVersion.class);
 
         when(answerRepository.findByCaseAndVersion(caseId, queryId, 1))
                 .thenReturn(Optional.empty());
+        when(queryVersionRepository.findLatestByQueryId(queryId)).thenReturn(Optional.of(queryVersion));
+        when(queryVersion.getLevel()).thenReturn(QueryLevel.CASE);
 
         final CaseDocument doc = new CaseDocument();
         doc.setCaseId(caseId);
         doc.setIngestionPhase(DocumentIngestionPhase.EXCEEDED_FILE_SIZE_LIMIT);
 
+        when(latestDocRepo.findLatestAsOfForCase(any(), any(), any())).thenReturn(Optional.empty());
         when(caseDocumentRepository.findFirstByCaseIdOrderByUploadedAtDesc(caseId))
                 .thenReturn(Optional.of(doc));
 
         final ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> service.getAnswer(queryId, caseId, 1, null)
+                () -> service.getAnswers(queryId, caseId, 1, null)
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(NOT_FOUND);

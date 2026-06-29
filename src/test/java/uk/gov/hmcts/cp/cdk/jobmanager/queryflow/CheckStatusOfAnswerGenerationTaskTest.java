@@ -20,7 +20,6 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.COMPLETED;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.INPROGRESS;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.STARTED;
 
-import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.services.AnswerGenerationService;
 import uk.gov.hmcts.cp.cdk.services.CaseLevelAllDocumentsAnswerService;
@@ -88,12 +87,6 @@ class CheckStatusOfAnswerGenerationTaskTest {
     private DefendantAnswerService defendantAnswerService;
 
     @Mock
-    private IngestionProperties ingestionProperties;
-
-    @Mock
-    private IngestionProperties.Feature feature;
-
-    @Mock
     private ExecutionService executionService;
 
     private ExecutionInfo executionInfo;
@@ -104,7 +97,9 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @BeforeEach
     void setUp() {
-        task = new CheckStatusOfAnswerGenerationTask(api, objectMapper, retryProperties, answerGenerationService, caseLevelAllDocumentsAnswerService, caseLevelLatestDocumentAnswerService, defendantAnswerService, ingestionProperties, executionService);
+        task = new CheckStatusOfAnswerGenerationTask(api, objectMapper, retryProperties,
+                answerGenerationService, caseLevelAllDocumentsAnswerService,
+                caseLevelLatestDocumentAnswerService, defendantAnswerService, executionService);
         transactionId = UUID.randomUUID();
         caseId = UUID.randomUUID();
         queryId = UUID.randomUUID();
@@ -126,8 +121,6 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @Test
     void shouldRetry_whenExceptionCallingRagApi() {
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
         doThrow(new IllegalStateException()).when(api).answerUserQueryStatus(transactionId.toString(), true);
 
         final ExecutionInfo result = task.execute(executionInfo);
@@ -137,8 +130,6 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @Test
     void shouldRetry_whenResponseIsNull() {
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
         when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(null);
 
         final ExecutionInfo result = task.execute(executionInfo);
@@ -148,8 +139,6 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @Test
     void shouldRetry_whenHttpStatusIsNot2xx() {
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
         final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
 
         when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(response);
@@ -161,8 +150,6 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @Test
     void shouldRetry_whenResponseBodyIsNull() {
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
         final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.ok(null);
 
         when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(response);
@@ -175,8 +162,6 @@ class CheckStatusOfAnswerGenerationTaskTest {
     @Test
     void shouldRetry_whenAnswerGenerationIsPending() {
         when(body.getStatus()).thenReturn(AnswerGenerationStatus.ANSWER_GENERATION_PENDING);
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
 
         final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> response = ResponseEntity.ok(body);
 
@@ -191,8 +176,6 @@ class CheckStatusOfAnswerGenerationTaskTest {
     void shouldSaveAnswerToCdkDatabase_andCompleteJob_whenAnswerGenerationSuccessful() {
         when(body.getStatus()).thenReturn(ANSWER_GENERATED);
         when(body.getLlmResponse()).thenReturn("llmResponse");
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
         when(body.getDocumentChunks()).thenReturn(List.of(new DocumentChunk(documentId.toString(), "doc-name", 1, "chunk1"),
                 new DocumentChunk(documentId.toString(), "doc-name", 2, "chunk2")));
 
@@ -211,8 +194,6 @@ class CheckStatusOfAnswerGenerationTaskTest {
     @Test
     void shouldNotSaveAnswerToCdkDatabase_andCompleteJob_whenAnswerGenerationFailed() {
         when(body.getStatus()).thenReturn(ANSWER_GENERATION_FAILED);
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
 
         final JobManagerRetryProperties.RetryConfig  retryConfig = new JobManagerRetryProperties.RetryConfig();
         retryConfig.setMaxAttempts(3);
@@ -238,8 +219,6 @@ class CheckStatusOfAnswerGenerationTaskTest {
     @Test
     void shouldTriggerRetryTask_whenAnswerGenerationFailed_andRetriesRemain() {
         when(body.getStatus()).thenReturn(ANSWER_GENERATION_FAILED);
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
 
         final JobManagerRetryProperties.RetryConfig retryConfig = new JobManagerRetryProperties.RetryConfig();
         retryConfig.setMaxAttempts(3);
@@ -259,8 +238,6 @@ class CheckStatusOfAnswerGenerationTaskTest {
     @Test
     void shouldNotRetry_whenMaxRetriesReached() {
         when(body.getStatus()).thenReturn(ANSWER_GENERATION_FAILED);
-        when(ingestionProperties.getFeature()).thenReturn(feature);
-        when(feature.isUseMultiDefendant()).thenReturn(false);
 
         final JobManagerRetryProperties.RetryConfig retryConfig = new JobManagerRetryProperties.RetryConfig();
         retryConfig.setMaxAttempts(0); // already at max
