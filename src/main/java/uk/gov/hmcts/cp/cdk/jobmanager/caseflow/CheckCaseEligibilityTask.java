@@ -35,6 +35,7 @@ import org.springframework.stereotype.Component;
 @Task(CHECK_CASE_ELIGIBILITY)
 public class CheckCaseEligibilityTask implements ExecutableTask {
 
+    public static final int SINGLE_DEFENDANT_COUNT = 1;
     private final ExecutionService executionService;
     private final ProgressionClient progressionClient;
     private final JobManagerRetryProperties retryProperties;
@@ -65,14 +66,12 @@ public class CheckCaseEligibilityTask implements ExecutableTask {
             }
 
             final ProsecutionCaseEligibilityInfo info = eligibilityInfo.get();
-            final int defendantCount = info.defendantCount();
-
-            if (defendantCount < 1) {
+            if (info.defendantCount() < SINGLE_DEFENDANT_COUNT) {
                 log.info("Case {} has no defendants. Not eligible to proceed. Completing task.", caseId);
                 return complete(executionInfo);
             }
 
-            log.info("Case {} has {} defendants. Proceeding to {}.", caseId, defendantCount, CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS);
+            log.info("Case {} has {} defendants. Proceeding to {}.", caseId, info.defendantCount(), CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS);
 
             final JsonObjectBuilder updatedJobData = createObjectBuilder(jobData);
             updatedJobData.add(CTX_DEFENDANT_ID_KEY, info.defendantIds().getFirst());
