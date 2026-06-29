@@ -47,7 +47,7 @@ Artefact-Version
 - Output: `artefact_version` — propagated to all downstream jobs
 
 ### Job: `Build`
-- JDK: Temurin 21; Gradle: current (wrapper)
+- JDK: Temurin 25; Gradle: current (wrapper)
 - Command: `./gradlew build -DARTEFACT_VERSION=<version>`
 - **This includes integration tests** — `build` depends on `integration` which spins up the full Docker Compose stack (postgres, artemis, azurite, azurite-seed, wiremock, app). Expect 5–10 min.
 - Uploads `build/libs/<repo>-<version>.jar` as artifact `app-jar`
@@ -156,7 +156,7 @@ Pre-pulled by the CodeQL workflow to speed up the compose stack:
 postgres:16-alpine
 wiremock/wiremock:3.9.1
 mcr.microsoft.com/azure-storage/azurite:3.33.0
-eclipse-temurin:21-jdk
+eclipse-temurin:25-jdk
 testcontainers/ryuk:0.12.0
 ```
 

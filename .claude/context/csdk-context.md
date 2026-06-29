@@ -7,7 +7,7 @@ Every answer must be cited, auditable, and free of PII. Classified OFFICIAL-SENS
 
 ## Stack
 
-- **Java 21 · Spring Boot 4.0.5 · Gradle 9** — base package `uk.gov.hmcts.cp.cdk`, port 8082, context path `/casedocumentknowledge-service`
+- **Java 25 · Spring Boot 4.0.5 · Gradle 9** — base package `uk.gov.hmcts.cp.cdk`, port 8082, context path `/casedocumentknowledge-service`
 - **PostgreSQL 16** + **Flyway** (migrations `V1000–V1010`, append-only)
 - **Azure Blob Storage** (`azure-storage-blob` 12.32.0) — authenticated via **Managed Identity only** (`AzureIdentityConfig` → `AzureTokenService` → `ApimAuthHeaderService`)
 - **ActiveMQ Artemis 2.31.2** — audit event publishing only (via `cp-audit-filter-springboot`); no `@JmsListener` in service code

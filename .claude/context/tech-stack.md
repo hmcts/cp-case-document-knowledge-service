@@ -9,7 +9,7 @@
 
 | Component | Version / Detail |
 |-----------|-----------------|
-| Java | 21 (LTS) |
+| Java | 25 |
 | Spring Boot | 4.0.5 |
 | Spring MVC | via Spring Boot |
 | Spring Data JPA | via Spring Boot |

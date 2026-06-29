@@ -28,7 +28,7 @@ Load on demand:
 
 ## Tech stack & layout (ground truth for this repo)
 
-- **Java 21**, **Spring Boot 4.0.5**, Spring MVC, Spring Data JPA
+- **Java 25**, **Spring Boot 4.0.5**, Spring MVC, Spring Data JPA
 - **PostgreSQL 16** + **Flyway** migrations (`src/main/resources/db/migration`, versioned `V1000–V1010`; next is V1011)
 - **Gradle 9** build; quality gates **PMD** + **JaCoCo**
 - Observability: Actuator health, **Prometheus** (Micrometer), **OTLP** tracing, structured **JSON logs** (`logback-spring.xml`)
