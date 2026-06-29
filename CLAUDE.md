@@ -26,25 +26,9 @@ Load on demand:
 - `.claude/context/azure-sdk-guide.md` — when touching any Azure integration (this service uses Managed Identity; see `clients/common/Azure*`).
 - `.claude/context/cloud-adoption-rationale.md` — only when lock-in / cloud-cost trade-offs or an ADR require it. Do not auto-load.
 
-## Tech stack & layout (ground truth for this repo)
+## Tech stack & layout
 
-- **Java 25**, **Spring Boot 4.0.5**, Spring MVC, Spring Data JPA
-- **PostgreSQL 16** + **Flyway** migrations (`src/main/resources/db/migration`, versioned `V1000–V1010`; next is V1011)
-- **Gradle 9** build; quality gates **PMD** + **JaCoCo**
-- Observability: Actuator health, **Prometheus** (Micrometer), **OTLP** tracing, structured **JSON logs** (`logback-spring.xml`)
-- Async/eventing: **ActiveMQ Artemis** (JMS); Spring Batch job metadata (`V1000__spring_batch_metadata.sql`)
-- Distributed locking: **ShedLock** (`shedlock-spring` + `shedlock-provider-jdbc-template`); table created by `V1010__create_shedlock_table.sql`
-- Local infra via **Docker Compose** (Postgres, Artemis, Azurite, azurite-seed, WireMock, app)
-- Base package: **`uk.gov.hmcts.cp.cdk`** · service context path: `/casedocumentknowledge-service` (port 8082 locally)
-
-Key areas:
-- `clients/` — external CPP integrations: `hearing`, `progression`, `rag` (via **APIM**, authenticated with **Azure Managed Identity** — `clients/common/AzureIdentityConfig`, `AzureTokenService`, `ApimAuthHeaderService`)
-- `controllers/` — `Answers`, `Document`, `Ingestion`, `Queries`, `QueryCatalogue`; access control in `controllers/accesscontrol/` + `resources/acl/`; exception handling in `controllers/exception/`
-- `jobmanager/` — `caseflow`, `hearing`, `queryflow` orchestration tasks
-- `scheduler/` — `IntradayDiscoveryScheduler` + `SchedulerProperties` (ShedLock-guarded scheduled ingestion)
-- `filters/tracing/` — request tracing filters
-- `config/`, `http/`, `util/` — Spring configuration, HTTP utilities, shared helpers
-- `domain/`, `repo/`, `services/`, `storage/`
+See `.claude/context/tech-stack.md` — that file is the single source of truth for versions, packages, dependencies, and project layout. Do not duplicate its content here.
 
 ## Build, test & quality commands (use these — do not invent)
 
