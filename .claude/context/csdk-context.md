@@ -7,7 +7,7 @@
 ## Stack
 
 - **Java 25 · Spring Boot 4.0.5 · Gradle 9** — base package `uk.gov.hmcts.cp.cdk`, port 8082, context path `/casedocumentknowledge-service`
-- **PostgreSQL 16** + **Flyway** (migrations `V1000–V1010`, append-only)
+- **PostgreSQL 16** + **Flyway** (migrations `V1000–V1011`, append-only)
 - **Azure Blob Storage** (`azure-storage-blob` 12.32.0) — authenticated via **Managed Identity only** (`AzureIdentityConfig` → `AzureTokenService` → `ApimAuthHeaderService`)
 - **ActiveMQ Artemis 2.31.2** — audit event publishing only (via `cp-audit-filter-springboot`); no `@JmsListener` in service code
 - **ShedLock** (JDBC, `V1010`) — guards `IntradayDiscoveryScheduler`
@@ -18,10 +18,10 @@
 
 | Package | Purpose |
 |---------|---------|
-| `controllers/` | REST API: `Answers`, `Document`, `Ingestion`, `Queries`, `QueryCatalogue` + `GlobalExceptionHandler` |
-| `services/` | Business logic: answer generation, query management, document discovery, ingestion orchestration |
-| `domain/` | 22 JPA entities: `Query`, `QueryVersion`, `CaseDocument`, `CaseQueryStatus`, answer variants, `DocumentVerificationTask`, `ScheduledIngestionRequest` |
-| `repo/` | 13 JPA repositories |
+| `controllers/` | REST API: `Answers`, `Document`, `Ingestion`, `Queries`, `QueryCatalogue`, `DiscoveryScheduler` + `GlobalExceptionHandler` |
+| `services/` | Business logic: answer generation, query management, document discovery, ingestion orchestration, discovery scheduler configuration |
+| `domain/` | 23 JPA entities: `Query`, `QueryVersion`, `CaseDocument`, `CaseQueryStatus`, answer variants, `DocumentVerificationTask`, `ScheduledIngestionRequest`, `DiscoverySchedulerConfiguration` |
+| `repo/` | 14 JPA repositories |
 | `jobmanager/` | Long-running task orchestration via Task Manager service: `caseflow/` (5 multi-defendant tasks), `queryflow/`, `hearing/` |
 | `scheduler/` | `IntradayDiscoveryScheduler` — every 10 min, Mon–Fri 07:00–19:50, ShedLock-guarded |
 | `clients/` | External integrations: `rag/` (AI), `hearing/`, `progression/`, `common/` (Azure auth + APIM) |
@@ -58,13 +58,15 @@ All APIM calls: `RestClientFactoryConfig` → `CorrelationIdInterceptor` → `Ap
 | `/queries` | POST |
 | `/query-catalogue`, `/query-catalogue/{queryId}` | GET |
 | `/query-catalogue/{queryId}/label` | PATCH |
+| `/discovery-scheduler/configurations` | POST |
 
 ---
 
 ## Access control
 
 - Framework: `cp-auth-rules-filter` (Drools, `acl/cdks-rules.drl`)
-- All endpoints require `"AI search"` permission or System Users group
+- Most endpoints require `"AI search"` permission or System Users group
+- Exception: `/discovery-scheduler/configurations` (action `casedocumentknowledge-service.discovery-scheduler-configuration`) is **System Users group only** — no `"AI search"` fallback, since it's a backend config write, not an end-user action
 - User context header: `CJSCPPUID`
 - Permission constant: `PermissionConstants.INTELLIGENCE_ACCESS`
 
@@ -86,7 +88,7 @@ All APIM calls: `RestClientFactoryConfig` → `CorrelationIdInterceptor` → `Ap
 
 1. **No PII / case content in logs, tests, or artefacts** — use synthetic data; Azurite seed and WireMock stubs must be non-real.
 2. **Azure via Managed Identity only** — no connection strings, SAS tokens, or account keys anywhere.
-3. **Flyway migrations are append-only** — never edit a shipped `V*.sql`; add the next version. Current highest: `V1010`; next is `V1011`.
+3. **Flyway migrations are append-only** — never edit a shipped `V*.sql`; add the next version. Current highest: `V1011`; next is `V1012`.
 4. **Do not drop RAG response fields** — changes to the ingestion or answer-serving flow must preserve all fields returned by the RAG service (e.g. `doc_id`, `llm_input`). Citation production is upstream's responsibility; CSDK's responsibility is not to lose that data.
 5. **JSON logging to stdout only** — `logback-spring.xml`; never log document content, answer text, or CJSCPPUID values.
 6. **PMD + JaCoCo must pass** — do not lower thresholds.
