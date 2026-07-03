@@ -22,7 +22,10 @@ public class DiscoverySchedulerController implements DiscoverySchedulerApi {
     @Override
     public ResponseEntity<UpsertDiscoverySchedulerConfiguration200Response> upsertDiscoverySchedulerConfiguration(
             @RequestBody @Valid final DiscoverySchedulerConfigurationRequest discoverySchedulerConfigurationRequest) {
-        log.debug("upsertDiscoverySchedulerConfiguration request={}", discoverySchedulerConfigurationRequest);
+        log.debug("upsertDiscoverySchedulerConfiguration courtCentreId={} courtRoomId={} version={}",
+                discoverySchedulerConfigurationRequest.getCourtCentreId(),
+                discoverySchedulerConfigurationRequest.getCourtRoomId(),
+                discoverySchedulerConfigurationRequest.getVersion());
         return ResponseEntity.ok(service.upsert(discoverySchedulerConfigurationRequest));
     }
 }
