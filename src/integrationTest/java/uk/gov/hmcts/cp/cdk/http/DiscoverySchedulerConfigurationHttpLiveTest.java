@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 import uk.gov.hmcts.cp.cdk.util.UtilConstants;
@@ -78,10 +79,14 @@ class DiscoverySchedulerConfigurationHttpLiveTest extends AbstractHttpLiveTest {
             ps.setObject(1, courtCentreId);
             ps.setObject(2, courtRoomId);
             try (ResultSet rs = ps.executeQuery()) {
-                assertThat(rs.next()).isTrue();
+                if (!rs.next()) {
+                    fail("Expected latest discovery scheduler configuration row to exist");
+                }
                 assertThat(rs.getInt("version")).isEqualTo(2);
                 assertThat(rs.getBoolean("is_active")).isFalse();
-                assertThat(rs.next()).isFalse();
+                if (rs.next()) {
+                    fail("Expected only one row for this court centre/court room pair");
+                }
             }
         }
     }
@@ -97,7 +102,7 @@ class DiscoverySchedulerConfigurationHttpLiveTest extends AbstractHttpLiveTest {
 
         try {
             postConfiguration(courtCentreId, courtRoomId, 1, true);
-            org.junit.jupiter.api.Assertions.fail("Expected duplicate version to be rejected");
+            fail("Expected duplicate version to be rejected");
         } catch (final org.springframework.web.client.HttpClientErrorException ex) {
             assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         }

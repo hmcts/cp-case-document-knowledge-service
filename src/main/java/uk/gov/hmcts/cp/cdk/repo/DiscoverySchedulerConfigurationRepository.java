@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.repo;
 
 import uk.gov.hmcts.cp.cdk.domain.DiscoverySchedulerConfiguration;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,6 +19,12 @@ public interface DiscoverySchedulerConfigurationRepository extends JpaRepository
             + "ORDER BY version DESC LIMIT 1", nativeQuery = true)
     Optional<DiscoverySchedulerConfiguration> findLatestByCourtCentreAndCourtRoom(
             @Param("courtCentreId") UUID courtCentreId, @Param("courtRoomId") UUID courtRoomId);
+
+    @Query(value = "SELECT DISTINCT ON (court_centre_id, court_room_id) * "
+            + "FROM discovery_scheduler_configuration "
+            + "WHERE is_active = true "
+            + "ORDER BY court_centre_id, court_room_id, version DESC", nativeQuery = true)
+    List<DiscoverySchedulerConfiguration> findLatestActiveConfigurations();
 
     boolean existsByCourtCentreIdAndCourtRoomIdAndVersion(UUID courtCentreId, UUID courtRoomId, Integer version);
 }

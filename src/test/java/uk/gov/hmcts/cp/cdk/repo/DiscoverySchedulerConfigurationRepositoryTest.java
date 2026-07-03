@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import uk.gov.hmcts.cp.cdk.domain.DiscoverySchedulerConfiguration;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -79,6 +80,62 @@ class DiscoverySchedulerConfigurationRepositoryTest {
                 repository.findLatestByCourtCentreAndCourtRoom(UUID.randomUUID(), UUID.randomUUID());
 
         assertThat(latest).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findLatestActiveConfigurations skips an inactive latest version and returns the latest active one for the pair")
+    void findLatestActiveConfigurations_skips_inactive_latest() {
+        // seeded: v1 active=true, v2 active=false (v2 is the overall latest, but inactive)
+        final List<DiscoverySchedulerConfiguration> latestActive = repository.findLatestActiveConfigurations();
+
+        final Optional<DiscoverySchedulerConfiguration> forSeededPair = latestActive.stream()
+                .filter(c -> c.getCourtCentreId().equals(courtCentreId) && c.getCourtRoomId().equals(courtRoomId))
+                .findFirst();
+
+        assertThat(forSeededPair).isPresent();
+        assertThat(forSeededPair.get().getVersion()).isEqualTo(1);
+        assertThat(forSeededPair.get().isActive()).isTrue();
+    }
+
+    @Test
+    @DisplayName("findLatestActiveConfigurations returns the highest active version for a pair, ignoring an inactive version in between")
+    void findLatestActiveConfigurations_returns_highest_active_ignoring_inactive_gap() {
+        repository.saveAndFlush(configuration(courtCentreId, courtRoomId, 3, true));
+
+        final List<DiscoverySchedulerConfiguration> latestActive = repository.findLatestActiveConfigurations();
+
+        final Optional<DiscoverySchedulerConfiguration> forSeededPair = latestActive.stream()
+                .filter(c -> c.getCourtCentreId().equals(courtCentreId) && c.getCourtRoomId().equals(courtRoomId))
+                .findFirst();
+
+        assertThat(forSeededPair).isPresent();
+        assertThat(forSeededPair.get().getVersion()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("findLatestActiveConfigurations excludes pairs with no active version at all")
+    void findLatestActiveConfigurations_excludes_pairs_with_no_active_version() {
+        final UUID centreWithOnlyInactiveVersions = UUID.randomUUID();
+        final UUID roomWithOnlyInactiveVersions = UUID.randomUUID();
+        repository.saveAndFlush(configuration(centreWithOnlyInactiveVersions, roomWithOnlyInactiveVersions, 1, false));
+
+        final List<DiscoverySchedulerConfiguration> latestActive = repository.findLatestActiveConfigurations();
+
+        assertThat(latestActive)
+                .noneMatch(c -> c.getCourtCentreId().equals(centreWithOnlyInactiveVersions)
+                        && c.getCourtRoomId().equals(roomWithOnlyInactiveVersions));
+    }
+
+    @Test
+    @DisplayName("findLatestActiveConfigurations returns exactly one row per court centre/court room pair")
+    void findLatestActiveConfigurations_returns_one_row_per_pair() {
+        final List<DiscoverySchedulerConfiguration> latestActive = repository.findLatestActiveConfigurations();
+
+        final long matchesForSeededPair = latestActive.stream()
+                .filter(c -> c.getCourtCentreId().equals(courtCentreId) && c.getCourtRoomId().equals(courtRoomId))
+                .count();
+
+        assertThat(matchesForSeededPair).isEqualTo(1);
     }
 
     @Test
