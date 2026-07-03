@@ -23,8 +23,6 @@ class HearingDaysCalculatorTest {
     private static final LocalDate MON2 = LocalDate.of(2026, 7, 13);
     private static final LocalDate TUE2 = LocalDate.of(2026, 7, 14);
     private static final LocalDate WED2 = LocalDate.of(2026, 7, 15);
-    private static final LocalDate THU2 = LocalDate.of(2026, 7, 16);
-    private static final LocalDate FRI2 = LocalDate.of(2026, 7, 17);
 
     private HearingDaysCalculator calculator;
 
