@@ -17,17 +17,17 @@ import java.util.List;
  * weekday instead.
  */
 @Component
-public class HearingDatesCalculator {
+public class HearingDaysCalculator {
 
-    public List<LocalDate> calculate(final LocalDate hearingDate, final int daysAhead) {
+    public List<LocalDate> calculate(final LocalDate from, final int daysAhead) {
         if (daysAhead <= 0) {
             return List.of();
         }
 
-        final LocalDate endDate = findEndDate(hearingDate, daysAhead);
+        final LocalDate endDate = findEndDate(from, daysAhead);
 
         final List<LocalDate> hearingDates = new ArrayList<>();
-        for (LocalDate d = hearingDate; !d.isAfter(endDate); d = d.plusDays(1)) {
+        for (LocalDate d = from; !d.isAfter(endDate); d = d.plusDays(1)) {
             hearingDates.add(d);
         }
         return hearingDates;

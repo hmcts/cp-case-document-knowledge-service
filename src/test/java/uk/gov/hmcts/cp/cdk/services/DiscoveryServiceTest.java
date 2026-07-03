@@ -7,12 +7,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
 import uk.gov.hmcts.cp.cdk.repo.ScheduledIngestionRequestRepository;
+import uk.gov.hmcts.cp.cdk.scheduler.SchedulerProperties;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -39,14 +39,16 @@ class DiscoveryServiceTest {
     private ScheduledIngestionRequestRepository scheduledIngestionRequestRepository;
 
     @Mock
-    private HearingDatesCalculator hearingDatesCalculator;
+    private HearingDaysCalculator hearingDaysCalculator;
 
     private DiscoveryService discoveryService;
 
     @BeforeEach
     void setUp() {
+        final SchedulerProperties schedulerProperties = new SchedulerProperties();
+        schedulerProperties.getNightlyDiscovery().setDaysAhead(NIGHTLY_DISCOVERY_DAYS);
         discoveryService = new DiscoveryService(
-                jobManagerService, scheduledIngestionRequestRepository, hearingDatesCalculator, NIGHTLY_DISCOVERY_DAYS);
+                jobManagerService, scheduledIngestionRequestRepository, hearingDaysCalculator, schedulerProperties);
     }
 
     @Test
@@ -153,14 +155,14 @@ class DiscoveryServiceTest {
     void runNightlyDiscovery_shouldCallCalculatorWithTodayAndNightlyDiscoveryDays() {
         // given
         final LocalDate today = LocalDate.now();
-        when(hearingDatesCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today));
 
         // when
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(hearingDatesCalculator).calculate(today, NIGHTLY_DISCOVERY_DAYS);
+        verify(hearingDaysCalculator).calculate(today, NIGHTLY_DISCOVERY_DAYS);
     }
 
     @Test
@@ -168,7 +170,7 @@ class DiscoveryServiceTest {
         // given
         final LocalDate today = LocalDate.now();
         final LocalDate tomorrow = today.plusDays(1);
-        when(hearingDatesCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today, tomorrow));
 
         // when
@@ -189,7 +191,7 @@ class DiscoveryServiceTest {
         final ScheduledIngestionRequest request1 = mockRequest(today);
         final ScheduledIngestionRequest request2 = mockRequest(tomorrow);
 
-        when(hearingDatesCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today, tomorrow));
         when(scheduledIngestionRequestRepository.findAllByHearingDate(today))
                 .thenReturn(List.of(request1));
@@ -209,7 +211,7 @@ class DiscoveryServiceTest {
         final LocalDate today = LocalDate.now();
         final ScheduledIngestionRequest request = mockRequest(today);
 
-        when(hearingDatesCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today));
         when(scheduledIngestionRequestRepository.findAllByHearingDate(today))
                 .thenReturn(List.of(request));
@@ -227,7 +229,7 @@ class DiscoveryServiceTest {
         // given
         final LocalDate today = LocalDate.now();
         final LocalDate tomorrow = today.plusDays(1);
-        when(hearingDatesCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today, tomorrow));
 
         // when
@@ -243,7 +245,7 @@ class DiscoveryServiceTest {
     void runNightlyDiscovery_shouldNotThrowWhenCalculatorReturnsEmpty() {
         // given
         final LocalDate today = LocalDate.now();
-        when(hearingDatesCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of());
 
         // when / then

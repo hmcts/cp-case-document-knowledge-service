@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Runs once per day at 02:00 to pre-load today's scheduled hearings before court opens.
+ * Runs once per day at 02:00 to pre-load scheduled hearings from today to configured number of days ahead.
  */
 @ConditionalOnProperty(
         name = "scheduler.nightly-discovery.enabled",

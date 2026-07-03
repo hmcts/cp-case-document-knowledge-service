@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static uk.gov.hmcts.cp.cdk.stub.HearingQueryApiStub.stubGetHearingsReturnsEmptyHearingSummaries;
 import static uk.gov.hmcts.cp.cdk.util.UtilConstants.USER_WITH_PERMISSIONS;
 
-import uk.gov.hmcts.cp.cdk.services.HearingDatesCalculator;
+import uk.gov.hmcts.cp.cdk.services.HearingDaysCalculator;
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 
 import java.sql.Connection;
@@ -90,7 +90,7 @@ class NightlyDiscoverySchedulerLiveTest extends AbstractHttpLiveTest {
 
         // Nightly discovery calculates the next 3 weekdays from today; seed a record
         // on the first date in that window so the scheduler always picks it up.
-        final HearingDatesCalculator calculator = new HearingDatesCalculator();
+        final HearingDaysCalculator calculator = new HearingDaysCalculator();
         final List<LocalDate> hearingDates = calculator.calculate(LocalDate.now(), 3);
         final LocalDate targetDate = hearingDates.get(0);
 

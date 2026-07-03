@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 // Reference week: 2026-07-06 (Mon) → 2026-07-12 (Sun), next Mon = 2026-07-13
 @DisplayName("HearingDatesCalculator tests")
-class HearingDatesCalculatorTest {
+class HearingDaysCalculatorTest {
 
     private static final LocalDate MON  = LocalDate.of(2026, 7,  6);
     private static final LocalDate TUE  = LocalDate.of(2026, 7,  7);
@@ -26,11 +26,11 @@ class HearingDatesCalculatorTest {
     private static final LocalDate THU2 = LocalDate.of(2026, 7, 16);
     private static final LocalDate FRI2 = LocalDate.of(2026, 7, 17);
 
-    private HearingDatesCalculator calculator;
+    private HearingDaysCalculator calculator;
 
     @BeforeEach
     void setUp() {
-        calculator = new HearingDatesCalculator();
+        calculator = new HearingDaysCalculator();
     }
 
     // -------------------------------------------------------------------------

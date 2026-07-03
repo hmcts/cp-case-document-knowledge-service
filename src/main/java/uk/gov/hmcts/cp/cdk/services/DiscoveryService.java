@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.services;
 
 import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
 import uk.gov.hmcts.cp.cdk.repo.ScheduledIngestionRequestRepository;
+import uk.gov.hmcts.cp.cdk.scheduler.SchedulerProperties;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -10,7 +11,6 @@ import java.util.UUID;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,17 +20,17 @@ public class DiscoveryService {
 
     private final JobManagerService jobManagerService;
     private final ScheduledIngestionRequestRepository scheduledIngestionRequestRepository;
-    private final HearingDatesCalculator hearingDatesCalculator;
-    private final int nightlyDiscoveryDays;
+    private final HearingDaysCalculator hearingDaysCalculator;
+    private final SchedulerProperties schedulerProperties;
 
     public DiscoveryService(final JobManagerService jobManagerService,
                             final ScheduledIngestionRequestRepository scheduledIngestionRequestRepository,
-                            final HearingDatesCalculator hearingDatesCalculator,
-                            @Value("${scheduler.nightly-discovery.days-ahead:3}") final int nightlyDiscoveryDays) {
+                            final HearingDaysCalculator hearingDaysCalculator,
+                            final SchedulerProperties schedulerProperties) {
         this.jobManagerService = jobManagerService;
         this.scheduledIngestionRequestRepository = scheduledIngestionRequestRepository;
-        this.hearingDatesCalculator = hearingDatesCalculator;
-        this.nightlyDiscoveryDays = nightlyDiscoveryDays;
+        this.hearingDaysCalculator = hearingDaysCalculator;
+        this.schedulerProperties = schedulerProperties;
     }
 
     /**
@@ -50,7 +50,7 @@ public class DiscoveryService {
     @Transactional
     public void runNightlyDiscovery() {
         final LocalDate today = LocalDate.now();
-        final List<LocalDate> hearingDates = hearingDatesCalculator.calculate(today, nightlyDiscoveryDays);
+        final List<LocalDate> hearingDates = hearingDaysCalculator.calculate(today, schedulerProperties.getNightlyDiscovery().getDaysAhead());
         log.info("Nightly discovery hearing dates={}", hearingDates);
         hearingDates.forEach(this::processScheduledIngestionRequests);
     }
