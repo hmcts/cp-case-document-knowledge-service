@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.services;
 
 import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
 import uk.gov.hmcts.cp.cdk.repo.ScheduledIngestionRequestRepository;
+import uk.gov.hmcts.cp.cdk.scheduler.SchedulerProperties;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -19,11 +20,17 @@ public class DiscoveryService {
 
     private final JobManagerService jobManagerService;
     private final ScheduledIngestionRequestRepository scheduledIngestionRequestRepository;
+    private final HearingDaysCalculator hearingDaysCalculator;
+    private final SchedulerProperties schedulerProperties;
 
     public DiscoveryService(final JobManagerService jobManagerService,
-                            final ScheduledIngestionRequestRepository scheduledIngestionRequestRepository) {
+                            final ScheduledIngestionRequestRepository scheduledIngestionRequestRepository,
+                            final HearingDaysCalculator hearingDaysCalculator,
+                            final SchedulerProperties schedulerProperties) {
         this.jobManagerService = jobManagerService;
         this.scheduledIngestionRequestRepository = scheduledIngestionRequestRepository;
+        this.hearingDaysCalculator = hearingDaysCalculator;
+        this.schedulerProperties = schedulerProperties;
     }
 
     /**
@@ -33,6 +40,22 @@ public class DiscoveryService {
     @Transactional
     public void runIntradayDiscovery() {
         final LocalDate hearingDate = LocalDate.now();
+        processScheduledIngestionRequests(hearingDate);
+    }
+
+    /**
+     * Nightly discovery: pre-loads hearing dates calculated from today before court opens.
+     * Uses HearingDatesCalculator to determine the relevant date window based on the start day.
+     */
+    @Transactional
+    public void runNightlyDiscovery() {
+        final LocalDate today = LocalDate.now();
+        final List<LocalDate> hearingDates = hearingDaysCalculator.calculate(today, schedulerProperties.getNightlyDiscovery().getDaysAhead());
+        log.info("Nightly discovery hearing dates={}", hearingDates);
+        hearingDates.forEach(this::processScheduledIngestionRequests);
+    }
+
+    private void processScheduledIngestionRequests(final LocalDate hearingDate) {
         final List<ScheduledIngestionRequest> ingestionRequestList = scheduledIngestionRequestRepository.findAllByHearingDate(hearingDate);
         ingestionRequestList
                 .stream()
