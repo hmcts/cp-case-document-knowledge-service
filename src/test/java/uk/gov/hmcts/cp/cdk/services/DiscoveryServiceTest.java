@@ -7,10 +7,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import uk.gov.hmcts.cp.cdk.domain.DiscoverySchedulerConfiguration;
 import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
+import uk.gov.hmcts.cp.cdk.repo.DiscoverySchedulerConfigurationRepository;
 import uk.gov.hmcts.cp.cdk.repo.ScheduledIngestionRequestRepository;
 import uk.gov.hmcts.cp.cdk.scheduler.SchedulerProperties;
 
@@ -39,6 +41,9 @@ class DiscoveryServiceTest {
     private ScheduledIngestionRequestRepository scheduledIngestionRequestRepository;
 
     @Mock
+    private DiscoverySchedulerConfigurationRepository discoverySchedulerConfigurationRepository;
+
+    @Mock
     private HearingDaysCalculator hearingDaysCalculator;
 
     private DiscoveryService discoveryService;
@@ -48,7 +53,8 @@ class DiscoveryServiceTest {
         final SchedulerProperties schedulerProperties = new SchedulerProperties();
         schedulerProperties.getNightlyDiscovery().setDaysAhead(NIGHTLY_DISCOVERY_DAYS);
         discoveryService = new DiscoveryService(
-                jobManagerService, scheduledIngestionRequestRepository, hearingDaysCalculator, schedulerProperties);
+                jobManagerService, scheduledIngestionRequestRepository, discoverySchedulerConfigurationRepository,
+                hearingDaysCalculator, schedulerProperties);
     }
 
     @Test
@@ -56,8 +62,8 @@ class DiscoveryServiceTest {
         // given
         final LocalDate today = LocalDate.now();
 
-        final ScheduledIngestionRequest request1 = mockRequest(today);
-        final ScheduledIngestionRequest request2 = mockRequest(today);
+        final ScheduledIngestionRequest request1 = mockRequest();
+        final ScheduledIngestionRequest request2 = mockRequest();
 
         when(scheduledIngestionRequestRepository.findAllByHearingDate(today)).thenReturn(List.of(request1, request2));
 
@@ -82,8 +88,8 @@ class DiscoveryServiceTest {
         // given
         final LocalDate today = LocalDate.now();
 
-        final ScheduledIngestionRequest request1 = mockRequest(today);
-        final ScheduledIngestionRequest request2 = mockRequest(today);
+        final ScheduledIngestionRequest request1 = mockRequest();
+        final ScheduledIngestionRequest request2 = mockRequest();
 
         when(scheduledIngestionRequestRepository.findAllByHearingDate(today)).thenReturn(List.of(request1, request2));
 
@@ -130,7 +136,6 @@ class DiscoveryServiceTest {
         when(request.getCppuid()).thenReturn(cppuid);
         when(request.getCourtCentreId()).thenReturn(courtCentreId);
         when(request.getCourtRoomId()).thenReturn(roomId);
-        when(request.getHearingDate()).thenReturn(hearingDate);
 
         when(scheduledIngestionRequestRepository.findAllByHearingDate(hearingDate))
                 .thenReturn(List.of(request));
@@ -166,7 +171,7 @@ class DiscoveryServiceTest {
     }
 
     @Test
-    void runNightlyDiscovery_shouldQueryRepositoryForEachCalculatedDate() {
+    void runNightlyDiscovery_shouldQueryActiveConfigurationsOnceRegardlessOfCalculatedDateCount() {
         // given
         final LocalDate today = LocalDate.now();
         final LocalDate tomorrow = today.plusDays(1);
@@ -177,44 +182,69 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(scheduledIngestionRequestRepository).findAllByHearingDate(today);
-        verify(scheduledIngestionRequestRepository).findAllByHearingDate(tomorrow);
-        verifyNoMoreInteractions(scheduledIngestionRequestRepository);
+        verify(discoverySchedulerConfigurationRepository, times(1)).findLatestActiveConfigurations();
+        verifyNoInteractions(scheduledIngestionRequestRepository);
     }
 
     @Test
-    void runNightlyDiscovery_shouldDispatchTasksForAllRequestsAcrossCalculatedDates() {
+    void runNightlyDiscovery_shouldDispatchTasksForEveryConfigurationAndCalculatedDate() {
         // given
         final LocalDate today = LocalDate.now();
         final LocalDate tomorrow = today.plusDays(1);
 
-        final ScheduledIngestionRequest request1 = mockRequest(today);
-        final ScheduledIngestionRequest request2 = mockRequest(tomorrow);
+        final DiscoverySchedulerConfiguration config1 = mockConfiguration();
+        final DiscoverySchedulerConfiguration config2 = mockConfiguration();
 
         when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today, tomorrow));
-        when(scheduledIngestionRequestRepository.findAllByHearingDate(today))
-                .thenReturn(List.of(request1));
-        when(scheduledIngestionRequestRepository.findAllByHearingDate(tomorrow))
-                .thenReturn(List.of(request2));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
+                .thenReturn(List.of(config1, config2));
 
         // when
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, times(2)).dispatchCaseDocumentIngestionTasks(any(JsonObject.class));
+        verify(jobManagerService, times(4)).dispatchCaseDocumentIngestionTasks(any(JsonObject.class));
+    }
+
+    @Test
+    void runNightlyDiscovery_shouldGenerateJobDataFromConfigurationAndHearingDate() {
+        // given
+        final LocalDate today = LocalDate.now();
+        final UUID courtCentreId = UUID.randomUUID();
+        final UUID courtRoomId = UUID.randomUUID();
+        final DiscoverySchedulerConfiguration config = mockConfiguration(courtCentreId, courtRoomId);
+
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+                .thenReturn(List.of(today));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
+                .thenReturn(List.of(config));
+
+        // when
+        discoveryService.runNightlyDiscovery();
+
+        // then
+        final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
+        verify(jobManagerService).dispatchCaseDocumentIngestionTasks(captor.capture());
+
+        final JsonObject jobData = captor.getValue();
+        assertThat(jobData.getString("courtCentreId")).isEqualTo(courtCentreId.toString());
+        assertThat(jobData.getString("roomId")).isEqualTo(courtRoomId.toString());
+        assertThat(jobData.getString("date")).isEqualTo(today.toString());
+        assertThat(jobData.getString("requestId")).isNotBlank();
+        assertThat(UUID.fromString(jobData.getString("cppuid"))).isNotNull();
     }
 
     @Test
     void runNightlyDiscovery_shouldContinueWhenDispatchFails() {
         // given
         final LocalDate today = LocalDate.now();
-        final ScheduledIngestionRequest request = mockRequest(today);
+        final DiscoverySchedulerConfiguration config = mockConfiguration();
 
         when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today));
-        when(scheduledIngestionRequestRepository.findAllByHearingDate(today))
-                .thenReturn(List.of(request));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
+                .thenReturn(List.of(config));
         doThrow(new RuntimeException("Dispatch failed"))
                 .when(jobManagerService)
                 .dispatchCaseDocumentIngestionTasks(any(JsonObject.class));
@@ -222,44 +252,61 @@ class DiscoveryServiceTest {
         // when / then
         Assertions.assertThatCode(() -> discoveryService.runNightlyDiscovery())
                 .doesNotThrowAnyException();
+
+        verify(jobManagerService).dispatchCaseDocumentIngestionTasks(any(JsonObject.class));
     }
 
     @Test
-    void runNightlyDiscovery_shouldNotDispatchWhenNoRequestsExistForCalculatedDates() {
+    void runNightlyDiscovery_shouldNotDispatchWhenNoActiveConfigurationsExist() {
         // given
         final LocalDate today = LocalDate.now();
         final LocalDate tomorrow = today.plusDays(1);
         when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today, tomorrow));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
+                .thenReturn(List.of());
 
         // when
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(scheduledIngestionRequestRepository).findAllByHearingDate(today);
-        verify(scheduledIngestionRequestRepository).findAllByHearingDate(tomorrow);
         verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasks(any());
     }
 
     @Test
-    void runNightlyDiscovery_shouldNotThrowWhenCalculatorReturnsEmpty() {
+    void runNightlyDiscovery_shouldNotDispatchWhenNoHearingDatesCalculated() {
         // given
         final LocalDate today = LocalDate.now();
+        final DiscoverySchedulerConfiguration config = mock(DiscoverySchedulerConfiguration.class);
         when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of());
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
+                .thenReturn(List.of(config));
 
         // when / then
         Assertions.assertThatCode(() -> discoveryService.runNightlyDiscovery())
                 .doesNotThrowAnyException();
+
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasks(any());
     }
 
-    private ScheduledIngestionRequest mockRequest(LocalDate hearingDate) {
+    private DiscoverySchedulerConfiguration mockConfiguration() {
+        return mockConfiguration(UUID.randomUUID(), UUID.randomUUID());
+    }
+
+    private DiscoverySchedulerConfiguration mockConfiguration(final UUID courtCentreId, final UUID courtRoomId) {
+        final DiscoverySchedulerConfiguration configuration = mock(DiscoverySchedulerConfiguration.class);
+        when(configuration.getCourtCentreId()).thenReturn(courtCentreId);
+        when(configuration.getCourtRoomId()).thenReturn(courtRoomId);
+        return configuration;
+    }
+
+    private ScheduledIngestionRequest mockRequest() {
         final ScheduledIngestionRequest request = mock(ScheduledIngestionRequest.class);
 
         when(request.getCppuid()).thenReturn(UUID.randomUUID());
         when(request.getCourtCentreId()).thenReturn(UUID.randomUUID());
         when(request.getCourtRoomId()).thenReturn(UUID.randomUUID());
-        when(request.getHearingDate()).thenReturn(hearingDate);
 
         return request;
     }

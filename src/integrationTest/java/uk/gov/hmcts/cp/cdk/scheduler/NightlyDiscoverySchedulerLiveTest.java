@@ -5,23 +5,20 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.findAll;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
-import static java.util.UUID.fromString;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static uk.gov.hmcts.cp.cdk.stub.HearingQueryApiStub.stubGetHearingsReturnsEmptyHearingSummaries;
-import static uk.gov.hmcts.cp.cdk.util.UtilConstants.USER_WITH_PERMISSIONS;
 
-import uk.gov.hmcts.cp.cdk.services.HearingDaysCalculator;
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.UUID;
 
 import org.awaitility.Awaitility;
@@ -29,9 +26,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Verifies that NightlyDiscoveryScheduler acquires a ShedLock, calculates the
- * upcoming hearing-date window, and dispatches ingestion tasks for any scheduled
- * requests within that window. The docker-compose stack overrides the cron to
- * fire every 30 seconds so tests complete well under a minute.
+ * upcoming hearing-date window, and dispatches ingestion tasks for every active
+ * court-centre/room configuration across that window. The docker-compose stack
+ * overrides the cron to fire every 30 seconds so tests complete well under a minute.
  */
 class NightlyDiscoverySchedulerLiveTest extends AbstractHttpLiveTest {
 
@@ -80,21 +77,17 @@ class NightlyDiscoverySchedulerLiveTest extends AbstractHttpLiveTest {
     }
 
     @Test
-    void scheduler_shouldCallHearingApi_forScheduledRequestsOnCalculatedDates() throws SQLException {
+    void scheduler_shouldCallHearingApi_forActiveCourtCentreConfigurations() throws SQLException {
         configureFor("localhost", 8089);
 
         final UUID courtCentreId = randomUUID();
         final UUID roomId = randomUUID();
-        final UUID id = randomUUID();
-        final UUID cppuid = fromString(USER_WITH_PERMISSIONS);
+        final UUID configurationId = randomUUID();
 
-        // Nightly discovery calculates the next 3 weekdays from today; seed a record
-        // on the first date in that window so the scheduler always picks it up.
-        final HearingDaysCalculator calculator = new HearingDaysCalculator();
-        final List<LocalDate> hearingDates = calculator.calculate(LocalDate.now(), 3);
-        final LocalDate targetDate = hearingDates.get(0);
-
-        insertScheduledIngestionRequest(id, cppuid, courtCentreId, roomId, targetDate);
+        // Nightly discovery dispatches one task per active court-centre/room
+        // configuration for every calculated hearing date; seeding one active
+        // configuration is enough for the scheduler to pick it up.
+        insertDiscoverySchedulerConfiguration(configurationId, courtCentreId, roomId);
         stubGetHearingsReturnsEmptyHearingSummaries(courtCentreId.toString(), roomId.toString());
 
         try {
@@ -106,34 +99,34 @@ class NightlyDiscoverySchedulerLiveTest extends AbstractHttpLiveTest {
 
             assertThat(findAll(getRequestedFor(urlPathEqualTo(HEARINGS_PATH))
                     .withQueryParam(COURT_CENTRE_ID, equalTo(courtCentreId.toString()))))
-                    .as("hearing API must be called for nightly-discovery request on date=%s", targetDate)
+                    .as("hearing API must be called for nightly-discovery active configuration courtCentreId=%s", courtCentreId)
                     .isNotEmpty();
         } finally {
-            deleteScheduledIngestionRequest(id);
+            deleteDiscoverySchedulerConfiguration(configurationId);
         }
     }
 
-    private void insertScheduledIngestionRequest(final UUID id, final UUID cppuid,
-                                                 final UUID courtCentreId, final UUID courtRoomId,
-                                                 final LocalDate hearingDate) throws SQLException {
+    private void insertDiscoverySchedulerConfiguration(final UUID id, final UUID courtCentreId,
+                                                        final UUID courtRoomId) throws SQLException {
         try (Connection conn = openConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "INSERT INTO scheduled_ingestion_request "
-                     + "(id, cppuid, court_centre_id, court_room_id, hearing_date, created_at, updated_at) "
-                     + "VALUES (?, ?, ?, ?, ?, NOW(), NOW())")) {
+                     "INSERT INTO discovery_scheduler_configuration "
+                     + "(id, court_centre_id, court_room_id, uploaded_date, version, is_active, created_at, updated_at) "
+                     + "VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())")) {
             ps.setObject(1, id);
-            ps.setObject(2, cppuid);
-            ps.setObject(3, courtCentreId);
-            ps.setObject(4, courtRoomId);
-            ps.setObject(5, hearingDate);
+            ps.setObject(2, courtCentreId);
+            ps.setObject(3, courtRoomId);
+            ps.setDate(4, Date.valueOf(LocalDate.now()));
+            ps.setInt(5, 1);
+            ps.setBoolean(6, true);
             ps.executeUpdate();
         }
     }
 
-    private void deleteScheduledIngestionRequest(final UUID id) throws SQLException {
+    private void deleteDiscoverySchedulerConfiguration(final UUID id) throws SQLException {
         try (Connection conn = openConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "DELETE FROM scheduled_ingestion_request WHERE id = ?")) {
+                     "DELETE FROM discovery_scheduler_configuration WHERE id = ?")) {
             ps.setObject(1, id);
             ps.executeUpdate();
         }
