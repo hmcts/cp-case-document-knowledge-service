@@ -28,11 +28,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.env.Environment;
 
 @ExtendWith(MockitoExtension.class)
 class DiscoveryServiceTest {
 
     private static final int NIGHTLY_DISCOVERY_DAYS = 3;
+    private static final String SYSTEM_USER_ID_ENV_KEY = "CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID";
+    private static final String SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000001";
 
     @Mock
     private JobManagerService jobManagerService;
@@ -46,6 +49,9 @@ class DiscoveryServiceTest {
     @Mock
     private HearingDaysCalculator hearingDaysCalculator;
 
+    @Mock
+    private Environment environment;
+
     private DiscoveryService discoveryService;
 
     @BeforeEach
@@ -54,7 +60,7 @@ class DiscoveryServiceTest {
         schedulerProperties.getNightlyDiscovery().setDaysAhead(NIGHTLY_DISCOVERY_DAYS);
         discoveryService = new DiscoveryService(
                 jobManagerService, scheduledIngestionRequestRepository, discoverySchedulerConfigurationRepository,
-                hearingDaysCalculator, schedulerProperties);
+                hearingDaysCalculator, schedulerProperties, environment);
     }
 
     @Test
@@ -162,6 +168,7 @@ class DiscoveryServiceTest {
         final LocalDate today = LocalDate.now();
         when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
 
         // when
         discoveryService.runNightlyDiscovery();
@@ -177,6 +184,7 @@ class DiscoveryServiceTest {
         final LocalDate tomorrow = today.plusDays(1);
         when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today, tomorrow));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
 
         // when
         discoveryService.runNightlyDiscovery();
@@ -199,6 +207,7 @@ class DiscoveryServiceTest {
                 .thenReturn(List.of(today, tomorrow));
         when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
                 .thenReturn(List.of(config1, config2));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
 
         // when
         discoveryService.runNightlyDiscovery();
@@ -214,11 +223,13 @@ class DiscoveryServiceTest {
         final UUID courtCentreId = UUID.randomUUID();
         final UUID courtRoomId = UUID.randomUUID();
         final DiscoverySchedulerConfiguration config = mockConfiguration(courtCentreId, courtRoomId);
+        final String mockedCppuid = UUID.randomUUID().toString();
 
         when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today));
         when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
                 .thenReturn(List.of(config));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(mockedCppuid);
 
         // when
         discoveryService.runNightlyDiscovery();
@@ -232,7 +243,7 @@ class DiscoveryServiceTest {
         assertThat(jobData.getString("roomId")).isEqualTo(courtRoomId.toString());
         assertThat(jobData.getString("date")).isEqualTo(today.toString());
         assertThat(jobData.getString("requestId")).isNotBlank();
-        assertThat(UUID.fromString(jobData.getString("cppuid"))).isNotNull();
+        assertThat(jobData.getString("cppuid")).isEqualTo(mockedCppuid);
     }
 
     @Test
@@ -245,6 +256,7 @@ class DiscoveryServiceTest {
                 .thenReturn(List.of(today));
         when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
                 .thenReturn(List.of(config));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
         doThrow(new RuntimeException("Dispatch failed"))
                 .when(jobManagerService)
                 .dispatchCaseDocumentIngestionTasks(any(JsonObject.class));
@@ -265,6 +277,7 @@ class DiscoveryServiceTest {
                 .thenReturn(List.of(today, tomorrow));
         when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
                 .thenReturn(List.of());
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
 
         // when
         discoveryService.runNightlyDiscovery();
@@ -282,12 +295,48 @@ class DiscoveryServiceTest {
                 .thenReturn(List.of());
         when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
                 .thenReturn(List.of(config));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
 
         // when / then
         Assertions.assertThatCode(() -> discoveryService.runNightlyDiscovery())
                 .doesNotThrowAnyException();
 
         verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasks(any());
+    }
+
+    @Test
+    void runNightlyDiscovery_shouldThrowIllegalStateExceptionWhenSystemUserIdEnvVarIsMissing() {
+        // given
+        final LocalDate today = LocalDate.now();
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+                .thenReturn(List.of(today));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(null);
+
+        // when / then
+        Assertions.assertThatThrownBy(() -> discoveryService.runNightlyDiscovery())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(SYSTEM_USER_ID_ENV_KEY);
+
+        verifyNoInteractions(jobManagerService);
+    }
+
+    @Test
+    void runNightlyDiscovery_shouldThrowIllegalStateExceptionWhenSystemUserIdIsNotAValidUuid() {
+        // given
+        final LocalDate today = LocalDate.now();
+        final String invalidSystemUserId = "not-a-valid-uuid";
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+                .thenReturn(List.of(today));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(invalidSystemUserId);
+
+        // when / then
+        Assertions.assertThatThrownBy(() -> discoveryService.runNightlyDiscovery())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(SYSTEM_USER_ID_ENV_KEY)
+                .hasMessageContaining(invalidSystemUserId)
+                .hasCauseInstanceOf(IllegalArgumentException.class);
+
+        verifyNoInteractions(jobManagerService);
     }
 
     private DiscoverySchedulerConfiguration mockConfiguration() {

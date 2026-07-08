@@ -18,6 +18,7 @@ import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -30,17 +31,20 @@ public class DiscoveryService {
     private final DiscoverySchedulerConfigurationRepository discoverySchedulerConfigurationRepository;
     private final HearingDaysCalculator hearingDaysCalculator;
     private final SchedulerProperties schedulerProperties;
+    private final Environment environment;
 
     public DiscoveryService(final JobManagerService jobManagerService,
                             final ScheduledIngestionRequestRepository scheduledIngestionRequestRepository,
                             final DiscoverySchedulerConfigurationRepository discoverySchedulerConfigurationRepository,
                             final HearingDaysCalculator hearingDaysCalculator,
-                            final SchedulerProperties schedulerProperties) {
+                            final SchedulerProperties schedulerProperties,
+                            final Environment environment) {
         this.jobManagerService = jobManagerService;
         this.scheduledIngestionRequestRepository = scheduledIngestionRequestRepository;
         this.discoverySchedulerConfigurationRepository = discoverySchedulerConfigurationRepository;
         this.hearingDaysCalculator = hearingDaysCalculator;
         this.schedulerProperties = schedulerProperties;
+        this.environment = environment;
     }
 
     /**
@@ -49,7 +53,18 @@ public class DiscoveryService {
      */
     public void runIntradayDiscovery() {
         final LocalDate hearingDate = LocalDate.now();
-        processScheduledIngestionRequests(hearingDate);
+        final List<ScheduledIngestionRequest> ingestionRequestList = scheduledIngestionRequestRepository.findAllByHearingDate(hearingDate);
+        ingestionRequestList
+                .stream()
+                .map(ir -> toJobData(ir.getCppuid().toString(), ir.getCourtCentreId().toString(),
+                        ir.getCourtRoomId().toString(), hearingDate.toString()))
+                .forEach(jobData -> {
+                    try {
+                        jobManagerService.dispatchCaseDocumentIngestionTasks(jobData);
+                    } catch (Exception e) {
+                        log.error("Intraday Discovery - Failed to dispatch case ingestion tasks for the jobData={}", jobData, e);
+                    }
+                });
     }
 
     /**
@@ -62,8 +77,7 @@ public class DiscoveryService {
         log.info("Nightly discovery hearing dates={}", hearingDates);
 
         final List<DiscoverySchedulerConfiguration> activeCourtCentreConfigurations = discoverySchedulerConfigurationRepository.findLatestActiveConfigurations();
-        final UUID cpSystemUserId = getSystemUserId();
-
+        final UUID cpSystemUserId = getSystemUserId(environment);
         log.info("Nightly discovery for active courtCentre configurations={} is made using the CPP SystemUser={}", activeCourtCentreConfigurations.size(), cpSystemUserId);
 
         activeCourtCentreConfigurations.forEach(acc -> {
@@ -80,21 +94,6 @@ public class DiscoveryService {
         });
     }
 
-    private void processScheduledIngestionRequests(final LocalDate hearingDate) {
-        final List<ScheduledIngestionRequest> ingestionRequestList = scheduledIngestionRequestRepository.findAllByHearingDate(hearingDate);
-        ingestionRequestList
-                .stream()
-                .map(ir -> toJobData(ir.getCppuid().toString(), ir.getCourtCentreId().toString(),
-                        ir.getCourtRoomId().toString(), hearingDate.toString()))
-                .forEach(jobData -> {
-                    try {
-                        jobManagerService.dispatchCaseDocumentIngestionTasks(jobData);
-                    } catch (Exception e) {
-                        log.error("Intraday Discovery - Failed to dispatch case ingestion tasks for the jobData={}", jobData, e);
-                    }
-                });
-    }
-
     private JsonObject toJobData(final String cppUid, final String courtCentreId,
                                  final String roomId, final String date) {
         return Json.createObjectBuilder()
@@ -106,10 +105,17 @@ public class DiscoveryService {
                 .build();
     }
 
-    private static @NotNull UUID getSystemUserId() {
-        final String configuredSystemUserId = System.getenv(CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID);
-        return hasText(configuredSystemUserId)
-                ? fromString(configuredSystemUserId)
-                : randomUUID();
+    private static @NotNull UUID getSystemUserId(final Environment environment) {
+        final String configuredSystemUserId = environment.getProperty(CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID);
+        if (!hasText(configuredSystemUserId)) {
+            throw new IllegalStateException("Required environment variable '" + CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID + "' is not set.");
+        }
+
+        try {
+            return fromString(configuredSystemUserId);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(
+                    "Environment variable '" + CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID + "' must contain a valid UUID, but was: '" + configuredSystemUserId + "'.", e);
+        }
     }
 }
