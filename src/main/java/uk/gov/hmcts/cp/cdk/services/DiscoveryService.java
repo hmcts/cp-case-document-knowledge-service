@@ -19,7 +19,6 @@ import jakarta.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -48,7 +47,6 @@ public class DiscoveryService {
      * Intraday discovery: targets late-arriving IDPCs, schedule changes, and late list additions.
      * find all ingestion requests for the current date and initiate the Discovery
      */
-    @Transactional
     public void runIntradayDiscovery() {
         final LocalDate hearingDate = LocalDate.now();
         processScheduledIngestionRequests(hearingDate);
@@ -58,7 +56,6 @@ public class DiscoveryService {
      * Nightly discovery: pre-loads hearing dates calculated from today before court opens.
      * Uses HearingDatesCalculator to determine the relevant date window based on the start day.
      */
-    @Transactional
     public void runNightlyDiscovery() {
         final LocalDate today = LocalDate.now();
         final List<LocalDate> hearingDates = hearingDaysCalculator.calculate(today, schedulerProperties.getNightlyDiscovery().getDaysAhead());
