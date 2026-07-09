@@ -175,6 +175,7 @@ services:
       CP_CDK_CJSCPPUID_HEADER: CJSCPPUID
       CP_CDK_BASE_URL: http://wiremock:8080
       CP_CDK_SCHEDULER_INTRADAY_DISCOVERY_ENABLED: true
+      CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID: "00000000-0000-0000-0000-000000000001"
 
     healthcheck:
       test: [ "CMD-SHELL", "curl -fsS http://localhost:8082/casedocumentknowledge-service/actuator/health || exit 1" ]
