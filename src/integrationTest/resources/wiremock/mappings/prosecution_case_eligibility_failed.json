@@ -1,0 +1,16 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/progression-query-api/query/api/rest/progression/prosecutioncases/ffffffff-ffff-ffff-ffff-ffffffffffff"
+  },
+  "response": {
+    "status": 500,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "error": "Simulated downstream failure for manual ingestion FAILED scenario"
+    }
+  }
+}

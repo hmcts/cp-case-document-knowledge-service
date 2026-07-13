@@ -52,13 +52,23 @@ All APIM calls: `RestClientFactoryConfig` → `CorrelationIdInterceptor` → `Ap
 | `/cases/{caseId}/queries/{queryId}/answers/with-llm` | GET |
 | `/cases/{caseId}/queries/{queryId}/answers/list` | GET |
 | `/documents/{docId}/material-content-url` | GET |
-| `/ingestion/process` | POST |
-| `/ingestion/status/{caseId}` | GET |
+| `/ingestions/start` | POST |
+| `/ingestions/start-by-case` | POST |
+| `/ingestions/status` | GET |
 | `/queries`, `/queries/{caseId}`, `/queries/{queryId}/versions` | GET |
 | `/queries` | POST |
 | `/query-catalogue`, `/query-catalogue/{queryId}` | GET |
 | `/query-catalogue/{queryId}/label` | PATCH |
 | `/discovery-scheduler/configurations` | POST |
+
+`/ingestions/start` (scheduled, multi-case via `courtCentreId`/`roomId`/`date`) is fire-and-forget:
+it dispatches `GET_CASES_FOR_HEARING` and returns `202 ACCEPTED` immediately. `/ingestions/start-by-case`
+(manual, single `caseId` — triggered by the "Process IDPC" button on the AI Search page) is
+synchronous: it runs `CheckCaseEligibilityTask`/`CheckIdpcAvailabilityAllDefendantsTask` inline on
+the request thread and only returns `200 OK` once that outcome is known (`STARTED` if a newer IDPC
+was found and the remaining workflow was dispatched, `NOT_REQUIRED` if not, `FAILED` on error). Its
+JobManager tasks run at `JobPriority.HIGH` (`jobmanager/support/JobPriority`); the scheduled flow is
+unaffected and stays at the task-manager default priority.
 
 ---
 

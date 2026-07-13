@@ -16,8 +16,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.controllers.exception.IngestionExceptionHandler;
 import uk.gov.hmcts.cp.cdk.services.IngestionProcessor;
+import uk.gov.hmcts.cp.cdk.services.IngestionProcessorByCase;
 import uk.gov.hmcts.cp.cdk.services.IngestionService;
 import uk.gov.hmcts.cp.openapi.model.cdk.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessByCaseRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
@@ -41,15 +43,25 @@ class IngestionControllerTest {
     private static final MediaType VND =
             MediaType.valueOf("application/vnd.casedocumentknowledge-service.ingestion-process+json");
 
+    private static final MediaType VND_BY_CASE =
+            MediaType.valueOf("application/vnd.casedocumentknowledge-service.ingestion-process-by-case+json");
+
     private static final String HEADER_NAME = "CJSCPPUID";
     private static final String HEADER_VALUE = "u-123";
 
     private MockMvc mvc(final IngestionService service, final IngestionProcessor ingestionProcessor) {
+        return mvc(service, ingestionProcessor, mock(IngestionProcessorByCase.class));
+    }
+
+    private MockMvc mvc(final IngestionService service,
+                        final IngestionProcessor ingestionProcessor,
+                        final IngestionProcessorByCase ingestionProcessorByCase) {
         final CQRSClientProperties props = mock(CQRSClientProperties.class, Mockito.RETURNS_DEEP_STUBS);
         when(props.headers().cjsCppuid()).thenReturn(HEADER_NAME);
 
         return MockMvcBuilders
-                .standaloneSetup(new IngestionController(service, ingestionProcessor, props))
+                .standaloneSetup(new IngestionController(
+                        service, ingestionProcessor, ingestionProcessorByCase, props))
                 .setControllerAdvice(new IngestionExceptionHandler())
                 .build();
     }
@@ -59,9 +71,12 @@ class IngestionControllerTest {
     void getIngestionStatus_returns_payload() throws Exception {
         final IngestionService service = mock(IngestionService.class);
         final IngestionProcessor ingestionProcessor = mock(IngestionProcessor.class, Mockito.RETURNS_DEEP_STUBS);
+        final IngestionProcessorByCase ingestionProcessorByCase =
+                mock(IngestionProcessorByCase.class);
         final CQRSClientProperties props = mock(CQRSClientProperties.class, Mockito.RETURNS_DEEP_STUBS);
         when(props.headers().cjsCppuid()).thenReturn(HEADER_NAME);
-        final IngestionController controller = new IngestionController(service, ingestionProcessor, props);
+        final IngestionController controller =
+                new IngestionController(service, ingestionProcessor, ingestionProcessorByCase, props);
 
         final MockMvc mvc = MockMvcBuilders
                 .standaloneSetup(controller)
@@ -170,5 +185,90 @@ class IngestionControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(content().contentType(VND))
                 .andExpect(jsonPath("$.message", containsString("already running")));
+    }
+
+    @Test
+    @DisplayName("POST /ingestions/start-by-case returns 200 with STARTED payload")
+    void startByCase_started() throws Exception {
+        final IngestionService service = mock(IngestionService.class);
+        final IngestionProcessor ingestionProcessor = mock(IngestionProcessor.class, Mockito.RETURNS_DEEP_STUBS);
+        final IngestionProcessorByCase starter = mock(IngestionProcessorByCase.class);
+        final MockMvc mvc = mvc(service, ingestionProcessor, starter);
+
+        final IngestionProcessResponse response = new IngestionProcessResponse();
+        response.setPhase(IngestionProcessPhase.STARTED);
+        response.setMessage("Ingestion workflow request accepted; task submitted via JobManager (requestId=abc123).");
+
+        when(starter.startIngestionProcess(anyString(), any(IngestionProcessByCaseRequest.class))).thenReturn(response);
+
+        final String body = """
+                { "caseId": "c0b2d8c2-3d62-4d7c-a2f5-1a4efc1d0c3b" }
+                """;
+
+        mvc.perform(post("/ingestions/start-by-case")
+                        .contentType(VND_BY_CASE).accept(VND_BY_CASE)
+                        .header(HEADER_NAME, HEADER_VALUE)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(VND_BY_CASE))
+                .andExpect(jsonPath("$.phase").value("STARTED"))
+                .andExpect(jsonPath("$.message", containsString("requestId=")));
+    }
+
+    @Test
+    @DisplayName("POST /ingestions/start-by-case returns 200 with NOT_REQUIRED payload")
+    void startByCase_notRequired() throws Exception {
+        final IngestionService service = mock(IngestionService.class);
+        final IngestionProcessor ingestionProcessor = mock(IngestionProcessor.class, Mockito.RETURNS_DEEP_STUBS);
+        final IngestionProcessorByCase starter = mock(IngestionProcessorByCase.class);
+        final MockMvc mvc = mvc(service, ingestionProcessor, starter);
+
+        final IngestionProcessResponse response = new IngestionProcessResponse();
+        response.setPhase(IngestionProcessPhase.NOT_REQUIRED);
+        response.setMessage("Ingestion process not started because no newer IDPC version is available "
+                + "and an Answers version already exists.");
+
+        when(starter.startIngestionProcess(anyString(), any(IngestionProcessByCaseRequest.class))).thenReturn(response);
+
+        final String body = """
+                { "caseId": "c0b2d8c2-3d62-4d7c-a2f5-1a4efc1d0c3b" }
+                """;
+
+        mvc.perform(post("/ingestions/start-by-case")
+                        .contentType(VND_BY_CASE).accept(VND_BY_CASE)
+                        .header(HEADER_NAME, HEADER_VALUE)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(VND_BY_CASE))
+                .andExpect(jsonPath("$.phase").value("NOT_REQUIRED"))
+                .andExpect(jsonPath("$.message", containsString("no newer IDPC")));
+    }
+
+    @Test
+    @DisplayName("POST /ingestions/start-by-case returns 200 with FAILED payload")
+    void startByCase_failed() throws Exception {
+        final IngestionService service = mock(IngestionService.class);
+        final IngestionProcessor ingestionProcessor = mock(IngestionProcessor.class, Mockito.RETURNS_DEEP_STUBS);
+        final IngestionProcessorByCase starter = mock(IngestionProcessorByCase.class);
+        final MockMvc mvc = mvc(service, ingestionProcessor, starter);
+
+        final IngestionProcessResponse response = new IngestionProcessResponse();
+        response.setPhase(IngestionProcessPhase.FAILED);
+        response.setMessage("Ingestion process could not be started due to an internal error.");
+
+        when(starter.startIngestionProcess(anyString(), any(IngestionProcessByCaseRequest.class))).thenReturn(response);
+
+        final String body = """
+                { "caseId": "c0b2d8c2-3d62-4d7c-a2f5-1a4efc1d0c3b" }
+                """;
+
+        mvc.perform(post("/ingestions/start-by-case")
+                        .contentType(VND_BY_CASE).accept(VND_BY_CASE)
+                        .header(HEADER_NAME, HEADER_VALUE)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(VND_BY_CASE))
+                .andExpect(jsonPath("$.phase").value("FAILED"))
+                .andExpect(jsonPath("$.message", containsString("internal error")));
     }
 }
