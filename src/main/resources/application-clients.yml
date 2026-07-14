@@ -21,8 +21,10 @@ cqrs:
     headers:
       cjs-cppuid: ${CP_CDK_CJSCPPUID_HEADER:CJSCPPUID}
     hearing:
-      accept-header: "application/vnd.hearing.get.hearings+json"
-      hearings-path: "/hearing-query-api/query/api/rest/hearing/hearings"
+      get-hearings-accept-header: "application/vnd.hearing.get.hearings+json"
+      get-hearings-path: "/hearing-query-api/query/api/rest/hearing/hearings"
+      get-hearing-cases-for-day-accept-header: "application/vnd.hearing.get.hearing-cases-for-day+json"
+      get-hearing-cases-for-day-path: "/hearing-query-api/query/api/rest/hearing/hearing-cases-for-day"
     progression:
       accept-header: "application/vnd.progression.query.courtdocuments+json"
       doc-type-id: "41be14e8-9df5-4b08-80b0-1e670bc80a5b"

@@ -4,7 +4,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "cqrs.client.hearing")
 public record HearingClientConfig(
-        String acceptHeader,
-        String hearingsPath
+        String getHearingsAcceptHeader,
+        String getHearingsPath,
+        String getHearingCasesForDayAcceptHeader,
+        String getHearingCasesForDayPath
 ) {
 }
