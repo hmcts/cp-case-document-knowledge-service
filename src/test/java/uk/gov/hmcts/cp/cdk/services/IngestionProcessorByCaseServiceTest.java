@@ -119,7 +119,7 @@ class IngestionProcessorByCaseServiceTest {
         final IngestionProcessResponse response = service.startIngestionProcess(CPPUID_VALUE, request());
 
         assertThat(response.getPhase()).isEqualTo(IngestionProcessPhase.NOT_REQUIRED);
-        assertThat(response.getMessage()).contains("no newer IDPC version is available");
+        assertThat(response.getMessage()).contains("not eligible for ingestion");
         verifyNoInteractions(checkIdpcAvailabilityAllDefendantsTask);
     }
 

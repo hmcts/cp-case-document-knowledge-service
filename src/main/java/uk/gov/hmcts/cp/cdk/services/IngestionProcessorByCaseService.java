@@ -58,9 +58,12 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class IngestionProcessorByCaseService implements IngestionProcessorByCase {
 
-    /* default */ static final String MSG_NOT_REQUIRED =
+    /* default */ static final String MSG_NOT_REQUIRED_NO_NEWER_IDPC =
             "Ingestion process not started because no newer IDPC version is available "
                     + "and an Answers version already exists.";
+    /* default */ static final String MSG_NOT_REQUIRED_NOT_ELIGIBLE =
+            "Ingestion process not started because the case is not eligible for ingestion "
+                    + "(no prosecution case found, or the case has no defendants).";
     /* default */ static final String MSG_STARTED =
             "Ingestion workflow request accepted; task submitted via JobManager (requestId=%s).";
     /* default */ static final String MSG_FAILED =
@@ -105,7 +108,7 @@ public class IngestionProcessorByCaseService implements IngestionProcessorByCase
             if (!CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS.equals(eligibilityResult.getAssignedTaskName())) {
                 log.info("Manual ingestion not required (case not eligible). caseId={}, requestId={}",
                         caseId, requestId);
-                return notRequired(response);
+                return notRequired(response, MSG_NOT_REQUIRED_NOT_ELIGIBLE);
             }
 
             final int newIdpcDocuments =
@@ -119,7 +122,7 @@ public class IngestionProcessorByCaseService implements IngestionProcessorByCase
 
             log.info("Manual ingestion not required (no newer IDPC version). caseId={}, requestId={}",
                     caseId, requestId);
-            return notRequired(response);
+            return notRequired(response, MSG_NOT_REQUIRED_NO_NEWER_IDPC);
 
         } catch (final Exception exception) {
             log.error("Manual ingestion could not be started due to an internal error. "
@@ -134,9 +137,9 @@ public class IngestionProcessorByCaseService implements IngestionProcessorByCase
         return response;
     }
 
-    private IngestionProcessResponse notRequired(final IngestionProcessResponse response) {
+    private IngestionProcessResponse notRequired(final IngestionProcessResponse response, final String message) {
         response.setPhase(IngestionProcessPhase.NOT_REQUIRED);
-        response.setMessage(MSG_NOT_REQUIRED);
+        response.setMessage(message);
         return response;
     }
 

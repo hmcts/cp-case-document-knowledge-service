@@ -14,6 +14,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_K
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_LATEST_DEFENDANT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SYNCHRONOUS_INVOCATION_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.REQUEST_ID;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuid;
@@ -156,6 +157,7 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
                 continue;
             }
             final JsonObjectBuilder updatedJobData = createObjectBuilder(jobData);
+            updatedJobData.remove(CTX_SYNCHRONOUS_INVOCATION_KEY);
             updatedJobData.add(CTX_DOC_ID_KEY, defendantToDocIdMap.get(defendantId));
             updatedJobData.add(CTX_MATERIAL_ID_KEY, info.materialId());
             updatedJobData.add(CTX_MATERIAL_NAME, MaterialNameValidator.truncateMaterialName(info.materialName()));

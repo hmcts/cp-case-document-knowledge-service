@@ -14,11 +14,13 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOCIDS_A
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_LATEST_DEFENDANT;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SYNCHRONOUS_INVOCATION_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
+import uk.gov.hmcts.cp.cdk.jobmanager.support.JobPriority;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
@@ -193,6 +195,50 @@ class CheckIdpcAvailabilityAllDefendantsTaskTest {
         assertThat(executions.stream()
                 .anyMatch(e -> e.getJobData().getBoolean(CTX_LATEST_DEFENDANT)))
                 .isTrue();
+    }
+
+    @Test
+    void registerNewDocumentsAndDispatch_propagatesPriority_andStripsSynchronousFlag() {
+        UUID materialId = UUID.randomUUID();
+        UUID defendantId = UUID.randomUUID();
+
+        LatestMaterialInfo info = new LatestMaterialInfo(
+                List.of(caseId), "doc", "desc",
+                materialId.toString(), "Material",
+                ZonedDateTime.now(),
+                UUID.randomUUID().toString(),
+                defendantId.toString()
+        );
+
+        JsonObject jobData = createObjectBuilder()
+                .add(CTX_CASE_ID_KEY, caseId)
+                .add(CPPUID, userId)
+                .add(CTX_SYNCHRONOUS_INVOCATION_KEY, true)
+                .build();
+
+        when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
+                .thenReturn(List.of(info));
+        when(documentIdResolver.resolveExistingDocIdForDefendant(any(), any(), any()))
+                .thenReturn(Optional.empty());
+
+        final ExecutionInfo highPriorityExecutionInfo = ExecutionInfo.executionInfo()
+                .withJobData(jobData)
+                .withAssignedTaskName(CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS)
+                .withAssignedTaskStartTime(ZonedDateTime.now())
+                .withExecutionStatus(ExecutionStatus.STARTED)
+                .withPriority(JobPriority.HIGH)
+                .build();
+
+        final int newDocs = task.registerNewDocumentsAndDispatch(highPriorityExecutionInfo);
+
+        assertThat(newDocs).isEqualTo(1);
+
+        verify(executionService).executeWith(captor.capture());
+        final ExecutionInfo dispatched = captor.getValue();
+
+        assertThat(dispatched.getAssignedTaskName()).isEqualTo(RETRIEVE_MATERIAL_AND_UPLOAD);
+        assertThat(dispatched.getPriority()).isEqualTo(JobPriority.HIGH);
+        assertThat(dispatched.getJobData().containsKey(CTX_SYNCHRONOUS_INVOCATION_KEY)).isFalse();
     }
 
     @Test
