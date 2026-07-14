@@ -21,16 +21,6 @@ public final class JobManagerKeys {
 
     public static final String CTX_ANSWER_RETRY_COUNT = "answerRetryCount";
 
-    /**
-     * When {@code true}, signals that a task's {@code execute(ExecutionInfo)} is being invoked
-     * directly, in-process, by a synchronous caller (e.g. the manual "Process IDPC" endpoint) —
-     * rather than by the JobExecutor picking up a queued job. Tasks that would otherwise dispatch
-     * their own follow-on step via {@code executionService.executeWith(...)} check this flag and
-     * skip that dispatch, returning the follow-on {@link uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo}
-     * instead so the synchronous caller can invoke the next task itself and observe its outcome.
-     */
-    public static final String CTX_SYNCHRONOUS_INVOCATION_KEY = "synchronousInvocation";
-
 
     public static final class Params {
 

@@ -1,17 +1,14 @@
 package uk.gov.hmcts.cp.cdk.services;
 
 import static java.time.ZonedDateTime.now;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_CASE_ELIGIBILITY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SYNCHRONOUS_INVOCATION_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.REQUEST_ID;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
-import uk.gov.hmcts.cp.cdk.jobmanager.caseflow.CheckCaseEligibilityTask;
-import uk.gov.hmcts.cp.cdk.jobmanager.caseflow.CheckIdpcAvailabilityAllDefendantsTask;
+import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCaseEligibilityInfo;
 import uk.gov.hmcts.cp.cdk.jobmanager.support.JobPriority;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessByCaseRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
@@ -19,6 +16,7 @@ import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.json.Json;
@@ -35,7 +33,8 @@ import org.springframework.stereotype.Service;
  * and starts from the eligibility check. It runs the eligibility and IDPC-availability checks
  * <b>synchronously</b> because the HTTP response depends on their outcome:
  * <ul>
- *   <li>no newer IDPC available → {@link IngestionProcessPhase#NOT_REQUIRED}, nothing dispatched;</li>
+ *   <li>case not eligible, or no newer IDPC available → {@link IngestionProcessPhase#NOT_REQUIRED},
+ *       nothing dispatched;</li>
  *   <li>newer IDPC available → the remaining workflow is dispatched via the JobManager at
  *       {@link JobPriority#HIGH} priority and {@link IngestionProcessPhase#STARTED} is returned;</li>
  *   <li>any unexpected error → {@link IngestionProcessPhase#FAILED}.</li>
@@ -44,14 +43,12 @@ import org.springframework.stereotype.Service;
  * <p>The scheduled ingestion endpoint is unaffected — it continues to dispatch at the default
  * priority.
  *
- * <p>The eligibility rule is not duplicated here — this service invokes
- * {@link CheckCaseEligibilityTask#execute(ExecutionInfo)} directly, in-process, the same
- * {@code ExecutableTask} contract method the JobManager framework itself calls for the
- * scheduled/async flow. The job data is marked with {@code CTX_SYNCHRONOUS_INVOCATION_KEY} so that
- * task returns the follow-on {@code CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS} {@link ExecutionInfo}
- * instead of dispatching it itself — this service dispatches it via
- * {@link CheckIdpcAvailabilityAllDefendantsTask#registerNewDocumentsAndDispatch(ExecutionInfo)}, so
- * the case is never processed twice.
+ * <p>The eligibility and IDPC-availability rules are not duplicated here — this service calls
+ * {@link CaseEligibilityService} and {@link IdpcAvailabilityService} directly, in-process, rather
+ * than dispatching them as JobManager jobs (which would return before their outcome is known).
+ * Those same two services are also used by {@code CheckCaseEligibilityTask} and
+ * {@code CheckIdpcAvailabilityAllDefendantsTask} for the scheduled/async flow, so the business rules
+ * are defined exactly once.
  */
 @Service
 @RequiredArgsConstructor
@@ -69,8 +66,8 @@ public class IngestionProcessorByCaseService implements IngestionProcessorByCase
     /* default */ static final String MSG_FAILED =
             "Ingestion process could not be started due to an internal error.";
 
-    private final CheckCaseEligibilityTask checkCaseEligibilityTask;
-    private final CheckIdpcAvailabilityAllDefendantsTask checkIdpcAvailabilityAllDefendantsTask;
+    private final CaseEligibilityService caseEligibilityService;
+    private final IdpcAvailabilityService idpcAvailabilityService;
 
     @Override
     public IngestionProcessResponse startIngestionProcess(final String cppuid,
@@ -82,37 +79,34 @@ public class IngestionProcessorByCaseService implements IngestionProcessorByCase
         response.setLastUpdated(utcNow());
 
         try {
-            final JsonObject jobData = Json.createObjectBuilder()
-                    .add(CPPUID, cppuid)
-                    .add(REQUEST_ID, requestId)
-                    .add(CTX_CASE_ID_KEY, caseId.toString())
-                    .add(CTX_SYNCHRONOUS_INVOCATION_KEY, true)
-                    .build();
+            final Optional<ProsecutionCaseEligibilityInfo> eligible =
+                    caseEligibilityService.resolveEligibleCase(caseId, cppuid);
 
-            final ExecutionInfo executionInfo = executionInfo()
-                    .withJobData(jobData)
-                    .withAssignedTaskName(CHECK_CASE_ELIGIBILITY)
-                    .withAssignedTaskStartTime(now())
-                    .withExecutionStatus(ExecutionStatus.STARTED)
-                    .withPriority(JobPriority.HIGH)
-                    .build();
-
-            final ExecutionInfo eligibilityResult = checkCaseEligibilityTask.execute(executionInfo);
-
-            if (eligibilityResult.getExecutionStatus() == ExecutionStatus.INPROGRESS) {
-                log.error("Manual ingestion could not be started; eligibility check failed. "
-                        + "caseId={}, requestId={}", caseId, requestId);
-                return failed(response);
-            }
-
-            if (!CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS.equals(eligibilityResult.getAssignedTaskName())) {
+            if (eligible.isEmpty()) {
                 log.info("Manual ingestion not required (case not eligible). caseId={}, requestId={}",
                         caseId, requestId);
                 return notRequired(response, MSG_NOT_REQUIRED_NOT_ELIGIBLE);
             }
 
+            final JsonObject jobData = Json.createObjectBuilder()
+                    .add(CPPUID, cppuid)
+                    .add(REQUEST_ID, requestId)
+                    .add(CTX_CASE_ID_KEY, caseId.toString())
+                    .build();
+
+            final JsonObject enrichedJobData =
+                    caseEligibilityService.withDefendantContext(jobData, eligible.get());
+
+            final ExecutionInfo executionInfo = executionInfo()
+                    .withJobData(enrichedJobData)
+                    .withAssignedTaskName(CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS)
+                    .withAssignedTaskStartTime(now())
+                    .withExecutionStatus(ExecutionStatus.STARTED)
+                    .withPriority(JobPriority.HIGH)
+                    .build();
+
             final int newIdpcDocuments =
-                    checkIdpcAvailabilityAllDefendantsTask.registerNewDocumentsAndDispatch(eligibilityResult);
+                    idpcAvailabilityService.registerNewDocumentsAndDispatch(executionInfo);
 
             if (newIdpcDocuments > 0) {
                 log.info("Manual ingestion started. caseId={}, newIdpcDocuments={}, requestId={}",

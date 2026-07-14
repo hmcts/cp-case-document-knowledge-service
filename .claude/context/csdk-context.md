@@ -64,11 +64,14 @@ All APIM calls: `RestClientFactoryConfig` → `CorrelationIdInterceptor` → `Ap
 `/ingestions/start` (scheduled, multi-case via `courtCentreId`/`roomId`/`date`) is fire-and-forget:
 it dispatches `GET_CASES_FOR_HEARING` and returns `202 ACCEPTED` immediately. `/ingestions/start-by-case`
 (manual, single `caseId` — triggered by the "Process IDPC" button on the AI Search page) is
-synchronous: it runs `CheckCaseEligibilityTask`/`CheckIdpcAvailabilityAllDefendantsTask` inline on
-the request thread and only returns `200 OK` once that outcome is known (`STARTED` if a newer IDPC
-was found and the remaining workflow was dispatched, `NOT_REQUIRED` if not, `FAILED` on error). Its
-JobManager tasks run at `JobPriority.HIGH` (`jobmanager/support/JobPriority`); the scheduled flow is
-unaffected and stays at the task-manager default priority.
+synchronous: `IngestionProcessorByCaseService` calls `CaseEligibilityService`/`IdpcAvailabilityService`
+inline on the request thread and only returns `200 OK` once the outcome is known (`STARTED` if a
+newer IDPC was found and the remaining workflow was dispatched, `NOT_REQUIRED` if not, `FAILED` on
+error). The scheduled flow's `CheckCaseEligibilityTask`/`CheckIdpcAvailabilityAllDefendantsTask`
+JobManager tasks call the same two services — the eligibility/IDPC-availability rules are defined
+once and reused by both entry points. Its JobManager tasks run at `JobPriority.HIGH`
+(`jobmanager/support/JobPriority`); the scheduled flow is unaffected and stays at the task-manager
+default priority.
 
 ---
 
