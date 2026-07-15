@@ -134,7 +134,7 @@ public class DiscoveryService {
         }
     }
 
-    private static JsonObject toJobDataForCaseEligibility(final UUID caseId, final UUID cpSystemUserId) {
+    private JsonObject toJobDataForCaseEligibility(final UUID caseId, final UUID cpSystemUserId) {
         return Json.createObjectBuilder()
                 .add(REQUEST_ID, randomUUID().toString())
                 .add(CPPUID, cpSystemUserId.toString())
