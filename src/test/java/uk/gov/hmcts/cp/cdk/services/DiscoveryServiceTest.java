@@ -297,6 +297,75 @@ class DiscoveryServiceTest {
     }
 
     @Test
+    void runNightlyDiscovery_shouldDedupeSameCaseIdAppearingInMultipleMatchedHearingCasesOnSameDate() {
+        // given
+        final LocalDate today = LocalDate.now();
+        final DiscoverySchedulerConfiguration config = mockConfiguration();
+        final UUID sharedCaseId = UUID.randomUUID();
+
+        final HearingCaseForDay morningHearing = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), today, UUID.randomUUID(),
+                List.of(new HearingCaseProsecutionCase(sharedCaseId)));
+        final HearingCaseForDay afternoonHearing = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), today, UUID.randomUUID(),
+                List.of(new HearingCaseProsecutionCase(sharedCaseId)));
+
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+                .thenReturn(List.of(today));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
+                .thenReturn(List.of(config));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(any(), any()))
+                .thenReturn(List.of(morningHearing, afternoonHearing));
+        when(hearingCaseWhitelistSelector.findMatchingCases(any(), any()))
+                .thenReturn(List.of(morningHearing, afternoonHearing));
+
+        // when
+        discoveryService.runNightlyDiscovery();
+
+        // then
+        final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
+        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckCaseEligibility(captor.capture());
+        assertThat(captor.getValue().getString("caseId")).isEqualTo(sharedCaseId.toString());
+    }
+
+    @Test
+    void runNightlyDiscovery_shouldDedupeSameCaseIdAppearingAcrossMultipleDates() {
+        // given
+        final LocalDate today = LocalDate.now();
+        final LocalDate tomorrow = today.plusDays(1);
+        final DiscoverySchedulerConfiguration config = mockConfiguration();
+        final UUID sharedCaseId = UUID.randomUUID();
+
+        final HearingCaseForDay caseToday = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), today, UUID.randomUUID(),
+                List.of(new HearingCaseProsecutionCase(sharedCaseId)));
+        final HearingCaseForDay caseTomorrow = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), tomorrow, UUID.randomUUID(),
+                List.of(new HearingCaseProsecutionCase(sharedCaseId)));
+
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+                .thenReturn(List.of(today, tomorrow));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
+                .thenReturn(List.of(config));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(eq(today), any())).thenReturn(List.of(caseToday));
+        when(hearingClient.getHearingCasesForDay(eq(tomorrow), any())).thenReturn(List.of(caseTomorrow));
+        when(hearingCaseWhitelistSelector.findMatchingCases(eq(List.of(caseToday)), any()))
+                .thenReturn(List.of(caseToday));
+        when(hearingCaseWhitelistSelector.findMatchingCases(eq(List.of(caseTomorrow)), any()))
+                .thenReturn(List.of(caseTomorrow));
+
+        // when
+        discoveryService.runNightlyDiscovery();
+
+        // then
+        final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
+        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckCaseEligibility(captor.capture());
+        assertThat(captor.getValue().getString("caseId")).isEqualTo(sharedCaseId.toString());
+    }
+
+    @Test
     void runNightlyDiscovery_shouldGenerateJobDataFromMatchedHearingCaseProsecutionCase() {
         // given
         final LocalDate today = LocalDate.now();
