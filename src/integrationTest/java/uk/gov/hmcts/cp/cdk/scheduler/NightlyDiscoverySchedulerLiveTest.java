@@ -1,13 +1,12 @@
 package uk.gov.hmcts.cp.cdk.scheduler;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.configureFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.findAll;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
-import static uk.gov.hmcts.cp.cdk.stub.HearingQueryApiStub.stubGetHearingsReturnsEmptyHearingSummaries;
+import static uk.gov.hmcts.cp.cdk.stub.HearingQueryApiStub.stubGetHearingCasesForDayReturnsEmptyHearingCases;
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 
@@ -26,15 +25,15 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Verifies that NightlyDiscoveryScheduler acquires a ShedLock, calculates the
- * upcoming hearing-date window, and dispatches ingestion tasks for every active
- * court-centre/room configuration across that window. The docker-compose stack
- * overrides the cron to fire every 30 seconds so tests complete well under a minute.
+ * upcoming hearing-date window, and calls the hearing-cases-for-day API for each
+ * calculated date so retrieved cases can be matched against active court-centre/room
+ * configurations. The docker-compose stack overrides the cron to fire every 30
+ * seconds so tests complete well under a minute.
  */
 class NightlyDiscoverySchedulerLiveTest extends AbstractHttpLiveTest {
 
     private static final String LOCK_NAME = "nightlyDiscoveryScheduler";
-    private static final String HEARINGS_PATH = "/hearing-query-api/query/api/rest/hearing/hearings";
-    private static final String COURT_CENTRE_ID = "courtCentreId";
+    private static final String HEARING_CASES_FOR_DAY_PATH = "/hearing-query-api/query/api/rest/hearing/hearing-cases-for-day";
 
     @Test
     void scheduler_shouldAcquireShedLock_andPopulateShedlockTable() throws SQLException {
@@ -77,29 +76,27 @@ class NightlyDiscoverySchedulerLiveTest extends AbstractHttpLiveTest {
     }
 
     @Test
-    void scheduler_shouldCallHearingApi_forActiveCourtCentreConfigurations() throws SQLException {
+    void scheduler_shouldCallHearingCasesForDayApi_forCalculatedHearingDates() throws SQLException {
         configureFor("localhost", 8089);
 
         final UUID courtCentreId = randomUUID();
         final UUID roomId = randomUUID();
         final UUID configurationId = randomUUID();
 
-        // Nightly discovery dispatches one task per active court-centre/room
-        // configuration for every calculated hearing date; seeding one active
-        // configuration is enough for the scheduler to pick it up.
+        // Nightly discovery retrieves hearing cases for every calculated hearing date
+        // and matches them against active court-centre/room configurations; seeding
+        // one active configuration is enough to exercise the whitelisting flow.
         insertDiscoverySchedulerConfiguration(configurationId, courtCentreId, roomId);
-        stubGetHearingsReturnsEmptyHearingSummaries(courtCentreId.toString(), roomId.toString());
+        stubGetHearingCasesForDayReturnsEmptyHearingCases();
 
         try {
             Awaitility.await()
                     .atMost(Duration.ofSeconds(90))
                     .pollInterval(Duration.ofSeconds(5))
-                    .until(() -> !findAll(getRequestedFor(urlPathEqualTo(HEARINGS_PATH))
-                            .withQueryParam(COURT_CENTRE_ID, equalTo(courtCentreId.toString()))).isEmpty());
+                    .until(() -> !findAll(getRequestedFor(urlPathEqualTo(HEARING_CASES_FOR_DAY_PATH))).isEmpty());
 
-            assertThat(findAll(getRequestedFor(urlPathEqualTo(HEARINGS_PATH))
-                    .withQueryParam(COURT_CENTRE_ID, equalTo(courtCentreId.toString()))))
-                    .as("hearing API must be called for nightly-discovery active configuration courtCentreId=%s", courtCentreId)
+            assertThat(findAll(getRequestedFor(urlPathEqualTo(HEARING_CASES_FOR_DAY_PATH))))
+                    .as("hearing-cases-for-day API must be called by nightly discovery for the calculated hearing dates")
                     .isNotEmpty();
         } finally {
             deleteDiscoverySchedulerConfiguration(configurationId);

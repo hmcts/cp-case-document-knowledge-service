@@ -11,6 +11,7 @@ import static org.apache.http.HttpStatus.SC_OK;
 public class HearingQueryApiStub {
 
     private static final String HEARINGS_PATH = "/hearing-query-api/query/api/rest/hearing/hearings";
+    private static final String HEARING_CASES_FOR_DAY_PATH = "/hearing-query-api/query/api/rest/hearing/hearing-cases-for-day";
     public static final String APPLICATION_JSON = "application/json";
 
     public static void stubGetHearingsReturnsEmptyHearingSummaries(final String courtCentreId, final String roomId) {
@@ -22,6 +23,16 @@ public class HearingQueryApiStub {
                         .withStatus(SC_OK)
                         .withHeader("Content-Type", APPLICATION_JSON)
                         .withBody("{\"hearingSummaries\":[]}")
+                ));
+    }
+
+    public static void stubGetHearingCasesForDayReturnsEmptyHearingCases() {
+        stubFor(get(urlPathEqualTo(HEARING_CASES_FOR_DAY_PATH))
+                .withQueryParam("date", matching(".*"))
+                .willReturn(aResponse()
+                        .withStatus(SC_OK)
+                        .withHeader("Content-Type", APPLICATION_JSON)
+                        .withBody("{\"hearingCases\":[]}")
                 ));
     }
 }

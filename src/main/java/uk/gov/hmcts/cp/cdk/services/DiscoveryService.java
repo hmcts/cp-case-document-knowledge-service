@@ -1,9 +1,15 @@
 package uk.gov.hmcts.cp.cdk.services;
 
+import static java.util.Objects.nonNull;
 import static java.util.UUID.fromString;
 import static java.util.UUID.randomUUID;
 import static org.springframework.util.StringUtils.hasText;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.REQUEST_ID;
 
+import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseForDay;
 import uk.gov.hmcts.cp.cdk.domain.DiscoverySchedulerConfiguration;
 import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
 import uk.gov.hmcts.cp.cdk.repo.DiscoverySchedulerConfigurationRepository;
@@ -30,6 +36,8 @@ public class DiscoveryService {
     private final ScheduledIngestionRequestRepository scheduledIngestionRequestRepository;
     private final DiscoverySchedulerConfigurationRepository discoverySchedulerConfigurationRepository;
     private final HearingDaysCalculator hearingDaysCalculator;
+    private final HearingClient hearingClient;
+    private final HearingCaseWhitelistSelector hearingCaseWhitelistSelector;
     private final SchedulerProperties schedulerProperties;
     private final Environment environment;
 
@@ -37,12 +45,16 @@ public class DiscoveryService {
                             final ScheduledIngestionRequestRepository scheduledIngestionRequestRepository,
                             final DiscoverySchedulerConfigurationRepository discoverySchedulerConfigurationRepository,
                             final HearingDaysCalculator hearingDaysCalculator,
+                            final HearingClient hearingClient,
+                            final HearingCaseWhitelistSelector hearingCaseWhitelistSelector,
                             final SchedulerProperties schedulerProperties,
                             final Environment environment) {
         this.jobManagerService = jobManagerService;
         this.scheduledIngestionRequestRepository = scheduledIngestionRequestRepository;
         this.discoverySchedulerConfigurationRepository = discoverySchedulerConfigurationRepository;
         this.hearingDaysCalculator = hearingDaysCalculator;
+        this.hearingClient = hearingClient;
+        this.hearingCaseWhitelistSelector = hearingCaseWhitelistSelector;
         this.schedulerProperties = schedulerProperties;
         this.environment = environment;
     }
@@ -60,7 +72,7 @@ public class DiscoveryService {
                         ir.getCourtRoomId().toString(), hearingDate.toString()))
                 .forEach(jobData -> {
                     try {
-                        jobManagerService.dispatchCaseDocumentIngestionTasks(jobData);
+                        jobManagerService.dispatchCaseDocumentIngestionTasksGetCasesForHearing(jobData);
                     } catch (Exception e) {
                         log.error("Intraday Discovery - Failed to dispatch case ingestion tasks for the jobData={}", jobData, e);
                     }
@@ -78,20 +90,38 @@ public class DiscoveryService {
 
         final List<DiscoverySchedulerConfiguration> activeCourtCentreConfigurations = discoverySchedulerConfigurationRepository.findLatestActiveConfigurations();
         final UUID cpSystemUserId = getSystemUserId(environment);
-        log.info("Nightly discovery for active courtCentre configurations={} is made using the CPP SystemUser={}", activeCourtCentreConfigurations.size(), cpSystemUserId);
+        log.info("Nightly discovery for active courtCentre configurations={} is made using the CPP SystemUser={}",
+                activeCourtCentreConfigurations.size(), cpSystemUserId);
 
-        activeCourtCentreConfigurations.forEach(acc -> {
-            hearingDates.stream()
-                    .map(hd -> toJobData(cpSystemUserId.toString(), acc.getCourtCentreId().toString(),
-                            acc.getCourtRoomId().toString(), hd.toString()))
-                    .forEach(jobData -> {
-                        try {
-                            jobManagerService.dispatchCaseDocumentIngestionTasks(jobData);
-                        } catch (Exception e) {
-                            log.error("Nightly Discovery - Failed to dispatch case ingestion tasks for the jobData={}", jobData, e);
-                        }
-                    });
+        hearingDates.forEach(hearingDate -> {
+            final List<HearingCaseForDay> hearingCases = hearingClient.getHearingCasesForDay(hearingDate, cpSystemUserId.toString());
+            final List<HearingCaseForDay> matchedHearingCases = hearingCaseWhitelistSelector.findMatchingCases(hearingCases, activeCourtCentreConfigurations);
+            log.info("Nightly discovery matched hearingCases={} out of retrieved={} for hearingDate={}",
+                    matchedHearingCases.size(), hearingCases.size(), hearingDate);
+
+            matchedHearingCases.forEach(hearingCase -> {
+                if (nonNull(hearingCase.prosecutionCases())) {
+                    hearingCase.prosecutionCases()
+                            .stream()
+                            .map(pCase -> toJobDataCaseEligibility(pCase.caseId(), cpSystemUserId))
+                            .forEach(jobData -> {
+                                try {
+                                    jobManagerService.dispatchCaseDocumentIngestionTasksCheckCaseEligibility(jobData);
+                                } catch (Exception e) {
+                                    log.error("Nightly Discovery - Failed to dispatch case ingestion tasks for the jobData={}", jobData, e);
+                                }
+                            });
+                }
+            });
         });
+    }
+
+    private static JsonObject toJobDataCaseEligibility(final UUID caseId, final UUID cpSystemUserId) {
+        return Json.createObjectBuilder()
+                .add(REQUEST_ID, randomUUID().toString())
+                .add(CPPUID, cpSystemUserId.toString())
+                .add(CTX_CASE_ID_KEY, caseId.toString())
+                .build();
     }
 
     private JsonObject toJobData(final String cppUid, final String courtCentreId,
