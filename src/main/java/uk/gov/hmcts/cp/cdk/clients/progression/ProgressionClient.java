@@ -2,7 +2,6 @@ package uk.gov.hmcts.cp.cdk.clients.progression;
 
 
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
-import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCaseEligibilityInfo;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,16 +33,4 @@ public interface ProgressionClient {
      * @return An Optional containing the download URL, or empty if not found.
      */
     Optional<String> getMaterialDownloadUrl(UUID materialId, String userId);
-
-    /**
-     * Retrieves prosecution case information required to evaluate eligibility.
-     *
-     * @param caseId The unique case identifier.
-     * @param userId The user identifier for authorisation.
-     * @return Eligibility-relevant prosecution case info, or empty if unavailable.
-     */
-    Optional<ProsecutionCaseEligibilityInfo> getProsecutionCaseEligibilityInfo(
-            UUID caseId,
-            String userId
-    );
 }

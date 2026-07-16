@@ -30,7 +30,7 @@ import org.springframework.http.ResponseEntity;
  * <ul>
  *   <li>STARTED — a newer IDPC exists, so the remaining workflow is dispatched;</li>
  *   <li>NOT_REQUIRED — the IDPC has already been ingested (seeded), so nothing is dispatched;</li>
- *   <li>FAILED — the downstream progression call errors (case-specific 500 stub).</li>
+ *   <li>FAILED — the downstream court-document-search call errors (case-specific 500 stub).</li>
  * </ul>
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -47,7 +47,7 @@ class IngestionProcessByCaseHttpLiveTest extends AbstractHttpLiveTest {
     private static final UUID STUB_DEFENDANT_ID = UUID.fromString("3bdcb43e-01d3-4c43-a530-b7aa55b2a3bb");
     private static final UUID STUB_COURTDOC_ID = UUID.fromString("89b05baa-75e0-4a87-b144-9d824ec9e61a");
 
-    // Reserved case id wired to a 500 eligibility response — see prosecution_case_eligibility_failed.json
+    // Reserved case id wired to a 500 court-document-search response — see court_document_search_failed.json
     private static final UUID FAILING_CASE_ID = UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff");
 
     private HttpEntity<String> requestFor(final UUID caseId) {
@@ -96,7 +96,7 @@ class IngestionProcessByCaseHttpLiveTest extends AbstractHttpLiveTest {
     }
 
     @Test
-    @DisplayName("Returns FAILED when the downstream eligibility check errors")
+    @DisplayName("Returns FAILED when the downstream IDPC-availability check errors")
     void startByCase_returnsFailed() {
         final ResponseEntity<String> response = postByCase(FAILING_CASE_ID);
 

@@ -1,42 +1,23 @@
 package uk.gov.hmcts.cp.cdk.services;
 
-import static jakarta.json.Json.createObjectBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPLOAD;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOCIDS_ARRAY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_LATEST_DEFENDANT;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
-import uk.gov.hmcts.cp.cdk.jobmanager.support.JobPriority;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
-import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
-import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
-import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import jakarta.json.JsonObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -49,55 +30,31 @@ class IdpcAvailabilityServiceTest {
     @Mock
     private ProgressionClient progressionClient;
     @Mock
-    private ExecutionService executionService;
-    @Mock
     private DocumentIdResolver documentIdResolver;
     @Mock
     private CaseDocumentRepository caseDocumentRepository;
-    @Captor
-    private ArgumentCaptor<ExecutionInfo> captor;
 
     private IdpcAvailabilityService service;
-    private String caseId;
+    private UUID caseId;
     private String userId;
 
     @BeforeEach
     void setUp() {
-        service = new IdpcAvailabilityService(
-                progressionClient,
-                executionService,
-                documentIdResolver,
-                caseDocumentRepository
-        );
+        service = new IdpcAvailabilityService(progressionClient, documentIdResolver, caseDocumentRepository);
 
-        caseId = UUID.randomUUID().toString();
+        caseId = UUID.randomUUID();
         userId = "cppuid-123";
     }
 
-    private ExecutionInfo executionInfo(JsonObject jobData) {
-        return ExecutionInfo.executionInfo()
-                .withJobData(jobData)
-                .withAssignedTaskName(CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS)
-                .withAssignedTaskStartTime(ZonedDateTime.now())
-                .withExecutionStatus(ExecutionStatus.INPROGRESS)
-                .build();
-    }
-
     @Test
-    @DisplayName("Returns zero and dispatches nothing when there are no materials")
-    void returnsZero_whenNoMaterials() {
-        JsonObject jobData = createObjectBuilder()
-                .add(CTX_CASE_ID_KEY, caseId)
-                .add(CPPUID, userId)
-                .build();
-
+    @DisplayName("Returns empty list when there are no materials")
+    void returnsEmpty_whenNoMaterials() {
         when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
                 .thenReturn(List.of());
 
-        int result = service.registerNewDocumentsAndDispatch(executionInfo(jobData));
+        final List<NewIdpcDocument> result = service.retrieveDocuments(caseId, userId);
 
-        assertThat(result).isZero();
-        verifyNoInteractions(executionService);
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -107,7 +64,7 @@ class IdpcAvailabilityServiceTest {
         UUID defendantId = UUID.randomUUID();
 
         LatestMaterialInfo info = new LatestMaterialInfo(
-                List.of(caseId),
+                List.of(caseId.toString()),
                 "doc-type",
                 "desc",
                 materialId.toString(),
@@ -117,31 +74,25 @@ class IdpcAvailabilityServiceTest {
                 defendantId.toString()
         );
 
-        JsonObject jobData = createObjectBuilder()
-                .add(CTX_CASE_ID_KEY, caseId)
-                .add(CPPUID, userId)
-                .build();
-
         when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
                 .thenReturn(List.of(info));
         when(documentIdResolver.resolveExistingDocIdForDefendant(any(), any(), any()))
                 .thenReturn(Optional.of(UUID.randomUUID()));
 
-        int result = service.registerNewDocumentsAndDispatch(executionInfo(jobData));
+        final List<NewIdpcDocument> result = service.retrieveDocuments(caseId, userId);
 
-        assertThat(result).isZero();
-        verifyNoInteractions(executionService);
+        assertThat(result).isEmpty();
     }
 
     @Test
-    @DisplayName("Registers and dispatches a retrieval task per new defendant document")
-    void schedulesTasks_forMultipleDefendants() {
+    @DisplayName("Returns a document per new defendant material, flagging the most recently uploaded as latest")
+    void returnsNewDocuments_forMultipleDefendants() {
         UUID materialId = UUID.randomUUID();
         UUID def1 = UUID.randomUUID();
         UUID def2 = UUID.randomUUID();
 
         LatestMaterialInfo m1 = new LatestMaterialInfo(
-                List.of(caseId), "doc", "desc",
+                List.of(caseId.toString()), "doc", "desc",
                 materialId.toString(), "Material1",
                 ZonedDateTime.now().minusMinutes(1),
                 UUID.randomUUID().toString(),
@@ -149,204 +100,80 @@ class IdpcAvailabilityServiceTest {
         );
 
         LatestMaterialInfo m2 = new LatestMaterialInfo(
-                List.of(caseId), "doc", "desc",
+                List.of(caseId.toString()), "doc", "desc",
                 materialId.toString(), "Material2",
                 ZonedDateTime.now(),
                 UUID.randomUUID().toString(),
                 def2.toString()
         );
 
-        JsonObject jobData = createObjectBuilder()
-                .add(CTX_CASE_ID_KEY, caseId)
-                .add(CPPUID, userId)
-                .build();
-
         when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
                 .thenReturn(List.of(m1, m2));
-
         when(documentIdResolver.resolveExistingDocIdForDefendant(any(), any(), any()))
                 .thenReturn(Optional.empty());
 
-        int result = service.registerNewDocumentsAndDispatch(executionInfo(jobData));
+        final List<NewIdpcDocument> result = service.retrieveDocuments(caseId, userId);
 
-        assertThat(result).isEqualTo(2);
-
-        verify(executionService, times(2)).executeWith(captor.capture());
-
-        List<ExecutionInfo> executions = captor.getAllValues();
-
-        for (ExecutionInfo exec : executions) {
-            assertThat(exec.getAssignedTaskName()).isEqualTo(RETRIEVE_MATERIAL_AND_UPLOAD);
-            assertThat(exec.getExecutionStatus()).isEqualTo(ExecutionStatus.STARTED);
-            assertThat(exec.getJobData().containsKey(CTX_DOC_ID_KEY)).isTrue();
-            assertThat(exec.getJobData().containsKey(CTX_DOCIDS_ARRAY)).isTrue();
-        }
-
-        assertThat(executions.stream()
-                .anyMatch(e -> e.getJobData().getBoolean(CTX_LATEST_DEFENDANT)))
-                .isTrue();
+        assertThat(result).hasSize(2);
+        assertThat(result).allSatisfy(doc -> assertThat(doc.docId()).isNotBlank());
+        assertThat(result.stream().filter(NewIdpcDocument::latestDefendant)).hasSize(1);
+        assertThat(result.stream().filter(NewIdpcDocument::latestDefendant).findFirst().orElseThrow().defendantId())
+                .isEqualTo(def2.toString());
     }
 
     @Test
-    @DisplayName("Propagates priority from the incoming ExecutionInfo to the dispatched retrieval job")
-    void propagatesPriorityToDispatchedJob() {
+    @DisplayName("Truncates material names longer than 50 characters, preserving .pdf extension")
+    void truncatesMaterialName_preservingPdfExtension() {
+        String materialName = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.pdf";
+
         UUID materialId = UUID.randomUUID();
         UUID defendantId = UUID.randomUUID();
 
         LatestMaterialInfo info = new LatestMaterialInfo(
-                List.of(caseId), "doc", "desc",
-                materialId.toString(), "Material",
+                List.of(caseId.toString()), "doc", "desc",
+                materialId.toString(), materialName,
                 ZonedDateTime.now(),
                 UUID.randomUUID().toString(),
                 defendantId.toString()
         );
-
-        JsonObject jobData = createObjectBuilder()
-                .add(CTX_CASE_ID_KEY, caseId)
-                .add(CPPUID, userId)
-                .build();
 
         when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
                 .thenReturn(List.of(info));
         when(documentIdResolver.resolveExistingDocIdForDefendant(any(), any(), any()))
                 .thenReturn(Optional.empty());
 
-        ExecutionInfo highPriorityExecutionInfo = ExecutionInfo.executionInfo()
-                .withJobData(jobData)
-                .withAssignedTaskName(CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS)
-                .withAssignedTaskStartTime(ZonedDateTime.now())
-                .withExecutionStatus(ExecutionStatus.STARTED)
-                .withPriority(JobPriority.HIGH)
-                .build();
+        final List<NewIdpcDocument> result = service.retrieveDocuments(caseId, userId);
 
-        service.registerNewDocumentsAndDispatch(highPriorityExecutionInfo);
-
-        verify(executionService).executeWith(captor.capture());
-        assertThat(captor.getValue().getPriority()).isEqualTo(JobPriority.HIGH);
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().materialName())
+                .endsWith(".pdf")
+                .hasSize(EXPECTED_SIZE);
     }
 
     @Test
-    @DisplayName("shouldNotTruncateMaterialName_whenExactly50Characters")
-    void shouldNotTruncateMaterialName_whenExactly50Characters() {
+    @DisplayName("Does not truncate material names of exactly 50 characters")
+    void doesNotTruncate_whenExactly50Characters() {
         String materialName = "12345678901234567890123456789012345678901234567890"; // 50 chars
 
         UUID materialId = UUID.randomUUID();
         UUID defendantId = UUID.randomUUID();
 
         LatestMaterialInfo info = new LatestMaterialInfo(
-                List.of(caseId),
-                "doc",
-                "desc",
-                materialId.toString(),
-                materialName,
+                List.of(caseId.toString()), "doc", "desc",
+                materialId.toString(), materialName,
                 ZonedDateTime.now(),
                 UUID.randomUUID().toString(),
                 defendantId.toString()
         );
 
-        JsonObject jobData = createObjectBuilder()
-                .add(CTX_CASE_ID_KEY, caseId)
-                .add(CPPUID, userId)
-                .build();
-
         when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
                 .thenReturn(List.of(info));
-
         when(documentIdResolver.resolveExistingDocIdForDefendant(any(), any(), any()))
                 .thenReturn(Optional.empty());
 
-        service.registerNewDocumentsAndDispatch(executionInfo(jobData));
+        final List<NewIdpcDocument> result = service.retrieveDocuments(caseId, userId);
 
-        verify(executionService).executeWith(captor.capture());
-
-        assertThat(
-                captor.getValue().getJobData().getString(CTX_MATERIAL_NAME)
-        ).isEqualTo(materialName);
-    }
-
-    @Test
-    @DisplayName("shouldTruncateMaterialNameAndPreservePdfExtension")
-    void shouldTruncateMaterialNameAndPreservePdfExtension() {
-        String materialName =
-                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.pdf";
-
-        UUID materialId = UUID.randomUUID();
-        UUID defendantId = UUID.randomUUID();
-
-        LatestMaterialInfo info = new LatestMaterialInfo(
-                List.of(caseId),
-                "doc",
-                "desc",
-                materialId.toString(),
-                materialName,
-                ZonedDateTime.now(),
-                UUID.randomUUID().toString(),
-                defendantId.toString()
-        );
-
-        JsonObject jobData = createObjectBuilder()
-                .add(CTX_CASE_ID_KEY, caseId)
-                .add(CPPUID, userId)
-                .build();
-
-        when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
-                .thenReturn(List.of(info));
-
-        when(documentIdResolver.resolveExistingDocIdForDefendant(any(), any(), any()))
-                .thenReturn(Optional.empty());
-
-        service.registerNewDocumentsAndDispatch(executionInfo(jobData));
-
-        verify(executionService).executeWith(captor.capture());
-
-        String actualName =
-                captor.getValue().getJobData().getString(CTX_MATERIAL_NAME);
-
-        assertThat(actualName)
-                .endsWith(".pdf")
-                .hasSize(EXPECTED_SIZE);
-    }
-
-    @Test
-    @DisplayName("shouldTruncateMaterialNameWithoutExtension")
-    void shouldTruncateMaterialNameWithoutExtension() {
-        String materialName =
-                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-
-        UUID materialId = UUID.randomUUID();
-        UUID defendantId = UUID.randomUUID();
-
-        LatestMaterialInfo info = new LatestMaterialInfo(
-                List.of(caseId),
-                "doc",
-                "desc",
-                materialId.toString(),
-                materialName,
-                ZonedDateTime.now(),
-                UUID.randomUUID().toString(),
-                defendantId.toString()
-        );
-
-        JsonObject jobData = createObjectBuilder()
-                .add(CTX_CASE_ID_KEY, caseId)
-                .add(CPPUID, userId)
-                .build();
-
-        when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
-                .thenReturn(List.of(info));
-
-        when(documentIdResolver.resolveExistingDocIdForDefendant(any(), any(), any()))
-                .thenReturn(Optional.empty());
-
-        service.registerNewDocumentsAndDispatch(executionInfo(jobData));
-
-        verify(executionService).executeWith(captor.capture());
-
-        String actualName =
-                captor.getValue().getJobData().getString(CTX_MATERIAL_NAME);
-
-        assertThat(actualName)
-                .hasSize(EXPECTED_SIZE)
-                .doesNotEndWith(".pdf");
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().materialName()).isEqualTo(materialName);
     }
 }

@@ -8,7 +8,6 @@ public final class JobManagerKeys {
     public static final String CTX_BLOB_NAME_KEY  ="blobName";
     public static final String CTX_MATERIAL_ID_KEY = "materialId";
     public static final String CTX_DEFENDANT_ID_KEY = "defendantId";
-    public static final String CTX_DEFENDANT_COUNT= "defendantCount";
     public static final String CTX_LATEST_DEFENDANT= "latestDefendant";
     public static final String CTX_DOCIDS_ARRAY= "docIdsList";
     public static final String CTX_QUERYIDS_ARRAY= "queryIdsList";

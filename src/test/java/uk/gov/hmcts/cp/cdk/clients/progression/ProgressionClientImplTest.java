@@ -8,11 +8,7 @@ import static org.mockito.Mockito.when;
 
 import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.CourtDocumentSearchResponse;
-import uk.gov.hmcts.cp.cdk.clients.progression.dto.Defendant;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
-import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCase;
-import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCaseEligibilityInfo;
-import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCaseResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.UrlResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
 
@@ -56,7 +52,6 @@ class ProgressionClientImplTest {
     private final String cppuidHeader = "cppuid";
     private final String courtDocsPath = "/court-docs";
     private final String materialPath = "/materials/{materialId}";
-    private final String prosecutionPath = "/cases/{caseId}";
 
     @BeforeEach
     void setUp() {
@@ -65,11 +60,9 @@ class ProgressionClientImplTest {
 
         when(props.courtDocsPath()).thenReturn(courtDocsPath);
         when(props.materialContentPath()).thenReturn(materialPath);
-        when(props.prosecutionCasePath()).thenReturn(prosecutionPath);
 
         when(props.acceptForCourtDocSearch()).thenReturn("json");
         when(props.acceptForMaterialContent()).thenReturn("json");
-        when(props.acceptForProsecutionCase()).thenReturn("json");
 
         client = new ProgressionClientImpl(restClient, rootProps, props, mapper);
     }
@@ -148,57 +141,6 @@ class ProgressionClientImplTest {
                 client.getMaterialDownloadUrl(UUID.randomUUID(), "user");
 
         assertThat(result.isEmpty()).isTrue();
-    }
-
-    @Test
-    void shouldReturnEmpty_whenResponseNull_getProsecutionCaseEligibilityInfo() {
-        mockRestClient();
-        when(responseSpec.body(ProsecutionCaseResponse.class)).thenReturn(null);
-
-        final Optional<ProsecutionCaseEligibilityInfo> result = client.getProsecutionCaseEligibilityInfo(UUID.randomUUID(), "user");
-
-        assertThat(result.isEmpty()).isTrue();
-    }
-
-    @Test
-    void shouldReturnEmptyDefendants_whenNoDefendants() {
-        final ProsecutionCaseResponse response = mock(ProsecutionCaseResponse.class);
-        final ProsecutionCase prosecutionCase = mock(ProsecutionCase.class);
-
-        when(response.prosecutionCase()).thenReturn(prosecutionCase);
-        when(prosecutionCase.defendants()).thenReturn(List.of());
-        when(prosecutionCase.id()).thenReturn("case-1");
-
-        mockRestClient();
-        when(responseSpec.body(ProsecutionCaseResponse.class)).thenReturn(response);
-
-        final Optional<ProsecutionCaseEligibilityInfo> result = client.getProsecutionCaseEligibilityInfo(UUID.randomUUID(), "user");
-
-        assertThat(result.isPresent()).isTrue();
-        assertThat(result.get().defendantIds().size()).isEqualTo(0);
-    }
-
-    @Test
-    void shouldMapDefendants_whenPresent() {
-        final ProsecutionCaseResponse response = mock(ProsecutionCaseResponse.class);
-        final ProsecutionCase prosecutionCase = mock(ProsecutionCase.class);
-
-        final Defendant d1 = mock(Defendant.class);
-        final Defendant d2 = mock(Defendant.class);
-
-        when(d1.id()).thenReturn("d1");
-        when(d2.id()).thenReturn("d2");
-        when(response.prosecutionCase()).thenReturn(prosecutionCase);
-        when(prosecutionCase.id()).thenReturn("case-1");
-        when(prosecutionCase.defendants()).thenReturn(List.of(d1, d2));
-
-        mockRestClient();
-        when(responseSpec.body(ProsecutionCaseResponse.class)).thenReturn(response);
-
-        final Optional<ProsecutionCaseEligibilityInfo> result = client.getProsecutionCaseEligibilityInfo(UUID.randomUUID(), "user");
-
-        assertThat(result.isPresent()).isTrue();
-        assertThat(result.get().defendantIds()).isEqualTo(List.of("d1", "d2"));
     }
 
     @Test

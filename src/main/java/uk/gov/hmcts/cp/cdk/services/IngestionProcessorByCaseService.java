@@ -1,25 +1,21 @@
 package uk.gov.hmcts.cp.cdk.services;
 
 import static java.time.ZonedDateTime.now;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.REQUEST_ID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPLOAD;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
-import uk.gov.hmcts.cp.cdk.clients.progression.dto.ProsecutionCaseEligibilityInfo;
 import uk.gov.hmcts.cp.cdk.jobmanager.support.JobPriority;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessByCaseRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
 import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
+import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
-import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,25 +26,28 @@ import org.springframework.stereotype.Service;
  *
  * <p>Unlike the scheduled ingestion ({@link JobManagerService}, via {@link IngestionProcessor}) this
  * entry point receives a single {@code caseId} directly, so it skips {@code GET_CASES_FOR_HEARING}
- * and starts from the eligibility check. It runs the eligibility and IDPC-availability checks
- * <b>synchronously</b> because the HTTP response depends on their outcome:
+ * and starts from the IDPC-availability check. It runs that check <b>synchronously</b> because the
+ * HTTP response depends on its outcome:
  * <ul>
- *   <li>case not eligible, or no newer IDPC available → {@link IngestionProcessPhase#NOT_REQUIRED},
- *       nothing dispatched;</li>
- *   <li>newer IDPC available → the remaining workflow is dispatched via the JobManager at
- *       {@link JobPriority#HIGH} priority and {@link IngestionProcessPhase#STARTED} is returned;</li>
+ *   <li>no newer IDPC available (this also covers a case that doesn't exist or has no defendants —
+ *       {@link IdpcAvailabilityService} simply finds nothing to ingest either way) →
+ *       {@link IngestionProcessPhase#NOT_REQUIRED}, nothing dispatched;</li>
+ *   <li>newer IDPC available → {@code RETRIEVE_MATERIAL_AND_UPLOAD} is dispatched via the JobManager
+ *       at {@link JobPriority#HIGH} priority and {@link IngestionProcessPhase#STARTED} is returned;</li>
  *   <li>any unexpected error → {@link IngestionProcessPhase#FAILED}.</li>
  * </ul>
  *
  * <p>The scheduled ingestion endpoint is unaffected — it continues to dispatch at the default
  * priority.
  *
- * <p>The eligibility and IDPC-availability rules are not duplicated here — this service calls
- * {@link CaseEligibilityService} and {@link IdpcAvailabilityService} directly, in-process, rather
- * than dispatching them as JobManager jobs (which would return before their outcome is known).
- * Those same two services are also used by {@code CheckCaseEligibilityTask} and
- * {@code CheckIdpcAvailabilityAllDefendantsTask} for the scheduled/async flow, so the business rules
- * are defined exactly once.
+ * <p>The IDPC-availability rule is not duplicated here — this service calls
+ * {@link IdpcAvailabilityService} directly, in-process, rather than dispatching it as a JobManager
+ * job (which would return before its outcome is known). That service is deliberately plain (no
+ * JobManager/task-framework types) and is also used by {@code CheckIdpcAvailabilityAllDefendantsTask}
+ * for the scheduled/async flow, so the business rule is defined exactly once. The per-document job
+ * data is likewise built once, by the shared {@link RetrieveMaterialAndUploadJobDataService} — only the final
+ * {@code ExecutionInfo}/{@code executionService.executeWith(...)} dispatch (below) is specific to
+ * this entry point.
  */
 @Service
 @RequiredArgsConstructor
@@ -58,16 +57,14 @@ public class IngestionProcessorByCaseService implements IngestionProcessorByCase
     /* default */ static final String MSG_NOT_REQUIRED_NO_NEWER_IDPC =
             "Ingestion process not started because no newer IDPC version is available "
                     + "and an Answers version already exists.";
-    /* default */ static final String MSG_NOT_REQUIRED_NOT_ELIGIBLE =
-            "Ingestion process not started because the case is not eligible for ingestion "
-                    + "(no prosecution case found, or the case has no defendants).";
     /* default */ static final String MSG_STARTED =
             "Ingestion workflow request accepted; task submitted via JobManager (requestId=%s).";
     /* default */ static final String MSG_FAILED =
             "Ingestion process could not be started due to an internal error.";
 
-    private final CaseEligibilityService caseEligibilityService;
     private final IdpcAvailabilityService idpcAvailabilityService;
+    private final RetrieveMaterialAndUploadJobDataService retrievalJobDataService;
+    private final ExecutionService executionService;
 
     @Override
     public IngestionProcessResponse startIngestionProcess(final String cppuid,
@@ -79,49 +76,42 @@ public class IngestionProcessorByCaseService implements IngestionProcessorByCase
         response.setLastUpdated(utcNow());
 
         try {
-            final Optional<ProsecutionCaseEligibilityInfo> eligible =
-                    caseEligibilityService.resolveEligibleCase(caseId, cppuid);
+            final List<NewIdpcDocument> newDocuments =
+                    idpcAvailabilityService.retrieveDocuments(caseId, cppuid);
 
-            if (eligible.isEmpty()) {
-                log.info("Manual ingestion not required (case not eligible). caseId={}, requestId={}",
+            if (newDocuments.isEmpty()) {
+                log.info("Manual ingestion not required (no newer IDPC version). caseId={}, requestId={}",
                         caseId, requestId);
-                return notRequired(response, MSG_NOT_REQUIRED_NOT_ELIGIBLE);
+                return notRequired(response, MSG_NOT_REQUIRED_NO_NEWER_IDPC);
             }
 
-            final JsonObject jobData = Json.createObjectBuilder()
-                    .add(CPPUID, cppuid)
-                    .add(REQUEST_ID, requestId)
-                    .add(CTX_CASE_ID_KEY, caseId.toString())
-                    .build();
+            dispatchRetrievalTasks(cppuid, requestId, caseId, newDocuments);
 
-            final JsonObject enrichedJobData =
-                    caseEligibilityService.withDefendantContext(jobData, eligible.get());
-
-            final ExecutionInfo executionInfo = executionInfo()
-                    .withJobData(enrichedJobData)
-                    .withAssignedTaskName(CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS)
-                    .withAssignedTaskStartTime(now())
-                    .withExecutionStatus(ExecutionStatus.STARTED)
-                    .withPriority(JobPriority.HIGH)
-                    .build();
-
-            final int newIdpcDocuments =
-                    idpcAvailabilityService.registerNewDocumentsAndDispatch(executionInfo);
-
-            if (newIdpcDocuments > 0) {
-                log.info("Manual ingestion started. caseId={}, newIdpcDocuments={}, requestId={}",
-                        caseId, newIdpcDocuments, requestId);
-                return started(response, requestId);
-            }
-
-            log.info("Manual ingestion not required (no newer IDPC version). caseId={}, requestId={}",
-                    caseId, requestId);
-            return notRequired(response, MSG_NOT_REQUIRED_NO_NEWER_IDPC);
+            log.info("Manual ingestion started. caseId={}, newIdpcDocuments={}, requestId={}",
+                    caseId, newDocuments.size(), requestId);
+            return started(response, requestId);
 
         } catch (final Exception exception) {
             log.error("Manual ingestion could not be started due to an internal error. "
                     + "caseId={}, requestId={}", caseId, requestId, exception);
             return failed(response);
+        }
+    }
+
+    private void dispatchRetrievalTasks(final String cppuid,
+                                        final String requestId,
+                                        final UUID caseId,
+                                        final List<NewIdpcDocument> newDocuments) {
+        for (final JsonObject jobData : retrievalJobDataService.enrich(cppuid, requestId, caseId, newDocuments)) {
+            final ExecutionInfo executionInfo = executionInfo()
+                    .withJobData(jobData)
+                    .withAssignedTaskName(RETRIEVE_MATERIAL_AND_UPLOAD)
+                    .withAssignedTaskStartTime(now())
+                    .withExecutionStatus(ExecutionStatus.STARTED)
+                    .withPriority(JobPriority.HIGH)
+                    .build();
+
+            executionService.executeWith(executionInfo);
         }
     }
 

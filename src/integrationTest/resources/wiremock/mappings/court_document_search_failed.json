@@ -2,7 +2,12 @@
   "priority": 1,
   "request": {
     "method": "GET",
-    "urlPathPattern": "/progression-query-api/query/api/rest/progression/prosecutioncases/ffffffff-ffff-ffff-ffff-ffffffffffff"
+    "urlPath": "/progression-query-api/query/api/rest/progression/courtdocumentsearch",
+    "queryParameters": {
+      "caseId": {
+        "equalTo": "ffffffff-ffff-ffff-ffff-ffffffffffff"
+      }
+    }
   },
   "response": {
     "status": 500,

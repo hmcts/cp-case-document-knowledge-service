@@ -1,22 +1,8 @@
 package uk.gov.hmcts.cp.cdk.services;
 
-import static jakarta.json.Json.createObjectBuilder;
 import static java.util.UUID.fromString;
 import static java.util.UUID.randomUUID;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPLOAD;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_COURTDOCUMENT_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOCIDS_ARRAY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_LATEST_DEFENDANT;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.REQUEST_ID;
-import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuid;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
-import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
@@ -25,10 +11,8 @@ import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
 import uk.gov.hmcts.cp.cdk.util.MaterialNameValidator;
-import uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo;
-import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
-import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -36,11 +20,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonArrayBuilder;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonObjectBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -50,16 +29,15 @@ import org.springframework.stereotype.Service;
  *
  * <p>Determines, for every defendant on a case, whether a newer IDPC version exists that has not
  * yet been ingested. For each such document it persists a placeholder {@link CaseDocument} and
- * dispatches a {@code RETRIEVE_MATERIAL_AND_UPLOAD} task via the JobManager. Documents that already
- * exist are skipped.
+ * returns a {@link NewIdpcDocument} describing it. Documents that already exist are skipped.
  *
  * <p>Used by both {@code CheckIdpcAvailabilityAllDefendantsTask} (scheduled ingestion, invoked
  * asynchronously via the JobManager) and {@link IngestionProcessorByCaseService} (manual "Process
- * IDPC" ingestion, invoked synchronously). The synchronous caller relies on the return value to
- * decide whether ingestion actually needs to continue.
- *
- * <p>Downstream tasks are dispatched with {@link ExecutionInfo.Builder#from(ExecutionInfo)}, so the
- * priority carried by the supplied {@link ExecutionInfo} propagates to every task created here.
+ * IDPC" ingestion, invoked synchronously). Each caller is responsible for dispatching
+ * {@code RETRIEVE_MATERIAL_AND_UPLOAD} for the returned documents via its own JobManager
+ * {@code ExecutionInfo}/{@code executionService.executeWith(...)} plumbing — this service never
+ * touches JobManager/task-framework types, so it stays reusable regardless of how each caller talks
+ * to the JobManager.
  */
 @Service
 @RequiredArgsConstructor
@@ -70,29 +48,19 @@ public class IdpcAvailabilityService {
     public static final String IDPC = "IDPC";
 
     private final ProgressionClient progressionClient;
-    private final ExecutionService executionService;
     private final DocumentIdResolver documentIdResolver;
     private final CaseDocumentRepository caseDocumentRepository;
 
     /**
-     * Evaluates IDPC availability for the case in the supplied {@link ExecutionInfo}, persisting
-     * placeholder documents and dispatching retrieval tasks for any newer IDPC versions found.
+     * Evaluates IDPC availability for the given case, persisting a placeholder document for every
+     * newer IDPC version found.
      *
-     * @return the number of newer IDPC documents that require ingestion (i.e. retrieval tasks
-     *         dispatched). {@code 0} means no newer IDPC version is available.
+     * @return the newer IDPC documents that require ingestion, in no particular order. An empty
+     *         list means no newer IDPC version is available.
      */
-    public int registerNewDocumentsAndDispatch(final ExecutionInfo executionInfo) {
-        final JsonObject jobData = executionInfo.getJobData();
-
-        final String caseIdString = jobData.getString(CTX_CASE_ID_KEY, null);
-        final String userId = jobData.getString(CPPUID, null);
-        final String requestId = jobData.getString(REQUEST_ID, "unknown");
-
-        final Optional<UUID> caseIdUuidOptional = parseUuid(caseIdString);
-        final UUID caseId = caseIdUuidOptional.get();
-
+    public List<NewIdpcDocument> retrieveDocuments(final UUID caseId, final String cppuid) {
         final List<LatestMaterialInfo> materials =
-                progressionClient.getCourtDocumentsForAllDefendants(caseId, userId);
+                progressionClient.getCourtDocumentsForAllDefendants(caseId, cppuid);
         final Map<String, String> defendantToDocIdMap = new HashMap<>();
 
         for (final LatestMaterialInfo info : materials) {
@@ -118,39 +86,24 @@ public class IdpcAvailabilityService {
                 .orElse(null);
         log.info("Latest defendant identified: {}", latestDefendantId);
 
-        final JsonArrayBuilder docIdsArrayBuilder = Json.createArrayBuilder();
-        defendantToDocIdMap.forEach((defendantId, docId) -> docIdsArrayBuilder.add(docId));
-        final JsonArray docIdsArray = docIdsArrayBuilder.build();
-
+        final List<NewIdpcDocument> newDocuments = new ArrayList<>();
         for (final LatestMaterialInfo info : materials) {
             final String defendantId = info.defendantId();
-            if (!defendantToDocIdMap.containsKey(defendantId)) {
+            final String docId = defendantToDocIdMap.get(defendantId);
+            if (docId == null) {
                 continue;
             }
-            final JsonObjectBuilder updatedJobData = createObjectBuilder(jobData);
-            updatedJobData.add(CTX_DOC_ID_KEY, defendantToDocIdMap.get(defendantId));
-            updatedJobData.add(CTX_MATERIAL_ID_KEY, info.materialId());
-            updatedJobData.add(CTX_MATERIAL_NAME, MaterialNameValidator.truncateMaterialName(info.materialName()));
-            updatedJobData.add(CTX_DEFENDANT_ID_KEY, info.defendantId());
-            updatedJobData.add(CTX_COURTDOCUMENT_ID_KEY, info.courtDocumentId());
-            updatedJobData.add(CTX_DOCIDS_ARRAY, docIdsArray);
-            final boolean isLatest = defendantId.equals(latestDefendantId);
-            updatedJobData.add(CTX_LATEST_DEFENDANT, isLatest);
-
-            final ExecutionInfo executionInfoNew = executionInfo()
-                    .from(executionInfo)
-                    .withAssignedTaskName(RETRIEVE_MATERIAL_AND_UPLOAD)
-                    .withJobData(updatedJobData.build())
-                    .withExecutionStatus(ExecutionStatus.STARTED)
-                    .build();
-
-            executionService.executeWith(executionInfoNew);
-
-            log.debug("Resolved material for caseId {} → id={}, name={}, requestId={}",
-                    caseIdString, info.materialId(), info.materialName(), requestId);
+            newDocuments.add(new NewIdpcDocument(
+                    docId,
+                    info.materialId(),
+                    MaterialNameValidator.truncateMaterialName(info.materialName()),
+                    defendantId,
+                    info.courtDocumentId(),
+                    defendantId.equals(latestDefendantId)
+            ));
         }
 
-        return defendantToDocIdMap.size();
+        return newDocuments;
     }
 
     private void persistCaseDocument(final UUID docId, final UUID caseId, final LatestMaterialInfo info) {

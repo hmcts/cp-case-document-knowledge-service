@@ -62,14 +62,18 @@ All APIM calls: `RestClientFactoryConfig` → `CorrelationIdInterceptor` → `Ap
 | `/discovery-scheduler/configurations` | POST |
 
 `/ingestions/start` (scheduled, multi-case via `courtCentreId`/`roomId`/`date`) is fire-and-forget:
-it dispatches `GET_CASES_FOR_HEARING` and returns `202 ACCEPTED` immediately. `/ingestions/start-by-case`
+it dispatches `GET_CASES_FOR_HEARING`, which dispatches `CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS`
+directly per case, and returns `202 ACCEPTED` immediately. `/ingestions/start-by-case`
 (manual, single `caseId` — triggered by the "Process IDPC" button on the AI Search page) is
-synchronous: `IngestionProcessorByCaseService` calls `CaseEligibilityService`/`IdpcAvailabilityService`
-inline on the request thread and only returns `200 OK` once the outcome is known (`STARTED` if a
-newer IDPC was found and the remaining workflow was dispatched, `NOT_REQUIRED` if not, `FAILED` on
-error). The scheduled flow's `CheckCaseEligibilityTask`/`CheckIdpcAvailabilityAllDefendantsTask`
-JobManager tasks call the same two services — the eligibility/IDPC-availability rules are defined
-once and reused by both entry points. Its JobManager tasks run at `JobPriority.HIGH`
+synchronous: `IngestionProcessorByCaseService` calls `IdpcAvailabilityService` inline on the request
+thread and only returns `200 OK` once the outcome is known (`STARTED` if a newer IDPC was found and
+the remaining workflow was dispatched, `NOT_REQUIRED` if not — this also covers a case that doesn't
+exist or has no defendants, since the availability check simply finds nothing to ingest either way —
+`FAILED` on error). The scheduled flow's `CheckIdpcAvailabilityAllDefendantsTask` JobManager task
+calls the same service, and both entry points build their `RETRIEVE_MATERIAL_AND_UPLOAD` job data via
+the shared `RetrieveMaterialAndUploadJobDataService` — so the IDPC-availability rule and its
+job-data shape are each defined exactly once and reused by both entry points. There is no separate
+case-eligibility step or task. The manual flow's JobManager tasks run at `JobPriority.HIGH`
 (`jobmanager/support/JobPriority`); the scheduled flow is unaffected and stays at the task-manager
 default priority.
 

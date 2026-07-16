@@ -8,7 +8,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_CASE_ELIGIBILITY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GET_CASES_FOR_HEARING;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.COURT_CENTRE_ID;
@@ -114,7 +114,7 @@ class GetCasesForHearingTaskTest {
     }
 
     @Test
-    void shouldCreateEligibilityTaskForEachCase() {
+    void shouldCreateIdpcAvailabilityTaskForEachCase() {
         HearingSummariesInfo case1 = new HearingSummariesInfo("case-1");
         HearingSummariesInfo case2 = new HearingSummariesInfo("case-2");
 
@@ -133,7 +133,7 @@ class GetCasesForHearingTaskTest {
 
         assertThat(scheduledTasks)
                 .allSatisfy(task -> {
-                    assertThat(task.getAssignedTaskName()).isEqualTo(CHECK_CASE_ELIGIBILITY);
+                    assertThat(task.getAssignedTaskName()).isEqualTo(CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS);
                     assertThat(task.getExecutionStatus()).isEqualTo(ExecutionStatus.STARTED);
                     assertThat(task.getJobData().getString(CPPUID))
                             .isEqualTo("cppuid-123");
