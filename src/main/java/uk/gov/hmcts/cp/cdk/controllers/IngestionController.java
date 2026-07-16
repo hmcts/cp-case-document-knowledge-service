@@ -66,8 +66,7 @@ public class IngestionController implements IngestionApi {
     public ResponseEntity<IngestionProcessResponse> startIngestionProcessByCase(
             @RequestBody @Valid final IngestionProcessByCaseRequest ingestionProcessByCaseRequest
     ) {
-        final String headerName = cqrsClientProperties.headers().cjsCppuid();
-        final String cppuid = RequestUtils.requireHeader(headerName);
+        final String cppuid = RequestUtils.requireHeader(cqrsClientProperties.headers().cjsCppuid());
 
         final IngestionProcessResponse resp =
                 ingestionProcessorByCase.startIngestionProcess(cppuid, ingestionProcessByCaseRequest);
