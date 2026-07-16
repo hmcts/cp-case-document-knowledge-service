@@ -13,7 +13,6 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.DATE;
 
 import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseForDay;
-import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseProsecutionCase;
 import uk.gov.hmcts.cp.cdk.domain.DiscoverySchedulerConfiguration;
 import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
 import uk.gov.hmcts.cp.cdk.repo.DiscoverySchedulerConfigurationRepository;
@@ -107,7 +106,6 @@ public class DiscoveryService {
         final Set<UUID> uniqueCaseIds = matchedHearingCases.stream()
                 .filter(hearingCase -> nonNull(hearingCase.prosecutionCases()))
                 .flatMap(hearingCase -> hearingCase.prosecutionCases().stream())
-                .map(HearingCaseProsecutionCase::caseId)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
 
         log.info("Nightly discovery dispatching case eligibility checks for uniqueCaseIds={} out of matchedHearingCases={}",

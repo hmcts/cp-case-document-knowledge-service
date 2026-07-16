@@ -3,7 +3,6 @@ package uk.gov.hmcts.cp.cdk.services;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseForDay;
-import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseProsecutionCase;
 import uk.gov.hmcts.cp.cdk.domain.DiscoverySchedulerConfiguration;
 
 import java.time.LocalDate;
@@ -181,7 +180,7 @@ class HearingCaseWhitelistSelectorTest {
     private HearingCaseForDay hearingCase(final UUID courtCentreId, final UUID courtRoomId) {
         return new HearingCaseForDay(
                 courtCentreId, courtRoomId, HEARING_DATE, UUID.randomUUID(),
-                List.of(new HearingCaseProsecutionCase(UUID.randomUUID())));
+                List.of(UUID.randomUUID()));
     }
 
     private DiscoverySchedulerConfiguration configuration(final UUID courtCentreId, final UUID courtRoomId) {

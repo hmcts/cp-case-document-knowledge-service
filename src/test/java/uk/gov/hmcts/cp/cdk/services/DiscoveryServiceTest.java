@@ -13,7 +13,6 @@ import static org.mockito.Mockito.when;
 
 import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseForDay;
-import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseProsecutionCase;
 import uk.gov.hmcts.cp.cdk.domain.DiscoverySchedulerConfiguration;
 import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
 import uk.gov.hmcts.cp.cdk.repo.DiscoverySchedulerConfigurationRepository;
@@ -305,10 +304,10 @@ class DiscoveryServiceTest {
 
         final HearingCaseForDay morningHearing = new HearingCaseForDay(
                 UUID.randomUUID(), UUID.randomUUID(), today, UUID.randomUUID(),
-                List.of(new HearingCaseProsecutionCase(sharedCaseId)));
+                List.of(sharedCaseId));
         final HearingCaseForDay afternoonHearing = new HearingCaseForDay(
                 UUID.randomUUID(), UUID.randomUUID(), today, UUID.randomUUID(),
-                List.of(new HearingCaseProsecutionCase(sharedCaseId)));
+                List.of(sharedCaseId));
 
         when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today));
@@ -339,10 +338,10 @@ class DiscoveryServiceTest {
 
         final HearingCaseForDay caseToday = new HearingCaseForDay(
                 UUID.randomUUID(), UUID.randomUUID(), today, UUID.randomUUID(),
-                List.of(new HearingCaseProsecutionCase(sharedCaseId)));
+                List.of(sharedCaseId));
         final HearingCaseForDay caseTomorrow = new HearingCaseForDay(
                 UUID.randomUUID(), UUID.randomUUID(), tomorrow, UUID.randomUUID(),
-                List.of(new HearingCaseProsecutionCase(sharedCaseId)));
+                List.of(sharedCaseId));
 
         when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today, tomorrow));
@@ -373,7 +372,7 @@ class DiscoveryServiceTest {
         final UUID caseId = UUID.randomUUID();
         final HearingCaseForDay matchedCase = new HearingCaseForDay(
                 UUID.randomUUID(), UUID.randomUUID(), today, UUID.randomUUID(),
-                List.of(new HearingCaseProsecutionCase(caseId)));
+                List.of(caseId));
 
         when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today));
@@ -544,9 +543,9 @@ class DiscoveryServiceTest {
     }
 
     private HearingCaseForDay hearingCaseWithProsecutionCases(final LocalDate hearingDate, final int prosecutionCaseCount) {
-        final List<HearingCaseProsecutionCase> prosecutionCases = new ArrayList<>();
+        final List<UUID> prosecutionCases = new ArrayList<>();
         for (int i = 0; i < prosecutionCaseCount; i++) {
-            prosecutionCases.add(new HearingCaseProsecutionCase(UUID.randomUUID()));
+            prosecutionCases.add(UUID.randomUUID());
         }
         return new HearingCaseForDay(UUID.randomUUID(), UUID.randomUUID(), hearingDate, UUID.randomUUID(), prosecutionCases);
     }

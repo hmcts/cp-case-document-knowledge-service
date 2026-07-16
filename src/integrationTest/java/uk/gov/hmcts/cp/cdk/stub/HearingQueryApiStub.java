@@ -51,7 +51,7 @@ public class HearingQueryApiStub {
                                   "courtRoomId":"%s",
                                   "hearingDate":"2026-07-15",
                                   "hearingId":"%s",
-                                  "prosecutionCases":[{"caseId":"%s"}]
+                                  "prosecutionCases":["%s"]
                                 }]}"""
                                 .formatted(courtCentreId, courtRoomId, UUID.randomUUID(), caseId))
                 ));

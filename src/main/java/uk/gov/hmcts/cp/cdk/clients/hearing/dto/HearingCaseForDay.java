@@ -9,6 +9,6 @@ public record HearingCaseForDay(
         UUID courtRoomId,
         LocalDate hearingDate,
         UUID hearingId,
-        List<HearingCaseProsecutionCase> prosecutionCases
+        List<UUID> prosecutionCases
 ) {
 }

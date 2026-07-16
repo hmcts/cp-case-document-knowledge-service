@@ -10,7 +10,6 @@ import static org.mockito.Mockito.when;
 
 import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseForDay;
-import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseProsecutionCase;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCasesForDayResponse;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummaries;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
@@ -126,9 +125,8 @@ class HearingClientImplTest {
 
     @Test
     void shouldReturnHearingCases_whenValidResponse() {
-        final HearingCaseProsecutionCase prosecutionCase = new HearingCaseProsecutionCase(UUID.randomUUID());
         final HearingCaseForDay hearingCase = new HearingCaseForDay(
-                UUID.randomUUID(), UUID.randomUUID(), now(), UUID.randomUUID(), List.of(prosecutionCase));
+                UUID.randomUUID(), UUID.randomUUID(), now(), UUID.randomUUID(), List.of(UUID.randomUUID()));
         final HearingCasesForDayResponse response = new HearingCasesForDayResponse(List.of(hearingCase));
 
         mockRestClient();
