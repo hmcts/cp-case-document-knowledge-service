@@ -3,7 +3,7 @@ package uk.gov.hmcts.cp.cdk.jobmanager.hearing;
 import static jakarta.json.Json.createObjectBuilder;
 import static java.util.stream.IntStream.range;
 import static org.springframework.util.StringUtils.hasText;
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_CASE_ELIGIBILITY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GET_CASES_FOR_HEARING;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.COURT_CENTRE_ID;
@@ -104,14 +104,15 @@ public class GetCasesForHearingTask implements ExecutableTask {
 
                 final ExecutionInfo executionInfoNew = executionInfo()
                         .from(executionInfo)
-                        .withAssignedTaskName(CHECK_CASE_ELIGIBILITY)
+                        .withAssignedTaskName(CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS)
                         .withJobData(singleCaseJobData)
                         .withExecutionStatus(ExecutionStatus.STARTED)
                         .build();
 
                 executionService.executeWith(executionInfoNew);
 
-                log.info("Created {} for caseId={} requestId={}", CHECK_CASE_ELIGIBILITY, caseId, requestId);
+                log.info("Created {} for caseId={} requestId={}",
+                        CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS, caseId, requestId);
             }
 
             return executionInfo()

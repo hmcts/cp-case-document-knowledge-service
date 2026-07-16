@@ -2,9 +2,11 @@ package uk.gov.hmcts.cp.cdk.controllers;
 
 import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.services.IngestionProcessor;
+import uk.gov.hmcts.cp.cdk.services.IngestionProcessorByCase;
 import uk.gov.hmcts.cp.cdk.services.IngestionService;
 import uk.gov.hmcts.cp.cdk.util.RequestUtils;
 import uk.gov.hmcts.cp.openapi.api.cdk.IngestionApi;
+import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessByCaseRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionStatusResponse;
@@ -32,8 +34,12 @@ public class IngestionController implements IngestionApi {
     public static final MediaType VND_INGESTION =
             new MediaType("application", "vnd.casedocumentknowledge-service.ingestion-process+json");
 
+    public static final MediaType VND_INGESTION_BY_CASE =
+            new MediaType("application", "vnd.casedocumentknowledge-service.ingestion-process-by-case+json");
+
     private final IngestionService service;
     private final IngestionProcessor ingestionProcessor;
+    private final IngestionProcessorByCase ingestionProcessorByCase;
     private final CQRSClientProperties cqrsClientProperties;
 
 
@@ -54,5 +60,17 @@ public class IngestionController implements IngestionApi {
         final IngestionProcessResponse resp = ingestionProcessor.startIngestionProcess(cppuid, ingestionProcessRequest);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED).contentType(VND_INGESTION).body(resp);
+    }
+
+    @Override
+    public ResponseEntity<IngestionProcessResponse> startIngestionProcessByCase(
+            @RequestBody @Valid final IngestionProcessByCaseRequest ingestionProcessByCaseRequest
+    ) {
+        final String cppuid = RequestUtils.requireHeader(cqrsClientProperties.headers().cjsCppuid());
+
+        final IngestionProcessResponse resp =
+                ingestionProcessorByCase.startIngestionProcess(cppuid, ingestionProcessByCaseRequest);
+
+        return ResponseEntity.status(HttpStatus.OK).contentType(VND_INGESTION_BY_CASE).body(resp);
     }
 }

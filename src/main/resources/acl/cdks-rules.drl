@@ -60,7 +60,7 @@ then
   $o.setSuccess(true);
 end
 
-rule "Allow LA – ingestion sattus"
+rule "Allow LA – ingestion status"
 when
   $o: Outcome()
   $a: Action(name == "casedocumentknowledge-service.ingestion")
@@ -69,11 +69,10 @@ then
   $o.setSuccess(true);
 end
 
-
-rule "Allow LA – ingestion process"
+rule "Allow LA – ingestion-process-by-case"
 when
   $o: Outcome()
-  $a: Action(name == "casedocumentknowledge-service.ingestion-process")
+  $a: Action(name == "casedocumentknowledge-service.ingestion-process-by-case")
   eval(userAndGroupProvider.hasPermission($a, PermissionConstants.accessToIntelligencePermissions()))
 then
   $o.setSuccess(true);

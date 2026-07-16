@@ -3,7 +3,6 @@ package uk.gov.hmcts.cp.cdk.jobmanager;
 public final class TaskNames {
 
     public static final String GET_CASES_FOR_HEARING = "GET_CASES_FOR_HEARING";
-    public static final String CHECK_CASE_ELIGIBILITY = "CHECK_CASE_ELIGIBILITY";
     public static final String CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS = "CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS";
     public static final String RETRIEVE_MATERIAL_AND_UPLOAD = "RETRIEVE_MATERIAL_AND_UPLOAD";
     public static final String CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS= "CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS";
