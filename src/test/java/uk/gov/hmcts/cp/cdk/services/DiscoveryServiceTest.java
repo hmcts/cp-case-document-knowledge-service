@@ -263,7 +263,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, times(2)).dispatchCaseDocumentIngestionTasksCheckCaseEligibility(any(JsonObject.class));
+        verify(jobManagerService, times(2)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
     }
 
     @Test
@@ -292,7 +292,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, times(3)).dispatchCaseDocumentIngestionTasksCheckCaseEligibility(any(JsonObject.class));
+        verify(jobManagerService, times(3)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
     }
 
     @Test
@@ -324,7 +324,7 @@ class DiscoveryServiceTest {
 
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
-        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckCaseEligibility(captor.capture());
+        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture());
         assertThat(captor.getValue().getString("caseId")).isEqualTo(sharedCaseId.toString());
     }
 
@@ -360,7 +360,7 @@ class DiscoveryServiceTest {
 
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
-        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckCaseEligibility(captor.capture());
+        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture());
         assertThat(captor.getValue().getString("caseId")).isEqualTo(sharedCaseId.toString());
     }
 
@@ -387,7 +387,7 @@ class DiscoveryServiceTest {
 
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
-        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckCaseEligibility(captor.capture());
+        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture());
 
         final JsonObject jobData = captor.getValue();
         assertThat(jobData.getString("caseId")).isEqualTo(caseId.toString());
@@ -411,13 +411,13 @@ class DiscoveryServiceTest {
         when(hearingCaseWhitelistSelector.findMatchingCases(any(), any())).thenReturn(List.of(matchedCase));
         doThrow(new RuntimeException("Dispatch failed"))
                 .when(jobManagerService)
-                .dispatchCaseDocumentIngestionTasksCheckCaseEligibility(any(JsonObject.class));
+                .dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
 
         // when / then
         Assertions.assertThatCode(() -> discoveryService.runNightlyDiscovery())
                 .doesNotThrowAnyException();
 
-        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckCaseEligibility(any(JsonObject.class));
+        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
     }
 
     @Test
@@ -441,7 +441,7 @@ class DiscoveryServiceTest {
         Assertions.assertThatCode(() -> discoveryService.runNightlyDiscovery())
                 .doesNotThrowAnyException();
 
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckCaseEligibility(any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any());
     }
 
     @Test
@@ -464,7 +464,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckCaseEligibility(any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any());
     }
 
     @Test
@@ -482,7 +482,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckCaseEligibility(any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any());
     }
 
     @Test

@@ -1,15 +1,14 @@
 package uk.gov.hmcts.cp.cdk.services;
 
 import static java.util.Objects.nonNull;
-import static java.util.UUID.fromString;
 import static java.util.UUID.randomUUID;
-import static org.springframework.util.StringUtils.hasText;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.COURT_CENTRE_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.DATE;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.REQUEST_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.ROOM_ID;
-import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.DATE;
+import static uk.gov.hmcts.cp.cdk.util.EnvironmentUtil.getSystemUserId;
 
 import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseForDay;
@@ -29,7 +28,6 @@ import java.util.stream.Collectors;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
@@ -37,7 +35,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class DiscoveryService {
 
-    private static final String CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID = "CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID";
     private final JobManagerService jobManagerService;
     private final ScheduledIngestionRequestRepository scheduledIngestionRequestRepository;
     private final DiscoverySchedulerConfigurationRepository discoverySchedulerConfigurationRepository;
@@ -126,7 +123,7 @@ public class DiscoveryService {
     private void dispatchCaseEligibilityCheck(final UUID caseId, final UUID cpSystemUserId) {
         final JsonObject jobData = toJobDataForCaseEligibility(caseId, cpSystemUserId);
         try {
-            jobManagerService.dispatchCaseDocumentIngestionTasksCheckCaseEligibility(jobData);
+            jobManagerService.dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(jobData);
         } catch (Exception e) {
             log.error("Nightly Discovery - Failed to dispatch case ingestion tasks for the jobData={}", jobData, e);
         }
@@ -149,19 +146,5 @@ public class DiscoveryService {
                 .add(ROOM_ID, roomId)
                 .add(DATE, date)
                 .build();
-    }
-
-    private static @NotNull UUID getSystemUserId(final Environment environment) {
-        final String configuredSystemUserId = environment.getProperty(CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID);
-        if (!hasText(configuredSystemUserId)) {
-            throw new IllegalStateException("Required environment variable '" + CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID + "' is not set.");
-        }
-
-        try {
-            return fromString(configuredSystemUserId);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalStateException(
-                    "Environment variable '" + CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID + "' must contain a valid UUID, but was: '" + configuredSystemUserId + "'.", e);
-        }
     }
 }

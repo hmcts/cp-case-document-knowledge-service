@@ -1,6 +1,6 @@
 package uk.gov.hmcts.cp.cdk.services;
 
-import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_CASE_ELIGIBILITY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GET_CASES_FOR_HEARING;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
@@ -126,9 +126,9 @@ public class JobManagerService implements IngestionProcessor {
     }
 
     /* package */
-    void dispatchCaseDocumentIngestionTasksCheckCaseEligibility(final JsonObject jobData) {
+    void dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(final JsonObject jobData) {
         final ExecutionInfo executionInfo = executionInfo()
-                .withAssignedTaskName(CHECK_CASE_ELIGIBILITY)
+                .withAssignedTaskName(CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS)
                 .withAssignedTaskStartTime(ZonedDateTime.now())
                 .withJobData(jobData)
                 .withExecutionStatus(ExecutionStatus.STARTED)
