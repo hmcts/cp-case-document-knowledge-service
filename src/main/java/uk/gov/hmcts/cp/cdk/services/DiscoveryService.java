@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
@@ -43,6 +44,7 @@ public class DiscoveryService {
     private final HearingCaseWhitelistSelector hearingCaseWhitelistSelector;
     private final SchedulerProperties schedulerProperties;
     private final Environment environment;
+    private final boolean isHearingForCasesEnabled;
 
     public DiscoveryService(final JobManagerService jobManagerService,
                             final ScheduledIngestionRequestRepository scheduledIngestionRequestRepository,
@@ -51,7 +53,8 @@ public class DiscoveryService {
                             final HearingClient hearingClient,
                             final HearingCaseWhitelistSelector hearingCaseWhitelistSelector,
                             final SchedulerProperties schedulerProperties,
-                            final Environment environment) {
+                            final Environment environment,
+                            @Value("${cqrs.client.hearing.is-hearing-for-cases-enabled:false}") final boolean isHearingForCasesEnabled) {
         this.jobManagerService = jobManagerService;
         this.scheduledIngestionRequestRepository = scheduledIngestionRequestRepository;
         this.discoverySchedulerConfigurationRepository = discoverySchedulerConfigurationRepository;
@@ -60,6 +63,7 @@ public class DiscoveryService {
         this.hearingCaseWhitelistSelector = hearingCaseWhitelistSelector;
         this.schedulerProperties = schedulerProperties;
         this.environment = environment;
+        this.isHearingForCasesEnabled = isHearingForCasesEnabled;
     }
 
     /**
@@ -96,19 +100,34 @@ public class DiscoveryService {
         log.info("Nightly discovery for active courtCentre configurations={} is made using the CPP SystemUser={}",
                 activeCourtCentreConfigurations.size(), cpSystemUserId);
 
-        final List<HearingCaseForDay> matchedHearingCases = hearingDates.stream()
-                .flatMap(hearingDate -> matchHearingCasesForDate(hearingDate, cpSystemUserId, activeCourtCentreConfigurations).stream())
-                .toList();
+        if (isHearingForCasesEnabled) {
+            final List<HearingCaseForDay> matchedHearingCases = hearingDates.stream()
+                    .flatMap(hearingDate -> matchHearingCasesForDate(hearingDate, cpSystemUserId, activeCourtCentreConfigurations).stream())
+                    .toList();
 
-        final Set<UUID> uniqueCaseIds = matchedHearingCases.stream()
-                .filter(hearingCase -> nonNull(hearingCase.prosecutionCases()))
-                .flatMap(hearingCase -> hearingCase.prosecutionCases().stream())
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+            final Set<UUID> uniqueCaseIds = matchedHearingCases.stream()
+                    .filter(hearingCase -> nonNull(hearingCase.prosecutionCases()))
+                    .flatMap(hearingCase -> hearingCase.prosecutionCases().stream())
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
 
-        log.info("Nightly discovery dispatching case eligibility checks for uniqueCaseIds={} out of matchedHearingCases={}",
-                uniqueCaseIds.size(), matchedHearingCases.size());
+            log.info("Nightly discovery dispatching case eligibility checks for uniqueCaseIds={} out of matchedHearingCases={}",
+                    uniqueCaseIds.size(), matchedHearingCases.size());
 
-        uniqueCaseIds.forEach(caseId -> dispatchCaseEligibilityCheck(caseId, cpSystemUserId));
+            uniqueCaseIds.forEach(caseId -> dispatchCaseEligibilityCheck(caseId, cpSystemUserId));
+        } else {
+            activeCourtCentreConfigurations.forEach(acc -> {
+                hearingDates.stream()
+                        .map(hd -> toJobDataForGetCaseHearings(cpSystemUserId.toString(), acc.getCourtCentreId().toString(),
+                                acc.getCourtRoomId().toString(), hd.toString()))
+                        .forEach(jobData -> {
+                            try {
+                                jobManagerService.dispatchCaseDocumentIngestionTasksGetCasesForHearing(jobData);
+                            } catch (Exception e) {
+                                log.error("Nightly Discovery - Failed to dispatch case ingestion tasks for the jobData={}", jobData, e);
+                            }
+                        });
+            });
+        }
     }
 
     private List<HearingCaseForDay> matchHearingCasesForDate(final LocalDate hearingDate, final UUID cpSystemUserId,
