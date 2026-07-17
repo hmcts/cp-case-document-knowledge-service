@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -10,6 +11,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseForDay;
 import uk.gov.hmcts.cp.cdk.domain.DiscoverySchedulerConfiguration;
 import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
 import uk.gov.hmcts.cp.cdk.repo.DiscoverySchedulerConfigurationRepository;
@@ -17,6 +20,7 @@ import uk.gov.hmcts.cp.cdk.repo.ScheduledIngestionRequestRepository;
 import uk.gov.hmcts.cp.cdk.scheduler.SchedulerProperties;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -50,6 +54,12 @@ class DiscoveryServiceTest {
     private HearingDaysCalculator hearingDaysCalculator;
 
     @Mock
+    private HearingClient hearingClient;
+
+    @Mock
+    private HearingCaseWhitelistSelector hearingCaseWhitelistSelector;
+
+    @Mock
     private Environment environment;
 
     private DiscoveryService discoveryService;
@@ -60,7 +70,7 @@ class DiscoveryServiceTest {
         schedulerProperties.getNightlyDiscovery().setDaysAhead(NIGHTLY_DISCOVERY_DAYS);
         discoveryService = new DiscoveryService(
                 jobManagerService, scheduledIngestionRequestRepository, discoverySchedulerConfigurationRepository,
-                hearingDaysCalculator, schedulerProperties, environment);
+                hearingDaysCalculator, hearingClient, hearingCaseWhitelistSelector, schedulerProperties, environment);
     }
 
     @Test
@@ -79,7 +89,7 @@ class DiscoveryServiceTest {
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
 
-        verify(jobManagerService, times(2)).dispatchCaseDocumentIngestionTasks(captor.capture());
+        verify(jobManagerService, times(2)).dispatchCaseDocumentIngestionTasksGetCasesForHearing(captor.capture());
 
         final List<JsonObject> captured = captor.getAllValues();
         assertThat(captured).hasSize(2);
@@ -101,14 +111,14 @@ class DiscoveryServiceTest {
 
         doThrow(new RuntimeException("Dispatch failed"))
                 .when(jobManagerService)
-                .dispatchCaseDocumentIngestionTasks(any(JsonObject.class));
+                .dispatchCaseDocumentIngestionTasksGetCasesForHearing(any(JsonObject.class));
 
         // when
         Assertions.assertThatCode(() -> discoveryService.runIntradayDiscovery())
                 .doesNotThrowAnyException();
 
         // then
-        verify(jobManagerService, times(2)).dispatchCaseDocumentIngestionTasks(any(JsonObject.class));
+        verify(jobManagerService, times(2)).dispatchCaseDocumentIngestionTasksGetCasesForHearing(any(JsonObject.class));
     }
 
     @Test
@@ -123,7 +133,7 @@ class DiscoveryServiceTest {
         discoveryService.runIntradayDiscovery();
 
         // then
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasks(any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksGetCasesForHearing(any());
 
         verify(scheduledIngestionRequestRepository, times(1))
                 .findAllByHearingDate(today);
@@ -152,7 +162,7 @@ class DiscoveryServiceTest {
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
 
-        verify(jobManagerService).dispatchCaseDocumentIngestionTasks(captor.capture());
+        verify(jobManagerService).dispatchCaseDocumentIngestionTasksGetCasesForHearing(captor.capture());
 
         final JsonObject jobData = captor.getValue();
         assertThat(jobData.getString("cppuid")).isEqualTo(cppuid.toString());
@@ -195,55 +205,194 @@ class DiscoveryServiceTest {
     }
 
     @Test
-    void runNightlyDiscovery_shouldDispatchTasksForEveryConfigurationAndCalculatedDate() {
+    void runNightlyDiscovery_shouldRetrieveHearingCasesForEachCalculatedDateUsingSystemUser() {
         // given
         final LocalDate today = LocalDate.now();
         final LocalDate tomorrow = today.plusDays(1);
 
-        final DiscoverySchedulerConfiguration config1 = mockConfiguration();
-        final DiscoverySchedulerConfiguration config2 = mockConfiguration();
-
         when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today, tomorrow));
-        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
-                .thenReturn(List.of(config1, config2));
         when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
 
         // when
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, times(4)).dispatchCaseDocumentIngestionTasks(any(JsonObject.class));
+        verify(hearingClient).getHearingCasesForDay(today, SYSTEM_USER_ID);
+        verify(hearingClient).getHearingCasesForDay(tomorrow, SYSTEM_USER_ID);
     }
 
     @Test
-    void runNightlyDiscovery_shouldGenerateJobDataFromConfigurationAndHearingDate() {
+    void runNightlyDiscovery_shouldFilterRetrievedHearingCasesUsingWhitelistSelector() {
         // given
         final LocalDate today = LocalDate.now();
-        final UUID courtCentreId = UUID.randomUUID();
-        final UUID courtRoomId = UUID.randomUUID();
-        final DiscoverySchedulerConfiguration config = mockConfiguration(courtCentreId, courtRoomId);
-        final String mockedCppuid = UUID.randomUUID().toString();
+        final DiscoverySchedulerConfiguration config = mockConfiguration();
+        final List<DiscoverySchedulerConfiguration> configs = List.of(config);
+        final List<HearingCaseForDay> retrievedCases = List.of(hearingCaseWithProsecutionCases(today, 0));
+
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+                .thenReturn(List.of(today));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
+                .thenReturn(configs);
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(today, SYSTEM_USER_ID)).thenReturn(retrievedCases);
+
+        // when
+        discoveryService.runNightlyDiscovery();
+
+        // then
+        verify(hearingCaseWhitelistSelector).findMatchingCases(retrievedCases, configs);
+    }
+
+    @Test
+    void runNightlyDiscovery_shouldDispatchCheckCaseEligibilityTaskForEachProsecutionCaseInMatchedHearingCases() {
+        // given
+        final LocalDate today = LocalDate.now();
+        final DiscoverySchedulerConfiguration config = mockConfiguration();
+        final HearingCaseForDay matchedCase = hearingCaseWithProsecutionCases(today, 2);
 
         when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today));
         when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
                 .thenReturn(List.of(config));
-        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(mockedCppuid);
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(any(), any())).thenReturn(List.of(matchedCase));
+        when(hearingCaseWhitelistSelector.findMatchingCases(any(), any())).thenReturn(List.of(matchedCase));
+
+        // when
+        discoveryService.runNightlyDiscovery();
+
+        // then
+        verify(jobManagerService, times(2)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
+    }
+
+    @Test
+    void runNightlyDiscovery_shouldDispatchAcrossMultipleDatesAndMatchedHearingCases() {
+        // given
+        final LocalDate today = LocalDate.now();
+        final LocalDate tomorrow = today.plusDays(1);
+        final DiscoverySchedulerConfiguration config = mockConfiguration();
+
+        final HearingCaseForDay caseToday = hearingCaseWithProsecutionCases(today, 2);
+        final HearingCaseForDay caseTomorrow = hearingCaseWithProsecutionCases(tomorrow, 1);
+
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+                .thenReturn(List.of(today, tomorrow));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
+                .thenReturn(List.of(config));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(eq(today), any())).thenReturn(List.of(caseToday));
+        when(hearingClient.getHearingCasesForDay(eq(tomorrow), any())).thenReturn(List.of(caseTomorrow));
+        when(hearingCaseWhitelistSelector.findMatchingCases(eq(List.of(caseToday)), any()))
+                .thenReturn(List.of(caseToday));
+        when(hearingCaseWhitelistSelector.findMatchingCases(eq(List.of(caseTomorrow)), any()))
+                .thenReturn(List.of(caseTomorrow));
+
+        // when
+        discoveryService.runNightlyDiscovery();
+
+        // then
+        verify(jobManagerService, times(3)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
+    }
+
+    @Test
+    void runNightlyDiscovery_shouldDedupeSameCaseIdAppearingInMultipleMatchedHearingCasesOnSameDate() {
+        // given
+        final LocalDate today = LocalDate.now();
+        final DiscoverySchedulerConfiguration config = mockConfiguration();
+        final UUID sharedCaseId = UUID.randomUUID();
+
+        final HearingCaseForDay morningHearing = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), today, UUID.randomUUID(),
+                List.of(sharedCaseId));
+        final HearingCaseForDay afternoonHearing = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), today, UUID.randomUUID(),
+                List.of(sharedCaseId));
+
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+                .thenReturn(List.of(today));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
+                .thenReturn(List.of(config));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(any(), any()))
+                .thenReturn(List.of(morningHearing, afternoonHearing));
+        when(hearingCaseWhitelistSelector.findMatchingCases(any(), any()))
+                .thenReturn(List.of(morningHearing, afternoonHearing));
 
         // when
         discoveryService.runNightlyDiscovery();
 
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
-        verify(jobManagerService).dispatchCaseDocumentIngestionTasks(captor.capture());
+        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture());
+        assertThat(captor.getValue().getString("caseId")).isEqualTo(sharedCaseId.toString());
+    }
+
+    @Test
+    void runNightlyDiscovery_shouldDedupeSameCaseIdAppearingAcrossMultipleDates() {
+        // given
+        final LocalDate today = LocalDate.now();
+        final LocalDate tomorrow = today.plusDays(1);
+        final DiscoverySchedulerConfiguration config = mockConfiguration();
+        final UUID sharedCaseId = UUID.randomUUID();
+
+        final HearingCaseForDay caseToday = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), today, UUID.randomUUID(),
+                List.of(sharedCaseId));
+        final HearingCaseForDay caseTomorrow = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), tomorrow, UUID.randomUUID(),
+                List.of(sharedCaseId));
+
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+                .thenReturn(List.of(today, tomorrow));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
+                .thenReturn(List.of(config));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(eq(today), any())).thenReturn(List.of(caseToday));
+        when(hearingClient.getHearingCasesForDay(eq(tomorrow), any())).thenReturn(List.of(caseTomorrow));
+        when(hearingCaseWhitelistSelector.findMatchingCases(eq(List.of(caseToday)), any()))
+                .thenReturn(List.of(caseToday));
+        when(hearingCaseWhitelistSelector.findMatchingCases(eq(List.of(caseTomorrow)), any()))
+                .thenReturn(List.of(caseTomorrow));
+
+        // when
+        discoveryService.runNightlyDiscovery();
+
+        // then
+        final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
+        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture());
+        assertThat(captor.getValue().getString("caseId")).isEqualTo(sharedCaseId.toString());
+    }
+
+    @Test
+    void runNightlyDiscovery_shouldGenerateJobDataFromMatchedHearingCaseProsecutionCase() {
+        // given
+        final LocalDate today = LocalDate.now();
+        final DiscoverySchedulerConfiguration config = mockConfiguration();
+        final UUID caseId = UUID.randomUUID();
+        final HearingCaseForDay matchedCase = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), today, UUID.randomUUID(),
+                List.of(caseId));
+
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+                .thenReturn(List.of(today));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
+                .thenReturn(List.of(config));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(any(), any())).thenReturn(List.of(matchedCase));
+        when(hearingCaseWhitelistSelector.findMatchingCases(any(), any())).thenReturn(List.of(matchedCase));
+
+        // when
+        discoveryService.runNightlyDiscovery();
+
+        // then
+        final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
+        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture());
 
         final JsonObject jobData = captor.getValue();
-        assertThat(jobData.getString("courtCentreId")).isEqualTo(courtCentreId.toString());
-        assertThat(jobData.getString("roomId")).isEqualTo(courtRoomId.toString());
-        assertThat(jobData.getString("date")).isEqualTo(today.toString());
+        assertThat(jobData.getString("caseId")).isEqualTo(caseId.toString());
+        assertThat(jobData.getString("cppuid")).isEqualTo(SYSTEM_USER_ID);
         assertThat(jobData.getString("requestId")).isNotBlank();
-        assertThat(jobData.getString("cppuid")).isEqualTo(mockedCppuid);
     }
 
     @Test
@@ -251,21 +400,71 @@ class DiscoveryServiceTest {
         // given
         final LocalDate today = LocalDate.now();
         final DiscoverySchedulerConfiguration config = mockConfiguration();
+        final HearingCaseForDay matchedCase = hearingCaseWithProsecutionCases(today, 1);
 
         when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
                 .thenReturn(List.of(today));
         when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
                 .thenReturn(List.of(config));
         when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(any(), any())).thenReturn(List.of(matchedCase));
+        when(hearingCaseWhitelistSelector.findMatchingCases(any(), any())).thenReturn(List.of(matchedCase));
         doThrow(new RuntimeException("Dispatch failed"))
                 .when(jobManagerService)
-                .dispatchCaseDocumentIngestionTasks(any(JsonObject.class));
+                .dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
 
         // when / then
         Assertions.assertThatCode(() -> discoveryService.runNightlyDiscovery())
                 .doesNotThrowAnyException();
 
-        verify(jobManagerService).dispatchCaseDocumentIngestionTasks(any(JsonObject.class));
+        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
+    }
+
+    @Test
+    void runNightlyDiscovery_shouldNotDispatchWhenMatchedHearingCaseHasNullProsecutionCases() {
+        // given
+        final LocalDate today = LocalDate.now();
+        final DiscoverySchedulerConfiguration config = mockConfiguration();
+        final HearingCaseForDay matchedCaseWithoutProsecutionCases = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), today, UUID.randomUUID(), null);
+
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+                .thenReturn(List.of(today));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
+                .thenReturn(List.of(config));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(any(), any())).thenReturn(List.of(matchedCaseWithoutProsecutionCases));
+        when(hearingCaseWhitelistSelector.findMatchingCases(any(), any()))
+                .thenReturn(List.of(matchedCaseWithoutProsecutionCases));
+
+        // when / then
+        Assertions.assertThatCode(() -> discoveryService.runNightlyDiscovery())
+                .doesNotThrowAnyException();
+
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any());
+    }
+
+    @Test
+    void runNightlyDiscovery_shouldNotDispatchWhenMatchedHearingCaseHasEmptyProsecutionCases() {
+        // given
+        final LocalDate today = LocalDate.now();
+        final DiscoverySchedulerConfiguration config = mockConfiguration();
+        final HearingCaseForDay matchedCaseWithEmptyProsecutionCases = hearingCaseWithProsecutionCases(today, 0);
+
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+                .thenReturn(List.of(today));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations())
+                .thenReturn(List.of(config));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(any(), any())).thenReturn(List.of(matchedCaseWithEmptyProsecutionCases));
+        when(hearingCaseWhitelistSelector.findMatchingCases(any(), any()))
+                .thenReturn(List.of(matchedCaseWithEmptyProsecutionCases));
+
+        // when
+        discoveryService.runNightlyDiscovery();
+
+        // then
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any());
     }
 
     @Test
@@ -283,7 +482,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasks(any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any());
     }
 
     @Test
@@ -301,7 +500,7 @@ class DiscoveryServiceTest {
         Assertions.assertThatCode(() -> discoveryService.runNightlyDiscovery())
                 .doesNotThrowAnyException();
 
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasks(any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksGetCasesForHearing(any());
     }
 
     @Test
@@ -340,14 +539,15 @@ class DiscoveryServiceTest {
     }
 
     private DiscoverySchedulerConfiguration mockConfiguration() {
-        return mockConfiguration(UUID.randomUUID(), UUID.randomUUID());
+        return mock(DiscoverySchedulerConfiguration.class);
     }
 
-    private DiscoverySchedulerConfiguration mockConfiguration(final UUID courtCentreId, final UUID courtRoomId) {
-        final DiscoverySchedulerConfiguration configuration = mock(DiscoverySchedulerConfiguration.class);
-        when(configuration.getCourtCentreId()).thenReturn(courtCentreId);
-        when(configuration.getCourtRoomId()).thenReturn(courtRoomId);
-        return configuration;
+    private HearingCaseForDay hearingCaseWithProsecutionCases(final LocalDate hearingDate, final int prosecutionCaseCount) {
+        final List<UUID> prosecutionCases = new ArrayList<>();
+        for (int i = 0; i < prosecutionCaseCount; i++) {
+            prosecutionCases.add(UUID.randomUUID());
+        }
+        return new HearingCaseForDay(UUID.randomUUID(), UUID.randomUUID(), hearingDate, UUID.randomUUID(), prosecutionCases);
     }
 
     private ScheduledIngestionRequest mockRequest() {

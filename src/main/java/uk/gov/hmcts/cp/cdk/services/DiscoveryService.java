@@ -1,9 +1,17 @@
 package uk.gov.hmcts.cp.cdk.services;
 
-import static java.util.UUID.fromString;
+import static java.util.Objects.nonNull;
 import static java.util.UUID.randomUUID;
-import static org.springframework.util.StringUtils.hasText;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.COURT_CENTRE_ID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.DATE;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.REQUEST_ID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.ROOM_ID;
+import static uk.gov.hmcts.cp.cdk.util.EnvironmentUtil.getSystemUserId;
 
+import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseForDay;
 import uk.gov.hmcts.cp.cdk.domain.DiscoverySchedulerConfiguration;
 import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
 import uk.gov.hmcts.cp.cdk.repo.DiscoverySchedulerConfigurationRepository;
@@ -11,13 +19,15 @@ import uk.gov.hmcts.cp.cdk.repo.ScheduledIngestionRequestRepository;
 import uk.gov.hmcts.cp.cdk.scheduler.SchedulerProperties;
 
 import java.time.LocalDate;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
@@ -25,11 +35,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class DiscoveryService {
 
-    private static final String CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID = "CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID";
     private final JobManagerService jobManagerService;
     private final ScheduledIngestionRequestRepository scheduledIngestionRequestRepository;
     private final DiscoverySchedulerConfigurationRepository discoverySchedulerConfigurationRepository;
     private final HearingDaysCalculator hearingDaysCalculator;
+    private final HearingClient hearingClient;
+    private final HearingCaseWhitelistSelector hearingCaseWhitelistSelector;
     private final SchedulerProperties schedulerProperties;
     private final Environment environment;
 
@@ -37,12 +48,16 @@ public class DiscoveryService {
                             final ScheduledIngestionRequestRepository scheduledIngestionRequestRepository,
                             final DiscoverySchedulerConfigurationRepository discoverySchedulerConfigurationRepository,
                             final HearingDaysCalculator hearingDaysCalculator,
+                            final HearingClient hearingClient,
+                            final HearingCaseWhitelistSelector hearingCaseWhitelistSelector,
                             final SchedulerProperties schedulerProperties,
                             final Environment environment) {
         this.jobManagerService = jobManagerService;
         this.scheduledIngestionRequestRepository = scheduledIngestionRequestRepository;
         this.discoverySchedulerConfigurationRepository = discoverySchedulerConfigurationRepository;
         this.hearingDaysCalculator = hearingDaysCalculator;
+        this.hearingClient = hearingClient;
+        this.hearingCaseWhitelistSelector = hearingCaseWhitelistSelector;
         this.schedulerProperties = schedulerProperties;
         this.environment = environment;
     }
@@ -56,11 +71,11 @@ public class DiscoveryService {
         final List<ScheduledIngestionRequest> ingestionRequestList = scheduledIngestionRequestRepository.findAllByHearingDate(hearingDate);
         ingestionRequestList
                 .stream()
-                .map(ir -> toJobData(ir.getCppuid().toString(), ir.getCourtCentreId().toString(),
+                .map(ir -> toJobDataForGetCaseHearings(ir.getCppuid().toString(), ir.getCourtCentreId().toString(),
                         ir.getCourtRoomId().toString(), hearingDate.toString()))
                 .forEach(jobData -> {
                     try {
-                        jobManagerService.dispatchCaseDocumentIngestionTasks(jobData);
+                        jobManagerService.dispatchCaseDocumentIngestionTasksGetCasesForHearing(jobData);
                     } catch (Exception e) {
                         log.error("Intraday Discovery - Failed to dispatch case ingestion tasks for the jobData={}", jobData, e);
                     }
@@ -78,44 +93,58 @@ public class DiscoveryService {
 
         final List<DiscoverySchedulerConfiguration> activeCourtCentreConfigurations = discoverySchedulerConfigurationRepository.findLatestActiveConfigurations();
         final UUID cpSystemUserId = getSystemUserId(environment);
-        log.info("Nightly discovery for active courtCentre configurations={} is made using the CPP SystemUser={}", activeCourtCentreConfigurations.size(), cpSystemUserId);
+        log.info("Nightly discovery for active courtCentre configurations={} is made using the CPP SystemUser={}",
+                activeCourtCentreConfigurations.size(), cpSystemUserId);
 
-        activeCourtCentreConfigurations.forEach(acc -> {
-            hearingDates.stream()
-                    .map(hd -> toJobData(cpSystemUserId.toString(), acc.getCourtCentreId().toString(),
-                            acc.getCourtRoomId().toString(), hd.toString()))
-                    .forEach(jobData -> {
-                        try {
-                            jobManagerService.dispatchCaseDocumentIngestionTasks(jobData);
-                        } catch (Exception e) {
-                            log.error("Nightly Discovery - Failed to dispatch case ingestion tasks for the jobData={}", jobData, e);
-                        }
-                    });
-        });
+        final List<HearingCaseForDay> matchedHearingCases = hearingDates.stream()
+                .flatMap(hearingDate -> matchHearingCasesForDate(hearingDate, cpSystemUserId, activeCourtCentreConfigurations).stream())
+                .toList();
+
+        final Set<UUID> uniqueCaseIds = matchedHearingCases.stream()
+                .filter(hearingCase -> nonNull(hearingCase.prosecutionCases()))
+                .flatMap(hearingCase -> hearingCase.prosecutionCases().stream())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        log.info("Nightly discovery dispatching case eligibility checks for uniqueCaseIds={} out of matchedHearingCases={}",
+                uniqueCaseIds.size(), matchedHearingCases.size());
+
+        uniqueCaseIds.forEach(caseId -> dispatchCaseEligibilityCheck(caseId, cpSystemUserId));
     }
 
-    private JsonObject toJobData(final String cppUid, final String courtCentreId,
-                                 final String roomId, final String date) {
+    private List<HearingCaseForDay> matchHearingCasesForDate(final LocalDate hearingDate, final UUID cpSystemUserId,
+                                                              final List<DiscoverySchedulerConfiguration> activeCourtCentreConfigurations) {
+        final List<HearingCaseForDay> hearingCases = hearingClient.getHearingCasesForDay(hearingDate, cpSystemUserId.toString());
+        final List<HearingCaseForDay> matchedHearingCases = hearingCaseWhitelistSelector.findMatchingCases(hearingCases, activeCourtCentreConfigurations);
+        log.info("Nightly discovery matched hearingCases={} out of retrieved={} for hearingDate={}",
+                matchedHearingCases.size(), hearingCases.size(), hearingDate);
+        return matchedHearingCases;
+    }
+
+    private void dispatchCaseEligibilityCheck(final UUID caseId, final UUID cpSystemUserId) {
+        final JsonObject jobData = toJobDataForCaseEligibility(caseId, cpSystemUserId);
+        try {
+            jobManagerService.dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(jobData);
+        } catch (Exception e) {
+            log.error("Nightly Discovery - Failed to dispatch case ingestion tasks for the jobData={}", jobData, e);
+        }
+    }
+
+    private JsonObject toJobDataForCaseEligibility(final UUID caseId, final UUID cpSystemUserId) {
         return Json.createObjectBuilder()
-                .add("cppuid", cppUid)
-                .add("requestId", randomUUID().toString())
-                .add("courtCentreId", courtCentreId)
-                .add("roomId", roomId)
-                .add("date", date)
+                .add(REQUEST_ID, randomUUID().toString())
+                .add(CPPUID, cpSystemUserId.toString())
+                .add(CTX_CASE_ID_KEY, caseId.toString())
                 .build();
     }
 
-    private static @NotNull UUID getSystemUserId(final Environment environment) {
-        final String configuredSystemUserId = environment.getProperty(CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID);
-        if (!hasText(configuredSystemUserId)) {
-            throw new IllegalStateException("Required environment variable '" + CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID + "' is not set.");
-        }
-
-        try {
-            return fromString(configuredSystemUserId);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalStateException(
-                    "Environment variable '" + CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID + "' must contain a valid UUID, but was: '" + configuredSystemUserId + "'.", e);
-        }
+    private JsonObject toJobDataForGetCaseHearings(final String cppUid, final String courtCentreId,
+                                                   final String roomId, final String date) {
+        return Json.createObjectBuilder()
+                .add(CPPUID, cppUid)
+                .add(REQUEST_ID, randomUUID().toString())
+                .add(COURT_CENTRE_ID, courtCentreId)
+                .add(ROOM_ID, roomId)
+                .add(DATE, date)
+                .build();
     }
 }

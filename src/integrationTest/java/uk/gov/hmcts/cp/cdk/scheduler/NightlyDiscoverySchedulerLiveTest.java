@@ -7,7 +7,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
-import static uk.gov.hmcts.cp.cdk.stub.HearingQueryApiStub.stubGetHearingsReturnsEmptyHearingSummaries;
+import static uk.gov.hmcts.cp.cdk.stub.HearingQueryApiStub.stubGetHearingCasesForDayReturnsHearingCase;
+import static uk.gov.hmcts.cp.cdk.stub.ProgressionQueryApiStub.stubGetCourtDocumentsForAllDefendantsReturnsEmpty;
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 
@@ -26,15 +27,18 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Verifies that NightlyDiscoveryScheduler acquires a ShedLock, calculates the
- * upcoming hearing-date window, and dispatches ingestion tasks for every active
- * court-centre/room configuration across that window. The docker-compose stack
- * overrides the cron to fire every 30 seconds so tests complete well under a minute.
+ * upcoming hearing-date window, calls the hearing-cases-for-day API for each
+ * calculated date, and — once a retrieved hearing case matches an active
+ * court-centre/room configuration — dispatches a check-idpc-availability task whose
+ * downstream execution calls the court-document-search API for all defendants on the
+ * case. The docker-compose stack overrides the cron to fire every 30 seconds so tests
+ * complete well under a minute.
  */
 class NightlyDiscoverySchedulerLiveTest extends AbstractHttpLiveTest {
 
     private static final String LOCK_NAME = "nightlyDiscoveryScheduler";
-    private static final String HEARINGS_PATH = "/hearing-query-api/query/api/rest/hearing/hearings";
-    private static final String COURT_CENTRE_ID = "courtCentreId";
+    private static final String HEARING_CASES_FOR_DAY_PATH = "/hearing-query-api/query/api/rest/hearing/hearing-cases-for-day";
+    private static final String COURT_DOCUMENT_SEARCH_PATH = "/progression-query-api/query/api/rest/progression/courtdocumentsearch";
 
     @Test
     void scheduler_shouldAcquireShedLock_andPopulateShedlockTable() throws SQLException {
@@ -77,29 +81,45 @@ class NightlyDiscoverySchedulerLiveTest extends AbstractHttpLiveTest {
     }
 
     @Test
-    void scheduler_shouldCallHearingApi_forActiveCourtCentreConfigurations() throws SQLException {
+    void scheduler_shouldCallHearingCasesForDayApi_forCalculatedHearingDates() throws SQLException {
         configureFor("localhost", 8089);
 
         final UUID courtCentreId = randomUUID();
         final UUID roomId = randomUUID();
         final UUID configurationId = randomUUID();
+        final UUID caseId = randomUUID();
 
-        // Nightly discovery dispatches one task per active court-centre/room
-        // configuration for every calculated hearing date; seeding one active
-        // configuration is enough for the scheduler to pick it up.
+        // Nightly discovery retrieves hearing cases for every calculated hearing date and
+        // matches them against active court-centre/room configurations. Returning a hearing
+        // case whose centre/room match the seeded configuration exercises the full flow:
+        // whitelist match -> dispatchCaseDocumentIngestionTasksCheckIdpcAvailability ->
+        // CheckIdpcAvailabilityAllDefendantsTask -> IdpcAvailabilityService.retrieveDocuments ->
+        // ProgressionClient.getCourtDocumentsForAllDefendants. The court-document-search API is
+        // stubbed to return no documents so the task completes without dispatching
+        // RETRIEVE_MATERIAL_AND_UPLOAD for any defendant.
         insertDiscoverySchedulerConfiguration(configurationId, courtCentreId, roomId);
-        stubGetHearingsReturnsEmptyHearingSummaries(courtCentreId.toString(), roomId.toString());
+        stubGetHearingCasesForDayReturnsHearingCase(courtCentreId.toString(), roomId.toString(), caseId.toString());
+        stubGetCourtDocumentsForAllDefendantsReturnsEmpty(caseId.toString());
 
         try {
             Awaitility.await()
                     .atMost(Duration.ofSeconds(90))
                     .pollInterval(Duration.ofSeconds(5))
-                    .until(() -> !findAll(getRequestedFor(urlPathEqualTo(HEARINGS_PATH))
-                            .withQueryParam(COURT_CENTRE_ID, equalTo(courtCentreId.toString()))).isEmpty());
+                    .until(() -> !findAll(getRequestedFor(urlPathEqualTo(HEARING_CASES_FOR_DAY_PATH))).isEmpty());
 
-            assertThat(findAll(getRequestedFor(urlPathEqualTo(HEARINGS_PATH))
-                    .withQueryParam(COURT_CENTRE_ID, equalTo(courtCentreId.toString()))))
-                    .as("hearing API must be called for nightly-discovery active configuration courtCentreId=%s", courtCentreId)
+            assertThat(findAll(getRequestedFor(urlPathEqualTo(HEARING_CASES_FOR_DAY_PATH))))
+                    .as("hearing-cases-for-day API must be called by nightly discovery for the calculated hearing dates")
+                    .isNotEmpty();
+
+            Awaitility.await()
+                    .atMost(Duration.ofSeconds(90))
+                    .pollInterval(Duration.ofSeconds(5))
+                    .until(() -> !findAll(getRequestedFor(urlPathEqualTo(COURT_DOCUMENT_SEARCH_PATH))
+                            .withQueryParam("caseId", equalTo(caseId.toString()))).isEmpty());
+
+            assertThat(findAll(getRequestedFor(urlPathEqualTo(COURT_DOCUMENT_SEARCH_PATH))
+                    .withQueryParam("caseId", equalTo(caseId.toString()))))
+                    .as("court-document-search API must be called for all defendants on the whitelisted matched hearing case caseId=%s", caseId)
                     .isNotEmpty();
         } finally {
             deleteDiscoverySchedulerConfiguration(configurationId);
