@@ -62,7 +62,7 @@ scheduler:
     enabled: ${CP_CDK_SCHEDULER_INTRADAY_DISCOVERY_ENABLED:true}
   nightly-discovery:
     name: "nightlyDiscoveryScheduler"
-    cron: "0 0 2 * * *"  # daily at 02:00
+    cron: "${CP_CDK_SCHEDULER_NIGHTLY_DISCOVERY_CRON:0 0 2 * * *}"  # daily at 02:00
     lock-at-least-for: "PT1H"
     lock-at-most-for: "PT2H"
     enabled: ${CP_CDK_SCHEDULER_NIGHTLY_DISCOVERY_ENABLED:true}
