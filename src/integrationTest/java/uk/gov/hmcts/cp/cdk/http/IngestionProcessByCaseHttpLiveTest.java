@@ -26,10 +26,14 @@ import org.springframework.http.ResponseEntity;
  * End-to-end tests for the manual ("Process IDPC") ingestion endpoint:
  * POST /ingestions/start-by-case
  *
- * <p>Covers all three response phases:
+ * <p>Covers all response phases:
  * <ul>
  *   <li>STARTED — a newer IDPC exists, so the remaining workflow is dispatched;</li>
- *   <li>NOT_REQUIRED — the IDPC has already been ingested (seeded), so nothing is dispatched;</li>
+ *   <li>STARTED (no newer IDPC, answer still pending) — the IDPC has already been ingested but no
+ *       answer has been generated yet for the case, so nothing new is dispatched but the phase is
+ *       still STARTED, not NOT_REQUIRED;</li>
+ *   <li>NOT_REQUIRED — the IDPC has already been ingested <b>and</b> an answer already exists
+ *       (seeded), so nothing is dispatched;</li>
  *   <li>FAILED — the downstream court-document-search call errors (case-specific 500 stub).</li>
  * </ul>
  */
@@ -83,10 +87,25 @@ class IngestionProcessByCaseHttpLiveTest extends AbstractHttpLiveTest {
     }
 
     @Test
-    @DisplayName("Returns NOT_REQUIRED when the IDPC has already been ingested")
+    @DisplayName("Returns STARTED (not NOT_REQUIRED) when the IDPC has already been ingested "
+            + "but no answer has been generated yet")
+    void startByCase_returnsStarted_whenIngestedButAnswerNotYetAvailable() throws Exception {
+        final UUID caseId = UUID.randomUUID();
+        seedExistingCaseDocument(caseId);
+
+        final ResponseEntity<String> response = postByCase(caseId);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("\"phase\":\"STARTED\"");
+        assertThat(response.getBody()).contains("previous answers are still in the process of generating");
+    }
+
+    @Test
+    @DisplayName("Returns NOT_REQUIRED when the IDPC has already been ingested and an answer already exists")
     void startByCase_returnsNotRequired() throws Exception {
         final UUID caseId = UUID.randomUUID();
         seedExistingCaseDocument(caseId);
+        seedAnswerAvailable(caseId);
 
         final ResponseEntity<String> response = postByCase(caseId);
 
@@ -131,6 +150,30 @@ class IngestionProcessByCaseHttpLiveTest extends AbstractHttpLiveTest {
             ps.setObject(11, STUB_COURTDOC_ID);
             ps.setObject(12, now);
             ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Seeds a canonical query plus a {@code case_query_status} row with status
+     * {@code ANSWER_AVAILABLE} for the given case, so the IDPC-availability check finds an answer
+     * already exists.
+     */
+    private void seedAnswerAvailable(final UUID caseId) throws Exception {
+        final UUID queryId = UUID.randomUUID();
+        try (Connection connection = openConnection()) {
+            try (PreparedStatement ps = connection.prepareStatement(
+                    "INSERT INTO queries (query_id, label) VALUES (?, ?)")) {
+                ps.setObject(1, queryId);
+                ps.setString(2, "Test query " + queryId);
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps = connection.prepareStatement(
+                    "INSERT INTO case_query_status (case_id, query_id, status) "
+                            + "VALUES (?, ?, 'ANSWER_AVAILABLE'::query_lifecycle_status_enum)")) {
+                ps.setObject(1, caseId);
+                ps.setObject(2, queryId);
+                ps.executeUpdate();
+            }
         }
     }
 }
