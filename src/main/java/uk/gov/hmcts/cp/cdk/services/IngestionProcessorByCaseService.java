@@ -5,7 +5,9 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPL
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
+import uk.gov.hmcts.cp.cdk.domain.QueryLifecycleStatus;
 import uk.gov.hmcts.cp.cdk.jobmanager.support.JobPriority;
+import uk.gov.hmcts.cp.cdk.repo.CaseQueryStatusRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessByCaseRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessResponse;
@@ -30,10 +32,17 @@ import org.springframework.stereotype.Service;
  * HTTP response depends on its outcome:
  * <ul>
  *   <li>no newer IDPC available (this also covers a case that doesn't exist or has no defendants —
- *       {@link IdpcAvailabilityService} simply finds nothing to ingest either way) →
+ *       {@link IdpcAvailabilityService} simply finds nothing to ingest either way) <b>and</b> an
+ *       answer already exists for the case ({@link CaseQueryStatusRepository#findByCaseId} has an
+ *       entry with {@link QueryLifecycleStatus#ANSWER_AVAILABLE}) →
  *       {@link IngestionProcessPhase#NOT_REQUIRED}, nothing dispatched;</li>
- *   <li>newer IDPC available → {@code RETRIEVE_MATERIAL_AND_UPLOAD} is dispatched via the JobManager
- *       at {@link JobPriority#HIGH} priority and {@link IngestionProcessPhase#STARTED} is returned;</li>
+ *   <li>no newer IDPC available and no answer exists yet for the case → nothing new to dispatch
+ *       (the existing documents were already sent for ingestion previously), but
+ *       {@link IngestionProcessPhase#STARTED} is still returned since the answer generation is
+ *       presumed to be in progress;</li>
+ *   <li>newer IDPC available → {@code RETRIEVE_MATERIAL_AND_UPLOAD} is dispatched via the
+ *       JobManager at {@link JobPriority#HIGH} priority for the newer documents found and
+ *       {@link IngestionProcessPhase#STARTED} is returned;</li>
  *   <li>any unexpected error → {@link IngestionProcessPhase#FAILED}.</li>
  * </ul>
  *
@@ -59,12 +68,15 @@ public class IngestionProcessorByCaseService implements IngestionProcessorByCase
                     + "and an Answers version already exists.";
     /* default */ static final String MSG_STARTED =
             "Ingestion workflow request accepted; task submitted via JobManager (requestId=%s).";
+    /* default */ static final String MSG_STARTED_ANSWERS_IN_PROGRESS =
+            "No newer IDPC version is available; previous answers are still in the process of generating.";
     /* default */ static final String MSG_FAILED =
             "Ingestion process could not be started due to an internal error.";
 
     private final IdpcAvailabilityService idpcAvailabilityService;
     private final RetrieveMaterialAndUploadJobDataService retrievalJobDataService;
     private final ExecutionService executionService;
+    private final CaseQueryStatusRepository caseQueryStatusRepository;
 
     @Override
     public IngestionProcessResponse startIngestionProcess(final String cppuid,
@@ -80,22 +92,33 @@ public class IngestionProcessorByCaseService implements IngestionProcessorByCase
                     idpcAvailabilityService.retrieveDocuments(caseId, cppuid);
 
             if (newDocuments.isEmpty()) {
-                log.info("Manual ingestion not required (no newer IDPC version). caseId={}, requestId={}",
-                        caseId, requestId);
-                return notRequired(response, MSG_NOT_REQUIRED_NO_NEWER_IDPC);
+                if (hasAnswerAvailable(caseId)) {
+                    log.info("Manual ingestion not required (no newer IDPC version and an answer already exists). "
+                            + "caseId={}, requestId={}", caseId, requestId);
+                    return notRequired(response, MSG_NOT_REQUIRED_NO_NEWER_IDPC);
+                }
+
+                log.info("No newer IDPC version but no answer exists yet; previous ingestion still in progress, "
+                        + "nothing new to dispatch. caseId={}, requestId={}", caseId, requestId);
+                return started(response, MSG_STARTED_ANSWERS_IN_PROGRESS);
             }
 
             dispatchRetrievalTasks(cppuid, requestId, caseId, newDocuments);
 
             log.info("Manual ingestion started. caseId={}, newIdpcDocuments={}, requestId={}",
                     caseId, newDocuments.size(), requestId);
-            return started(response, requestId);
+            return started(response, MSG_STARTED.formatted(requestId));
 
         } catch (final Exception exception) {
             log.error("Manual ingestion could not be started due to an internal error. "
                     + "caseId={}, requestId={}", caseId, requestId, exception);
             return failed(response);
         }
+    }
+
+    private boolean hasAnswerAvailable(final UUID caseId) {
+        return caseQueryStatusRepository.findByCaseId(caseId).stream()
+                .anyMatch(status -> status.getStatus() == QueryLifecycleStatus.ANSWER_AVAILABLE);
     }
 
     private void dispatchRetrievalTasks(final String cppuid,
@@ -115,9 +138,9 @@ public class IngestionProcessorByCaseService implements IngestionProcessorByCase
         }
     }
 
-    private IngestionProcessResponse started(final IngestionProcessResponse response, final String requestId) {
+    private IngestionProcessResponse started(final IngestionProcessResponse response, final String message) {
         response.setPhase(IngestionProcessPhase.STARTED);
-        response.setMessage(MSG_STARTED.formatted(requestId));
+        response.setMessage(message);
         return response;
     }
 
