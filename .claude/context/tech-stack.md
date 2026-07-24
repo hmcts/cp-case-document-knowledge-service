@@ -98,7 +98,7 @@ All APIM calls carry a subscription key or AAD token injected by `ApimAuthHeader
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
 | `api-cp-crime-caseadmin-case-document-knowledge` | 0.0.11 | OpenAPI models for CSDK own API |
-| `api-cp-ai-rag` | 0.0.12 | RAG service API models |
+| `api-cp-ai-rag` | 0.0.15 | RAG service API models |
 | `cp-auth-rules-filter` | 1.0.7 | Drools-based HTTP authorization |
 | `cp-audit-filter-springboot` | 1.0.5 | Audit event filter (publishes to Artemis) |
 | `task-manager-service` | 1.0.10 | Job/task orchestration client |
