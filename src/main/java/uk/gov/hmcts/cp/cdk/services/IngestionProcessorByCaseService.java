@@ -7,6 +7,7 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.domain.QueryLifecycleStatus;
 import uk.gov.hmcts.cp.cdk.jobmanager.support.JobPriority;
+import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.CaseQueryStatusRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessByCaseRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
@@ -33,11 +34,13 @@ import org.springframework.stereotype.Service;
  * <ul>
  *   <li>no newer IDPC available (this also covers a case that doesn't exist or has no defendants —
  *       {@link IdpcAvailabilityService} simply finds nothing to ingest either way) <b>and</b> an
- *       answer already exists for the case ({@link CaseQueryStatusRepository#findByCaseId} has an
- *       entry with {@link QueryLifecycleStatus#ANSWER_AVAILABLE}) →
+ *       answer already exists for the case's latest IDPC document
+ *       ({@link CaseDocumentRepository#findLatestDocId} resolves that document, and
+ *       {@link CaseQueryStatusRepository#findByCaseIdAndDocId} has an entry against it with
+ *       {@link QueryLifecycleStatus#ANSWER_AVAILABLE}) →
  *       {@link IngestionProcessPhase#NOT_REQUIRED}, nothing dispatched;</li>
- *   <li>no newer IDPC available and no answer exists yet for the case → nothing new to dispatch
- *       (the existing documents were already sent for ingestion previously), but
+ *   <li>no newer IDPC available and no answer exists yet for that latest document → nothing new to
+ *       dispatch (the existing documents were already sent for ingestion previously), but
  *       {@link IngestionProcessPhase#STARTED} is still returned since the answer generation is
  *       presumed to be in progress;</li>
  *   <li>newer IDPC available → {@code RETRIEVE_MATERIAL_AND_UPLOAD} is dispatched via the
@@ -77,6 +80,7 @@ public class IngestionProcessorByCaseService implements IngestionProcessorByCase
     private final RetrieveMaterialAndUploadJobDataService retrievalJobDataService;
     private final ExecutionService executionService;
     private final CaseQueryStatusRepository caseQueryStatusRepository;
+    private final CaseDocumentRepository caseDocumentRepository;
 
     @Override
     public IngestionProcessResponse startIngestionProcess(final String cppuid,
@@ -117,8 +121,10 @@ public class IngestionProcessorByCaseService implements IngestionProcessorByCase
     }
 
     private boolean hasAnswerAvailable(final UUID caseId) {
-        return caseQueryStatusRepository.findByCaseId(caseId).stream()
-                .anyMatch(status -> status.getStatus() == QueryLifecycleStatus.ANSWER_AVAILABLE);
+        return caseDocumentRepository.findLatestDocId(caseId)
+                .map(docId -> caseQueryStatusRepository.findByCaseIdAndDocId(caseId, docId).stream()
+                        .anyMatch(status -> status.getStatus() == QueryLifecycleStatus.ANSWER_AVAILABLE))
+                .orElse(false);
     }
 
     private void dispatchRetrievalTasks(final String cppuid,

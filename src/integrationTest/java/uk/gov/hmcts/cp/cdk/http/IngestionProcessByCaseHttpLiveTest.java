@@ -104,8 +104,8 @@ class IngestionProcessByCaseHttpLiveTest extends AbstractHttpLiveTest {
     @DisplayName("Returns NOT_REQUIRED when the IDPC has already been ingested and an answer already exists")
     void startByCase_returnsNotRequired() throws Exception {
         final UUID caseId = UUID.randomUUID();
-        seedExistingCaseDocument(caseId);
-        seedAnswerAvailable(caseId);
+        final UUID docId = seedExistingCaseDocument(caseId);
+        seedAnswerAvailable(caseId, docId);
 
         final ResponseEntity<String> response = postByCase(caseId);
 
@@ -128,7 +128,8 @@ class IngestionProcessByCaseHttpLiveTest extends AbstractHttpLiveTest {
      * Seeds an already-ingested case document matching the material/defendant returned by the
      * court-document search stub, so the IDPC-availability check finds no newer version to ingest.
      */
-    private void seedExistingCaseDocument(final UUID caseId) throws Exception {
+    private UUID seedExistingCaseDocument(final UUID caseId) throws Exception {
+        final UUID docId = UUID.randomUUID();
         final OffsetDateTime now = OffsetDateTime.now();
         try (Connection connection = openConnection();
              PreparedStatement ps = connection.prepareStatement(
@@ -137,7 +138,7 @@ class IngestionProcessByCaseHttpLiveTest extends AbstractHttpLiveTest {
                              + "ingestion_phase, ingestion_phase_at, defendant_id, courtdoc_id, created_at) "
                              + "VALUES (?, ?, ?, ?, ?, ?, ?, ?::document_ingestion_phase_enum, ?, ?, ?, ?)"
              )) {
-            ps.setObject(1, UUID.randomUUID());
+            ps.setObject(1, docId);
             ps.setObject(2, caseId);
             ps.setObject(3, STUB_MATERIAL_ID);
             ps.setString(4, "IDPC");
@@ -151,14 +152,15 @@ class IngestionProcessByCaseHttpLiveTest extends AbstractHttpLiveTest {
             ps.setObject(12, now);
             ps.executeUpdate();
         }
+        return docId;
     }
 
     /**
      * Seeds a canonical query plus a {@code case_query_status} row with status
-     * {@code ANSWER_AVAILABLE} for the given case, so the IDPC-availability check finds an answer
-     * already exists.
+     * {@code ANSWER_AVAILABLE} against the given (latest) doc_id, so the IDPC-availability check
+     * finds an answer already exists for the case's latest document.
      */
-    private void seedAnswerAvailable(final UUID caseId) throws Exception {
+    private void seedAnswerAvailable(final UUID caseId, final UUID docId) throws Exception {
         final UUID queryId = UUID.randomUUID();
         try (Connection connection = openConnection()) {
             try (PreparedStatement ps = connection.prepareStatement(
@@ -168,10 +170,11 @@ class IngestionProcessByCaseHttpLiveTest extends AbstractHttpLiveTest {
                 ps.executeUpdate();
             }
             try (PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO case_query_status (case_id, query_id, status) "
-                            + "VALUES (?, ?, 'ANSWER_AVAILABLE'::query_lifecycle_status_enum)")) {
+                    "INSERT INTO case_query_status (case_id, query_id, status, doc_id) "
+                            + "VALUES (?, ?, 'ANSWER_AVAILABLE'::query_lifecycle_status_enum, ?)")) {
                 ps.setObject(1, caseId);
                 ps.setObject(2, queryId);
+                ps.setObject(3, docId);
                 ps.executeUpdate();
             }
         }

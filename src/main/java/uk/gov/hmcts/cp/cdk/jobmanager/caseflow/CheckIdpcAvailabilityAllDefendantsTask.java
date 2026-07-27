@@ -61,6 +61,9 @@ public class CheckIdpcAvailabilityAllDefendantsTask implements ExecutableTask {
         try {
             final UUID caseId = parseUuid(caseIdString).get();
 
+            log.info("{} checking IDPC availability. caseId={}, cppuid={}",
+                    CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS, caseId, cppuid);
+
             final List<NewIdpcDocument> newDocuments =
                     idpcAvailabilityService.retrieveDocuments(caseId, cppuid);
 

@@ -25,4 +25,8 @@ public interface CaseQueryStatusRepository extends JpaRepository<CaseQueryStatus
     @Query("SELECT c FROM CaseQueryStatus c "
             + "WHERE c.caseQueryStatusId.caseId = :caseId AND c.caseQueryStatusId.queryId = :queryId")
     Optional<CaseQueryStatus> findByCaseIdAndQueryId(@Param("caseId") UUID caseId, @Param("queryId") UUID queryId);
+
+    @Query("SELECT c FROM CaseQueryStatus c "
+            + "WHERE c.caseQueryStatusId.caseId = :caseId AND c.docId = :docId")
+    List<CaseQueryStatus> findByCaseIdAndDocId(@Param("caseId") UUID caseId, @Param("docId") UUID docId);
 }
