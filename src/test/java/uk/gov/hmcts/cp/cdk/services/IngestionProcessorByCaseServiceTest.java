@@ -12,8 +12,6 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
 
-import uk.gov.hmcts.cp.cdk.domain.CaseQueryStatus;
-import uk.gov.hmcts.cp.cdk.domain.QueryLifecycleStatus;
 import uk.gov.hmcts.cp.cdk.jobmanager.support.JobPriority;
 import uk.gov.hmcts.cp.cdk.repo.CaseQueryStatusRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessByCaseRequest;
@@ -62,22 +60,6 @@ class IngestionProcessorByCaseServiceTest {
         caseId = UUID.randomUUID();
     }
 
-    private CaseQueryStatus answerAvailable() {
-        final CaseQueryStatus status = new CaseQueryStatus();
-        status.setCaseId(caseId);
-        status.setQueryId(UUID.randomUUID());
-        status.setStatus(QueryLifecycleStatus.ANSWER_AVAILABLE);
-        return status;
-    }
-
-    private CaseQueryStatus answerNotAvailable() {
-        final CaseQueryStatus status = new CaseQueryStatus();
-        status.setCaseId(caseId);
-        status.setQueryId(UUID.randomUUID());
-        status.setStatus(QueryLifecycleStatus.ANSWER_NOT_AVAILABLE);
-        return status;
-    }
-
     private IngestionProcessByCaseRequest request() {
         final IngestionProcessByCaseRequest req = new IngestionProcessByCaseRequest();
         req.setCaseId(caseId);
@@ -110,12 +92,12 @@ class IngestionProcessorByCaseServiceTest {
     }
 
     @Test
-    @DisplayName("Returns NOT_REQUIRED when no newer IDPC version exists and an answer already exists")
+    @DisplayName("Returns NOT_REQUIRED when no newer IDPC version exists and an answer already exists for the latest document")
     void returnsNotRequired_whenNoNewerIdpcAndAnswerExists() {
         when(idpcAvailabilityService.retrieveDocuments(caseId, CPPUID_VALUE))
                 .thenReturn(List.of());
-        when(caseQueryStatusRepository.findByCaseId(caseId))
-                .thenReturn(List.of(answerAvailable()));
+        when(caseQueryStatusRepository.existsAnswerAvailableForLatestDoc(caseId))
+                .thenReturn(true);
 
         final IngestionProcessResponse response = service.startIngestionProcess(CPPUID_VALUE, request());
 
@@ -125,27 +107,12 @@ class IngestionProcessorByCaseServiceTest {
     }
 
     @Test
-    @DisplayName("Returns STARTED when no newer IDPC version exists but no answer exists yet")
+    @DisplayName("Returns STARTED when no newer IDPC version exists but no answer exists yet for the latest document")
     void returnsStarted_whenNoNewerIdpcAndNoAnswerExists() {
         when(idpcAvailabilityService.retrieveDocuments(caseId, CPPUID_VALUE))
                 .thenReturn(List.of());
-        when(caseQueryStatusRepository.findByCaseId(caseId))
-                .thenReturn(List.of(answerNotAvailable()));
-
-        final IngestionProcessResponse response = service.startIngestionProcess(CPPUID_VALUE, request());
-
-        assertThat(response.getPhase()).isEqualTo(IngestionProcessPhase.STARTED);
-        assertThat(response.getMessage()).contains("previous answers are still in the process of generating");
-        verifyNoInteractions(executionService);
-    }
-
-    @Test
-    @DisplayName("Returns STARTED when no newer IDPC version exists and no case query status is recorded")
-    void returnsStarted_whenNoNewerIdpcAndNoCaseQueryStatus() {
-        when(idpcAvailabilityService.retrieveDocuments(caseId, CPPUID_VALUE))
-                .thenReturn(List.of());
-        when(caseQueryStatusRepository.findByCaseId(caseId))
-                .thenReturn(List.of());
+        when(caseQueryStatusRepository.existsAnswerAvailableForLatestDoc(caseId))
+                .thenReturn(false);
 
         final IngestionProcessResponse response = service.startIngestionProcess(CPPUID_VALUE, request());
 

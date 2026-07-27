@@ -5,7 +5,6 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPL
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
-import uk.gov.hmcts.cp.cdk.domain.QueryLifecycleStatus;
 import uk.gov.hmcts.cp.cdk.jobmanager.support.JobPriority;
 import uk.gov.hmcts.cp.cdk.repo.CaseQueryStatusRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessByCaseRequest;
@@ -33,11 +32,12 @@ import org.springframework.stereotype.Service;
  * <ul>
  *   <li>no newer IDPC available (this also covers a case that doesn't exist or has no defendants —
  *       {@link IdpcAvailabilityService} simply finds nothing to ingest either way) <b>and</b> an
- *       answer already exists for the case ({@link CaseQueryStatusRepository#findByCaseId} has an
- *       entry with {@link QueryLifecycleStatus#ANSWER_AVAILABLE}) →
+ *       answer already exists for the case's latest IDPC document
+ *       ({@link CaseQueryStatusRepository#existsAnswerAvailableForLatestDoc} resolves the latest
+ *       doc_id and checks it in a single query) →
  *       {@link IngestionProcessPhase#NOT_REQUIRED}, nothing dispatched;</li>
- *   <li>no newer IDPC available and no answer exists yet for the case → nothing new to dispatch
- *       (the existing documents were already sent for ingestion previously), but
+ *   <li>no newer IDPC available and no answer exists yet for that latest document → nothing new to
+ *       dispatch (the existing documents were already sent for ingestion previously), but
  *       {@link IngestionProcessPhase#STARTED} is still returned since the answer generation is
  *       presumed to be in progress;</li>
  *   <li>newer IDPC available → {@code RETRIEVE_MATERIAL_AND_UPLOAD} is dispatched via the
@@ -117,8 +117,7 @@ public class IngestionProcessorByCaseService implements IngestionProcessorByCase
     }
 
     private boolean hasAnswerAvailable(final UUID caseId) {
-        return caseQueryStatusRepository.findByCaseId(caseId).stream()
-                .anyMatch(status -> status.getStatus() == QueryLifecycleStatus.ANSWER_AVAILABLE);
+        return caseQueryStatusRepository.existsAnswerAvailableForLatestDoc(caseId);
     }
 
     private void dispatchRetrievalTasks(final String cppuid,

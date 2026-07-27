@@ -25,4 +25,28 @@ public interface CaseQueryStatusRepository extends JpaRepository<CaseQueryStatus
     @Query("SELECT c FROM CaseQueryStatus c "
             + "WHERE c.caseQueryStatusId.caseId = :caseId AND c.caseQueryStatusId.queryId = :queryId")
     Optional<CaseQueryStatus> findByCaseIdAndQueryId(@Param("caseId") UUID caseId, @Param("queryId") UUID queryId);
+
+    /**
+     * True if an {@code ANSWER_AVAILABLE} status is recorded against the case's latest IDPC
+     * document (most recently uploaded {@code case_documents} row still in an active ingestion
+     * phase). Resolves the latest doc_id and checks it in a single round trip rather than two
+     * separate repository calls.
+     */
+    @Query(value = """
+            SELECT EXISTS (
+                SELECT 1
+                  FROM case_query_status cqs
+                 WHERE cqs.case_id = :caseId
+                   AND cqs.status = 'ANSWER_AVAILABLE'
+                   AND cqs.doc_id = (
+                         SELECT cd.doc_id
+                           FROM case_documents cd
+                          WHERE cd.case_id = :caseId
+                            AND cd.ingestion_phase IN ('UPLOADED','INGESTED','WAITING_FOR_UPLOAD','EXCEEDED_FILE_SIZE_LIMIT')
+                          ORDER BY cd.uploaded_at DESC
+                          LIMIT 1
+                       )
+            )
+            """, nativeQuery = true)
+    boolean existsAnswerAvailableForLatestDoc(@Param("caseId") UUID caseId);
 }
