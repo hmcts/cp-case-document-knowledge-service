@@ -16,16 +16,6 @@ public interface CaseDocumentRepository extends JpaRepository<CaseDocument, UUID
     Optional<CaseDocument> findFirstByCaseIdOrderByUploadedAtDesc(UUID caseId);
 
     @Query(value = """
-             SELECT cd.doc_id
-               FROM case_documents cd
-             WHERE cd.case_id = :caseId
-               AND cd.ingestion_phase IN ('UPLOADED','INGESTED','WAITING_FOR_UPLOAD','EXCEEDED_FILE_SIZE_LIMIT')
-             ORDER BY cd.uploaded_at DESC
-             LIMIT 1
-            """, nativeQuery = true)
-    Optional<UUID> findLatestDocId(UUID caseId);
-
-    @Query(value = """
              SELECT distinct(cd.doc_id)
                FROM case_documents cd 
              WHERE cd.case_id = :caseId 
