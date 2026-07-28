@@ -1,3 +1,8 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+
 # HMCTS SDLC Pipeline — case-document-knowledge-service (CSDK)
 
 > Tailored from `hmcts-sdlc-orchestrator` for this repo — install the plugin first
@@ -101,7 +106,6 @@ Run in order. Do not skip or reorder. Halt at every human gate before proceeding
 | `test-analyzer` (agent) | Coverage-gap / flaky-test analysis across `test`, `integrationTest`, `pactVerificationTest` |
 | `api-contract-check` (skill) | Verify controllers/DTOs stay consistent with the consumed `api-cp-crime-caseadmin-case-document-knowledge` OpenAPI artefact (`build.gradle`) |
 | `review-checklist` (skill) | Code Review stage, alongside `review-pr` — Spring Boot/Azure/logging checklist items map directly onto CSDK's hard rules |
-| `generate-bdd-specs` (skill) | Test Specs stage — produces `docs/pipeline/test-specs/<story-id>.feature` |
 | `write-acceptance-criteria` (skill) | Requirements stage — deriving ACs from FRs |
 | `springboot-service-from-template` (skill) | Template-alignment check — ties to the hard rule against hand-scaffolding build files/Dockerfile/logback |
 
@@ -142,6 +146,7 @@ docs/pipeline/
 - **Never invent requirements, ACs, or test data** — flag unknowns as open questions. Every story needs a linked Jira ticket before the test stage.
 - **Preserve RAG response data** — any change to the ingestion or answer-serving flow must not drop or transform source fields returned by the RAG service (e.g. `doc_id`, `llm_input`). Citation production is the RAG service's responsibility; CSDK's responsibility is not to lose that data.
 - **No PII / case data / court reference numbers** in artefacts, prompts, logs, or test fixtures. Use synthetic data; WireMock stubs and Azurite seed data must be non-real.
+- **Security hooks are enforced automatically by the plugin** — `block-pii` and `block-secrets` run on every prompt and on every `Write`/`Edit`, `guard-bash` runs on every `Bash` call, and `guard-paths` runs on every `Read`/`Write`/`Edit` (`$PLUGIN/hooks/hooks.json`). These back the PII and Managed-Identity rules above; don't bypass or work around a hook block — treat it as a signal to fix the underlying content, not the gate.
 - **JSON logging to stdout is mandatory** (`logback-spring.xml`). No `System.out`; no logging of case content or document bodies. See `$PLUGIN/context/logging-standards.md`.
 - **Azure via Managed Identity only.** Connection strings, SAS tokens, and account keys are not permitted in code, config, env vars, or compose files. Use the existing `Azure*`/APIM client pattern. See `$PLUGIN/context/azure-sdk-guide.md`.
 - **Flyway migrations are append-only** — never edit a shipped `V*.sql`; add the next version. Route migration changes through `migration-reviewer`.
