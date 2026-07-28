@@ -127,16 +127,33 @@ Run in order. Do not skip or reorder. Halt at every human gate before proceeding
 
 ## Artefact output convention
 
-All pipeline artefacts go to `docs/pipeline/`:
+Every requirement gets its own folder under `docs/pipeline/`, scoped by Jira ticket, so
+successive requirements never overwrite each other's artefacts and each stage's output stays
+traceable back to its ticket:
 
 ```
-docs/pipeline/
-├── requirements.md
-├── user-stories/<story-id>.md
-├── test-specs/<story-id>.feature
-├── adrs/<NNN>-<title>.md
+docs/pipeline/<JIRA-TICKET>-<slug>/
+├── 00-input-brief.md
+├── 01-requirements.md
+├── 02-design.md
+├── 03-stories.md
+├── 04-test-specs.md
+├── adrs.md
 └── deploy-notes.md
 ```
+
+- `00-input-brief.md` — the raw, unstructured input as given (brief, Confluence page, Jira epic).
+- `01-requirements.md` — Requirements stage output.
+- `02-design.md` — Architecture & Design stage output (low-level design).
+- `03-stories.md` — User Story stage output; all stories split out of the requirement in one file.
+- `04-test-specs.md` — Test Specs stage output: test scenarios (Given/When/Then or equivalent, in
+  prose) for the integration tests to be written in `src/integrationTest/`, grouped by story — a
+  story can have more than one integration test scenario.
+- `adrs.md` — all architecturally-significant decisions raised while working this requirement, as
+  numbered sections (`## ADR-001: <title>`, `## ADR-002: <title>`, ...) in a single file.
+- `deploy-notes.md` — Deploy Sandbox stage output.
+
+Create the folder on first use (Requirements stage) — no pre-scaffolding required.
 
 ---
 
