@@ -9,6 +9,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseForDay;
+import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCasesForDayResponse;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummaries;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesListRequest;
@@ -16,6 +18,7 @@ import uk.gov.hmcts.cp.cdk.clients.hearing.mapper.HearingDtoMapper;
 
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,13 +58,17 @@ class HearingClientImplTest {
     private final String acceptHeader = "application/json";
     private final String cppuidHeader = "cppuid";
     private final String hearingsPath = "/hearings";
+    private final String hearingCasesForDayAcceptHeader = "application/json";
+    private final String hearingCasesForDayPath = "/hearing-cases-for-day";
 
     @BeforeEach
     void setUp() {
         when(rootProps.headers()).thenReturn(headers);
         when(headers.cjsCppuid()).thenReturn(cppuidHeader);
-        when(hearingProps.acceptHeader()).thenReturn(acceptHeader);
-        when(hearingProps.hearingsPath()).thenReturn(hearingsPath);
+        when(hearingProps.getHearingsAcceptHeader()).thenReturn(acceptHeader);
+        when(hearingProps.getHearingsPath()).thenReturn(hearingsPath);
+        when(hearingProps.getHearingCasesForDayAcceptHeader()).thenReturn(hearingCasesForDayAcceptHeader);
+        when(hearingProps.getHearingCasesForDayPath()).thenReturn(hearingCasesForDayPath);
 
         client = new HearingClientImpl(restClient, rootProps, hearingProps, mapper);
     }
@@ -112,6 +119,43 @@ class HearingClientImplTest {
         when(responseSpec.body(HearingSummariesListRequest.class)).thenReturn(response);
 
         final List<HearingSummariesInfo> result = client.getHearingsAndCases("court", "room", now(), "user");
+
+        assertThat(result.isEmpty()).isTrue();
+    }
+
+    @Test
+    void shouldReturnHearingCases_whenValidResponse() {
+        final HearingCaseForDay hearingCase = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), now(), UUID.randomUUID(), List.of(UUID.randomUUID()));
+        final HearingCasesForDayResponse response = new HearingCasesForDayResponse(List.of(hearingCase));
+
+        mockRestClient();
+        when(responseSpec.body(HearingCasesForDayResponse.class)).thenReturn(response);
+
+        final List<HearingCaseForDay> result = client.getHearingCasesForDay(now(), "user1");
+
+        assertThat(result).containsExactly(hearingCase);
+    }
+
+    @Test
+    void shouldReturnEmptyList_whenHearingCasesForDayResponseIsNull() {
+        mockRestClient();
+        when(responseSpec.body(HearingCasesForDayResponse.class)).thenReturn(null);
+
+        final List<HearingCaseForDay> result = client.getHearingCasesForDay(now(), "user");
+
+        assertThat(result.isEmpty()).isTrue();
+    }
+
+    @Test
+    void shouldReturnEmptyList_whenHearingCasesIsNull() {
+        final HearingCasesForDayResponse response = mock(HearingCasesForDayResponse.class);
+        when(response.hearingCases()).thenReturn(null);
+
+        mockRestClient();
+        when(responseSpec.body(HearingCasesForDayResponse.class)).thenReturn(response);
+
+        final List<HearingCaseForDay> result = client.getHearingCasesForDay(now(), "user");
 
         assertThat(result.isEmpty()).isTrue();
     }

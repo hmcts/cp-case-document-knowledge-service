@@ -59,4 +59,11 @@ scheduler:
     cron: "0 0/10 7-19 * * MON-FRI"  # every 10 min, Mon–Fri, 07:00–19:50
     lock-at-least-for: "PT8M"
     lock-at-most-for: "PT9M"
-    enabled: ${CP_CDK_SCHEDULER_INTRADAY_DISCOVERY_ENABLED:false}
+    enabled: ${CP_CDK_SCHEDULER_INTRADAY_DISCOVERY_ENABLED:true}
+  nightly-discovery:
+    name: "nightlyDiscoveryScheduler"
+    cron: "${CP_CDK_SCHEDULER_NIGHTLY_DISCOVERY_CRON:0 0 2 * * *}"  # daily at 02:00
+    lock-at-least-for: "${CP_CDK_SCHEDULER_NIGHTLY_DISCOVERY_LOCK_AT_LEAST_FOR:PT1H}"
+    lock-at-most-for: "${CP_CDK_SCHEDULER_NIGHTLY_DISCOVERY_LOCK_AT_MOST_FOR:PT2H}"
+    enabled: ${CP_CDK_SCHEDULER_NIGHTLY_DISCOVERY_ENABLED:true}
+    days-ahead: ${CP_CDK_SCHEDULER_NIGHTLY_DISCOVERY_DAYS_AHEAD:3}

@@ -1,7 +1,5 @@
 package uk.gov.hmcts.cp.cdk.util;
 
-import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
-import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 
 import java.time.LocalDate;
@@ -78,17 +76,6 @@ public class TaskUtils {
         return parseIsoDate(dateString).orElse(null);
     }
 
-    // ---------- JDBC param builders ----------
-
-    public static MapSqlParameterSource buildReservationParams(final UUID caseId,
-                                                               final UUID queryId,
-                                                               final UUID documentId) {
-        return new MapSqlParameterSource()
-                .addValue("case_id", caseId)
-                .addValue("query_id", queryId)
-                .addValue("doc_id", documentId);
-    }
-
     public static MapSqlParameterSource buildAnswerParams(final UUID caseId,
                                                           final UUID queryId,
                                                           final Integer version,
@@ -114,21 +101,6 @@ public class TaskUtils {
                 .addValue("query_id", queryId)
                 .addValue("doc_id", documentId)
                 .addValue("version", version);
-    }
-
-    // ---------- Safe external lookups ----------
-
-    public static Optional<LatestMaterialInfo> getCourtDocuments(final ProgressionClient progressionClient,
-                                                                 final UUID caseId,
-                                                                 final String userId) {
-        Optional<LatestMaterialInfo> result;
-        try {
-            result = progressionClient.getCourtDocuments(caseId, userId);
-        } catch (Exception exception) {
-            log.error("Progression lookup failed for caseId={} (userId='{}')", caseId, userId, exception);
-            result = Optional.empty();
-        }
-        return result;
     }
 
     public static String normalise(final String value, final int max) {

@@ -1,5 +1,6 @@
 package uk.gov.hmcts.cp.cdk.services;
 
+import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GET_CASES_FOR_HEARING;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
@@ -91,7 +92,7 @@ public class JobManagerService implements IngestionProcessor {
         }
 
         try {
-            dispatchCaseDocumentIngestionTasks(jobData);
+            dispatchCaseDocumentIngestionTasksGetCasesForHearing(jobData);
             log.info("Case ingestion process started via JobManager. requestId={}, cppuid={}", requestId, safeCppuid);
 
             response.setPhase(IngestionProcessPhase.STARTED);
@@ -113,9 +114,21 @@ public class JobManagerService implements IngestionProcessor {
     }
 
     /* package */
-    void dispatchCaseDocumentIngestionTasks(final JsonObject jobData) {
+    void dispatchCaseDocumentIngestionTasksGetCasesForHearing(final JsonObject jobData) {
         final ExecutionInfo executionInfo = executionInfo()
                 .withAssignedTaskName(GET_CASES_FOR_HEARING)
+                .withAssignedTaskStartTime(ZonedDateTime.now())
+                .withJobData(jobData)
+                .withExecutionStatus(ExecutionStatus.STARTED)
+                .build();
+
+        executor.executeWith(executionInfo);
+    }
+
+    /* package */
+    void dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(final JsonObject jobData) {
+        final ExecutionInfo executionInfo = executionInfo()
+                .withAssignedTaskName(CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS)
                 .withAssignedTaskStartTime(ZonedDateTime.now())
                 .withJobData(jobData)
                 .withExecutionStatus(ExecutionStatus.STARTED)

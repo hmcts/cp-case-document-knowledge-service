@@ -11,9 +11,6 @@ public record ProgressionClientConfig(
         String courtDocsPath,
         String materialContentPath,
         String acceptForCourtDocSearch,
-        String acceptForMaterialContent,
-        String acceptForProsecutionCase,
-        String prosecutionCasePath
-
+        String acceptForMaterialContent
 ) {
 }

@@ -1,0 +1,21 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/progression-query-api/query/api/rest/progression/courtdocumentsearch",
+    "queryParameters": {
+      "caseId": {
+        "equalTo": "ffffffff-ffff-ffff-ffff-ffffffffffff"
+      }
+    }
+  },
+  "response": {
+    "status": 500,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "error": "Simulated downstream failure for manual ingestion FAILED scenario"
+    }
+  }
+}

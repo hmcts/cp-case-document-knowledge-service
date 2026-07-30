@@ -28,7 +28,7 @@
 |-----------|-----------------|
 | PostgreSQL | 16 (production), 16-alpine (Docker Compose) |
 | Flyway | 7.x — migrations in `src/main/resources/db/migration/` |
-| Migration prefix | `V1000` – `V1010` (append-only; never edit shipped versions) |
+| Migration prefix | `V1000` – `V1011` (append-only; never edit shipped versions) |
 | HikariCP | max 20 connections, min 5, 300 s timeout |
 | JPA DDL | `validate` — Flyway owns schema; Hibernate must not auto-create |
 | Timezone | UTC enforced via JPA/JDBC properties |
@@ -47,6 +47,7 @@
 | `V1008__alter_document_ingestion_phase_enum_file_size_limit.sql` | Ingestion phase enum + file size tracking |
 | `V1009__case_documents_scheduled_ingestion_request.sql` | `scheduled_ingestion_request` table |
 | `V1010__create_shedlock_table.sql` | `shedlock` table for distributed scheduler lock |
+| `V1011__create_discovery_scheduler_configuration.sql` | `discovery_scheduler_configuration` table (versioned court centre/court room ingestion config) |
 
 ---
 
@@ -96,8 +97,8 @@ All APIM calls carry a subscription key or AAD token injected by `ApimAuthHeader
 
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
-| `api-cp-crime-caseadmin-case-document-knowledge` | 0.0.9 | OpenAPI models for CSDK own API |
-| `api-cp-ai-rag` | 0.0.12 | RAG service API models |
+| `api-cp-crime-caseadmin-case-document-knowledge` | 0.0.11 | OpenAPI models for CSDK own API |
+| `api-cp-ai-rag` | 0.0.15 | RAG service API models |
 | `cp-auth-rules-filter` | 1.0.7 | Drools-based HTTP authorization |
 | `cp-audit-filter-springboot` | 1.0.5 | Audit event filter (publishes to Artemis) |
 | `task-manager-service` | 1.0.10 | Job/task orchestration client |
@@ -180,7 +181,8 @@ Integration test compose stack:
 - Permission constant: `"AI search"` (`PermissionConstants.INTELLIGENCE_ACCESS`)
 - Excluded from auth: `/usersgroups-query-api/`, `/actuator`, `/error`
 
-All endpoints require `"AI search"` permission or System Users group membership.
+Most endpoints require `"AI search"` permission or System Users group membership.
+Exception: `/discovery-scheduler/configurations` (action `casedocumentknowledge-service.discovery-scheduler-configuration`) is **System Users group only** — no `"AI search"` fallback, since it's a backend config write, not an end-user action.
 
 ---
 
@@ -212,6 +214,7 @@ Integration testing adds: `artemis`, `azurite`, `azurite-seed`, `wiremock`.
 | `/query-catalogue` | GET | Browse query catalogue |
 | `/query-catalogue/{queryId}` | GET | Single catalogue entry |
 | `/query-catalogue/{queryId}/label` | PATCH | Update label/order |
+| `/discovery-scheduler/configurations` | POST | Upsert versioned court centre/court room ingestion config |
 
 ---
 
@@ -219,10 +222,10 @@ Integration testing adds: `artemis`, `azurite`, `azurite-seed`, `wiremock`.
 
 ```
 uk.gov.hmcts.cp.cdk
-├── controllers/          REST controllers + exception handler + accesscontrol/
-├── services/             Business logic (Answer, Query, Document, Discovery, Ingestion)
-├── domain/               JPA entities (22 classes) + enums
-├── repo/                 JPA repositories (13) + helpers
+├── controllers/          REST controllers (incl. DiscoverySchedulerController) + exception handler + accesscontrol/
+├── services/             Business logic (Answer, Query, Document, Discovery, Ingestion, DiscoverySchedulerConfiguration)
+├── domain/               JPA entities (23 classes) + enums
+├── repo/                 JPA repositories (14) + helpers
 ├── jobmanager/           Task orchestration: caseflow/, queryflow/, hearing/, support/
 ├── scheduler/            IntradayDiscoveryScheduler + SchedulerProperties
 ├── clients/              External clients: rag/, hearing/, progression/, common/, config/
