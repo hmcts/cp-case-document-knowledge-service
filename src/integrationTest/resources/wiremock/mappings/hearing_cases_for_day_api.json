@@ -1,0 +1,17 @@
+{
+  "priority": 10,
+  "request": {
+    "method": "GET",
+    "urlPath": "/hearing-query-api/query/api/rest/hearing/hearing-cases-for-day",
+    "queryParameters": {
+      "date": { "matches": ".*" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "hearing_cases_for_day_api_response.json"
+  }
+}
