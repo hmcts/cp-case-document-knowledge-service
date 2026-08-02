@@ -1,7 +1,9 @@
 # Architecture Decision Records — Manual Discovery Scheduler Trigger Endpoint
 
 > Service: `cp-case-document-knowledge-service` (CSDK) · Taken at the Stage 1 → Stage 2 human gate.
-> Requirements: [`01-requirements.md`](./01-requirements.md) · Design: [`02-design.md`](./02-design.md)
+> Requirement: [`../TBC-manual-scheduler-trigger/`](../TBC-manual-scheduler-trigger/) ·
+> Requirements: [`01-requirements.md`](../TBC-manual-scheduler-trigger/01-requirements.md) ·
+> Design: [`02-design.md`](../TBC-manual-scheduler-trigger/02-design.md)
 
 ---
 

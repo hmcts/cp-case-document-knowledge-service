@@ -132,14 +132,16 @@ successive requirements never overwrite each other's artefacts and each stage's 
 traceable back to its ticket:
 
 ```
-docs/pipeline/<JIRA-TICKET>-<slug>/
-├── 00-input-brief.md
-├── 01-requirements.md
-├── 02-design.md
-├── 03-stories.md
-├── 04-test-specs.md
-├── adrs.md
-└── deploy-notes.md
+docs/pipeline/
+├── adrs/
+│   └── <JIRA-TICKET>-<slug>.md
+└── <JIRA-TICKET>-<slug>/
+    ├── 00-input-brief.md
+    ├── 01-requirements.md
+    ├── 02-design.md
+    ├── 03-stories.md
+    ├── 04-test-specs.md
+    └── deploy-notes.md
 ```
 
 - `00-input-brief.md` — the raw, unstructured input as given (brief, Confluence page, Jira epic).
@@ -149,11 +151,17 @@ docs/pipeline/<JIRA-TICKET>-<slug>/
 - `04-test-specs.md` — Test Specs stage output: test scenarios (Given/When/Then or equivalent, in
   prose) for the integration tests to be written in `src/integrationTest/`, grouped by story — a
   story can have more than one integration test scenario.
-- `adrs.md` — all architecturally-significant decisions raised while working this requirement, as
-  numbered sections (`## ADR-001: <title>`, `## ADR-002: <title>`, ...) in a single file.
 - `deploy-notes.md` — Deploy Sandbox stage output.
 
-Create the folder on first use (Requirements stage) — no pre-scaffolding required.
+`docs/pipeline/adrs/<JIRA-TICKET>-<slug>.md` — one ADR file per requirement, under a shared `adrs/`
+folder, named with the **same `<JIRA-TICKET>-<slug>` convention** as the requirement's own folder
+so the two stay trivially traceable to each other. All architecturally-significant decisions raised
+while working that requirement go in this one file, as numbered sections (`## ADR-001: <title>`,
+`## ADR-002: <title>`, ... — numbering is local to the file, one sequence per requirement).
+
+Create the requirement folder on first use (Requirements stage) — no pre-scaffolding required.
+Create its matching `adrs/<JIRA-TICKET>-<slug>.md` the first time a decision needs recording; not
+every requirement will need one.
 
 ---
 
@@ -171,4 +179,4 @@ Create the folder on first use (Requirements stage) — no pre-scaffolding requi
 - **Quality gates** — PMD and JaCoCo must pass; do not lower thresholds to go green. CodeQL and the secrets scanner must be clean.
 - **Use the HMCTS Spring Boot templates** as the master source for build files, Dockerfile, and logback config — do not hand-scaffold. Deviations require an ADR.
 - **Accessibility (WCAG 2.1 AA)** is non-negotiable for any user-facing output.
-- If confidence in a decision is low, write an ADR (`docs/pipeline/adrs/`) and surface it for review.
+- If confidence in a decision is low, write an ADR (`docs/pipeline/adrs/<JIRA-TICKET>-<slug>.md`) and surface it for review.
