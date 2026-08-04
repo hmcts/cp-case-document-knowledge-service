@@ -1,6 +1,6 @@
 # Requirements: Manual Discovery Scheduler Trigger Endpoint
 
-> **Stage 1 — Requirements** · Service: `cp-case-document-knowledge-service` (CSDK)
+> **Stage 1 — Requirements** · Service: `cp-case-document-knowledge-service` (CDKS)
 > **Jira: DD-43036**
 > Gate decisions (concurrency, response contract, granularity, path) are folded in below — see `02-design.md` and [`adrs/DD-43036-manual-scheduler-trigger.md`](../adrs/DD-43036-manual-scheduler-trigger.md) (ADR-001/002).
 
@@ -8,7 +8,7 @@
 
 ## Context
 
-CSDK runs two ShedLock-guarded scheduled discovery jobs — intraday (every 10 min, Mon–Fri 07:00–19:50) and nightly (daily 02:00) — via `DiscoveryService.runIntradayDiscovery()` / `runNightlyDiscovery()`. Today the only way to run either is to wait for its cron. This adds a System-User-only endpoint, `POST /discovery-scheduler/trigger`, to run one named operation (`INTRADAY`/`NIGHTLY`) on demand, reusing both operations unchanged.
+CDKS runs two ShedLock-guarded scheduled discovery jobs — intraday (every 10 min, Mon–Fri 07:00–19:50) and nightly (daily 02:00) — via `DiscoveryService.runIntradayDiscovery()` / `runNightlyDiscovery()`. Today the only way to run either is to wait for its cron. This adds a System-User-only endpoint, `POST /discovery-scheduler/trigger`, to run one named operation (`INTRADAY`/`NIGHTLY`) on demand, reusing both operations unchanged.
 
 Operational driver (missed-run recovery, smoke-testing, support reprocessing) is unstated and should be confirmed before go-live/production rollout.
 

@@ -1,6 +1,6 @@
 # Design: Manual Discovery Scheduler Trigger Endpoint
 
-> **Stage 2 — Architecture & Design** · Service: `cp-case-document-knowledge-service` (CSDK)
+> **Stage 2 — Architecture & Design** · Service: `cp-case-document-knowledge-service` (CDKS)
 > **Jira: DD-43036** · Requirements: [`01-requirements.md`](./01-requirements.md) · ADRs: [`adrs/DD-43036-manual-scheduler-trigger.md`](../adrs/DD-43036-manual-scheduler-trigger.md)
 > `POST /discovery-scheduler/trigger` — enum discriminator (`INTRADAY`/`NIGHTLY`), returns `202 Accepted` immediately, dispatches the existing `DiscoveryService` operation onto a dedicated bounded executor. `DiscoveryService` itself is not touched.
 
@@ -135,7 +135,7 @@ ThreadPoolTaskExecutor discoveryTriggerExecutor(MdcCopyingTaskDecorator decorato
     awaitTerminationSeconds = ${cp.cdk.discovery-trigger.await-termination-seconds:30}
 ```
 
-- **Explicit `execute(...)`, not `@Async`.** CSDK has zero `@Async` usage; `@EnableAsync` would add proxying service-wide for one call site, and self-invocation would silently make it synchronous again. Explicit injection is trivially unit-testable.
+- **Explicit `execute(...)`, not `@Async`.** CDKS has zero `@Async` usage; `@EnableAsync` would add proxying service-wide for one call site, and self-invocation would silently make it synchronous again. Explicit injection is trivially unit-testable.
 - **Not virtual threads.** `spring.threads.virtual.enabled` defaults `false` and is unset in this repo — behaviour must not depend on that toggle.
 - **Boundedness is the only back-pressure.** One worker thread per pod caps concurrent manual runs per pod — per-JVM only, not a distributed guarantee (consistent with ADR-001).
 - **Rejection, deliberately rough:** queue full → `TaskRejectedException` → `GlobalExceptionHandler` catch-all → 500. A 429/503 is out of scope. `queue-capacity` is externalised.
@@ -208,4 +208,4 @@ Scoping only — Test Specs stage owns the actual scenarios.
 
 **Contract tests:** none expected — no known consumer yet.
 
-**Verify empirically:** unknown-JSON-field behaviour (CSDK's `@Primary ObjectMapper` may not match Boot's default), and JaCoCo coverage on the new `@Configuration`/`TaskDecorator` classes (easy to leave uncovered).
+**Verify empirically:** unknown-JSON-field behaviour (CDKS's `@Primary ObjectMapper` may not match Boot's default), and JaCoCo coverage on the new `@Configuration`/`TaskDecorator` classes (easy to leave uncovered).

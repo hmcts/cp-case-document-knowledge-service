@@ -1,6 +1,6 @@
 # Architecture Decision Records — Manual Discovery Scheduler Trigger Endpoint
 
-> Service: `cp-case-document-knowledge-service` (CSDK) · Jira: DD-43036 · Taken at the Stage 1 → Stage 2 human gate.
+> Service: `cp-case-document-knowledge-service` (CDKS) · Jira: DD-43036 · Taken at the Stage 1 → Stage 2 human gate.
 > Requirement: [`../DD-43036-manual-scheduler-trigger/`](../DD-43036-manual-scheduler-trigger/) ·
 > Requirements: [`01-requirements.md`](../DD-43036-manual-scheduler-trigger/01-requirements.md) ·
 > Design: [`02-design.md`](../DD-43036-manual-scheduler-trigger/02-design.md)
@@ -42,7 +42,7 @@
 
 ### Context
 
-`runIntradayDiscovery()`/`runNightlyDiscovery()` are synchronous, `void`, unbounded (nightly calls the Hearing API once per hearing date at a 15s read timeout, then dispatches N Task Manager jobs), and already swallow per-item failures internally. A synchronous response would hold the connection open against an unconfirmed gateway timeout. CSDK has both precedents already: `/ingestions/start` (202, fire-and-forget) and `/ingestions/start-by-case` (200, synchronous but single-case and bounded — not comparable here). Reporting per-item outcomes would also force `DiscoveryService`'s `void` signatures to change, touching the cron path.
+`runIntradayDiscovery()`/`runNightlyDiscovery()` are synchronous, `void`, unbounded (nightly calls the Hearing API once per hearing date at a 15s read timeout, then dispatches N Task Manager jobs), and already swallow per-item failures internally. A synchronous response would hold the connection open against an unconfirmed gateway timeout. CDKS has both precedents already: `/ingestions/start` (202, fire-and-forget) and `/ingestions/start-by-case` (200, synchronous but single-case and bounded — not comparable here). Reporting per-item outcomes would also force `DiscoveryService`'s `void` signatures to change, touching the cron path.
 
 ### Decision
 
@@ -58,6 +58,6 @@
 ### Consequences
 
 - **Positive:** response time independent of run duration (NFR-005 satisfied structurally); `DiscoveryService` untouched (FR-005/AC-006/AC-007 hold); consistent with the `/ingestions/start` precedent; continue-on-error behaviour inherited free.
-- **Accepted:** the caller learns nothing beyond "dispatched" — a post-202 failure is only visible in logs (mitigated by the `correlationId` in the response + an explicit `ERROR` log). A new in-process async mechanism is introduced (CSDK had none); queue exhaustion surfaces as a bare 500 — a known, deliberately unaddressed rough edge.
+- **Accepted:** the caller learns nothing beyond "dispatched" — a post-202 failure is only visible in logs (mitigated by the `correlationId` in the response + an explicit `ERROR` log). A new in-process async mechanism is introduced (CDKS had none); queue exhaustion surfaces as a bare 500 — a known, deliberately unaddressed rough edge.
 - **Technical risk, mitigated in design:** `RequestContextFilter` clears MDC in `finally`, so a naive implementation would silently drop `correlationId` on every triggered run — closed by capturing MDC at submit time (`02-design.md` §7). Non-blocking behaviour needs an explicit IT (delayed-stub assertion), since nothing in the type system prevents a future change from making it synchronous again.
 - **Reversibility — effectively one-way:** moving to synchronous/per-item-counts later would break the released contract and `DiscoveryService`'s signatures. Get the contract right first time (`02-design.md` §1).

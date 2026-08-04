@@ -1,6 +1,6 @@
 # User Stories: Manual Discovery Scheduler Trigger Endpoint
 
-> **Stage 3 — User Story** · Service: `cp-case-document-knowledge-service` (CSDK)
+> **Stage 3 — User Story** · Service: `cp-case-document-knowledge-service` (CDKS)
 > **Parent Jira: DD-43036** — each story below gets its own sub-ticket (placeholder `DD-#####` until raised).
 > Acceptance Criteria text below is embedded verbatim from [`01-requirements.md`](./01-requirements.md)
 > so each story is ready to paste into its Jira ticket; ADR-001/ADR-002
@@ -14,7 +14,7 @@ deployed to and verified on sandbox · Jira ticket updated with test evidence. D
 
 ## Story 1 — Release trigger operation in the API contract
 **Jira: DD-#####**
-As a **CSDK developer**, I want **`POST /discovery-scheduler/trigger` and its schemas — including
+As a **CDKS developer**, I want **`POST /discovery-scheduler/trigger` and its schemas — including
 the dedicated vendor media type — added to and released from
 `api-cp-crime-caseadmin-case-document-knowledge`**, so that **the endpoint can be implemented
 against a generated interface, not hand-scaffolded**.
