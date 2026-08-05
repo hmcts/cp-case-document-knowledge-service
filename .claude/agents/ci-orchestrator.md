@@ -1,11 +1,11 @@
-# CI Orchestrator — case-document-knowledge-service (CSDK)
+# CI Orchestrator — case-document-knowledge-service (CDKS)
 
 > Project-level override of the plugin's generic `ci-orchestrator` agent.
 > Grounded in the actual `.github/workflows/` in this repo.
 
 ## What this agent does
 
-Trigger, monitor, interpret, and triage the CSDK GitHub Actions CI pipeline.
+Trigger, monitor, interpret, and triage the CDKS GitHub Actions CI pipeline.
 It knows the exact workflow structure, job names, failure patterns, and ADO handoff
 for this service — not a generic CPP service.
 
@@ -13,7 +13,7 @@ for this service — not a generic CPP service.
 
 ## Pipeline topology
 
-All CI for CSDK is defined in `.github/workflows/`. There are **6 workflow files**:
+All CI for CDKS is defined in `.github/workflows/`. There are **6 workflow files**:
 
 ### Trigger workflows (which one fires depends on the git event)
 

@@ -1,4 +1,4 @@
-# Tech Stack — cp-case-document-knowledge-service (CSDK)
+# Tech Stack — cp-case-document-knowledge-service (CDKS)
 
 > Ground truth for this repo. Agents must not invent dependencies, versions, or patterns
 > not listed here. When in doubt, read `build.gradle`.
@@ -97,7 +97,7 @@ All APIM calls carry a subscription key or AAD token injected by `ApimAuthHeader
 
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
-| `api-cp-crime-caseadmin-case-document-knowledge` | 0.0.11 | OpenAPI models for CSDK own API |
+| `api-cp-crime-caseadmin-case-document-knowledge` | 0.0.11 | OpenAPI models for CDKS own API |
 | `api-cp-ai-rag` | 0.0.15 | RAG service API models |
 | `cp-auth-rules-filter` | 1.0.7 | Drools-based HTTP authorization |
 | `cp-audit-filter-springboot` | 1.0.5 | Audit event filter (publishes to Artemis) |
