@@ -1,6 +1,6 @@
-# CSDK Project Context
+# CDKS Project Context
 
-**cp-case-document-knowledge-service** — persists and surfaces AI/RAG-generated answers for Crime Common Platform case documents. The service orchestrates document ingestion into the RAG pipeline, stores the responses it receives, and serves them back via REST API. Answer generation and citation production are the responsibility of the upstream RAG service; CSDK must not drop or alter RAG response fields (e.g. `doc_id`, `llm_input`) when persisting or mapping. Classified OFFICIAL-SENSITIVE; no PII in data, logs, or artefacts.
+**cp-case-document-knowledge-service** — persists and surfaces AI/RAG-generated answers for Crime Common Platform case documents. The service orchestrates document ingestion into the RAG pipeline, stores the responses it receives, and serves them back via REST API. Answer generation and citation production are the responsibility of the upstream RAG service; CDKS must not drop or alter RAG response fields (e.g. `doc_id`, `llm_input`) when persisting or mapping. Classified OFFICIAL-SENSITIVE; no PII in data, logs, or artefacts.
 
 ---
 
@@ -106,7 +106,7 @@ default priority.
 1. **No PII / case content in logs, tests, or artefacts** — use synthetic data; Azurite seed and WireMock stubs must be non-real.
 2. **Azure via Managed Identity only** — no connection strings, SAS tokens, or account keys anywhere.
 3. **Flyway migrations are append-only** — never edit a shipped `V*.sql`; add the next version. Current highest: `V1011`; next is `V1012`.
-4. **Do not drop RAG response fields** — changes to the ingestion or answer-serving flow must preserve all fields returned by the RAG service (e.g. `doc_id`, `llm_input`). Citation production is upstream's responsibility; CSDK's responsibility is not to lose that data.
+4. **Do not drop RAG response fields** — changes to the ingestion or answer-serving flow must preserve all fields returned by the RAG service (e.g. `doc_id`, `llm_input`). Citation production is upstream's responsibility; CDKS's responsibility is not to lose that data.
 5. **JSON logging to stdout only** — `logback-spring.xml`; never log document content, answer text, or CJSCPPUID values.
 6. **PMD + JaCoCo must pass** — do not lower thresholds.
 

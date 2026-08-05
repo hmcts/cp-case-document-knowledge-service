@@ -3,21 +3,21 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 
-# HMCTS SDLC Pipeline — case-document-knowledge-service (CSDK)
+# HMCTS SDLC Pipeline — case-document-knowledge-service (CDKS)
 
 > Tailored from `hmcts-sdlc-orchestrator` for this repo — install the plugin first
 > (`/plugin install hmcts-sdlc-orchestrator@agentic-plugins-marketplace`) or the references below
-> will not resolve. Only `csdk-context.md` and `tech-stack.md` are CSDK-specific and stored locally
+> will not resolve. Only `cdks-context.md` and `tech-stack.md` are CDKS-specific and stored locally
 > under `.claude/context/`; every other context doc, pipeline agent, and auxiliary agent/skill
 > below lives in the plugin itself (`$PLUGIN` = `~/.claude/plugins/marketplaces/agentic-plugins-marketplace/plugins/agents/hmcts-sdlc-orchestrator`)
 > — don't copy plugin content into this repo, it will just drift out of sync.
 
 ## Project context
 
-**case-document-knowledge-service (CSDK)** — persists and surfaces AI/RAG-generated answers for
+**case-document-knowledge-service (CDKS)** — persists and surfaces AI/RAG-generated answers for
 Crime Common Platform case documents. The service orchestrates document ingestion into the RAG
 pipeline, stores the responses it receives, and serves them back via REST API. Answer generation
-and citation production are the responsibility of the upstream RAG service; CSDK must not drop or
+and citation production are the responsibility of the upstream RAG service; CDKS must not drop or
 alter the response data (including source fields) when persisting or mapping to API responses.
 Data protection and traceability are first-order concerns.
 
@@ -25,8 +25,8 @@ This is an HMCTS engineering project. All work must comply with HMCTS engineerin
 Service Manual, and MOJ security and accessibility requirements.
 
 Always load before any pipeline stage:
-- `.claude/context/csdk-context.md` — **single source of truth**: stack, packages, integrations, API surface, hard rules. Load this first. **CSDK-specific, stored locally.**
-- `.claude/context/tech-stack.md` — CSDK's actual versions, packages, and layout. **CSDK-specific, stored locally.**
+- `.claude/context/cdks-context.md` — **single source of truth**: stack, packages, integrations, API surface, hard rules. Load this first. **CDKS-specific, stored locally.**
+- `.claude/context/tech-stack.md` — CDKS's actual versions, packages, and layout. **CDKS-specific, stored locally.**
 - `$PLUGIN/context/hmcts-standards.md`
 - `$PLUGIN/context/azure-cloud-native.md` — Cloud-Native posture and Shared Responsibility Model on Azure.
 - `$PLUGIN/context/logging-standards.md` — mandatory JSON logging for Spring Boot services.
@@ -77,9 +77,9 @@ Run in order. Do not skip or reorder. Halt at every human gate before proceeding
 | 8 | Deploy Sandbox        | `hmcts-sdlc-orchestrator:deployer` (plugin)                | Human |
 
 > **Local overrides:** `implementation` and `ci-orchestrator` are project-local rewrites of the
-> plugin's generic agents, not copies — they encode CSDK-specific facts the plugin template can't
+> plugin's generic agents, not copies — they encode CDKS-specific facts the plugin template can't
 > know (actual GitHub Actions workflow names, the ADO trigger pipeline ID, JDK/Temurin version,
-> Docker images, Flyway/Artemis/Azurite failure-triage tables, and CSDK's
+> Docker images, Flyway/Artemis/Azurite failure-triage tables, and CDKS's
 > `@Slf4j @RestController implements FooApi` controller pattern). The plugin has no changelog —
 > if it's upgraded, diff these two files by hand against the plugin's versions to catch drift.
 >
@@ -91,7 +91,7 @@ Run in order. Do not skip or reorder. Halt at every human gate before proceeding
 
 ---
 
-## Auxiliary agents & skills — what applies to CSDK
+## Auxiliary agents & skills — what applies to CDKS
 
 | Capability | When to use it here |
 |-----------|---------------------|
@@ -102,26 +102,26 @@ Run in order. Do not skip or reorder. Halt at every human gate before proceeding
 | `migration-reviewer` (agent) | **Any change under `db/migration`** — Flyway migrations are append-only and versioned |
 | `rbac-auditor` (agent) | Changes to `controllers/accesscontrol/`, `PermissionConstants`, or `resources/acl/` |
 | `doc-generator` / `adr-template` | API docs (OpenAPI) and recording architecture decisions |
-| `research` (agent) | Tracing CSDK's integration with the upstream RAG service or the companion OpenAPI spec repo — broader than `event-flow-mapper`'s Artemis-only scope |
+| `research` (agent) | Tracing CDKS's integration with the upstream RAG service or the companion OpenAPI spec repo — broader than `event-flow-mapper`'s Artemis-only scope |
 | `test-analyzer` (agent) | Coverage-gap / flaky-test analysis across `test`, `integrationTest`, `pactVerificationTest` |
 | `api-contract-check` (skill) | Verify controllers/DTOs stay consistent with the consumed `api-cp-crime-caseadmin-case-document-knowledge` OpenAPI artefact (`build.gradle`) |
-| `review-checklist` (skill) | Code Review stage, alongside `review-pr` — Spring Boot/Azure/logging checklist items map directly onto CSDK's hard rules |
+| `review-checklist` (skill) | Code Review stage, alongside `review-pr` — Spring Boot/Azure/logging checklist items map directly onto CDKS's hard rules |
 | `write-acceptance-criteria` (skill) | Requirements stage — deriving ACs from FRs |
 | `springboot-service-from-template` (skill) | Template-alignment check — ties to the hard rule against hand-scaffolding build files/Dockerfile/logback |
 
 > Not applicable in this repo:
 > - `helm-config-validator` / `terraform-validate` — there are **no Helm charts or Terraform**
 >   here (deployment infra lives elsewhere). Skip unless infra is added to this repo.
-> - `context-scaffold` / `context-service-guide` — legacy WildFly `cpp-context-*` only; CSDK is
+> - `context-scaffold` / `context-service-guide` — legacy WildFly `cpp-context-*` only; CDKS is
 >   Spring Boot (Modern by Default).
-> - `pipeline-debug` — needs an in-repo `azure-pipelines.yml` to trace; CSDK's CI is 100% GitHub
+> - `pipeline-debug` — needs an in-repo `azure-pipelines.yml` to trace; CDKS's CI is 100% GitHub
 >   Actions. The `hmcts/trigger-ado-pipeline` step only fires an external pipeline by ID — there's
 >   no template in this repo for the skill to debug.
-> - `springboot-api-from-template` — for bootstrapping a brand-new API-spec repo; CSDK already
+> - `springboot-api-from-template` — for bootstrapping a brand-new API-spec repo; CDKS already
 >   consumes an established one.
-> - `accessibility-check` — CSDK is backend-only with no UI to scan. Hard rule below on WCAG 2.1 AA
->   is inherited from the HMCTS template and applies to downstream consumers of CSDK's API, not to
->   CSDK itself.
+> - `accessibility-check` — CDKS is backend-only with no UI to scan. Hard rule below on WCAG 2.1 AA
+>   is inherited from the HMCTS template and applies to downstream consumers of CDKS's API, not to
+>   CDKS itself.
 
 ---
 
@@ -165,11 +165,11 @@ every requirement will need one.
 
 ---
 
-## Hard rules (CSDK)
+## Hard rules (CDKS)
 
 - **Never proceed past a human gate** without explicit confirmation.
 - **Never invent requirements, ACs, or test data** — flag unknowns as open questions. Every story needs a linked Jira ticket before the test stage.
-- **Preserve RAG response data** — any change to the ingestion or answer-serving flow must not drop or transform source fields returned by the RAG service (e.g. `doc_id`, `llm_input`). Citation production is the RAG service's responsibility; CSDK's responsibility is not to lose that data.
+- **Preserve RAG response data** — any change to the ingestion or answer-serving flow must not drop or transform source fields returned by the RAG service (e.g. `doc_id`, `llm_input`). Citation production is the RAG service's responsibility; CDKS's responsibility is not to lose that data.
 - **No PII / case data / court reference numbers** in artefacts, prompts, logs, or test fixtures. Use synthetic data; WireMock stubs and Azurite seed data must be non-real.
 - **Security hooks are enforced automatically by the plugin** — `block-pii` and `block-secrets` run on every prompt and on every `Write`/`Edit`, `guard-bash` runs on every `Bash` call, and `guard-paths` runs on every `Read`/`Write`/`Edit` (`$PLUGIN/hooks/hooks.json`). These back the PII and Managed-Identity rules above; don't bypass or work around a hook block — treat it as a signal to fix the underlying content, not the gate.
 - **JSON logging to stdout is mandatory** (`logback-spring.xml`). No `System.out`; no logging of case content or document bodies. See `$PLUGIN/context/logging-standards.md`.
