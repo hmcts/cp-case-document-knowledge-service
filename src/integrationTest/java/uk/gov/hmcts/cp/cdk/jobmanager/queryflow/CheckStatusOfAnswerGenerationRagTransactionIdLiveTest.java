@@ -12,8 +12,10 @@ import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.DisplayName;
@@ -51,7 +53,8 @@ class CheckStatusOfAnswerGenerationRagTransactionIdLiveTest extends AbstractHttp
         seedCheckStatusJob(caseId, queryId, transactionId, null);
 
         try {
-            awaitRagTransactionId("answers", caseId, queryId, transactionId);
+            final UUID persisted = awaitRagTransactionId("answers", caseId, queryId);
+            assertThat(persisted).isEqualTo(transactionId);
         } finally {
             cleanup("answers", caseId, queryId);
         }
@@ -68,13 +71,14 @@ class CheckStatusOfAnswerGenerationRagTransactionIdLiveTest extends AbstractHttp
         seedCheckStatusJob(caseId, queryId, transactionId, "CASE");
 
         try {
-            awaitRagTransactionId("case_level_latest_doc_answers", caseId, queryId, transactionId);
+            final UUID persisted = awaitRagTransactionId("case_level_latest_doc_answers", caseId, queryId);
+            assertThat(persisted).isEqualTo(transactionId);
         } finally {
             cleanup("case_level_latest_doc_answers", caseId, queryId);
         }
     }
 
-    private void seedQuery(final UUID queryId) throws Exception {
+    private void seedQuery(final UUID queryId) throws SQLException {
         try (Connection c = openConnection();
              PreparedStatement ps = c.prepareStatement(
                      "INSERT INTO queries (query_id, label, created_at) VALUES (?, 'RAG transactionId live test query', NOW())")) {
@@ -84,46 +88,50 @@ class CheckStatusOfAnswerGenerationRagTransactionIdLiveTest extends AbstractHttp
     }
 
     private void seedCheckStatusJob(final UUID caseId, final UUID queryId, final UUID transactionId,
-                                    final String queryLevelOrNull) throws Exception {
-        final StringBuilder jobData = new StringBuilder("{")
-                .append("\"").append(CTX_CASE_ID_KEY).append("\":\"").append(caseId).append("\",")
-                .append("\"").append(CTX_SINGLE_QUERY_ID).append("\":\"").append(queryId).append("\",")
-                .append("\"").append(CTX_RAG_TRANSACTION_ID).append("\":\"").append(transactionId).append("\"");
-        if (queryLevelOrNull != null) {
-            jobData.append(",\"").append(CTX_QUERY_LEVEL).append("\":\"").append(queryLevelOrNull).append("\"");
-        }
-        jobData.append("}");
+                                    final String queryLevelOrNull) throws SQLException {
+        final String levelField = queryLevelOrNull == null
+                ? ""
+                : ",\"%s\":\"%s\"".formatted(CTX_QUERY_LEVEL, queryLevelOrNull);
+        final String jobData = "{\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\"%s}".formatted(
+                CTX_CASE_ID_KEY, caseId, CTX_SINGLE_QUERY_ID, queryId, CTX_RAG_TRANSACTION_ID, transactionId, levelField);
 
         try (Connection c = openConnection();
              PreparedStatement ps = c.prepareStatement(INSERT_JOB_SQL)) {
             ps.setObject(1, UUID.randomUUID());
             ps.setString(2, CHECK_STATUS_OF_ANSWER_GENERATION);
-            ps.setString(3, jobData.toString());
+            ps.setString(3, jobData);
             ps.executeUpdate();
         }
     }
 
-    private void awaitRagTransactionId(final String table, final UUID caseId, final UUID queryId,
-                                       final UUID expectedTransactionId) {
+    private UUID awaitRagTransactionId(final String table, final UUID caseId, final UUID queryId) {
+        final AtomicReference<UUID> found = new AtomicReference<>();
         Awaitility.await()
                 .atMost(Duration.ofSeconds(60))
                 .pollInterval(Duration.ofSeconds(2))
-                .untilAsserted(() -> {
-                    try (Connection c = openConnection();
-                         PreparedStatement ps = c.prepareStatement(
-                                 "SELECT rag_transaction_id FROM " + table + " WHERE case_id = ? AND query_id = ?")) {
-                        ps.setObject(1, caseId);
-                        ps.setObject(2, queryId);
-                        try (ResultSet rs = ps.executeQuery()) {
-                            assertThat(rs.next()).as("answer row must exist in %s", table).isTrue();
-                            assertThat(rs.getObject("rag_transaction_id", UUID.class))
-                                    .isEqualTo(expectedTransactionId);
-                        }
-                    }
+                .until(() -> {
+                    found.set(fetchRagTransactionId(table, caseId, queryId));
+                    return found.get() != null;
                 });
+        return found.get();
     }
 
-    private void cleanup(final String table, final UUID caseId, final UUID queryId) throws Exception {
+    private UUID fetchRagTransactionId(final String table, final UUID caseId, final UUID queryId) throws SQLException {
+        try (Connection c = openConnection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT rag_transaction_id FROM " + table + " WHERE case_id = ? AND query_id = ?")) {
+            ps.setObject(1, caseId);
+            ps.setObject(2, queryId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getObject("rag_transaction_id", UUID.class);
+                }
+                return null;
+            }
+        }
+    }
+
+    private void cleanup(final String table, final UUID caseId, final UUID queryId) throws SQLException {
         try (Connection c = openConnection()) {
             try (PreparedStatement ps = c.prepareStatement(
                     "DELETE FROM case_query_status WHERE case_id = ? AND query_id = ?")) {
