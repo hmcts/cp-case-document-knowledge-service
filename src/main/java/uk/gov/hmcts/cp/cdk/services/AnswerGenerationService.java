@@ -27,12 +27,13 @@ public class AnswerGenerationService {
 
     /* default */
     static final String SQL_UPSERT_ANSWER =
-            "INSERT INTO answers(case_id, query_id, version, created_at, answer, llm_input, doc_id) " +
-                    "VALUES (:case_id, :query_id, :version, NOW(), :answer, :llm_input, :doc_id) " +
+            "INSERT INTO answers(case_id, query_id, version, created_at, answer, llm_input, doc_id, rag_transaction_id) " +
+                    "VALUES (:case_id, :query_id, :version, NOW(), :answer, :llm_input, :doc_id, :rag_transaction_id) " +
                     "ON CONFLICT (case_id, query_id, version) DO UPDATE SET " +
                     "  answer = EXCLUDED.answer, " +
                     "  llm_input = EXCLUDED.llm_input, " +
                     "  doc_id = EXCLUDED.doc_id, " +
+                    "  rag_transaction_id = EXCLUDED.rag_transaction_id, " +
                     "  created_at = EXCLUDED.created_at";
 
     /* default */
@@ -50,14 +51,14 @@ public class AnswerGenerationService {
 
     @Transactional
     public void upsertAnswer(final UUID caseId, final UUID queryId, final String answer,
-                             final String llmInput, final UUID docId) {
+                             final String llmInput, final UUID docId, final UUID ragTransactionId) {
 
         // 1. get version
         final Integer version = getVersionNumber(caseId, queryId);
         log.info("Next version={} found for the caseId={}, queryId={}", version, caseId, queryId);
 
         // 2. upsert answer
-        final MapSqlParameterSource params = buildAnswerParams(caseId, queryId, version, answer, llmInput, docId);
+        final MapSqlParameterSource params = buildAnswerParams(caseId, queryId, version, answer, llmInput, docId, ragTransactionId);
         namedParameterJdbcTemplate.update(SQL_UPSERT_ANSWER, params);
 
         // 3. update case_query_status (replaces trigger)

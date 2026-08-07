@@ -3,6 +3,7 @@ package uk.gov.hmcts.cp.cdk.domain;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
@@ -21,4 +22,7 @@ public class BaseAnswer {
 
     @Column(name = "llm_input", columnDefinition = "TEXT")
     protected String llmInput;
+
+    @Column(name = "rag_transaction_id")
+    protected UUID ragTransactionId;
 }

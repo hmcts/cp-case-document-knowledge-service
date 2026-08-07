@@ -27,7 +27,7 @@ class AnswerMapperTest {
         final UUID caseId = randomUUID();
         final UUID queryId = randomUUID();
         final AnswerId answerId = new AnswerId(caseId, queryId, 2);
-        final Answer answer = new Answer(answerId, utcNow(), testAnswer, llmText, randomUUID());
+        final Answer answer = new Answer(answerId, utcNow(), testAnswer, llmText, randomUUID(), randomUUID());
 
         // When
         final AnswerResponse response = mapper.toAnswerResponse(answer, userQuery);
@@ -49,7 +49,7 @@ class AnswerMapperTest {
         final UUID caseId = randomUUID();
         final UUID queryId = randomUUID();
         final AnswerId answerId = new AnswerId(caseId, queryId, 2);
-        final Answer answer = new Answer(answerId, utcNow(), testAnswer, llmText, randomUUID());
+        final Answer answer = new Answer(answerId, utcNow(), testAnswer, llmText, randomUUID(), randomUUID());
 
         // When
         final AnswerWithLlmResponse response = mapper.toAnswerWithLlm(answer, userQuery);

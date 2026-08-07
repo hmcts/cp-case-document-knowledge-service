@@ -28,16 +28,18 @@ public class CaseLevelAllDocumentsAnswerService {
 
     private static final String UPSERT_SQL = """
         INSERT INTO case_level_all_documents_answers
-        (case_id, query_id, version, created_at, answer, llm_input)
-        VALUES (:case_id, :query_id, :version, NOW(), :answer, :llm_input)
+        (case_id, query_id, version, created_at, answer, llm_input, rag_transaction_id)
+        VALUES (:case_id, :query_id, :version, NOW(), :answer, :llm_input, :rag_transaction_id)
         ON CONFLICT (case_id, query_id, version) DO UPDATE SET
             answer = EXCLUDED.answer,
             llm_input = EXCLUDED.llm_input,
+            rag_transaction_id = EXCLUDED.rag_transaction_id,
             created_at = EXCLUDED.created_at
     """;
 
     @Transactional
-    public void upsert(final UUID caseId, final UUID queryId, final String answer, final String llmInput) {
+    public void upsert(final UUID caseId, final UUID queryId, final String answer, final String llmInput,
+                       final UUID ragTransactionId) {
 
         final int version = getVersionNumber(caseId, queryId);
 
@@ -46,7 +48,8 @@ public class CaseLevelAllDocumentsAnswerService {
                 .addValue("query_id", queryId)
                 .addValue("version", version)
                 .addValue("answer", answer)
-                .addValue("llm_input", llmInput);
+                .addValue("llm_input", llmInput)
+                .addValue("rag_transaction_id", ragTransactionId);
 
         jdbc.update(UPSERT_SQL, params);
 

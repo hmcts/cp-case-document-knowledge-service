@@ -71,17 +71,17 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
 
         final JsonObject jobData = executionInfo.getJobData();
-        final UUID transactionId = parseUuidOrNull(jobData.getString(CTX_RAG_TRANSACTION_ID, null));
+        final UUID ragTransactionId = parseUuidOrNull(jobData.getString(CTX_RAG_TRANSACTION_ID, null));
 
         try {
-            final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> userQueryAnswerResponse = documentInformationSummarisedAsynchronouslyApi.answerUserQueryStatus(transactionId.toString(), true);
+            final ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> userQueryAnswerResponse = documentInformationSummarisedAsynchronouslyApi.answerUserQueryStatus(ragTransactionId.toString(), true);
 
             if (isNull(userQueryAnswerResponse)
                     || !userQueryAnswerResponse.getStatusCode().is2xxSuccessful()
                     || isNull(userQueryAnswerResponse.getBody())
                     || ANSWER_GENERATION_PENDING == userQueryAnswerResponse.getBody().getStatus()) {
 
-                log.info("Answer Generation in progress for the transactionId={} → retrying", transactionId);
+                log.info("Answer Generation in progress for the ragTransactionId={} → retrying", ragTransactionId);
                 return retry(executionInfo);
             }
 
@@ -103,7 +103,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                                     queryId,
                                     answerResponseBody.getLlmResponse(),
                                     llmInputJson,
-                                    documentId
+                                    documentId,
+                                    ragTransactionId
                             );
                             break;
 
@@ -112,7 +113,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                                     caseId,
                                     queryId,
                                     answerResponseBody.getLlmResponse(),
-                                    llmInputJson
+                                    llmInputJson,
+                                    ragTransactionId
                             );
                             break;
 
@@ -123,7 +125,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                                     defendantId,
                                     answerResponseBody.getLlmResponse(),
                                     llmInputJson,
-                                    documentId
+                                    documentId,
+                                    ragTransactionId
                             );
                             break;
                         case null, default:
@@ -132,19 +135,20 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                                     queryId,
                                     answerResponseBody.getLlmResponse(),
                                     llmInputJson,
-                                    documentId
+                                    documentId,
+                                    ragTransactionId
                             );
                             break;
                     }
 
 
-                log.info("Answer Generation updated in the DB for caseId={}, docId={}, queryId={}, transactionId={}, task completed.",
-                        caseId, documentId, queryId, transactionId);
+                log.info("Answer Generation updated in the DB for caseId={}, docId={}, queryId={}, ragTransactionId={}, task completed.",
+                        caseId, documentId, queryId, ragTransactionId);
             }
 
             if (ANSWER_GENERATION_FAILED == answerResponseBody.getStatus()) {
-                log.info("Answer Generation Failed for caseId={}, docId={}, queryId={}, transactionId={}, task completed.",
-                        caseId, documentId, queryId, transactionId);
+                log.info("Answer Generation Failed for caseId={}, docId={}, queryId={}, ragTransactionId={}, task completed.",
+                        caseId, documentId, queryId, ragTransactionId);
 
                 final int retryCount = jobData.containsKey(CTX_ANSWER_RETRY_COUNT)
                         ? jobData.getInt(CTX_ANSWER_RETRY_COUNT)
@@ -154,8 +158,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
 
                 if (retryCount < maxRetries) {
 
-                    log.info("Answer generation failed. Retrying {}/{} for transactionId={}",
-                            retryCount + 1, maxRetries, transactionId);
+                    log.info("Answer generation failed. Retrying {}/{} for ragTransactionId={}",
+                            retryCount + 1, maxRetries, ragTransactionId);
 
                     final JsonObject singleCaseJobData = createObjectBuilder(jobData)
                             .add(CTX_ANSWER_RETRY_COUNT, retryCount + 1)
@@ -171,8 +175,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                     executionService.executeWith(executionInfoNew);
 
                 } else {
-                    log.warn("Max retries reached for caseId={}, queryId={}, transactionId={}",
-                            caseId, queryId, transactionId);
+                    log.warn("Max retries reached for caseId={}, queryId={}, ragTransactionId={}",
+                            caseId, queryId, ragTransactionId);
                 }
             }
 
@@ -182,7 +186,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                     .build();
 
         } catch (final Exception ex) {
-            log.error("Failed to check answer generation status RAG for transactionId={}", transactionId, ex);
+            log.error("Failed to check answer generation status RAG for ragTransactionId={}", ragTransactionId, ex);
             return retry(executionInfo);
         }
     }
