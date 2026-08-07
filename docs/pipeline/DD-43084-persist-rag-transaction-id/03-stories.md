@@ -1,7 +1,7 @@
 # User Stories: Persist RAG `transactionId` on Answer Records
 
 > **Stage 3 — User Story** · Service: `cp-case-document-knowledge-service` (CDKS)
-> **Parent Jira: DD-43084** — each story below gets its own sub-ticket (placeholder `DD-#####` until raised).
+> **Parent Jira: DD-43084** — each story below has its own sub-ticket, raised as DD-43104/DD-43105/DD-43106.
 > Acceptance Criteria text below is embedded verbatim from [`01-requirements.md`](./01-requirements.md)
 > so each story is ready to paste into its Jira ticket; ADR-001/ADR-002
 > ([`adrs/DD-43084-persist-rag-transaction-id.md`](../adrs/DD-43084-persist-rag-transaction-id.md)) are locked decisions, not reopened here.
@@ -13,7 +13,7 @@ deployed to and verified on sandbox · Jira ticket updated with test evidence. D
 ---
 
 ## Story 1 — Add `rag_transaction_id` column to all four answer tables
-**Jira: DD-#####**
+**Jira: [DD-43104](https://tools.hmcts.net/jira/browse/DD-43104)**
 As a **CDKS developer**, I want **a new, append-only Flyway migration (`V1012`) that adds a
 nullable `rag_transaction_id UUID` column to `answers`, `case_level_latest_doc_answers`,
 `case_level_all_documents_answers`, and `defendant_answers`**, so that **the application layer has
@@ -29,7 +29,7 @@ somewhere to persist the RAG transaction id, with zero risk to existing data or 
 - DoD delta: `migration-reviewer` review completed for `V1012__add_rag_transaction_id_to_answers.sql`
 
 ## Story 2 — Thread `transactionId` through the four answer-persistence paths
-**Jira: DD-#####**
+**Jira: [DD-43105](https://tools.hmcts.net/jira/browse/DD-43105)**
 As a **support/ops engineer investigating an AI-generated answer**, I want **every successfully
 generated answer to record the RAG `transactionId` that produced it, for every query level**, so
 that **I can trace any stored answer back to the exact upstream RAG call, closing the "RAG
@@ -61,7 +61,7 @@ Reuses the `transactionId` `CheckStatusOfAnswerGenerationTask` already resolves 
   regression (AC-007)
 
 ## Story 3 — Keep the read-side JPA entities in sync with the new column
-**Jira: DD-#####**
+**Jira: [DD-43106](https://tools.hmcts.net/jira/browse/DD-43106)**
 As a **CDKS developer**, I want **`Answer`, `BaseAnswer` (and its subclasses) to expose a mapped
 `ragTransactionId` field**, so that **the entity model doesn't silently drift from the table it
 maps, ready for a future API-exposure change without another schema audit**.
