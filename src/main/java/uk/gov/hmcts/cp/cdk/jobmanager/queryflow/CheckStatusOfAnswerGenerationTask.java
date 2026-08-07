@@ -103,7 +103,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                                     queryId,
                                     answerResponseBody.getLlmResponse(),
                                     llmInputJson,
-                                    documentId
+                                    documentId,
+                                    transactionId
                             );
                             break;
 
@@ -112,7 +113,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                                     caseId,
                                     queryId,
                                     answerResponseBody.getLlmResponse(),
-                                    llmInputJson
+                                    llmInputJson,
+                                    transactionId
                             );
                             break;
 
@@ -123,7 +125,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                                     defendantId,
                                     answerResponseBody.getLlmResponse(),
                                     llmInputJson,
-                                    documentId
+                                    documentId,
+                                    transactionId
                             );
                             break;
                         case null, default:
@@ -132,7 +135,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                                     queryId,
                                     answerResponseBody.getLlmResponse(),
                                     llmInputJson,
-                                    documentId
+                                    documentId,
+                                    transactionId
                             );
                             break;
                     }

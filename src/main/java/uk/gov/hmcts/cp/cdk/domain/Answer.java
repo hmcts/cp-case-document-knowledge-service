@@ -52,4 +52,7 @@ public class Answer {
 
     @Column(name = "doc_id")
     private UUID docId;
+
+    @Column(name = "rag_transaction_id")
+    private UUID ragTransactionId;
 }
