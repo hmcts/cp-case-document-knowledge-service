@@ -27,4 +27,14 @@ public final class UtilHttp {
 
         return rt;
     }
+
+    /**
+     * A client with no default-user interceptor, for tests that must send a request
+     * with no CJSCPPUID header at all (newClient() always injects one when absent).
+     */
+    public static RestTemplate newClientWithoutDefaultUser() {
+        return new RestTemplate(
+                new BufferingClientHttpRequestFactory(new SimpleClientHttpRequestFactory())
+        );
+    }
 }

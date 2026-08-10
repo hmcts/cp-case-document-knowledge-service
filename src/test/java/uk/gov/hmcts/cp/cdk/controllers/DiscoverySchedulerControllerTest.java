@@ -1,5 +1,6 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -8,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import uk.gov.hmcts.cp.cdk.services.DiscoverySchedulerConfigurationService;
+import uk.gov.hmcts.cp.cdk.services.DiscoveryTriggerService;
+import uk.gov.hmcts.cp.openapi.model.cdk.DiscoveryOperation;
 import uk.gov.hmcts.cp.openapi.model.cdk.DiscoverySchedulerConfigurationRequest;
 import uk.gov.hmcts.cp.openapi.model.cdk.UpsertDiscoverySchedulerConfiguration200Response;
 
@@ -24,9 +27,15 @@ class DiscoverySchedulerControllerTest {
 
     private static final MediaType VND =
             MediaType.valueOf("application/vnd.casedocumentknowledge-service.discovery-scheduler-configuration+json");
+    private static final MediaType VND_TRIGGER =
+            MediaType.valueOf("application/vnd.casedocumentknowledge-service.discovery-scheduler-trigger+json");
 
     private MockMvc mvc(final DiscoverySchedulerConfigurationService service) {
-        return MockMvcBuilders.standaloneSetup(new DiscoverySchedulerController(service)).build();
+        return mvc(service, mock(DiscoveryTriggerService.class));
+    }
+
+    private MockMvc mvc(final DiscoverySchedulerConfigurationService service, final DiscoveryTriggerService triggerService) {
+        return MockMvcBuilders.standaloneSetup(new DiscoverySchedulerController(service, triggerService)).build();
     }
 
     @Test
@@ -125,5 +134,27 @@ class DiscoverySchedulerControllerTest {
                         .contentType(VND).accept(VND)
                         .content(body))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /discovery-scheduler/trigger returns 202 with vendor content type and delegates once")
+    void triggerDiscovery_returns_202_and_delegates_once() throws Exception {
+        final DiscoveryTriggerService triggerService = mock(DiscoveryTriggerService.class);
+        final MockMvc mvc = mvc(mock(DiscoverySchedulerConfigurationService.class), triggerService);
+
+        final String body = """
+                {
+                  "discoveryOperation": "INTRADAY"
+                }
+                """;
+
+        mvc.perform(post("/discovery-scheduler/trigger")
+                        .contentType(VND_TRIGGER).accept(VND_TRIGGER)
+                        .content(body))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.discoveryOperation").value("INTRADAY"))
+                .andExpect(jsonPath("$.message").value("Discovery run dispatched."));
+
+        verify(triggerService).trigger(eq(DiscoveryOperation.INTRADAY));
     }
 }

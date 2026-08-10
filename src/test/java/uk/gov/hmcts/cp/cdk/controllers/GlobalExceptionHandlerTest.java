@@ -144,6 +144,21 @@ class GlobalExceptionHandlerTest {
         assertEquals("Unexpected error", res.getBody().getMessage());
     }
 
+    @Test
+    void onMethodNotSupported_shouldReturn405() throws Exception {
+        when(span.context().traceId()).thenReturn("mmm");
+
+        final org.springframework.web.HttpRequestMethodNotSupportedException ex =
+                new org.springframework.web.HttpRequestMethodNotSupportedException("GET", List.of("POST"));
+
+        final GlobalExceptionHandler handler = new GlobalExceptionHandler(tracer);
+        final ResponseEntity<ErrorResponse> res = handler.onMethodNotSupported(ex);
+
+        assertEquals(HttpStatus.METHOD_NOT_ALLOWED, res.getStatusCode());
+        assertEquals("405", res.getBody().getError());
+        assertEquals("mmm", res.getBody().getTraceId());
+    }
+
     @MockitoSettings(strictness = Strictness.LENIENT)
     @Test
     void traceId_shouldReturnNull_ifTracerThrows() {

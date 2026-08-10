@@ -86,3 +86,12 @@ when
 then
   $o.setSuccess(true);
 end
+
+rule "Allow LA – discovery-scheduler-trigger"
+when
+  $o: Outcome()
+  $a: Action(name == "casedocumentknowledge-service.discovery-scheduler-trigger")
+  eval(userAndGroupProvider.isMemberOfAnyOfTheSuppliedGroups($a, "System Users"))
+then
+  $o.setSuccess(true);
+end

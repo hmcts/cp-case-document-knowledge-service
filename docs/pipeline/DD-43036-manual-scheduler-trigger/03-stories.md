@@ -13,7 +13,7 @@ deployed to and verified on sandbox · Jira ticket updated with test evidence. D
 ---
 
 ## Story 1 — Release trigger operation in the API contract
-**Jira: DD-#####**
+**Jira: DD-43060**
 As a **CDKS developer**, I want **`POST /discovery-scheduler/trigger` and its schemas — including
 the dedicated vendor media type — added to and released from
 `api-cp-crime-caseadmin-case-document-knowledge`**, so that **the endpoint can be implemented
@@ -27,7 +27,7 @@ against a generated interface, not hand-scaffolded**.
 - DoD delta: contract PR reviewed & released; no breaking change to existing `Discovery Scheduler` tag
 
 ## Story 2 — System-Users-only ACL rule for the trigger endpoint
-**Jira: DD-#####**
+**Jira: DD-43061**
 As a **security engineer**, I want **a new Drools rule restricting the trigger action to "System
 Users" only, no "AI search" fallback**, so that **only trusted operational callers can force an
 on-demand run**.
@@ -39,12 +39,12 @@ on-demand run**.
 - AC-011: New Drools rule has exactly one group-membership condition — no `hasPermission`, no `or` — matching `discovery-scheduler-configuration`.
 
 - NFR: NFR-001 (AuthZ)
-- Dependency: needs Story 1's released vendor media type/action name; route through `rbac-auditor`
+- Dependency: needs Story 1 (DD-43060)'s released vendor media type/action name; route through `rbac-auditor`
   (CLAUDE.md — any `acl/` change)
 - DoD delta: `rbac-auditor` review completed for `acl/cdks-rules.drl`
 
 ## Story 3 — On-demand discovery trigger endpoint (fire-and-forget dispatch)
-**Jira: DD-#####**
+**Jira: DD-43062**
 As a **support/operations user (System User)**, I want **to POST a named operation
 (`INTRADAY`/`NIGHTLY`) and get an immediate `202 Accepted`**, so that **I can force a missed or
 extra discovery run without waiting for its cron, or blocking on completion**.
@@ -70,8 +70,8 @@ Reuses `DiscoveryService` unchanged via new `DiscoveryTriggerService` + dedicate
 - Out of scope: run-status/history, cancel/pause/resume, parameterising the run, a third operation,
   rate limiting, 409/429 on queue-full/lock-overlap (design §6, ADR-001)
 - NFR: NFR-004, NFR-005, NFR-006, NFR-008, NFR-009, NFR-012
-- Dependency: needs Story 1 released/consumed (`version.cdk` bump lands here); compiles independent
-  of Story 2 but fail-closed without it — ship together
+- Dependency: needs Story 1 (DD-43060) released/consumed (`version.cdk` bump lands here); compiles independent
+  of Story 2 (DD-43061) but fail-closed without it — ship together
 - DoD delta: `DiscoveryServiceTest`/existing scheduler tests pass unmodified (AC-007); `gradle
   clean build` incl. `integration` green, PMD/JaCoCo at existing thresholds (AC-024)
 
