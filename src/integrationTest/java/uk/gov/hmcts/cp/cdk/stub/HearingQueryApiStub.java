@@ -25,14 +25,14 @@ public class HearingQueryApiStub {
                 .withQueryParam(DATE, matching(".*"))
                 .willReturn(aResponse()
                         .withStatus(SC_OK)
-                        .withHeader("Content-Type", APPLICATION_JSON)
+                        .withHeader(CONTENT_TYPE, APPLICATION_JSON)
                         .withBody("{\"hearingSummaries\":[]}")
                 ));
     }
 
     public static void stubGetHearingCasesForDayReturnsEmptyHearingCases() {
         stubFor(get(urlPathEqualTo(HEARING_CASES_FOR_DAY_PATH))
-                .withQueryParam("date", matching(".*"))
+                .withQueryParam(DATE, matching(".*"))
                 .willReturn(aResponse()
                         .withStatus(SC_OK)
                         .withHeader(CONTENT_TYPE, APPLICATION_JSON)
@@ -42,10 +42,10 @@ public class HearingQueryApiStub {
 
     public static void stubGetHearingCasesForDayReturnsEmptyHearingCasesWithDelay(final int fixedDelayMs) {
         stubFor(get(urlPathEqualTo(HEARING_CASES_FOR_DAY_PATH))
-                .withQueryParam("date", matching(".*"))
+                .withQueryParam(DATE, matching(".*"))
                 .willReturn(aResponse()
                         .withStatus(SC_OK)
-                        .withHeader("Content-Type", APPLICATION_JSON)
+                        .withHeader(CONTENT_TYPE, APPLICATION_JSON)
                         .withFixedDelay(fixedDelayMs)
                         .withBody("{\"hearingCases\":[]}")
                 ));
@@ -54,10 +54,10 @@ public class HearingQueryApiStub {
     public static void stubGetHearingCasesForDayReturnsHearingCase(final String courtCentreId, final String courtRoomId,
                                                                     final String caseId) {
         stubFor(get(urlPathEqualTo(HEARING_CASES_FOR_DAY_PATH))
-                .withQueryParam("date", matching(".*"))
+                .withQueryParam(DATE, matching(".*"))
                 .willReturn(aResponse()
                         .withStatus(SC_OK)
-                        .withHeader("Content-Type", APPLICATION_JSON)
+                        .withHeader(CONTENT_TYPE, APPLICATION_JSON)
                         .withBody("""
                                 {"hearingCases":[{
                                   "courtCentreId":"%s",
