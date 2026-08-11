@@ -15,7 +15,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 public class DiscoveryTriggerConfig {
 
     @Bean("discoveryTriggerExecutor")
-    public ThreadPoolTaskExecutor discoveryTriggerExecutor(final DiscoveryTriggerProperties properties) {
+    public ThreadPoolTaskExecutor discoveryTriggerExecutor(final DiscoveryTriggerProperties properties,
+                                                            final MdcCopyingTaskDecorator taskDecorator) {
         final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(1);
         executor.setMaxPoolSize(1);
@@ -23,6 +24,7 @@ public class DiscoveryTriggerConfig {
         executor.setThreadNamePrefix("discovery-trigger-");
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(properties.getAwaitTerminationSeconds());
+        executor.setTaskDecorator(taskDecorator);
         executor.initialize();
         return executor;
     }

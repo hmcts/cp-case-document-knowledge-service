@@ -76,7 +76,7 @@ Reuses `DiscoveryService` unchanged via new `DiscoveryTriggerService` + dedicate
   clean build` incl. `integration` green, PMD/JaCoCo at existing thresholds (AC-024)
 
 ## Story 4 — Structured logging and correlation for manual discovery runs
-**Jira: DD-#####**
+**Jira: DD-43063**
 As an **on-call engineer**, I want **each manual trigger to emit one correlated start/completion
 log pair, explicitly distinguishable from a cron run**, so that **I can trace and audit manual
 interventions without confusing them with scheduled ones**.
