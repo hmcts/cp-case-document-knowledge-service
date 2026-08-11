@@ -86,7 +86,7 @@ and `<task>_<behaviour>` for live tests (matching
 - **Reinforced by (integration):** `IngestionProcessByCaseHttpLiveTest.seedExistingCaseDocument(...)`
   (line ~136) performs exactly this kind of column-less raw insert and must keep working
   **unmodified** — the live proof that the column's nullability preserves backward compatibility
-  (NFR-004). Covered as Scenario 3.2.
+  (NFR-003). Covered as Scenario 3.2.
 
 **Scenario 1.3 — The entity mapping matches the column, and `TEXT` stores the value byte-for-byte**
 - **Given** the `CaseDocument` entity with its new `@Column(name = "rag_document_reference") private String ragDocumentReference`
@@ -302,7 +302,7 @@ returning a `CaseDocument` whose `ragDocumentReference` is **already set** to a 
 
 ## Story 3 — End-to-end test coverage for `rag_document_reference` (DD-43138)
 
-**Scenario 3.1 — The column is populated through the real ingestion flow, with the two-stub ordering hazard resolved** *(AC-011, NFR-005)*
+**Scenario 3.1 — The column is populated through the real ingestion flow, with the two-stub ordering hazard resolved** *(AC-011, NFR-004)*
 - **Given** the `gradle integration` compose stack (app + PostgreSQL + Artemis + Azurite +
   azurite-seed + WireMock), a `case_documents` row seeded directly via JDBC in phase
   `WAITING_FOR_UPLOAD` with `rag_document_reference IS NULL`, and a Task Manager `jobs` row seeded
@@ -361,7 +361,7 @@ returning a `CaseDocument` whose `ragDocumentReference` is **already set** to a 
   and adds a second asynchronous hop; if it proves flaky, drop it and rely on the unit coverage,
   recording the decision on the ticket rather than leaving a quarantined test behind.
 
-**Scenario 3.2 — No API or response-shape regression across the existing live suites** *(AC-007, NFR-004)*
+**Scenario 3.2 — No API or response-shape regression across the existing live suites** *(AC-007, NFR-003)*
 - **Given** the full set of existing `*HttpLiveTest` classes, **with their assertions unmodified**
 - **When** `gradle integration` runs after `V1013`, the entity field and the task change have all
   landed
@@ -370,7 +370,7 @@ returning a `CaseDocument` whose `ragDocumentReference` is **already set** to a 
     raw `INSERT INTO case_documents (doc_id, case_id, material_id, source, doc_name, blob_uri,
     uploaded_at, ingestion_phase, ingestion_phase_at, defendant_id, courtdoc_id, created_at)` omits
     the new column entirely and must keep working — which it does *only* because the column is
-    nullable with no default (NFR-004, and the practical consequence of ADR-002's "no `NOT NULL`").
+    nullable with no default (NFR-003, and the practical consequence of ADR-002's "no `NOT NULL`").
   - `IngestionProcessHttpLiveTest`, `IngestionStatusHttpLiveTest`, `DocumentHttpLiveTest`,
     `AnswersHttpLiveTest`, `QueriesHttpLiveTest`, `QueryVersionsHttpLiveTest`,
     `ActuatorHttpLiveTest` — no response body gains a field, because no controller, mapper or DTO

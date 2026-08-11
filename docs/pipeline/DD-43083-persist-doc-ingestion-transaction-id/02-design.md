@@ -38,7 +38,7 @@ COMMENT ON COLUMN case_documents.rag_document_reference IS
 
 - Plain `TEXT NULL` — no `NOT NULL`, no `DEFAULT`, no `CHECK`, no index. `ADD COLUMN` of a
   nullable column with no default is metadata-only on PostgreSQL 16 (no table rewrite, no lock
-  escalation), matching NFR-003.
+  escalation), matching NFR-002.
 - **No `CHECK` constraint deliberately.** The table does have a shape check on a comparable opaque
   string — `cd_sha256_shape CHECK (sha256_hex IS NULL OR sha256_hex ~ '^[0-9a-fA-F]{64}$')`
   (`V1001__case_documents_ai_schema.sql`) — and it would be easy to add the RAG UUID pattern here
@@ -55,7 +55,7 @@ COMMENT ON COLUMN case_documents.rag_document_reference IS
   (`fk_cqs_doc`, `fk_cllda_doc`, `fk_def_doc` all reference `case_documents.doc_id`) or the
   `document_ingestion_phase_enum` type is touched.
 - Route through `migration-reviewer` per CLAUDE.md's hard rule for any `db/migration` change
-  (AC-008, NFR-006). Shipped `V1000`–`V1012` are not edited.
+  (AC-008). Shipped `V1000`–`V1012` are not edited.
 
 ### 2. Files touched
 
@@ -168,8 +168,8 @@ private void saveDocumentUploaded(final CaseDocument doc, final String blobName,
   file (line 3); it is null-safe, so no separate null guard is needed.
 - **Fifth parameter is fine for PMD.** `.github/pmd-ruleset.xml` includes only the `bestpractices`,
   `codestyle`, `errorprone`, `performance` and `security` categories — the `design` category (which
-  owns `ExcessiveParameterList`, default threshold 10) is not enabled, so NFR-007's contingency
-  does not bite. An explicit `String documentReference` parameter is preferred over passing
+  owns `ExcessiveParameterList`, default threshold 10) is not enabled, so PMD does not object to
+  the fifth parameter. An explicit `String documentReference` parameter is preferred over passing
   `FileStorageLocationReturnedSuccessfully` into the persistence helper, which would couple a
   private DB-write method to a generated RAG API model. If this parameter list grows again, the
   right refactor is a small local record (e.g. `UploadedBlob(blobName, blobUrl, sizeBytes)`), not a
@@ -246,7 +246,7 @@ No `TaskUtils` test is needed — nothing is added there (contrast DD-43084, whi
 `buildAnswerParams`).
 
 **Integration (`src/integrationTest/`)** — asserts the value survives end-to-end and not just in a
-mocked unit (AC-011, NFR-005).
+mocked unit (AC-011, NFR-004).
 
 Recommended shape: a dedicated live test mirroring DD-43084's
 `jobmanager/queryflow/CheckStatusOfAnswerGenerationRagTransactionIdLiveTest` — seed a `jobs` row
@@ -282,7 +282,7 @@ Also in scope for the IT pass, both assertion-only:
 - `IngestionProcessByCaseHttpLiveTest`, `IngestionProcessHttpLiveTest`, `IngestionStatusHttpLiveTest`,
   `DocumentHttpLiveTest` run **unmodified and green** — no response body gains a field (AC-007), and
   the raw `INSERT INTO case_documents (...)` in `IngestionProcessByCaseHttpLiveTest` keeps working
-  precisely because the column is nullable (NFR-004).
+  precisely because the column is nullable (NFR-003).
 - App startup succeeds against a database migrated from `V1012` with pre-existing
   `case_documents` rows — which is also the live proof that `ddl-auto: validate` accepts the new
   `String` → `TEXT` mapping (AC-006, AC-009).

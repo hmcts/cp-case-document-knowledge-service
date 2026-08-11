@@ -96,17 +96,16 @@ version; the answer-side `rag_transaction_id` columns delivered by DD-43084.
 
 ## Non-Functional Requirements
 
+Trimmed to the NFRs that carry ticket-specific decision content. Migration governance, PMD/JaCoCo,
+platform versions, and logging rules are covered once, generically, by CLAUDE.md's hard rules and
+are not repeated here per requirement.
+
 | ID | Category | Requirement |
 |----|----------|-------------|
-| NFR-001 | Data protection | `documentReference` is an opaque, RAG-issued correlation string — not PII, not case content, not a court reference number. Both `RetrieveMaterialAndUploadTask` and `CheckIngestionStatusForAllDefendantsTask` already log it at INFO today, so persisting it introduces no new data-protection exposure. Same reasoning as DD-43084/NFR-001. |
-| NFR-002 | Traceability | After this change, every uploaded document row can be tied back to the exact RAG ingestion transaction that produced it, closing the ingestion-side half of the gap DD-43084 closed on the answer side. |
-| NFR-003 | Migration safety | `ALTER TABLE case_documents ADD COLUMN ... NULL` is additive and metadata-only on PostgreSQL 16 — no table rewrite, no lock escalation, no default backfill — regardless of current row count. No existing column, constraint (`cd_blob_uri_not_blank`, `cd_source_not_blank`, `cd_size_nonneg`, `cd_sha256_shape`), index, or the `document_ingestion_phase_enum` type is touched. |
-| NFR-004 | Backward compatibility | No change to any GET response shape or SQL read path. `IdpcAvailabilityService.persistCaseDocument(...)` and `DocumentService` keep compiling and behaving unchanged (new field simply unset). The raw `INSERT INTO case_documents (...)` in `IngestionProcessByCaseHttpLiveTest` continues to work untouched, precisely because the column is nullable. |
-| NFR-005 | Testability | Unit coverage in `RetrieveMaterialAndUploadTaskTest` asserting the persisted entity carries the value; `CheckIngestionStatusForAllDefendantsTaskTest` still green; `integrationTest` coverage asserting the column is populated end-to-end through the existing WireMock stub `wiremock/mappings/document_upload_to_generate_url.json` (which already returns a synthetic UUID-shaped `documentReference`). `gradle integration` passes against the compose stack. |
-| NFR-006 | Migration governance | The new `V1013__*.sql` is routed through the `migration-reviewer` agent per CLAUDE.md's hard rule for any change under `db/migration`. Shipped migrations `V1000`–`V1012` are never edited. |
-| NFR-007 | Code quality | PMD and JaCoCo pass at existing thresholds; no new suppressions. If adding a parameter pushes `saveDocumentUploaded(...)` past a PMD parameter-count rule, pass the `FileStorageLocationReturnedSuccessfully` (or a small local record) rather than suppressing the rule. |
-| NFR-008 | Platform | Java 25 / Spring Boot 4.0.5 / Gradle 9 / PostgreSQL 16 / Flyway 7.x. The existing Spring Data JPA `saveAndFlush` write pattern on `CaseDocument` is preserved — no raw SQL is introduced on this path. |
-| NFR-009 | Logging | JSON-to-stdout logging unchanged; no `System.out`; no document body or case content logged. The existing "Saved CaseDocument …" log line may include the reference (already-permitted data), but no new log statement is required by this change. |
+| NFR-001 | Data protection | `documentReference` is an opaque, RAG-issued correlation string — not PII, not case content, not a court reference number. Both `RetrieveMaterialAndUploadTask` and `CheckIngestionStatusForAllDefendantsTask` already log it at INFO today, so persisting it introduces no new data-protection exposure. |
+| NFR-002 | Migration safety | `ALTER TABLE case_documents ADD COLUMN ... NULL` is additive and metadata-only on PostgreSQL 16 — no table rewrite, no lock escalation — regardless of current row count. No existing column, constraint, index, or the `document_ingestion_phase_enum` type is touched. |
+| NFR-003 | Backward compatibility | No change to any GET response shape or SQL read path. `IdpcAvailabilityService.persistCaseDocument(...)` and `DocumentService` keep compiling and behaving unchanged. The raw `INSERT INTO case_documents (...)` in `IngestionProcessByCaseHttpLiveTest` continues to work, precisely because the column is nullable. |
+| NFR-004 | Testability | Unit coverage in `RetrieveMaterialAndUploadTaskTest` / `CheckIngestionStatusForAllDefendantsTaskTest`; `integrationTest` coverage asserting the column is populated end-to-end through the RAG WireMock stub. `gradle integration` passes against the compose stack. |
 
 ---
 
@@ -158,7 +157,7 @@ DD-43084 was split into DD-43104 / DD-43105 / DD-43106.
    its own beyond what Story 2 delivers.*
 4. **Story 4 — Test coverage end-to-end.** Unit assertions on the captured entity plus an
    `integrationTest` assertion that the column is populated from the existing WireMock stub; keep
-   PMD/JaCoCo green. Covers NFR-005, AC-011, AC-012, AC-013.
+   PMD/JaCoCo green. Covers NFR-004, AC-011, AC-012, AC-013.
 
 Explicitly **not** a story in this requirement: any API exposure of the field, a lookup-by-reference
 endpoint, or a backfill job.
