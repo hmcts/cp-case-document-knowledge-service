@@ -15,25 +15,38 @@ public class HearingQueryApiStub {
     private static final String HEARINGS_PATH = "/hearing-query-api/query/api/rest/hearing/hearings";
     private static final String HEARING_CASES_FOR_DAY_PATH = "/hearing-query-api/query/api/rest/hearing/hearing-cases-for-day";
     public static final String APPLICATION_JSON = "application/json";
+    private static final String DATE = "date";
+    private static final String CONTENT_TYPE = "Content-Type";
 
     public static void stubGetHearingsReturnsEmptyHearingSummaries(final String courtCentreId, final String roomId) {
         stubFor(get(urlPathEqualTo(HEARINGS_PATH))
                 .withQueryParam("courtCentreId", equalTo(courtCentreId))
                 .withQueryParam("roomId", equalTo(roomId))
-                .withQueryParam("date", matching(".*"))
+                .withQueryParam(DATE, matching(".*"))
                 .willReturn(aResponse()
                         .withStatus(SC_OK)
-                        .withHeader("Content-Type", APPLICATION_JSON)
+                        .withHeader(CONTENT_TYPE, APPLICATION_JSON)
                         .withBody("{\"hearingSummaries\":[]}")
                 ));
     }
 
     public static void stubGetHearingCasesForDayReturnsEmptyHearingCases() {
         stubFor(get(urlPathEqualTo(HEARING_CASES_FOR_DAY_PATH))
-                .withQueryParam("date", matching(".*"))
+                .withQueryParam(DATE, matching(".*"))
                 .willReturn(aResponse()
                         .withStatus(SC_OK)
-                        .withHeader("Content-Type", APPLICATION_JSON)
+                        .withHeader(CONTENT_TYPE, APPLICATION_JSON)
+                        .withBody("{\"hearingCases\":[]}")
+                ));
+    }
+
+    public static void stubGetHearingCasesForDayReturnsEmptyHearingCasesWithDelay(final int fixedDelayMs) {
+        stubFor(get(urlPathEqualTo(HEARING_CASES_FOR_DAY_PATH))
+                .withQueryParam(DATE, matching(".*"))
+                .willReturn(aResponse()
+                        .withStatus(SC_OK)
+                        .withHeader(CONTENT_TYPE, APPLICATION_JSON)
+                        .withFixedDelay(fixedDelayMs)
                         .withBody("{\"hearingCases\":[]}")
                 ));
     }
@@ -41,10 +54,10 @@ public class HearingQueryApiStub {
     public static void stubGetHearingCasesForDayReturnsHearingCase(final String courtCentreId, final String courtRoomId,
                                                                     final String caseId) {
         stubFor(get(urlPathEqualTo(HEARING_CASES_FOR_DAY_PATH))
-                .withQueryParam("date", matching(".*"))
+                .withQueryParam(DATE, matching(".*"))
                 .willReturn(aResponse()
                         .withStatus(SC_OK)
-                        .withHeader("Content-Type", APPLICATION_JSON)
+                        .withHeader(CONTENT_TYPE, APPLICATION_JSON)
                         .withBody("""
                                 {"hearingCases":[{
                                   "courtCentreId":"%s",

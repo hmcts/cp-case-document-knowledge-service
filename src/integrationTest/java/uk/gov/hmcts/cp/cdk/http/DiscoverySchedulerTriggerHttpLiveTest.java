@@ -7,6 +7,7 @@ import static uk.gov.hmcts.cp.cdk.util.UtilConstants.USER_WITH_SYSTEM_USERS_GROU
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
 import uk.gov.hmcts.cp.cdk.util.BrokerUtil;
+import uk.gov.hmcts.cp.cdk.stub.HearingQueryApiStub;
 import uk.gov.hmcts.cp.openapi.model.cdk.DiscoveryOperation;
 
 import java.time.Duration;
@@ -149,5 +150,27 @@ class DiscoverySchedulerTriggerHttpLiveTest extends AbstractHttpLiveTest {
                     json.toString().contains("discovery-scheduler-trigger"));
             assertThat(auditMessage).as("expected an audit event for the trigger action").isNotNull();
         }
+    }
+
+    @Test
+    @DisplayName("NIGHTLY trigger returns 202 well before a delayed downstream call completes (design Testing item 5, Story 4)")
+    void trigger_nightly_returns202_beforeDelayedHearingCasesForDayCompletes() {
+        HearingQueryApiStub.stubGetHearingCasesForDayReturnsEmptyHearingCasesWithDelay(4000);
+
+        final String body = """
+                {
+                  "discoveryOperation": "NIGHTLY"
+                }
+                """;
+
+        final Instant before = Instant.now();
+        final ResponseEntity<String> response = http.exchange(
+                baseUrl + TRIGGER_PATH, HttpMethod.POST, new HttpEntity<>(body, vendorHeaders()), String.class);
+        final Duration elapsed = Duration.between(before, Instant.now());
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(elapsed)
+                .as("202 must return without waiting for the delayed hearing-cases-for-day call(s) to complete")
+                .isLessThan(Duration.ofSeconds(2));
     }
 }

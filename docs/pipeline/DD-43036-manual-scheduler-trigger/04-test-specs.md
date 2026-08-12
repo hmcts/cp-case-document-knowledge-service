@@ -6,7 +6,7 @@
 > ADRs: [`adrs/DD-43036-manual-scheduler-trigger.md`](../adrs/DD-43036-manual-scheduler-trigger.md)
 >
 > Scenarios for `src/integrationTest/`, grouped by story. **Story 1 (DD-43060)** is contract-only
-> (no runtime behaviour here — no scenarios). **Story 4** not yet scoped into this file.
+> (no runtime behaviour here — no scenarios).
 
 ---
 
@@ -211,3 +211,80 @@ in `DiscoveryTriggerServiceTest`, since `DiscoveryService` already swallows per-
    catch-all, with unit coverage added to the existing `GlobalExceptionHandlerTest`. This is a
    deviation from design §2's "not changed" list for `GlobalExceptionHandler.java` — required for
    AC-002, not a scope choice.
+
+---
+
+## Story 4 — Structured logging and correlation for manual discovery runs (DD-43063)
+
+Covers **AC-018, AC-019, AC-020**. NFR-002 (Logging), NFR-007 (Observability).
+
+**Not independently deployable** — extends Story 3's `DiscoveryTriggerService`/`DiscoveryTriggerConfig`
+classes in place; no new endpoint or ACL surface.
+
+### What's new
+
+- `config/MdcCopyingTaskDecorator.java` (new) — captures `MDC.getCopyOfContextMap()` on the request
+  thread at submit time (before `RequestContextFilter`'s `finally` clears it), installs it on the
+  worker thread, runs the delegate, clears MDC in its own `finally`. Wired into
+  `discoveryTriggerExecutor` via `ThreadPoolTaskExecutor.setTaskDecorator(...)`.
+- `DiscoveryTriggerService.runWithLogging(...)` now puts `trigger=manual` and `discoveryOperation`
+  into MDC around the delegate call (cleared after) — promoted to top-level JSON fields by
+  `LogstashEncoder`, the explicit discriminator AC-019 requires (not timestamp inference).
+
+### Scenarios
+
+**S4.1 — MDC captured at submit time is visible on the worker thread (unit,
+`MdcCopyingTaskDecoratorTest`).** Given MDC has `correlationId` set on the calling thread, when
+`decorate(...)`'s returned `Runnable` runs on a *different* thread, then that value is visible
+inside it — even after the calling thread's MDC is cleared/mutated post-submit.
+
+**S4.2 — MDC is cleared after the decorated runnable completes (unit).** Given a pooled thread runs
+the decorated runnable, then that thread's MDC is empty afterward — proves no leakage into whatever
+task that pooled thread picks up next.
+
+**S4.3 — a null context map at decorate-time doesn't throw (unit).** Given no MDC is set when
+`decorate(...)` is called, then the returned `Runnable` still runs without error.
+
+**S4.4 — one correlated start/completion log pair per run, tagged `trigger=manual`, no PII
+(AC-018–020, unit, extends `DiscoveryTriggerServiceTest`).** Given `correlationId` is set on MDC and
+`trigger(...)` is invoked, when the captured `Runnable` is run (success and failure paths, each
+asserted separately), then a Logback `ListAppender` attached to `DiscoveryTriggerService`'s logger
+shows exactly one "starting" event and exactly one "finished"/"failed" event, both carrying
+`correlationId` + `trigger=manual` + `discoveryOperation` in their MDC property map, and no event's
+formatted message contains `CJSCPPUID`, a case/court identifier, or document content — trivially true
+by construction (the log statements only ever interpolate the enum), asserted here so a future
+edit can't silently add one.
+
+*Why unit-level, not IT:* asserting real log output from an IT would need a docker-log-scraping
+helper that doesn't exist in `testsupport/` today (flagged as an open question back in Story 2's
+spec); the `ListAppender` approach gives full, deterministic coverage of AC-018–020 without it.
+
+**S4.5 — non-blocking dispatch, delayed-stub proof (design §Testing item 5, IT, extends
+`DiscoverySchedulerTriggerHttpLiveTest`).** Given `/hearing-cases-for-day` is stubbed with a
+multi-second `fixedDelay` (`CP_CDK_HEARING_IS_HEARING_FOR_CASES_ENABLED=true` in the compose stack
+means `NIGHTLY` calls this endpoint directly and synchronously, once per date in the
+`nightly-discovery.days-ahead` window — no `scheduled_ingestion_request` seeding needed, unlike the
+`INTRADAY` path), when a System User triggers `NIGHTLY`, then the `202` returns in well under the
+stub's delay — proving the response is decoupled from the worker's total run time, not just from
+one call's latency as Story 3's S3.1 already showed with an un-stubbed instant response.
+
+### Coverage map
+
+| AC | Scenario(s) | Layer |
+|---|---|---|
+| AC-018 | S4.4 | Unit |
+| AC-019 | S4.4 | Unit |
+| AC-020 | S4.4 | Unit (+ manual review of the two log statements) |
+| (design item 5) | S4.5 | Integration |
+
+### Constraints and open questions
+
+1. **AC-018/019/020 are unit-level, not IT** — see S4.4's rationale above. The DoD's "manual +
+   automated check confirms no PII/case data in any log record" is satisfied by S4.4 (automated) plus
+   a one-time manual read of `DiscoveryTriggerService`'s two log statements (only `discoveryOperation`
+   is ever interpolated) — not a coded manual-test step.
+2. **S4.5 depends on the compose stack's `is-hearing-for-cases-enabled` toggle staying `true`.** If
+   that default ever flips, `NIGHTLY` falls back to the per-active-configuration/job-manager path
+   (indirect, async, harder to pin a delay to) and S4.5 would need reworking — flagging so a future
+   toggle change doesn't silently break this test for an unrelated reason.
+3. **Test data** — synthetic fixtures only; no case/court/user identifiers.
