@@ -21,6 +21,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUI
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.REQUEST_ID;
 
 import uk.gov.hmcts.cp.cdk.testsupport.AbstractHttpLiveTest;
+import uk.gov.hmcts.cp.cdk.util.UtilConstants;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -72,7 +73,7 @@ class RetrieveMaterialAndUploadRagDocumentReferenceLiveTest extends AbstractHttp
     @DisplayName("Persists the RAG documentReference into case_documents.rag_document_reference "
             + "when the real upload task runs against a WAITING_FOR_UPLOAD row")
     void retrieveMaterialAndUploadTask_persistsRagDocumentReference_onCaseDocumentsRow() throws Exception {
-        configureFor("localhost", 8089);
+        configureFor(UtilConstants.wireMockHost(), UtilConstants.wireMockPort());
 
         final UUID caseId = UUID.randomUUID();
         final UUID defendantId = UUID.randomUUID();
