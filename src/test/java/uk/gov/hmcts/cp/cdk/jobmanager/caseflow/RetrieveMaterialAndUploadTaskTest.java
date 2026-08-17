@@ -115,6 +115,17 @@ public class RetrieveMaterialAndUploadTaskTest {
                 .build();
     }
 
+    private void stubSuccessfulUploadPipeline(final String documentReference) {
+        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.of("url"));
+        when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
+        when(uploadProperties.contentType()).thenReturn("application/pdf");
+        when(caseDocumentRepository.findSupersededDocuments(any(), any())).thenReturn(List.of());
+        when(documentIngestionInitiationApi.initiateDocumentUpload(any()))
+                .thenReturn(ResponseEntity.ok(new FileStorageLocationReturnedSuccessfully("storage-url", documentReference)));
+        when(storageService.copyFromUrl(any(), any()))
+                .thenReturn(new DocumentBlobMetadata("https://storage.blob/blob1", "document-id_120326.pdf", 12345L));
+    }
+
     @Test
     void shouldReturnCompletedWhenMissingRequiredJobData() {
         when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.empty());
@@ -211,14 +222,7 @@ public class RetrieveMaterialAndUploadTaskTest {
 
     @Test
     void shouldSaveDocumentUploadedWhenCopyUrlSuccessful() {
-        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.of("url"));
-        when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
-        when(uploadProperties.contentType()).thenReturn("application/pdf");
-        when(caseDocumentRepository.findSupersededDocuments(any(), any())).thenReturn(List.of());
-        when(documentIngestionInitiationApi.initiateDocumentUpload(any()))
-                .thenReturn(ResponseEntity.ok(new FileStorageLocationReturnedSuccessfully("storage-url", "doc-ref")));
-
-        when(storageService.copyFromUrl(any(), any())).thenReturn(new DocumentBlobMetadata("https://storage.blob/blob1", "document-id_120326.pdf", 12345L));
+        stubSuccessfulUploadPipeline("doc-ref");
         when(caseDocumentRepository.findById(any())).thenReturn(Optional.of(new CaseDocument()));
 
         final ExecutionInfo result = task.execute(executionInfo);
@@ -236,14 +240,7 @@ public class RetrieveMaterialAndUploadTaskTest {
     void shouldPersistRagDocumentReferenceInTheSameSaveAndFlush_whenUploadSucceeds() {
         final String reference = randomUUID().toString();
 
-        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.of("url"));
-        when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
-        when(uploadProperties.contentType()).thenReturn("application/pdf");
-        when(caseDocumentRepository.findSupersededDocuments(any(), any())).thenReturn(List.of());
-        when(documentIngestionInitiationApi.initiateDocumentUpload(any()))
-                .thenReturn(ResponseEntity.ok(new FileStorageLocationReturnedSuccessfully("storage-url", reference)));
-        when(storageService.copyFromUrl(any(), any()))
-                .thenReturn(new DocumentBlobMetadata("https://storage.blob/blob1", "document-id_120326.pdf", 12345L));
+        stubSuccessfulUploadPipeline(reference);
         when(caseDocumentRepository.findById(any())).thenReturn(Optional.of(new CaseDocument()));
 
         final ExecutionInfo result = task.execute(executionInfo);
@@ -266,14 +263,7 @@ public class RetrieveMaterialAndUploadTaskTest {
     void shouldStoreRagDocumentReferenceVerbatim_whenReferenceIsNotUuidShaped() {
         final String nonUuidReference = "not-a-uuid";
 
-        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.of("url"));
-        when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
-        when(uploadProperties.contentType()).thenReturn("application/pdf");
-        when(caseDocumentRepository.findSupersededDocuments(any(), any())).thenReturn(List.of());
-        when(documentIngestionInitiationApi.initiateDocumentUpload(any()))
-                .thenReturn(ResponseEntity.ok(new FileStorageLocationReturnedSuccessfully("storage-url", nonUuidReference)));
-        when(storageService.copyFromUrl(any(), any()))
-                .thenReturn(new DocumentBlobMetadata("https://storage.blob/blob1", "document-id_120326.pdf", 12345L));
+        stubSuccessfulUploadPipeline(nonUuidReference);
         when(caseDocumentRepository.findById(any())).thenReturn(Optional.of(new CaseDocument()));
 
         final ExecutionInfo result = task.execute(executionInfo);
@@ -288,14 +278,7 @@ public class RetrieveMaterialAndUploadTaskTest {
 
     @Test
     void shouldLeaveRagDocumentReferenceNullAndRetry_whenReferenceIsNull() {
-        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.of("url"));
-        when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
-        when(uploadProperties.contentType()).thenReturn("application/pdf");
-        when(caseDocumentRepository.findSupersededDocuments(any(), any())).thenReturn(List.of());
-        when(documentIngestionInitiationApi.initiateDocumentUpload(any()))
-                .thenReturn(ResponseEntity.ok(new FileStorageLocationReturnedSuccessfully("storage-url", null)));
-        when(storageService.copyFromUrl(any(), any()))
-                .thenReturn(new DocumentBlobMetadata("https://storage.blob/blob1", "document-id_120326.pdf", 12345L));
+        stubSuccessfulUploadPipeline(null);
         when(caseDocumentRepository.findById(any())).thenReturn(Optional.of(new CaseDocument()));
 
         final ExecutionInfo result = task.execute(executionInfo);
@@ -310,14 +293,7 @@ public class RetrieveMaterialAndUploadTaskTest {
 
     @Test
     void shouldLeaveRagDocumentReferenceNull_whenReferenceIsBlank() {
-        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.of("url"));
-        when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
-        when(uploadProperties.contentType()).thenReturn("application/pdf");
-        when(caseDocumentRepository.findSupersededDocuments(any(), any())).thenReturn(List.of());
-        when(documentIngestionInitiationApi.initiateDocumentUpload(any()))
-                .thenReturn(ResponseEntity.ok(new FileStorageLocationReturnedSuccessfully("storage-url", "")));
-        when(storageService.copyFromUrl(any(), any()))
-                .thenReturn(new DocumentBlobMetadata("https://storage.blob/blob1", "document-id_120326.pdf", 12345L));
+        stubSuccessfulUploadPipeline("");
         when(caseDocumentRepository.findById(any())).thenReturn(Optional.of(new CaseDocument()));
 
         final ExecutionInfo result = task.execute(executionInfo);
@@ -338,14 +314,7 @@ public class RetrieveMaterialAndUploadTaskTest {
         final CaseDocument existing = new CaseDocument();
         existing.setRagDocumentReference("reference-A");
 
-        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.of("url"));
-        when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
-        when(uploadProperties.contentType()).thenReturn("application/pdf");
-        when(caseDocumentRepository.findSupersededDocuments(any(), any())).thenReturn(List.of());
-        when(documentIngestionInitiationApi.initiateDocumentUpload(any()))
-                .thenReturn(ResponseEntity.ok(new FileStorageLocationReturnedSuccessfully("storage-url", "reference-B")));
-        when(storageService.copyFromUrl(any(), any()))
-                .thenReturn(new DocumentBlobMetadata("https://storage.blob/blob1", "document-id_120326.pdf", 12345L));
+        stubSuccessfulUploadPipeline("reference-B");
         when(caseDocumentRepository.findById(any())).thenReturn(Optional.of(existing));
 
         final ExecutionInfo result = task.execute(executionInfo);
