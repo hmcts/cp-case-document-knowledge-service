@@ -83,4 +83,7 @@ public class CaseDocument {
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt = utcNow();
+
+    @Column(name = "rag_document_reference")
+    private String ragDocumentReference;
 }

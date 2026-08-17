@@ -226,7 +226,7 @@ should not be smuggled into this change.
 | OQ-002 (column name) | **Resolved — ADR-001:** `rag_document_reference`. |
 | OQ-003 (SQL type + fallback) | **Resolved — ADR-002:** `TEXT`, verbatim, no parse, no CHECK; malformed values stored as-is. |
 | OQ-005 (index) | **Design position: no index** (FR-010). Nothing queries by reference. If an ops lookup need is confirmed, it is a separate additive migration; `TEXT` does not constrain that option. |
-| OQ-001, OQ-004, OQ-006, OQ-007 | **Carried forward unchanged** with their Stage 1 owners and due dates. None of them alters the design in §1–§6; OQ-001 (ticket text) and OQ-006 (does the ticket actually want the status task to read from the row instead of job data?) are the two that could reopen scope, and both are due before Stage 3. |
+| OQ-001, OQ-004, OQ-006, OQ-007 | **Resolved at implementation** — see `01-requirements.md` §Open Questions for the resolution recorded against each. None of them altered the design in §1–§6: OQ-001 (implementation matches the restated persist-only scope, confirmed by the AC-007 diff check), OQ-004 (additive/nullable column, confirmed safe for external readers by the Scenario 3.3 upgrade run), OQ-006 (deliberately not implemented — `CheckIngestionStatusForAllDefendantsTask` still reads job data, unchanged), OQ-007 (column has no independent retention/audit lifecycle — confirmed). |
 
 ---
 

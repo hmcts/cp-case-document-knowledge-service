@@ -59,7 +59,8 @@ transaction — the ingestion-side half of what DD-43084 did for answers**.
 **Notes:** needs Story 1's column. Retries of `RETRIEVE_MATERIAL_AND_UPLOAD` overwrite the stored
 reference (last-write-wins, intended — design §5), and `CheckIngestionStatusForAllDefendantsTask`
 needs **no code change** since it re-saves the hydrated entity (folds in Stage 1's candidate Story
-3). OQ-001/OQ-006 (scope vs. the literal ticket text) should be settled before this is picked up.
+3). OQ-001/OQ-006 (scope vs. the literal ticket text) — resolved at implementation, see
+`01-requirements.md` §Open Questions.
 
 ---
 
