@@ -163,6 +163,10 @@ class RetrieveMaterialAndUploadRagDocumentReferenceLiveTest extends AbstractHttp
     private String awaitRagDocumentReference(final UUID docId) {
         final AtomicReference<String> found = new AtomicReference<>();
         Awaitility.await()
+                .alias("rag_document_reference populated for doc_id=" + docId
+                        + " (RETRIEVE_MATERIAL_AND_UPLOAD job never picked up, "
+                        + "the POST /document-upload stub for this docId never matched, "
+                        + "or the column was never written — check app/wiremock logs)")
                 .atMost(Duration.ofSeconds(60))
                 .pollInterval(Duration.ofSeconds(2))
                 .until(() -> {
