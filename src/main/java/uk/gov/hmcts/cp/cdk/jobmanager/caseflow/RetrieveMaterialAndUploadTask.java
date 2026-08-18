@@ -114,6 +114,7 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
             final List<MetadataFilter> documentMetadata = createUploadMetadata(caseId, defendantId, materialId, today);
             final List<UUID> supersededDocumentList = getSupersededDocuments(caseId, defendantId);
             final FileStorageLocationReturnedSuccessfully fileStorageLocation = initiateDocumentUpload(documentId, materialName, documentMetadata, supersededDocumentList);
+            final String documentReference = fileStorageLocation.getDocumentReference();
             log.info("downloadUrl generated: {}, destinationUrl: {} ", downloadUrl, fileStorageLocation.getStorageUrl());
 
             final DocumentBlobMetadata documentBlobMetadata = storageService.copyFromUrl(downloadUrl, fileStorageLocation.getStorageUrl());
@@ -122,7 +123,7 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
             final long sizeBytes = nonNull(documentBlobMetadata) ? documentBlobMetadata.blobSize() : UNKNOWN_SIZE_BYTES;
 
             caseDocumentRepository.findById(documentId).ifPresent(doc ->
-                    saveDocumentUploaded(doc, blobName, blobUrl, sizeBytes));
+                    saveDocumentUploaded(doc, blobName, blobUrl, sizeBytes, documentReference));
 
             log.info("Saved CaseDocument docId={}, caseId={}, materialId={}, sizeBytes={}, blobUri={}, requestId={}",
                     documentId, caseId, materialId, sizeBytes, blobUrl, requestId);
@@ -130,7 +131,7 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
             final JsonObjectBuilder updatedJobData = createObjectBuilder(jobData);
 
             updatedJobData.add(CTX_DOC_ID_KEY, documentId.toString());
-            updatedJobData.add(CTX_DOC_REFERENCE_KEY, fileStorageLocation.getDocumentReference());
+            updatedJobData.add(CTX_DOC_REFERENCE_KEY, documentReference);
             updatedJobData.add(CTX_BLOB_NAME_KEY, blobName);
 
             final ExecutionInfo executionInfoNew = executionInfo()
@@ -224,7 +225,8 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
                 : supersededDocuments;
     }
 
-    private void saveDocumentUploaded(final CaseDocument doc, final String blobName, final String blobUrl, final long sizeBytes) {
+    private void saveDocumentUploaded(final CaseDocument doc, final String blobName, final String blobUrl,
+                                      final long sizeBytes, final String documentReference) {
         doc.setDocName(blobName);
         doc.setBlobUri(blobUrl);
         doc.setContentType(uploadProperties.contentType());
@@ -232,6 +234,7 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
         doc.setUploadedAt(utcNow());
         doc.setIngestionPhase(DocumentIngestionPhase.UPLOADED);
         doc.setIngestionPhaseAt(utcNow());
+        doc.setRagDocumentReference(isBlank(documentReference) ? null : documentReference);
         caseDocumentRepository.saveAndFlush(doc);
     }
 }

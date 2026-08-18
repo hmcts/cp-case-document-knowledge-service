@@ -497,14 +497,13 @@ Every cell below describes coverage *to be written*. No row is evidence of a pas
    inconsistent special case, and the broader JPA-entity-equality smell is out of scope).
 4. **Story sequencing.** Story 3's IT cannot compile or pass until Stories 1 and 2 have merged. It
    can be drafted in parallel, but do not open it as a standalone PR against `main`.
-5. **Upstream open questions still unresolved** and due before Stage 5 begins: **OQ-001** (the
-   literal DD-43083 ticket text was never fetched — no Jira access in these sessions; the whole
-   scope is a restatement) and **OQ-006** (whether the ticket's actual driver is for
-   `CheckIngestionStatusForAllDefendantsTask` to read the reference *from the row* instead of job
-   data, which would grow scope well beyond persistence). If either resolves differently, Story 2's
-   scenarios and this whole test plan need revisiting. **OQ-004** (external readers of
-   `case_documents`) and **OQ-007** (retention/purge) remain open for before-merge sign-off, and
-   **OQ-005** (index) stays deferred.
+5. **Upstream open questions — resolved at implementation.** **OQ-001** (ticket text never
+   fetched — no Jira access in these sessions) and **OQ-006** (whether the ticket's actual driver
+   is for `CheckIngestionStatusForAllDefendantsTask` to read the reference *from the row* instead
+   of job data) are both closed per `01-requirements.md` §Open Questions: implementation matches
+   the restated persist-only scope, and the status task deliberately still reads job data,
+   unchanged. **OQ-004** (external readers of `case_documents`) and **OQ-007** (retention/purge)
+   are likewise resolved there. **OQ-005** (index) stays deferred — no read path needs it.
 6. **Jira sub-tickets are live.** Story 1 is [DD-43136](https://tools.hmcts.net/jira/browse/DD-43136),
    Story 2 is [DD-43137](https://tools.hmcts.net/jira/browse/DD-43137), Story 3 is
    [DD-43138](https://tools.hmcts.net/jira/browse/DD-43138) — CLAUDE.md's "linked Jira ticket per

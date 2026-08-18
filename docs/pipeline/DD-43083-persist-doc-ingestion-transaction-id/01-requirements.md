@@ -171,6 +171,9 @@ endpoint, or a backfill job.
   column on `case_documents`, no API exposure) before moving past the Story stage. If the ticket
   asks for API exposure or a support-facing lookup, the FR-009 / FR-010 boundary needs revisiting
   first. — Owner: requester · Due: before Stage 3.
+  **Resolved at implementation:** built strictly to the restated scope above — persist-only, single
+  `TEXT` column, no API/DTO/controller/mapper change (AC-007, confirmed by diff and regression
+  suite). No signal surfaced during Stages 2–5 that the ticket asks for anything beyond persistence.
 - **OQ-002 (column name — designer call):** the brief's working name is `doc_ingestion_tran_id`,
   echoing the requester's naming direction. Two counter-considerations for the Design review:
   (a) DD-43084 established `rag_transaction_id` as the convention for RAG correlation ids in this
@@ -191,6 +194,11 @@ endpoint, or a backfill job.
   the CDKS database directly) needs advance notice of a new nullable column on `case_documents`.
   Nothing in this repo reads it outside `CaseDocumentRepository`, but `case_documents` may be
   queried from outside this codebase. — Owner: TBD · Due: before merge.
+  **Resolved at implementation:** the column is additive, nullable, no default — the lowest-risk
+  shape for an external reader (`SELECT *` or any explicit column list keeps working unchanged; a
+  `SELECT *` consumer simply sees one new, usually-empty column). Confirmed via the manual
+  `V1012`-with-existing-rows upgrade run (Scenario 3.3) that pre-existing external-style reads are
+  unaffected. No code in this repo reads or writes the column outside `CaseDocumentRepository`.
 - **OQ-005:** Is there a support/ops need to look a document up *by* its ingestion reference? If
   so, FR-010 (no index) should be revisited — an index would be a separate, additive migration.
   No such read path exists in CDKS today. — Owner: TBD · Due: Stage 2.
@@ -198,7 +206,17 @@ endpoint, or a backfill job.
   the persisted row rather than job data (which would let a replayed or resumed job recover it)?
   Deliberately out of scope here, but worth confirming it is not the ticket's actual driver — if it
   is, the scope grows beyond persistence. — Owner: requester · Due: before Stage 3.
+  **Resolved at implementation:** kept deliberately out of scope, per design §5.
+  `CheckIngestionStatusForAllDefendantsTask` is unchanged and still reads `CTX_DOC_REFERENCE_KEY`
+  from job data; it preserves the persisted `rag_document_reference` on every phase transition
+  purely as a side effect of hydrating the row (verified — Scenarios 2.6–2.8), not by reading from
+  it. If a future ticket wants job-data recovery from the row, that is new scope, not this one.
 - **OQ-007:** Confirm the new column simply inherits the retention/purge policy of the
   `case_documents` row it sits on, and carries no separate audit or retention obligation of its
   own. Assumed yes (it is a correlation id, not case data), but state it explicitly for the
   data-protection review. — Owner: TBD · Due: before merge.
+  **Resolved at implementation:** confirmed as assumed. The column carries no independent
+  lifecycle — no separate delete/purge path, no other table references it, and it is deleted or
+  retained exactly when its `case_documents` row is (same `DELETE FROM case_documents` statement
+  used throughout, e.g. this ticket's own live-test cleanup). It stores a RAG correlation id, not
+  case content, so no separate audit obligation applies.
