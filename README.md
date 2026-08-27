@@ -18,6 +18,7 @@ Spring Boot 4 (Java 25), PostgreSQL + Flyway, production-ready observability, an
 - [Integration tests with Docker Compose](#integration-tests-with-docker-compose)
 - [Configuration](#configuration)
 - [API & docs](#api--docs)
+- [How requirement docs are generated (Claude Code SDLC pipeline)](#how-requirement-docs-are-generated-claude-code-sdlc-pipeline)
 - [Observability](#observability)
 - [SBOM / dependency insights](#sbom--dependency-insights)
 - [Troubleshooting](#troubleshooting)
@@ -189,6 +190,65 @@ curl -fsS "http://localhost:8082/actuator/health" | jq
 
 Please see the API Marketplace documentation for details on api versioning,
 etc : [Supporting Documents](https://github.com/hmcts/api-hmcts-marketplace-template?tab=readme-ov-file#supporting-documents)
+
+---
+
+## How requirement docs are generated (Claude Code SDLC pipeline)
+
+Every requirement/story in this repo gets a matching set of docs under `docs/pipeline/` —
+requirements, design, ADRs, user stories, and test specs — written *before* any code is written.
+These aren't written by hand: they're generated with **Claude Code**, using a plugin called
+**`hmcts-sdlc-orchestrator`**, following the process below. Anyone on the team can do this for
+their own ticket the same way.
+
+### One-time setup
+
+Install the plugin inside Claude Code (once per machine):
+
+```
+/plugin install hmcts-sdlc-orchestrator@agentic-plugins-marketplace
+```
+
+That's it — this repo already has everything else needed: `CLAUDE.md` at the repo root tells
+Claude Code how to use the plugin for CDKS specifically, and `.claude/context/cdks-context.md` /
+`.claude/context/tech-stack.md` give it CDKS's own facts (stack, packages, hard rules) so its
+output is grounded in this codebase, not generic.
+
+### How to generate docs for a new ticket
+
+1. **Open this repo in Claude Code**, on a new branch named after your Jira ticket (e.g. `DD-12345`).
+2. **Give it the ticket** — paste the Jira ticket's description/acceptance criteria, or a link/summary of what's being asked, and say something like *"generate the SDLC pipeline docs for DD-12345."*
+3. Claude Code works through four stages **in order, pausing after each one for you to review and approve** before moving to the next:
+   - **Requirements** — turns the raw ticket into a structured requirements doc, grounding every claim against the actual code (not just taking the ticket's wording on faith) and flagging anything it can't verify as an open question rather than guessing.
+   - **Architecture & Design** — resolves the open questions with concrete decisions, recorded as numbered ADRs.
+   - **User Stories** — splits the work into independently-deliverable sub-stories for you to review.
+   - **Test Specs** — writes out the test scenarios (Given/When/Then) each story needs, before any test or production code exists.
+4. **Nothing proceeds without you.** Each of the four stages above is a human checkpoint — Claude Code stops and waits for your go-ahead (or your answers to open questions) before continuing. It will not start writing production code on its own.
+5. Once stories are approved, **create the real Jira sub-tickets** for each story and give Claude Code their ticket numbers so it can replace the placeholders in the stories doc — a linked ticket per story is required before test specs are finalised.
+6. Commit the `docs/pipeline/...` files and raise a PR for design-authority sign-off, same as any other change.
+
+### Where the output lands
+
+```
+docs/pipeline/
+├── adrs/
+│   └── <JIRA-TICKET>-<slug>.md        # architecture decisions for that ticket
+└── <JIRA-TICKET>-<slug>/
+    ├── 00-input-brief.md              # the raw ticket text, as given
+    ├── 01-requirements.md
+    ├── 02-design.md
+    ├── 03-stories.md
+    └── 04-test-specs.md
+```
+
+A fully worked example — including a design-authority-directed scope change and a captured
+`/actuator/prometheus` baseline for regression comparison — is under
+[`docs/pipeline/DD-43185-stalled-work-scheduler-monitoring/`](docs/pipeline/DD-43185-stalled-work-scheduler-monitoring/).
+Worth a skim before running this on your own ticket.
+
+For the full picture — every pipeline stage, which agent runs it, and the hard rules Claude Code
+follows here (no PII in docs, append-only Flyway migrations, Managed-Identity-only Azure access,
+etc.) — see [`CLAUDE.md`](CLAUDE.md) at the repo root.
 
 ---
 
