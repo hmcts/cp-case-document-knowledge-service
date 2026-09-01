@@ -1,5 +1,8 @@
 package uk.gov.hmcts.cp.cdk.scheduler;
 
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.INTRADAY_DISCOVERY;
+
+import uk.gov.hmcts.cp.cdk.metrics.SchedulerMetrics;
 import uk.gov.hmcts.cp.cdk.services.DiscoveryService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -22,9 +25,12 @@ import org.springframework.stereotype.Component;
 public class IntradayDiscoveryScheduler {
 
     private final DiscoveryService discoveryService;
+    private final SchedulerMetrics schedulerMetrics;
 
-    public IntradayDiscoveryScheduler(final DiscoveryService discoveryService) {
+    public IntradayDiscoveryScheduler(final DiscoveryService discoveryService,
+                                       final SchedulerMetrics schedulerMetrics) {
         this.discoveryService = discoveryService;
+        this.schedulerMetrics = schedulerMetrics;
     }
 
     @Scheduled(cron = "${scheduler.intraday-discovery.cron:0 0/10 7-19 * * MON-FRI}")
@@ -32,8 +38,16 @@ public class IntradayDiscoveryScheduler {
             lockAtLeastFor = "${scheduler.intraday-discovery.lock-at-least-for:PT8M}",
             lockAtMostFor = "${scheduler.intraday-discovery.lock-at-most-for:PT9M}")
     public void run() {
-        log.info("Intraday discovery starting");
-        discoveryService.runIntradayDiscovery();
-        log.info("Intraday discovery finished");
+        log.info("Intraday discovery starting scheduler={}", INTRADAY_DISCOVERY);
+        boolean success = false;
+        try {
+            discoveryService.runIntradayDiscovery();
+            success = true;
+            log.info("Intraday discovery finished scheduler={}", INTRADAY_DISCOVERY);
+        } catch (final Exception e) {
+            log.error("Intraday discovery failed scheduler={}", INTRADAY_DISCOVERY, e);
+        } finally {
+            schedulerMetrics.recordRun(INTRADAY_DISCOVERY, success);
+        }
     }
 }

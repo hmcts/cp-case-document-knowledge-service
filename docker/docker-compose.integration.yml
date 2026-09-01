@@ -178,6 +178,18 @@ services:
       CASEDOCUMENTKNOWLEDGE_SYSTEM_USER_ID: "00000000-0000-0000-0000-000000000001"
       CP_CDK_HEARING_IS_HEARING_FOR_CASES_ENABLED: true
 
+      # DD-43185: fast refresh cadence for integration tests. lock-at-least-for is PT1S (not PT0S)
+      # so lock_until is always strictly after locked_at (OQ-017) — a real assertion, not a race.
+      # Deliberately NOT overriding CP_CDK_MONITORING_STALLED_THRESHOLD (N-3): the shipped PT30M
+      # default is used as-is here, rather than a shortened test threshold, so that other suites'
+      # freshly-created WAITING_FOR_UPLOAD rows can never join the stalled-document count — the
+      # live tests compensate by backdating their own seeded rows by 61 minutes. See 02-design.md
+      # §3 for the full rationale.
+      CP_CDK_MONITORING_REFRESH_INTERVAL: PT10S
+      CP_CDK_MONITORING_INITIAL_DELAY: PT2S
+      CP_CDK_MONITORING_LOCK_AT_LEAST_FOR: PT1S
+      CP_CDK_MONITORING_LOCK_AT_MOST_FOR: PT30S
+
     healthcheck:
       test: [ "CMD-SHELL", "curl -fsS http://localhost:8082/casedocumentknowledge-service/actuator/health || exit 1" ]
       interval: 10s

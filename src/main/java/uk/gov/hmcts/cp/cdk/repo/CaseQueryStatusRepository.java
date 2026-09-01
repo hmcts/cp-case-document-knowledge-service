@@ -3,15 +3,35 @@ package uk.gov.hmcts.cp.cdk.repo;
 import uk.gov.hmcts.cp.cdk.domain.CaseQueryStatus;
 import uk.gov.hmcts.cp.cdk.domain.CaseQueryStatusId;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.persistence.QueryHint;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
 public interface CaseQueryStatusRepository extends JpaRepository<CaseQueryStatus, CaseQueryStatusId> {
+
+    /**
+     * DD-43185 (FR-005): counts queries stuck awaiting an answer, older than the given cutoff.
+     * {@code status} is spelled as a literal, not a bound parameter — the {@code V1014} partial
+     * index {@code idx_cqs_awaiting_answer_at} only applies when PostgreSQL can trivially prove
+     * the predicate, which holds for a literal equality but is not reliable for a bound parameter.
+     */
+    String COUNT_AWAITING_ANSWER_OLDER_THAN_SQL = """
+            SELECT COUNT(*)
+              FROM case_query_status cqs
+             WHERE cqs.status = 'ANSWER_NOT_AVAILABLE'
+               AND cqs.status_at < :cutoff
+            """;
+
+    @QueryHints(@QueryHint(name = "jakarta.persistence.query.timeout", value = "5000"))
+    @Query(value = COUNT_AWAITING_ANSWER_OLDER_THAN_SQL, nativeQuery = true)
+    long countAwaitingAnswerOlderThan(@Param("cutoff") OffsetDateTime cutoff);
 
     /**
      * {@code caseId} lives on the {@link CaseQueryStatusId} embedded id, not directly on
