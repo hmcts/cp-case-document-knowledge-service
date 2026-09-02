@@ -95,6 +95,13 @@ class MonitoringMetricsHttpLiveTest extends AbstractHttpLiveTest {
                                 .orElseThrow();
                         assertThat(current).isGreaterThanOrEqualTo(baseline + 1);
                     });
+
+            // Direct assertion on the confirmed post-poll state, not just the eventual-consistency
+            // check inside untilAsserted's lambda (PMD's UnitTestShouldIncludeAssert rule does not
+            // look inside lambda bodies for an assert — see the same pattern in
+            // IngestionProcessHttpLiveTest).
+            assertThat(sampleValue(scrape(), STALLED_WAITING_FOR_UPLOAD))
+                    .hasValueSatisfying(v -> assertThat(v).isGreaterThanOrEqualTo(baseline + 1));
         } finally {
             deleteCaseDocument(docId);
         }
@@ -209,6 +216,13 @@ class MonitoringMetricsHttpLiveTest extends AbstractHttpLiveTest {
                         final double current = sampleValue(scrape(), QUERIES_AWAITING_ANSWER).orElseThrow();
                         assertThat(current).isGreaterThanOrEqualTo(baseline + 1);
                     });
+
+            // Direct assertion on the confirmed post-poll state, not just the eventual-consistency
+            // check inside untilAsserted's lambda (PMD's UnitTestShouldIncludeAssert rule does not
+            // look inside lambda bodies for an assert — see the same pattern in
+            // IngestionProcessHttpLiveTest).
+            assertThat(sampleValue(scrape(), QUERIES_AWAITING_ANSWER))
+                    .hasValueSatisfying(v -> assertThat(v).isGreaterThanOrEqualTo(baseline + 1));
         } finally {
             deleteCaseQueryStatusAndQuery(caseId, queryId);
         }
