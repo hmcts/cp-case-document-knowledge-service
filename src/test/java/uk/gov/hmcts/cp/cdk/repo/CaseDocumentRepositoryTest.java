@@ -5,8 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase.INGESTED;
 import static uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase.UPLOADED;
 
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -102,6 +104,43 @@ class CaseDocumentRepositoryTest {
         assertThat(result).isEmpty();
     }
 
+
+    @Test
+    @DisplayName("Should leave rag_document_reference NULL when a row is inserted without the column")
+    void shouldLeaveRagDocumentReferenceNull_whenRowInsertedWithoutTheColumn() {
+        final UUID docId = randomUUID();
+        persist(docId, randomUUID(), randomUUID(), UPLOADED);
+
+        final String value = jdbc.queryForObject(
+                "SELECT rag_document_reference FROM case_documents WHERE doc_id = ?", String.class, docId);
+
+        assertThat(value).isNull();
+    }
+
+    @Test
+    @DisplayName("Should round-trip rag_document_reference verbatim when saved through the entity")
+    void shouldRoundTripRagDocumentReference_whenSavedThroughTheEntity() {
+        final String mixedCaseReference = "B181B0b0-628e-4491-9CCD-2ea93d70cb2f";
+
+        final CaseDocument entity = new CaseDocument();
+        entity.setDocId(randomUUID());
+        entity.setCaseId(randomUUID());
+        entity.setMaterialId(randomUUID());
+        entity.setDocName("doc-name");
+        entity.setBlobUri("http://blob_uri");
+        entity.setUploadedAt(OffsetDateTime.now());
+        entity.setIngestionPhase(UPLOADED);
+        entity.setIngestionPhaseAt(OffsetDateTime.now());
+        entity.setCreatedAt(OffsetDateTime.now());
+        entity.setRagDocumentReference(mixedCaseReference);
+
+        repository.saveAndFlush(entity);
+        em.clear();
+
+        final CaseDocument reloaded = repository.findById(entity.getDocId()).orElseThrow();
+
+        assertThat(reloaded.getRagDocumentReference()).isEqualTo(mixedCaseReference);
+    }
 
     private void persist(final UUID docId, final UUID caseId, final UUID defendantId, final DocumentIngestionPhase phase) {
         jdbc.update("""

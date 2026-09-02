@@ -28,4 +28,12 @@ public final class UtilConstants {
         return System.getProperty("it.db.pass", "casedocumentknowledge");
     }
 
+    public static String wireMockHost() {
+        return System.getProperty("it.wiremock.host", "localhost");
+    }
+
+    public static int wireMockPort() {
+        return Integer.parseInt(System.getProperty("it.wiremock.port", "8089"));
+    }
+
 }

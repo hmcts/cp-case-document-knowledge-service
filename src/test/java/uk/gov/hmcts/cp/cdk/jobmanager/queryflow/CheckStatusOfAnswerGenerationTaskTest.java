@@ -5,13 +5,16 @@ import static java.time.ZonedDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_STATUS_OF_ANSWER_GENERATION;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERY_LEVEL;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_RAG_TRANSACTION_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATED;
@@ -20,6 +23,7 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.COMPLETED;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.INPROGRESS;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.STARTED;
 
+import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.services.AnswerGenerationService;
 import uk.gov.hmcts.cp.cdk.services.CaseLevelAllDocumentsAnswerService;
@@ -185,10 +189,63 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
         final ExecutionInfo result = task.execute(executionInfo);
 
-        verify(answerGenerationService).upsertAnswer(any(UUID.class), any(UUID.class), anyString(), anyString(), any(UUID.class));
+        verify(answerGenerationService).upsertAnswer(any(UUID.class), any(UUID.class), anyString(), anyString(), any(UUID.class), eq(transactionId));
 
         assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
         assertThat(result.isShouldRetry()).isFalse();
+    }
+
+    @Test
+    void shouldPassRagTransactionId_toCaseLevelLatestDocAnswerService_forCaseLevelQuery() {
+        final JsonObject jobData = createObjectBuilder(executionInfo.getJobData())
+                .add(CTX_QUERY_LEVEL, QueryLevel.CASE.name())
+                .build();
+        executionInfo = ExecutionInfo.executionInfo().from(executionInfo).withJobData(jobData).build();
+
+        when(body.getStatus()).thenReturn(ANSWER_GENERATED);
+        when(body.getLlmResponse()).thenReturn("llmResponse");
+        when(body.getDocumentChunks()).thenReturn(List.of());
+        when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(ResponseEntity.ok(body));
+
+        task.execute(executionInfo);
+
+        verify(caseLevelLatestDocumentAnswerService).upsert(eq(caseId), eq(queryId), anyString(), anyString(), eq(documentId), eq(transactionId));
+    }
+
+    @Test
+    void shouldPassRagTransactionId_toCaseLevelAllDocumentsAnswerService_forCaseAllDocumentsLevelQuery() {
+        final JsonObject jobData = createObjectBuilder(executionInfo.getJobData())
+                .add(CTX_QUERY_LEVEL, QueryLevel.CASE_ALL_DOCUMENTS.name())
+                .build();
+        executionInfo = ExecutionInfo.executionInfo().from(executionInfo).withJobData(jobData).build();
+
+        when(body.getStatus()).thenReturn(ANSWER_GENERATED);
+        when(body.getLlmResponse()).thenReturn("llmResponse");
+        when(body.getDocumentChunks()).thenReturn(List.of());
+        when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(ResponseEntity.ok(body));
+
+        task.execute(executionInfo);
+
+        verify(caseLevelAllDocumentsAnswerService).upsert(eq(caseId), eq(queryId), anyString(), anyString(), eq(transactionId));
+    }
+
+    @Test
+    void shouldPassRagTransactionId_toDefendantAnswerService_forDefendantLevelQuery() {
+        final UUID defendantId = UUID.randomUUID();
+        final JsonObject jobData = createObjectBuilder(executionInfo.getJobData())
+                .add(CTX_QUERY_LEVEL, QueryLevel.DEFENDANT.name())
+                .add(CTX_DEFENDANT_ID_KEY, defendantId.toString())
+                .build();
+        executionInfo = ExecutionInfo.executionInfo().from(executionInfo).withJobData(jobData).build();
+
+        when(body.getStatus()).thenReturn(ANSWER_GENERATED);
+        when(body.getLlmResponse()).thenReturn("llmResponse");
+        when(body.getDocumentChunks()).thenReturn(List.of());
+        when(api.answerUserQueryStatus(transactionId.toString(), true)).thenReturn(ResponseEntity.ok(body));
+
+        task.execute(executionInfo);
+
+        verify(defendantAnswerService).upsert(eq(caseId), eq(queryId), eq(defendantId), anyString(), anyString(), eq(documentId), eq(transactionId));
     }
 
     @Test

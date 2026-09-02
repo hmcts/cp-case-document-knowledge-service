@@ -49,6 +49,10 @@ cdk:
         max-attempts: ${CDK_JOBMANAGER_RETRY_QUESTIONS_MAX_ATTEMPTS:100}
         delay-seconds: ${CDK_JOBMANAGER_RETRY_QUESTIONS_DELAY_SECONDS:10}
 
+  discovery-trigger:
+    queue-capacity: ${CP_CDK_DISCOVERY_TRIGGER_QUEUE_CAPACITY:10}
+    await-termination-seconds: ${CP_CDK_DISCOVERY_TRIGGER_AWAIT_TERMINATION_SECONDS:30}
+
 taskmanager:
   schema:
     enabled=true:

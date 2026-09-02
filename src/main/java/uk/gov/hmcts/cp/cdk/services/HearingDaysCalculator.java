@@ -1,11 +1,11 @@
 package uk.gov.hmcts.cp.cdk.services;
 
-import org.springframework.stereotype.Component;
-
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.stereotype.Component;
 
 /**
  * Calculates a contiguous window of hearing dates starting from the given date.

@@ -29,19 +29,21 @@ public class DefendantAnswerService {
 
     private static final String UPSERT_SQL = """
         INSERT INTO defendant_answers
-        (case_id, query_id, defendant_id, version, created_at, answer, llm_input, doc_id)
-        VALUES (:case_id, :query_id, :defendant_id, :version, NOW(), :answer, :llm_input, :doc_id)
+        (case_id, query_id, defendant_id, version, created_at, answer, llm_input, doc_id, rag_transaction_id)
+        VALUES (:case_id, :query_id, :defendant_id, :version, NOW(), :answer, :llm_input, :doc_id, :rag_transaction_id)
         ON CONFLICT (case_id, query_id, defendant_id, version) DO UPDATE SET
             answer = EXCLUDED.answer,
             llm_input = EXCLUDED.llm_input,
             doc_id = EXCLUDED.doc_id,
+            rag_transaction_id = EXCLUDED.rag_transaction_id,
             created_at = EXCLUDED.created_at
     """;
 
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     @Transactional
     public void upsert(final UUID caseId, final UUID queryId, final UUID defendantId,
-                       final String answer, final String llmInput, final UUID docId) {
+                       final String answer, final String llmInput, final UUID docId,
+                       final UUID ragTransactionId) {
 
         final Integer version = getVersionNumberWithDefendentId(caseId, queryId, defendantId);
 
@@ -52,7 +54,8 @@ public class DefendantAnswerService {
                 .addValue("version", version)
                 .addValue("answer", answer)
                 .addValue("llm_input", llmInput)
-                .addValue("doc_id", docId);
+                .addValue("doc_id", docId)
+                .addValue("rag_transaction_id", ragTransactionId);
 
         jdbc.update(UPSERT_SQL, params);
 

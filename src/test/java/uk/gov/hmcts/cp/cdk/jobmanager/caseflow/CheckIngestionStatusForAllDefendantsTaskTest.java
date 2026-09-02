@@ -112,6 +112,7 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
                 .thenReturn(ResponseEntity.ok(body));
 
         CaseDocument doc = new CaseDocument();
+        doc.setRagDocumentReference("pre-existing-reference");
         when(caseDocumentRepository.findById(documentId)).thenReturn(Optional.of(doc));
 
         UUID caseQueryId = randomUUID();
@@ -149,6 +150,7 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
         ExecutionInfo result = task.execute(executionInfo);
 
         assertThat(doc.getIngestionPhase()).isEqualTo(DocumentIngestionPhase.INGESTED);
+        assertThat(doc.getRagDocumentReference()).isEqualTo("pre-existing-reference");
         verify(caseDocumentRepository).saveAndFlush(doc);
 
         // executions triggered
@@ -193,6 +195,7 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
         when(documentIngestionStatusApi.documentStatusByReference("ref-123")).thenReturn(ResponseEntity.ok(body));
 
         final CaseDocument doc = new CaseDocument();
+        doc.setRagDocumentReference("pre-existing-reference");
         when(caseDocumentRepository.findById(documentId)).thenReturn(Optional.of(doc));
 
         final UUID caseQueryId = randomUUID();
@@ -231,6 +234,42 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
         ExecutionInfo result = task.execute(executionInfo);
 
         assertThat(doc.getIngestionPhase()).isEqualTo(DocumentIngestionPhase.EXCEEDED_FILE_SIZE_LIMIT);
+        assertThat(doc.getRagDocumentReference()).isEqualTo("pre-existing-reference");
+        verify(caseDocumentRepository).saveAndFlush(doc);
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+    }
+
+    @Test
+    void shouldPreserveRagDocumentReference_whenTransitioningToFailed() {
+        final DocumentIngestionStatusReturnedSuccessfully body = new DocumentIngestionStatusReturnedSuccessfully();
+        body.setStatus(DocumentIngestionStatus.INGESTION_FAILED);
+
+        when(documentIngestionStatusApi.documentStatusByReference("ref-123")).thenReturn(ResponseEntity.ok(body));
+
+        final CaseDocument doc = new CaseDocument();
+        doc.setRagDocumentReference("pre-existing-reference");
+        when(caseDocumentRepository.findById(documentId)).thenReturn(Optional.of(doc));
+
+        final JsonObject jobData = Json.createObjectBuilder()
+                .add("docId", documentId.toString())
+                .add("blobName", "blob-123")
+                .add("caseId", randomUUID().toString())
+                .add(CTX_DOC_REFERENCE_KEY, "ref-123")
+                .add(CTX_LATEST_DEFENDANT, true)
+                .add(CTX_DEFENDANT_ID_KEY, randomUUID().toString())
+                .build();
+
+        final ExecutionInfo executionInfo = executionInfo()
+                .withJobData(jobData)
+                .withAssignedTaskName(CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS)
+                .withAssignedTaskStartTime(ZonedDateTime.now())
+                .withExecutionStatus(ExecutionStatus.INPROGRESS)
+                .build();
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(doc.getIngestionPhase()).isEqualTo(DocumentIngestionPhase.FAILED);
+        assertThat(doc.getRagDocumentReference()).isEqualTo("pre-existing-reference");
         verify(caseDocumentRepository).saveAndFlush(doc);
         assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
     }

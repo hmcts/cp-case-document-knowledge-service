@@ -1,4 +1,4 @@
-# Implementation Agent — case-document-knowledge-service (CSDK)
+# Implementation Agent — case-document-knowledge-service (CDKS)
 
 > Project-level implementation agent grounded in the actual code patterns of this repo.
 > Follow every section exactly — deviate only when the story explicitly permits it.
@@ -130,7 +130,7 @@ Fix PMD violations. Do not lower JaCoCo thresholds.
 
 Before writing a single line of code, internalise these:
 
-- **Do not drop RAG response fields** — CSDK persists and surfaces what the RAG service returns; it
+- **Do not drop RAG response fields** — CDKS persists and surfaces what the RAG service returns; it
   does not generate answers or validate citations. Any change to persistence or mapping must preserve
   all RAG response fields (`doc_id`, `llm_input`, etc.). Dropping or transforming these fields is a defect.
 - **No PII** in code, tests, logs, or WireMock stubs. Use synthetic UUIDs:
@@ -178,10 +178,10 @@ Rules:
 - Access control lives in `cdks-rules.drl` (Drools, evaluated by the auth filter) — **not** in the
   controller. See §7 below for how to add a rule.
 
-#### OpenAPI spec — HARD GATE (verify before writing any file in CSDK)
+#### OpenAPI spec — HARD GATE (verify before writing any file in CDKS)
 
 `api-cp-crime-caseadmin-case-document-knowledge` is a **separate repository owned by a different
-team.** CSDK does not raise PRs or make changes there. All CSDK code is derived from whatever that
+team.** CDKS does not raise PRs or make changes there. All CDKS code is derived from whatever that
 repo publishes — never the other way round.
 
 The generated interfaces and DTOs come from the artifact declared in `gradle.properties`:
@@ -202,7 +202,7 @@ Generated packages in that JAR:
 
 Current interfaces in `0.0.9`: `AnswersApi`, `DocumentApi`, `IngestionApi`, `QueriesApi`, `QueryCatalogueApi`.
 
-**Verify the interface exists before writing a single line of code in CSDK:**
+**Verify the interface exists before writing a single line of code in CDKS:**
 
 ```bash
 jar tf ~/.gradle/caches/modules-2/files-2.1/uk.gov.hmcts.cp/api-cp-crime-caseadmin-case-document-knowledge/$(grep version.cdk gradle.properties | cut -d= -f2)/*.jar \
@@ -213,12 +213,12 @@ jar tf ~/.gradle/caches/modules-2/files-2.1/uk.gov.hmcts.cp/api-cp-crime-caseadm
 
 1. Do not create any file in this repo — no controller, service, entity, migration, mapper, or test.
 2. Flag as a blocker: the external spec artifact must be updated and a new version published
-   before CSDK implementation can begin. Surface this in the PR description or story comments;
-   do not ship partial CSDK code for this feature.
+   before CDKS implementation can begin. Surface this in the PR description or story comments;
+   do not ship partial CDKS code for this feature.
 3. Once a new artifact version is available that contains the required `*Api` interface:
    - Bump `version.cdk` in `gradle.properties`
    - Run `./gradlew compileJava` to confirm the interface and model classes resolve
-   - Then implement controller, service, entity, migration, mapper, and tests in CSDK
+   - Then implement controller, service, entity, migration, mapper, and tests in CDKS
 
 This gate applies to both interfaces (`*Api`) and DTOs (`*Request`, `*Response`). Never hand-write
 classes that duplicate what the generated artifact should provide. Never write `@PostMapping`,

@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -85,6 +86,14 @@ public class GlobalExceptionHandler {
         log.warn("Malformed request body: {}", httpMessageNotReadableException.getMessage());
         final ErrorResponse err = base(String.valueOf(HttpStatus.BAD_REQUEST.value()), "Malformed request body");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> onMethodNotSupported(final HttpRequestMethodNotSupportedException httpRequestMethodNotSupportedException) {
+        log.warn("Method not supported: {}", httpRequestMethodNotSupportedException.getMessage());
+        final ErrorResponse err = base(String.valueOf(HttpStatus.METHOD_NOT_ALLOWED.value()),
+                httpRequestMethodNotSupportedException.getMessage());
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(err);
     }
 
     @ExceptionHandler(Exception.class)

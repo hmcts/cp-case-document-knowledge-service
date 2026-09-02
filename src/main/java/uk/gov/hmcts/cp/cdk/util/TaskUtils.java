@@ -81,14 +81,16 @@ public class TaskUtils {
                                                           final Integer version,
                                                           final String answer,
                                                           final String llmInput,
-                                                          final UUID documentId) {
+                                                          final UUID documentId,
+                                                          final UUID ragTransactionId) {
         return new MapSqlParameterSource()
                 .addValue("case_id", caseId)
                 .addValue("query_id", queryId)
                 .addValue("version", version)
                 .addValue("answer", answer)
                 .addValue("llm_input", llmInput)
-                .addValue("doc_id", documentId);
+                .addValue("doc_id", documentId)
+                .addValue("rag_transaction_id", ragTransactionId);
     }
 
     public static MapSqlParameterSource buildCaseStatusParams(final UUID caseId,

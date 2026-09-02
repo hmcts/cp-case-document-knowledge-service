@@ -4,6 +4,7 @@ import static jakarta.json.Json.createObjectBuilder;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -13,6 +14,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_BLOB_NAM
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_REFERENCE_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
@@ -113,6 +115,17 @@ public class RetrieveMaterialAndUploadTaskTest {
                 .build();
     }
 
+    private void stubSuccessfulUploadPipeline(final String documentReference) {
+        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.of("url"));
+        when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
+        when(uploadProperties.contentType()).thenReturn("application/pdf");
+        when(caseDocumentRepository.findSupersededDocuments(any(), any())).thenReturn(List.of());
+        when(documentIngestionInitiationApi.initiateDocumentUpload(any()))
+                .thenReturn(ResponseEntity.ok(new FileStorageLocationReturnedSuccessfully("storage-url", documentReference)));
+        when(storageService.copyFromUrl(any(), any()))
+                .thenReturn(new DocumentBlobMetadata("https://storage.blob/blob1", "document-id_120326.pdf", 12345L));
+    }
+
     @Test
     void shouldReturnCompletedWhenMissingRequiredJobData() {
         when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.empty());
@@ -156,6 +169,7 @@ public class RetrieveMaterialAndUploadTaskTest {
         assertThat(nextTask.getExecutionStatus()).isEqualTo(ExecutionStatus.STARTED);
         assertThat(nextTask.getJobData().getString(CTX_DOC_ID_KEY)).isEqualTo(documentId.toString());
         assertThat(nextTask.getJobData().containsKey(CTX_BLOB_NAME_KEY)).isTrue();
+        assertThat(nextTask.getJobData().getString(CTX_DOC_REFERENCE_KEY)).isEqualTo("document-id");
     }
 
     @Test
@@ -208,23 +222,106 @@ public class RetrieveMaterialAndUploadTaskTest {
 
     @Test
     void shouldSaveDocumentUploadedWhenCopyUrlSuccessful() {
-        when(progressionClient.getMaterialDownloadUrl(any(), any())).thenReturn(Optional.of("url"));
-        when(uploadProperties.datePattern()).thenReturn("yyyyMMdd");
-        when(caseDocumentRepository.findSupersededDocuments(any(), any())).thenReturn(List.of());
-        when(documentIngestionInitiationApi.initiateDocumentUpload(any()))
-                .thenReturn(ResponseEntity.ok(new FileStorageLocationReturnedSuccessfully("storage-url", "doc-ref")));
-
-        when(storageService.copyFromUrl(any(), any())).thenReturn(new DocumentBlobMetadata("https://storage.blob/blob1", "document-id_120326.pdf", 12345L));
+        stubSuccessfulUploadPipeline("doc-ref");
         when(caseDocumentRepository.findById(any())).thenReturn(Optional.of(new CaseDocument()));
 
         final ExecutionInfo result = task.execute(executionInfo);
 
-        verify(caseDocumentRepository).saveAndFlush(caseDocumentCaptor.capture());
+        verify(caseDocumentRepository, times(1)).saveAndFlush(caseDocumentCaptor.capture());
         assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
 
         final CaseDocument savedCaseDocument = caseDocumentCaptor.getValue();
         assertThat(savedCaseDocument.getIngestionPhase()).isEqualTo(DocumentIngestionPhase.UPLOADED);
         assertThat(savedCaseDocument.getBlobUri()).isEqualTo("https://storage.blob/blob1");
+        assertThat(savedCaseDocument.getRagDocumentReference()).isEqualTo("doc-ref");
+    }
+
+    @Test
+    void shouldPersistRagDocumentReferenceInTheSameSaveAndFlush_whenUploadSucceeds() {
+        final String reference = randomUUID().toString();
+
+        stubSuccessfulUploadPipeline(reference);
+        when(caseDocumentRepository.findById(any())).thenReturn(Optional.of(new CaseDocument()));
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
+        verify(caseDocumentRepository, times(1)).saveAndFlush(caseDocumentCaptor.capture());
+
+        final CaseDocument saved = caseDocumentCaptor.getValue();
+        assertThat(saved.getRagDocumentReference()).isEqualTo(reference);
+        assertThat(saved.getDocName()).isEqualTo("document-id_120326.pdf");
+        assertThat(saved.getBlobUri()).isEqualTo("https://storage.blob/blob1");
+        assertThat(saved.getContentType()).isEqualTo("application/pdf");
+        assertThat(saved.getSizeBytes()).isEqualTo(12345L);
+        assertThat(saved.getUploadedAt()).isNotNull();
+        assertThat(saved.getIngestionPhase()).isEqualTo(DocumentIngestionPhase.UPLOADED);
+        assertThat(saved.getIngestionPhaseAt()).isNotNull();
+    }
+
+    @Test
+    void shouldStoreRagDocumentReferenceVerbatim_whenReferenceIsNotUuidShaped() {
+        final String nonUuidReference = "not-a-uuid";
+
+        stubSuccessfulUploadPipeline(nonUuidReference);
+        when(caseDocumentRepository.findById(any())).thenReturn(Optional.of(new CaseDocument()));
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
+        verify(caseDocumentRepository).saveAndFlush(caseDocumentCaptor.capture());
+        assertThat(caseDocumentCaptor.getValue().getRagDocumentReference()).isEqualTo(nonUuidReference);
+
+        verify(executionService).executeWith(executionInfoCaptor.capture());
+        assertThat(executionInfoCaptor.getValue().getJobData().getString(CTX_DOC_REFERENCE_KEY)).isEqualTo(nonUuidReference);
+    }
+
+    @Test
+    void shouldLeaveRagDocumentReferenceNullAndRetry_whenReferenceIsNull() {
+        stubSuccessfulUploadPipeline(null);
+        when(caseDocumentRepository.findById(any())).thenReturn(Optional.of(new CaseDocument()));
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.INPROGRESS);
+        assertThat(result.isShouldRetry()).isTrue();
+
+        verify(caseDocumentRepository).saveAndFlush(caseDocumentCaptor.capture());
+        assertThat(caseDocumentCaptor.getValue().getRagDocumentReference()).isNull();
+        verifyNoInteractions(executionService);
+    }
+
+    @Test
+    void shouldLeaveRagDocumentReferenceNull_whenReferenceIsBlank() {
+        stubSuccessfulUploadPipeline("");
+        when(caseDocumentRepository.findById(any())).thenReturn(Optional.of(new CaseDocument()));
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        verify(caseDocumentRepository).saveAndFlush(caseDocumentCaptor.capture());
+        assertThat(caseDocumentCaptor.getValue().getRagDocumentReference()).isNull();
+
+        // A blank (non-null) reference does not throw JsonObjectBuilder.add(..., ""), so the
+        // pre-existing, unchanged behaviour is COMPLETED with the next task scheduled — unlike
+        // the null case, which throws and retries (see shouldLeaveRagDocumentReferenceNullAndRetry_whenReferenceIsNull).
+        assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
+        verify(executionService).executeWith(executionInfoCaptor.capture());
+        assertThat(executionInfoCaptor.getValue().getJobData().getString(CTX_DOC_REFERENCE_KEY)).isEmpty();
+    }
+
+    @Test
+    void shouldOverwriteRagDocumentReference_whenTaskRetriesWithANewReference() {
+        final CaseDocument existing = new CaseDocument();
+        existing.setRagDocumentReference("reference-A");
+
+        stubSuccessfulUploadPipeline("reference-B");
+        when(caseDocumentRepository.findById(any())).thenReturn(Optional.of(existing));
+
+        final ExecutionInfo result = task.execute(executionInfo);
+
+        assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
+        verify(caseDocumentRepository).saveAndFlush(caseDocumentCaptor.capture());
+        assertThat(caseDocumentCaptor.getValue().getRagDocumentReference()).isEqualTo("reference-B");
     }
 
     @Test

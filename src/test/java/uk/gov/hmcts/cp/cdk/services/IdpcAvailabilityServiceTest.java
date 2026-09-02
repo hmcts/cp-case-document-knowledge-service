@@ -2,10 +2,13 @@ package uk.gov.hmcts.cp.cdk.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
+import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
 
@@ -18,6 +21,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -33,6 +38,9 @@ class IdpcAvailabilityServiceTest {
     private DocumentIdResolver documentIdResolver;
     @Mock
     private CaseDocumentRepository caseDocumentRepository;
+
+    @Captor
+    private ArgumentCaptor<CaseDocument> caseDocumentCaptor;
 
     private IdpcAvailabilityService service;
     private UUID caseId;
@@ -119,6 +127,35 @@ class IdpcAvailabilityServiceTest {
         assertThat(result.stream().filter(NewIdpcDocument::latestDefendant)).hasSize(1);
         assertThat(result.stream().filter(NewIdpcDocument::latestDefendant).findFirst().orElseThrow().defendantId())
                 .isEqualTo(def2.toString());
+    }
+
+    @Test
+    @DisplayName("Leaves rag_document_reference null when persisting a new WAITING_FOR_UPLOAD document")
+    void shouldLeaveRagDocumentReferenceNull_whenPersistingWaitingForUploadRow() {
+        UUID materialId = UUID.randomUUID();
+        UUID defendantId = UUID.randomUUID();
+
+        LatestMaterialInfo info = new LatestMaterialInfo(
+                List.of(caseId.toString()), "doc", "desc",
+                materialId.toString(), "Material",
+                ZonedDateTime.now(),
+                UUID.randomUUID().toString(),
+                defendantId.toString()
+        );
+
+        when(progressionClient.getCourtDocumentsForAllDefendants(any(), any()))
+                .thenReturn(List.of(info));
+        when(documentIdResolver.resolveExistingDocIdForDefendant(any(), any(), any()))
+                .thenReturn(Optional.empty());
+
+        final List<NewIdpcDocument> result = service.retrieveDocuments(caseId, userId);
+
+        assertThat(result).hasSize(1);
+        verify(caseDocumentRepository).saveAndFlush(caseDocumentCaptor.capture());
+
+        final CaseDocument saved = caseDocumentCaptor.getValue();
+        assertThat(saved.getIngestionPhase()).isEqualTo(DocumentIngestionPhase.WAITING_FOR_UPLOAD);
+        assertThat(saved.getRagDocumentReference()).isNull();
     }
 
     @Test
