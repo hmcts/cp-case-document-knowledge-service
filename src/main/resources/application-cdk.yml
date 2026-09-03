@@ -53,6 +53,14 @@ cdk:
     queue-capacity: ${CP_CDK_DISCOVERY_TRIGGER_QUEUE_CAPACITY:10}
     await-termination-seconds: ${CP_CDK_DISCOVERY_TRIGGER_AWAIT_TERMINATION_SECONDS:30}
 
+  monitoring:
+    enabled: ${CP_CDK_MONITORING_ENABLED:true}
+    stalled-threshold: ${CP_CDK_MONITORING_STALLED_THRESHOLD:PT30M}
+    refresh-interval: ${CP_CDK_MONITORING_REFRESH_INTERVAL:PT1M}
+    initial-delay: ${CP_CDK_MONITORING_INITIAL_DELAY:PT30S}
+    lock-at-least-for: ${CP_CDK_MONITORING_LOCK_AT_LEAST_FOR:PT55S}
+    lock-at-most-for: ${CP_CDK_MONITORING_LOCK_AT_MOST_FOR:PT5M}
+
 taskmanager:
   schema:
     enabled=true:

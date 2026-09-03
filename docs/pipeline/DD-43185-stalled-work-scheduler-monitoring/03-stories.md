@@ -182,16 +182,15 @@ remains untouched, exactly as before — it already had no call sites and no met
 - Dropping the now-redundant `idx_cd_phase` (a strict prefix of the new composite) — recorded as a follow-up, needs its own before/after evidence.
 
 ### Pre-merge gate note (does not block starting this story)
-Per **ADR-003 (accepted, DBA review required before merge)**: `V1014` uses plain `CREATE INDEX`
-(not `CONCURRENTLY` — Flyway wraps migrations in a transaction, and `CONCURRENTLY` cannot run inside
-one), which takes a `SHARE` lock blocking writes to `case_documents` and `case_query_status` for the
-build's duration. This repository's compose stack cannot size that window. **A DBA must confirm
-production row counts and the acceptable write-blocking window before this migration is merged and
-deployed** — routed through `migration-reviewer` per CLAUDE.md's hard rule. Work on the repository
-methods, projections and the Testcontainers plan test can proceed in parallel with that review; only
-the merge/deploy step is gated on it. The same DBA follow-up also owns the production-scale
-`EXPLAIN` evidence AC-012 asks for (OQ-009 — not deliverable from this repository; see
-`02-design.md` §12).
+**Resolved — 2026-09-01.** `V1014` uses plain `CREATE INDEX` (not `CONCURRENTLY` — Flyway wraps
+migrations in a transaction, and `CONCURRENTLY` cannot run inside one), which takes a `SHARE` lock
+blocking writes to `case_documents` and `case_query_status` for the build's duration. The requester
+has confirmed both tables hold fewer than ~100,000 rows in production — at that volume the lock
+window is sub-second to low-single-digit seconds, not a meaningful ingestion-outage risk. `V1014`
+is cleared to merge and deploy as a normal migration, still routed through `migration-reviewer` per
+CLAUDE.md's standard hard rule (not as a sizing gate, just the usual review). See ADR-003's
+Consequences for the full resolution. A formal production `EXPLAIN` capture (AC-012, OQ-009) remains
+good practice post-deploy but no longer blocks merge — see `02-design.md` §12.
 
 ### Definition of done
 - [ ] Code reviewed and approved.
@@ -304,7 +303,7 @@ each story's own DoD.
 ### Out of scope for this story
 - Writing the production code for any of the six meters or the two repository queries — Stories 1–4.
 - Contract tests — no API, schema, or contract change anywhere in this ticket; `pactVerificationTest` is unaffected.
-- Production-scale `EXPLAIN` evidence and DBA index-lock sizing — Story 3's pre-merge gate note and OQ-009's manual DBA follow-up, outside this repository.
+- A formal production `EXPLAIN` capture — good practice post-deploy, no longer a merge blocker now that OQ-009's row-count question is resolved (Story 3's gate note above).
 
 ### Definition of done
 - [ ] Code reviewed and approved.
@@ -362,7 +361,7 @@ ticket, not part of this set).
 
 **Carried-forward follow-ups needing action before or shortly after this ticket ships**, for
 visibility at sprint planning (none of these are stories in this set):
-- OQ-009 — DBA-run production-scale `EXPLAIN` evidence and index-build lock sizing (Story 3's gate note above).
+- OQ-009 — **Resolved 2026-09-01** (row-count/lock-sizing question closed; Story 3's gate note above). A formal production `EXPLAIN` capture for the permanent record remains a good post-deploy follow-up, non-blocking.
 - OQ-011 — the alert-rule/dashboard follow-up ticket itself, owned by platform/SRE.
 - OQ-012 — security-reviewer sign-off that `/actuator/prometheus`'s exposure (same port as the public API, excluded from `cp-auth-rules-filter`, protected only by ingress/network policy) is acceptable for these new operational-volume series. Required before merge, not a story.
 - OQ-001 — Jira DD-43185's pasted brief was never confirmed against the live ticket/epic comments in this session (no Jira/Atlassian MCP tool available). Sub-tickets `DD-43218`–`DD-43222` are now cut and linked; this OQ still asks the requester to confirm the original pasted brief was complete and current before Stage 5 starts.

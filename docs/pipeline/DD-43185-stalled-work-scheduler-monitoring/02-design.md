@@ -190,6 +190,18 @@ AC-010's "≥ 60 s" is therefore asserted against `application-cdk.yml`'s shippe
 test, **not** against the running compose container — exactly as the shipped 10-minutely intraday
 cron is not what the compose stack runs.
 
+> **Implementation note (N-3, 2026-09-01):** the shipped compose file deliberately departs from
+> the sketch above in three ways, all recorded inline as YAML comments at the point of use: (1) it
+> does **not** override `CP_CDK_MONITORING_STALLED_THRESHOLD` at all — the compose stack runs with
+> the shipped `PT30M` default rather than a shortened `PT1M` — because a short threshold would let
+> other suites' freshly-created `WAITING_FOR_UPLOAD` rows join the stalled-document count and flake
+> the assertions (the exact risk OQ-015 raised); the live tests instead backdate their own seeded
+> rows by 61 minutes, which works against either threshold value. (2) `lock-at-least-for` is `PT1S`,
+> not `PT0S`, so `lock_until` is provably `>` `locked_at` for OQ-017's assertion rather than merely
+> `>=`. (3) `lock-at-most-for` is set explicitly to `PT30S` rather than left at the shipped `PT5M`.
+> All three are compose-only test-environment choices; the shipped `application-cdk.yml` defaults
+> above are unchanged.
+
 ### 4. `SchedulerProperties` — bind the missing `enabled` flag (OQ-007 → ADR-006)
 
 `scheduler.intraday-discovery.enabled` and `scheduler.nightly-discovery.enabled` are set in

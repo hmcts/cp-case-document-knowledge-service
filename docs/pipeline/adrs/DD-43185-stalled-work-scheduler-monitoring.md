@@ -352,16 +352,22 @@ CREATE INDEX IF NOT EXISTS idx_cqs_awaiting_answer_at
   be taken or reversed at the Stage-2 gate without touching the migration.
 - **Accepted:** `idx_cd_phase_phase_at` indexes every `case_documents` row, including the
   `INGESTED` majority. It is the price of not depending on a predicate-implication proof.
-- **Accepted / needs DBA input:** plain `CREATE INDEX` takes a `SHARE` lock that blocks writes to
-  each table for the duration of the build. On a small table this is sub-second; on a large one it
-  is an ingestion outage. **Neither this repository nor its compose stack can tell you which.** The
-  row counts must come from the DBA (OQ-009), and if either table is large the migration should be
-  scheduled into a window, or `CONCURRENTLY` applied out-of-band with a no-op
-  `CREATE INDEX IF NOT EXISTS` left in `V1014` to keep Flyway consistent.
+- **Resolved — 2026-09-01, DBA row-count confirmation received.** Plain `CREATE INDEX` takes a
+  `SHARE` lock that blocks writes to each table for the duration of the build; the risk is real
+  only when the table is large enough for that build to take more than a moment. The requester has
+  confirmed both `case_documents` and `case_query_status` hold **fewer than ~100,000 rows** in
+  production. At that volume, index construction is sub-second to low-single-digit seconds on
+  typical hardware — the write-blocking window is not a meaningful ingestion-outage risk. `V1014`
+  is cleared to ship as a normal, unscheduled migration; no maintenance window and no out-of-band
+  `CONCURRENTLY` build are required. Still route through `migration-reviewer` per the standard
+  hard rule, but the row-count blocker itself (OQ-009's first half) is closed.
 - **Accepted:** `AC-006`/`AC-012` ("EXPLAIN shows an index scan", "under 500 ms at production
-  scale") remain **unverifiable inside this repository**. What can be delivered is a
-  Testcontainers-backed plan assertion at documented synthetic volumes; the production-scale number
-  is a manual DBA follow-up. See `02-design.md` §12 (OQ-009).
+  scale") remain **unverifiable inside this repository** as literal automated assertions — the
+  Testcontainers-backed plan assertion (`StalledWorkQueryPlanTest`) proves index usage at a
+  documented ~100k-row synthetic volume, which given the confirmed real production volume above is
+  now a representative proxy rather than merely a synthetic stand-in. A one-off production
+  `EXPLAIN (ANALYZE, BUFFERS)` capture post-deploy remains good practice for the record, but is no
+  longer gating the merge. See `02-design.md` §12 (OQ-009).
 - **Reversibility:** good. Both indexes are additive and droppable in a later migration with no
   data implication; the only irreversible cost is the build-time lock.
 

@@ -1012,9 +1012,11 @@ resolved here, and each needs an owner's answer before the affected test is writ
   shipping a gauge over permanently-zero series. See the note at the top of this
   document. Table cleanup itself remains a separate future ticket, not resolved by this OQ.
 
-Carried forward from earlier stages, unchanged and unresolved: **OQ-001** (the Jira brief was never
-confirmed against the live ticket), **OQ-009** (production-scale `EXPLAIN` + index-lock sizing —
-DBA, blocks requirements AC-012 and gates `V1014`'s merge), **OQ-011** (alert rules and dashboards —
+Carried forward from earlier stages: **OQ-001** (the Jira brief was never confirmed against the
+live ticket, still unresolved), **OQ-009** (**resolved 2026-09-01** — production row counts
+confirmed under 100k for both tables, `V1014`'s merge gate is cleared; a formal production
+`EXPLAIN` capture remains a non-blocking post-deploy follow-up), **OQ-011** (alert rules and
+dashboards —
 platform/SRE; without it this ticket ships signals nobody watches), **OQ-012** (security sign-off
 that `/actuator/prometheus`, served on the public API port and excluded from
 `cp-auth-rules-filter`, may carry these operational-volume series — required before merge).
