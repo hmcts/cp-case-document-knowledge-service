@@ -6,14 +6,21 @@
 > Requirements: [`01-requirements.md`](../DD-43182-operational-metrics-instrumentation/01-requirements.md) ·
 > Design: [`02-design.md`](../DD-43182-operational-metrics-instrumentation/02-design.md)
 >
-> **Status of this file: Stage-2 human gate cleared on 2026-09-03. All ten ADRs are `Accepted`.**
-> All six gate items in `02-design.md` §14 (GATE-1 – GATE-6) are **accepted as designed**,
-> including GATE-6's re-scoping of AC-024. The cross-ticket coordination item with DD-43183
+> **Status of this file: Stage-2 human gate cleared on 2026-09-03. ADR-001 – ADR-010 were all
+> `Accepted` at that gate.** **Amended 2026-09-04 at the Stage-4 gate:** the requester's decision on
+> OQ-022 **withdraws** two of those accepted decisions — ADR-006's `cdk_task_retry_exhausted_total`
+> counter and ADR-007's `outcome=timed_out` value — and **ADR-011** (new, below) records that
+> decision, its evidence and its follow-up. ADR-006 and ADR-007 are therefore
+> `Accepted, partially superseded by ADR-011`; ADR-001, ADR-003, ADR-005 and ADR-010 carry dated
+> in-place amendments for the smaller Stage-4 decisions (OQ-023 – OQ-034). Nothing else is reopened.
+> All six gate items in `02-design.md` §14 (GATE-1 – GATE-6) were **accepted as designed**,
+> including GATE-6's re-scoping of AC-024 — **except GATE-2, which is withdrawn by ADR-011.** The cross-ticket coordination item with DD-43183
 > (`JobCorrelationAspect` ordered outermost of `TaskRetryMetricsAspect` on `ExecutableTask.execute`;
 > this ADR's "`cdk.metrics.enabled=false` removes the proxying entirely" claim is corrected — see
 > the note at ADR-006/§10) is also accepted. Two items remain outside Design's control and are
 > carried forward as follow-ups, not blockers: OQ-018's second half (platform/SRE confirmation of
-> the `cdk_` prefix for these eight new names) and OQ-019 (the owning team for alert rules).
+> the `cdk_` prefix for these **seven** new names — eight before ADR-011 withdrew
+> `cdk_task_retry_exhausted_total`) and OQ-019 (the owning team for alert rules).
 >
 > **This is the second metrics ticket in CDKS.** DD-43185's ADR-001 already settled the house
 > convention (lowercase dot-separated Micrometer registration names, no `.total` segment on
@@ -76,8 +83,9 @@ rediscover it.
    `cdk.external.call.duration` → `cdk_external_call_duration_seconds`.
    This is the exact analogue of DD-43185's `.total` rule and is stated so the pair reads as one
    rule: *never encode in the registered name what the exposition layer appends.*
-2. **Counters keep DD-43185's rule.** `cdk.document.ingestion.phase`, `cdk.answer.generation`,
-   `cdk.task.retry` and `cdk.task.retry.exhausted` — no `.total`.
+2. **Counters keep DD-43185's rule.** `cdk.document.ingestion.phase`, `cdk.answer.generation`
+   and `cdk.task.retry` — no `.total`. (`cdk.task.retry.exhausted` was in this list until
+   **ADR-011** withdrew the meter entirely.)
 3. **Extend the existing `uk.gov.hmcts.cp.cdk.metrics.CdkMeters`.** No second constants class, no
    per-area constants class. Its Javadoc mapping table gains one row per new meter, and gains the
    Timer rule as prose. The class stays `final` with a throwing private constructor.
@@ -90,8 +98,12 @@ rediscover it.
    | `cdk_external_call_duration_seconds` | `cdk.external.call.duration` | Timer | `dependency`, `operation`, `outcome` |
    | `cdk_answer_generation_total` | `cdk.answer.generation` | Counter | `outcome`, `query_level` |
    | `cdk_task_retry_total` | `cdk.task.retry` | Counter | `task_name`, `retry_policy` |
-   | `cdk_task_retry_exhausted_total` | `cdk.task.retry.exhausted` | Counter | `task_name`, `retry_policy` |
    | `cdk_http_pool_connections_leased` | `cdk.http.pool.connections.leased` | Gauge | — |
+
+   > **Amended 2026-09-04 (ADR-011).** `cdk_task_retry_exhausted_total` /
+   > `cdk.task.retry.exhausted` was the seventh row of this table and is **withdrawn** — the meter is
+   > not built. Seven rendered names, not eight. `cdk_answer_generation_total`'s `outcome` set drops
+   > `timed_out` and is `{succeeded, failed}`.
 
 5. **Tag-value casing follows DD-43185 ADR-001's rule with no exceptions.** Applied to the new tag
    sets:
@@ -102,7 +114,16 @@ rediscover it.
    - `task_name` — `TaskNames` constants verbatim (they are already UPPER_SNAKE and are the
      persisted `jobs.assigned_task_name` values).
    - `outcome` — the ticket's literals as stated (`success`, `client_error`, `server_error`,
-     `timeout`; `succeeded`, `failed`, `timed_out`), plus the CDKS-invented `error` (ADR-003).
+     `timeout`; `succeeded`, `failed`), plus the CDKS-invented `error` (ADR-003). (`timed_out` was
+     in this list until ADR-011 withdrew it.)
+     **Amended 2026-09-04 — OQ-031 decided: `failure` and `failed` stay as two distinct tag values,
+     each behind its own clearly-named constant.** DD-43185's `cdk.scheduler.runs` keeps
+     `CdkMeters.OUTCOME_FAILURE` (`"failure"`); DD-43182's `cdk.answer.generation` uses a **new,
+     distinctly named** constant — `OUTCOME_FAILED` (`"failed"`). They are not merged, not aliased
+     and not cross-used; the two constants are declared adjacently with a Javadoc sentence on each
+     naming the meter it belongs to, precisely because `OUTCOME_FAILURE` would otherwise compile
+     silently wherever `failed` is meant. Renaming either after alert rules exist is the
+     cross-repository one-way door DD-43185 ADR-001 recorded, so both spellings are frozen here.
      **Note the deliberate inconsistency the ticket itself creates:** `cdk_external_call_duration_seconds`
      uses `success` while `cdk_answer_generation_total` uses `succeeded`. Design keeps both as the
      ticket states them rather than harmonising, because renaming a tag value after alert rules
@@ -142,7 +163,8 @@ rediscover it.
   the `CdkMeters` Javadoc table.
 - **Accepted:** the `success`/`succeeded` split ships as ticketed unless the gate says otherwise.
 - **Reversibility:** poor once alert rules exist in another repository, exactly as DD-43185
-  ADR-001 recorded. Settle all eight names and all tag-value spellings at this gate.
+  ADR-001 recorded. Settle all **seven** names (eight before ADR-011) and all tag-value spellings at
+  this gate — including OQ-031's deliberate `failure`/`failed` coexistence.
 
 ---
 
@@ -340,6 +362,17 @@ recording call site.** One `OutcomeClassifier`, used by every dependency:
 | `com.azure.core.exception.HttpResponseException` with a 4xx / 5xx response status | `client_error` / `server_error` |
 | `java.net.SocketTimeoutException`, `org.apache.hc.client5.http.ConnectTimeoutException`, `org.apache.hc.core5.concurrent.CancellableDependency`-style `ConnectionRequestTimeoutException`, `java.util.concurrent.TimeoutException` | `timeout` |
 | anything else (JSON parse failure, `IllegalStateException` from an aborted blob copy, `NullPointerException` in mapping) | `error` |
+| **the depth bound (5 layers) is reached without observing any of the above** | `error` |
+
+**Amended 2026-09-04 — OQ-025 decided.** The value *at and beyond* the depth bound is the generic
+**`error`**, stated explicitly rather than left implied. The consequence is accepted and must be
+documented in `OutcomeClassifier`'s Javadoc: a status-bearing cause sitting deeper than five layers
+is mis-tagged `error` rather than `client_error`/`server_error`. The bound is judged deep enough —
+the deepest chain CDKS itself produces is depth 3
+(`RagClientException → ResourceAccessException → SocketTimeoutException`) — and `error` is the
+correct failure mode for an unbounded walk: it degrades to "we could not tell", never to a wrong
+positive claim. If a real chain is ever found deeper than five, the fix is to raise the constant,
+not to remove the bound.
 
 This reaches through `RagClientException` (cause = `HttpStatusCodeException` or the raw failure)
 and through Spring's `ResourceAccessException` (cause = `SocketTimeoutException` for a read
@@ -599,20 +632,34 @@ timer, at N+1 extra series per combination — with 55 combinations and a 5-boun
 | `cdk.external.call.duration` | Timer, no buckets | 11 `(dependency,operation)` × `outcome`(5) | 3 | 33 (`success` only) | 165 |
 | `httpcomponents.httpclient.pool.*` (ADR-008) | 4 Gauges | — | — | 5 | 5 |
 | `cdk.http.pool.connections.leased` (ADR-008) | Gauge | — | 1 | 1 | 1 |
-| `cdk.answer.generation` | Counter | `outcome`(3) × `query_level`(4) | 1 | 12 | 12 |
+| `cdk.answer.generation` | Counter | `outcome`(2) × `query_level`(4) | 1 | 8 | 8 |
 | `cdk.task.retry` | Counter | `task_name`(7) ⟨`retry_policy` determined⟩ | 1 | 7 | 7 |
-| `cdk.task.retry.exhausted` | Counter | `task_name`(7) ⟨`retry_policy` determined⟩ | 1 | 7 | 7 |
-| **DD-43182 total** | | | | **106** | **243** |
+| **DD-43182 total** | | | | **95** | **232** |
 
-Plus DD-43185's 14 = **257 `cdk_*`/pool series worst case.** The `service`/`cluster`/`region`
+Plus DD-43185's 14 = **246 `cdk_*`/pool series worst case.** The `service`/`cluster`/`region`
 common tags apply on top and add no series.
+
+> **Amended 2026-09-04 (ADR-011).** The table above is the recomputed budget. ADR-011 removes
+> `cdk.task.retry.exhausted` entirely (−7 registered, −7 worst case) and drops `timed_out` from
+> `cdk.answer.generation` (12 → 8, −4 both columns). DD-43182's own contribution therefore falls
+> from **106 / 243** to **95 / 232**, and the combined `cdk_*`/pool worst case from **257** to
+> **246**. Headroom against NFR-002's 2,000-series budget widens; nothing in points (1) – (4)
+> changes, because neither withdrawn meter carried a histogram.
 
 **6 — The 2,000-series budget is met, and how it is enforced (OQ-016).** The budget counts the
 **whole endpoint**, framework series included, as the ticket's "per pod" implies. DD-43185 captured
 `baseline-actuator-prometheus.md` — 76 metric families — but **no series count**, so no baseline
 number exists. Design's deliverables:
    - a companion `baseline-series-count.md`, captured the same way as DD-43185's families baseline,
-     recording the measured pre-DD-43182 series count on the compose stack;
+     recording the measured pre-DD-43182 series count on the compose stack.
+     **Amended 2026-09-04 — OQ-034 decided: capture it when Story 7 (`DD-43273`) is built, not
+     before Story 1 starts.** Story 7 is sequenced last precisely because it owns the whole-endpoint
+     assertions, and the baseline is only needed at the moment the ceiling assertion is written.
+     The capture is taken from a commit *without* DD-43182's changes present (a clean
+     `origin/develop` checkout, or `git stash`), which is what makes it a pre-implementation
+     measurement — "pre-implementation" is a property of the **commit measured**, not of the
+     calendar date it was measured on. This removes the earlier "must happen before Story 1"
+     framing, which would have forced an otherwise-unrelated hand-off between stories;
    - a **merge-blocking** `integrationTest` assertion that the total series count on
      `/actuator/prometheus` is below a stated ceiling in the compose stack. Set the compose ceiling
      **tighter than 2,000** and say why: `http_server_requests_seconds_*` grows with distinct
@@ -666,15 +713,45 @@ database query, no remote call, no lock is touched by a scrape.
 - **Accepted:** the compose-stack series ceiling is not production's. Stated in the test's own
   assertion message so nobody later mistakes one for the other.
 - **Accepted:** the exact numeric ceiling cannot be fixed until the baseline is measured, which is
-  a Story-8 deliverable. The *arithmetic* for DD-43182's own contribution (243) is fixed now.
+  a **Story 7 (`DD-43273`)** deliverable, taken against a DD-43182-free commit (OQ-034). The
+  *arithmetic* for DD-43182's own contribution is fixed now: **232** worst case after ADR-011
+  (243 before it).
 - **Reversibility:** excellent. Bucket ladders and the ceiling are one constant and one assertion.
 
 ---
 
-## ADR-006: Compute retry grants and retry exhaustion inside CDKS by replicating `TaskExecutor.canRetry`'s predicate from `ExecutionInfo.getRetryAttemptsRemaining()`, applied by one AOP aspect around `ExecutableTask.execute`
+## ADR-006: Compute retry grants inside CDKS by replicating `TaskExecutor.canRetry`'s predicate from `ExecutionInfo.getRetryAttemptsRemaining()`, applied by one AOP aspect around `ExecutableTask.execute`
 
-- **Status:** Accepted at Stage-2 gate (2026-09-03) · **Date:** 2026-09-03 · **Jira:** DD-43182 · **Resolves:** OQ-008 (blocking), OQ-009, OQ-010 (blocking)
-- **Artefacts:** `01-requirements.md` (FR-010, FR-011, FR-012, NFR-004, AC-018 – AC-021, OQ-008, OQ-009, OQ-010) · `02-design.md` (§7)
+- **Status:** Accepted at Stage-2 gate (2026-09-03); **decision (2)'s exhaustion counter withdrawn 2026-09-04 — partially superseded by ADR-011.** The retry-*grant* half (`cdk.task.retry`), the shared predicate, the aspect, `retry_policy` and the `task_name` membership check all stand unchanged. · **Date:** 2026-09-03, amended 2026-09-04 · **Jira:** DD-43182 · **Resolves:** OQ-009, OQ-010; OQ-008 **re-opened and escalated** by ADR-011
+- **Artefacts:** `01-requirements.md` (FR-010, FR-011, FR-012, NFR-004, AC-018 – AC-021, OQ-008, OQ-009, OQ-010) · `02-design.md` (§7) · **ADR-011** (supersession)
+
+> ### Withdrawn: `cdk_task_retry_exhausted_total` (2026-09-04)
+>
+> **This ADR's central finding — that the library's retry decision is computable inside CDKS from
+> `ExecutionInfo.getRetryAttemptsRemaining()` — is correct and is not retracted. What it missed is
+> that a task never gets to *observe* the exhausted state it can compute.** Stage 4 (OQ-022) read
+> the same bytecode one step further: `TaskExecutor.performRetry(...)` writes `remaining - 1`, so
+> the **last granted retry writes `0`**, and `JobsRepository`'s assignment query is
+> `… WHERE worker_id IS NULL AND (retry_attempts_remaining IS NULL OR retry_attempts_remaining > 0)
+> AND assigned_task_start_time <= :currentTime …` — a row at `0` is **never selected again**. There
+> is therefore no execution in which `canRetry` is evaluated against `remaining == 0`: the job is
+> abandoned *between* executions, by the scheduler, silently, with no task run to notice it.
+> CDKS's own production code already encodes this asymmetry —
+> `CheckIngestionStatusForAllDefendantsTask.LAST_RETRY_COUNT = 1` treats `remaining == 1` as the
+> final execution (line 64, acted on at line 213).
+>
+> The consequence for point (2) below is decisive: `cdk.task.retry.exhausted` would have been
+> **permanently zero for six of the seven tasks**, firing only for `GENERATE_ANSWER_FOR_QUERY` and
+> for null-budget jobs — i.e. only via the `getRetryDurationsInSecs().isEmpty()` clause, never via
+> the budget-runs-out clause that FR-011/FR-012 actually exist for. A counter named
+> "retry exhausted" that cannot see the exhaustion of `CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS`'s
+> 50-attempt budget is worse than absent: it is a series an alert rule would be written against,
+> reading `0` while work is being abandoned.
+>
+> **Decision (2026-09-04): the counter is not built.** The underlying gap is in
+> `task-manager-service`, not in CDKS, and is escalated there rather than worked around here. Full
+> reasoning, the rejected `remaining <= 1` workaround, and the follow-up ticket are in **ADR-011**.
+> Points (1), (3), (4), (5) and (6) below are retained with the amendments marked inline.
 
 ### Context
 
@@ -748,25 +825,55 @@ separate defect; FR-012's documentation must state the *effective* numbers, not 
 ### Decision
 
 **1 — One shared predicate, `metrics/TaskRetryDecision.willBeRetried(ExecutionInfo, ExecutableTask)`,
-that replicates `canRetry` exactly:**
+that replicates `canRetry`'s *budget* clauses — with `shouldRetry` tested by the caller, not by the
+predicate.** **Amended 2026-09-04 — OQ-023 decided in favour of `02-design.md` §7's code snippet,
+and this ADR's earlier four-clause form (which folded `shouldRetry` in) is the version that was
+wrong.** The predicate is:
 
 ```
-shouldRetry(from the ExecutionInfo about to be returned, or true-by-TaskExecutor on the throw path)
-  && info.getRetryAttemptsRemaining() != null
+willBeRetried(info, task) =
+     info.getRetryAttemptsRemaining() != null
   && info.getRetryAttemptsRemaining() > 0
   && task.getRetryDurationsInSecs().isPresent()
 ```
 
-A unit test asserts the predicate against the decompiled `canRetry` semantics, including the
-`GENERATE_ANSWER_FOR_QUERY` case (empty `Optional` ⇒ false) and the `null`-remaining case. **If
+and the **caller** supplies `shouldRetry`, so the full retry decision a caller evaluates is
+`shouldRetry && willBeRetried(info, task)` — reproducing `canRetry` exactly. Two reasons this is
+the right split, both from live call sites:
+
+- `TaskRetryMetricsAspect.recordFromReturn(...)` already gates on
+  `status == INPROGRESS && info.isShouldRetry()` before it consults the predicate at all
+  (`02-design.md` §7), so folding `shouldRetry` into the predicate makes it a redundant second test
+  on that path.
+- ADR-007's `GenerateAnswerForQueryTask` RAG-start path calls the predicate at a point where
+  `shouldRetry` is *about to be* set `true` and is not yet on any `ExecutionInfo` the caller holds.
+  A predicate that reads `isShouldRetry()` off the incoming info would return `false` there for the
+  wrong reason and make the increment look correct by accident.
+
+`willBeRetried` therefore answers exactly one question — "does the library still have budget and
+configuration to grant a retry?" — and `shouldRetry` ("does the task want one?") stays where the
+code already decides it. A unit test asserts the predicate against the decompiled `canRetry`
+semantics, including the `GENERATE_ANSWER_FOR_QUERY` case (empty `Optional` ⇒ false) and the
+`null`-remaining case, and asserts that `shouldRetry` is **not** an input. **If
 `task-manager-service` ever changes `canRetry`, this predicate drifts** — that is the single risk
 this decision carries, and it is mitigated in (5).
 
-**2 — `cdk.task.retry` counts retries that will actually be *granted*; `cdk.task.retry.exhausted`
-counts the one moment a task's budget runs out.** This closes OQ-010's "requested versus granted"
-question in favour of **granted**, because granted is what happened and requested is a number about
-CDKS's intentions. The two counters partition the `INPROGRESS` outcome exactly: every
-`INPROGRESS`-returning execution increments exactly one of them.
+**2 — `cdk.task.retry` counts retries that will actually be *granted*.** This closes OQ-010's
+"requested versus granted" question in favour of **granted**, because granted is what happened and
+requested is a number about CDKS's intentions.
+
+> **Amended 2026-09-04 (ADR-011).** The second half of this point — "`cdk.task.retry.exhausted`
+> counts the one moment a task's budget runs out", and the claim that "the two counters partition
+> the `INPROGRESS` outcome exactly" — is **withdrawn**. There is one counter, not two, and it does
+> not partition anything: an `INPROGRESS` + `shouldRetry` execution increments `cdk.task.retry` when
+> `willBeRetried(...)` is true, and increments **nothing** when it is false. The `false` case is
+> now an explicitly *uncounted* outcome, which is the honest position — CDKS cannot distinguish
+> "budget exhausted" (unobservable, per the banner above) from "no retry configuration"
+> (`GENERATE_ANSWER_FOR_QUERY`) in a way that would make a shared counter mean one thing.
+> **OQ-024, decided 2026-09-04:** an `INPROGRESS` result with `shouldRetry=false` likewise
+> increments nothing — neither retried nor exhausted. It is unreachable with today's seven tasks
+> (all build `INPROGRESS` with `shouldRetry=true`), but the boundary is pinned by a test rather than
+> left to an implementer's reading.
 
 **3 — Applied by a single Spring AOP aspect, `metrics/TaskRetryMetricsAspect`, around
 `ExecutableTask.execute(..)` on `uk.gov.hmcts.cp.cdk.jobmanager..*`.** Not seven explicit call
@@ -808,19 +915,36 @@ documentation requirement in the metric itself instead of in a table a reader ha
    This is a tag the ticket does not specify, so the gate must accept or reject it. Rejecting it
    costs nothing but moves the table entirely into documentation.
 
-**5 — The library-drift risk is bounded by a test, not a comment.** An `integrationTest` against
-the compose stack drives a task to genuine exhaustion (`CDK_JOBMANAGER_RETRY_*` overridden to a
-budget of 1–2 in compose) and asserts that `cdk_task_retry_exhausted_total` incremented **and**
-that the corresponding `jobs` row has `retry_attempts_remaining = 0` and is not re-executed. That
-ties the CDKS-side prediction to the library's actual behaviour, so a `task-manager-service` bump
-that changes `canRetry` fails CI instead of silently making the counter wrong.
+**5 — The library-drift risk is bounded by a test, not a comment.** **Amended 2026-09-04 — the
+test survives ADR-011's withdrawal, re-aimed at the surviving counter, and the seam changes per
+OQ-028.** `cdk.task.retry` still holds a replica of a library predicate, so the mitigation is still
+required. The `integrationTest` seeds a **`jobs` row directly via JDBC** with a small explicit
+`retry_attempts_remaining` (`INSERT INTO jobs (…, retry_attempts_remaining, …)`, already the house
+idiom in `CheckStatusOfAnswerGenerationRagTransactionIdLiveTest` and
+`RetrieveMaterialAndUploadRagDocumentReferenceLiveTest`, reachable through
+`AbstractHttpLiveTest.openConnection()`), drives it to the end of its budget against a
+never-terminal WireMock stub, and asserts that `cdk_task_retry_total` increased by **exactly the
+number of retries the library actually granted** and that the row ends at `retry_attempts_remaining
+= 0`, is not re-executed and is not deleted. That still ties the CDKS-side prediction to the
+library's real behaviour, so a `task-manager-service` bump that changes `canRetry` fails CI. **The
+compose-level `CDK_JOBMANAGER_RETRY_*` override is withdrawn (OQ-028):** that key governs two tasks
+for the whole live suite, and `IngestionProcessHttpLiveTest`, `IngestionStatusHttpLiveTest` and
+`RetrieveMaterialAndUploadRagDocumentReferenceLiveTest` all depend on polling to completion within
+the shipped budget. Per-row seeding is scoped to one test and needs no compose change; the seeded
+rows are deleted in a `finally` block because the compose database is shared.
 
 **6 — `GENERATE_ANSWER_FOR_QUERY`'s missing override is documented, not fixed** (per the ticket's
-out-of-scope list). The consequence is stated plainly and is a *feature* of this design: the task
-will emit `cdk_task_retry_exhausted_total{task_name="GENERATE_ANSWER_FOR_QUERY", retry_policy="none"}`
-on every failure and **never** `cdk_task_retry_total`, which is exactly what is happening. The
-metric surfaces the defect rather than papering over it. FR-012's in-repo documentation
-(`CdkMeters` Javadoc — OQ-017(b)) says so.
+out-of-scope list). **Amended 2026-09-04 (ADR-011): the way the metric surfaces the defect changes,
+and gets weaker — state it honestly.** The original design had this task emit
+`cdk_task_retry_exhausted_total{task_name="GENERATE_ANSWER_FOR_QUERY", retry_policy="none"}` on
+every failure. With the exhaustion counter withdrawn it now emits **nothing at all** on either
+counter, so what surfaces the defect is a *permanently zero*
+`cdk_task_retry_total{task_name="GENERATE_ANSWER_FOR_QUERY", retry_policy="none"}` series — which
+is exactly why that series is still **pre-registered at `0`** (DD-43185's rule: a zero series is a
+signal, a missing one is ambiguous). Zero-against-a-registered-series is a weaker signal than a
+rising counter and reads identically to "this task simply never failed", so FR-012's in-repo
+documentation (`CdkMeters` Javadoc — OQ-017(b)) must say **both** that the task can never be
+retried **and** that its zero is therefore not evidence of health.
 
 ### Alternatives considered
 
@@ -852,15 +976,23 @@ metric surfaces the defect rather than papering over it. FR-012's in-repo docume
 
 ### Consequences
 
-- **Positive:** OQ-008 is closed **in-repo**, exactly, with no library change, no cross-schema
-  read, and no new failure mode. FR-011 and AC-020 become testable.
+- ~~**Positive:** OQ-008 is closed **in-repo**, exactly, with no library change, no cross-schema
+  read, and no new failure mode. FR-011 and AC-020 become testable.~~ **Retracted 2026-09-04
+  (ADR-011).** OQ-008 is **not** closed in-repo: exhaustion is unobservable from a task execution,
+  so FR-011 and AC-020 are **not** deliverable by this ticket and are descoped. The library change
+  ADR-006 rejected as "unnecessary" is now the recommended fix.
 - **Positive:** the throw path is covered, so `cdk_task_retry_total` is not systematically low.
 - **Positive:** zero lines of task business logic change — the strongest available NFR-005 story
   for Area D.
 - **Positive:** `retry_policy` makes the metric self-describing at no cardinality cost.
 - **Accepted:** CDKS now holds a *replica* of a library predicate. Mitigated by (5)'s
   behaviour-anchored integration test, and by a Javadoc pointer to the decompiled `canRetry`. This
-  is the one genuine liability in this ADR and it should be read as such at the gate.
+  is the one genuine liability in this ADR and it should be read as such at the gate. **It is
+  unchanged by ADR-011 — the replica is still there, still only for `cdk.task.retry`, and (5)'s
+  test is still its only real mitigation.**
+- **Accepted 2026-09-04 (ADR-011):** exhaustion of a real retry budget remains **undetected** by
+  CDKS after this ticket, exactly as Stage 1 originally concluded. That is a knowingly-shipped gap
+  with a named owner (the `task-manager-service` follow-up), not an oversight.
 - **Accepted:** the first `@Aspect` in this codebase, so the seven task beans become CGLIB proxies.
   De-risked by the verified `AopUtils.getTargetClass` call in `TaskRegistry`, by
   `cdk.metrics.enabled=false` removing the aspect bean entirely (ADR-010), and by the existing
@@ -872,10 +1004,56 @@ metric surfaces the defect rather than papering over it. FR-012's in-repo docume
 
 ---
 
-## ADR-007: `cdk_answer_generation_total` counts answer-generation transactions that ended — redefining `timed_out` as "abandoned while still `ANSWER_GENERATION_PENDING`", and adding `query_level="unknown"`
+## ADR-007: `cdk_answer_generation_total` counts answer-generation transactions that ended, at the four points CDKS can actually observe — and adds `query_level="unknown"`
 
-- **Status:** Accepted at Stage-2 gate (2026-09-03) · **Date:** 2026-09-03 · **Jira:** DD-43182 · **Resolves:** OQ-011 (blocking); depends on ADR-006
-- **Artefacts:** `01-requirements.md` (FR-009, AC-015 – AC-017, OQ-011, OQ-021) · `02-design.md` (§8)
+- **Status:** Accepted at Stage-2 gate (2026-09-03); **`outcome=timed_out` and the `catch`-path `failed` increment withdrawn 2026-09-04 — partially superseded by ADR-011.** `succeeded`, the budget-spent `failed`, `GenerateAnswerForQueryTask`'s three abandonment paths (GATE-5) and `query_level="unknown"` all stand unchanged. · **Date:** 2026-09-03, amended 2026-09-04 · **Jira:** DD-43182 · **Resolves:** OQ-011 (partially — (a)/(d) re-opened); depends on ADR-006
+- **Artefacts:** `01-requirements.md` (FR-009, AC-015 – AC-017, OQ-011, OQ-021) · `02-design.md` (§8) · **ADR-011** (supersession)
+
+> ### Withdrawn: `outcome=timed_out`, and the `catch`-at-exhaustion `failed` increment (2026-09-04)
+>
+> **Traced at the Stage-4 gate, not assumed.** The question put to this amendment was whether
+> `timed_out` survives ADR-011's withdrawal of `cdk_task_retry_exhausted_total` — i.e. whether
+> `CheckStatusOfAnswerGenerationTask` has an **independent** way to know its polling budget is spent,
+> separate from the library's internal counter. **It does not.** The call sites, read in
+> `src/main/java/uk/gov/hmcts/cp/cdk/jobmanager/queryflow/CheckStatusOfAnswerGenerationTask.java`:
+>
+> - The `ANSWER_GENERATION_PENDING` / null / non-2xx branch is line 82–86 and its only action is
+>   `return retry(executionInfo)` (line 85 → the private helper at line 205), which builds
+>   `INPROGRESS` + `shouldRetry=true` and **keeps no count of its own**. The polling budget is
+>   entirely the library's `questions-retry` budget, and the only handle on it is
+>   `ExecutionInfo.getRetryAttemptsRemaining()` — the exact value ADR-011 shows a task can never
+>   observe at `0`.
+> - The task *does* own an independent counter — `CTX_ANSWER_RETRY_COUNT` (`"answerRetryCount"`),
+>   read at line 153, incremented at line 165 — but it counts something else entirely: the
+>   `ANSWER_GENERATION_FAILED` **re-dispatch** cycles, compared against
+>   `retryProperties.getQuestionsRetry().getMaxAttempts()` at line 157. It is not touched on the
+>   `PENDING` path and does not track polling attempts. It cannot be repurposed without a job-data
+>   schema change, which is out of scope.
+>
+> So `timed_out` (`02-design.md` §8 row 3) shares the *same* `TaskRetryDecision.willBeRetried(...)`
+> mechanism as the withdrawn exhaustion counter, over the *same* library-owned value. ADR-007's own
+> Consequences already said as much — "`timed_out` depends on ADR-006's replicated predicate, so
+> ADR-006's library-drift risk propagates here" — but it under-stated it: the dependency is on
+> *reachability*, not merely on drift. `!willBeRetried(...)` is never true for
+> `CHECK_STATUS_OF_ANSWER_GENERATION` (its budget is non-null and `getRetryDurationsInSecs()` always
+> returns `Optional.of(...)`, line 195–203), so the increment can never fire. **`timed_out` is
+> therefore withdrawn**, and `cdk.answer.generation` ships as `{succeeded, failed}` — precisely the
+> fallback this ADR's own Alternatives section described.
+>
+> **The same trace withdraws row 4** (`catch (Exception)` **and** `!willBeRetried(...)` → `failed`,
+> `02-design.md` §8). It is gated on the identical unreachable condition. `failed` survives via the
+> three increments that do **not** depend on the library counter (see the amended table below), so
+> the tag value itself is unaffected — only this one increment point is.
+>
+> **Accepted cost, stated plainly:** ADR-007's headline property — that the counter's total equals
+> "answer-generation transactions that ended" — **no longer holds**. Two real terminations become
+> invisible: a transaction abandoned while still `PENDING`, and one abandoned from the `catch` path.
+> `succeeded + failed` therefore **undercounts** ended transactions, and
+> `succeeded / (succeeded + failed)` **overstates** the success rate by exactly the population that
+> silently vanishes today. That is the state the ticket was written to fix and it is not fixed; it
+> is now, at least, a *named* gap with an owner (ADR-011's follow-up), rather than a counter that
+> claims completeness it does not have. `CdkMeters`' Javadoc must say so, and OQ-019's alert-rule
+> owner must be told not to treat `succeeded / total` as a true success rate.
 
 ### Context
 
@@ -905,8 +1083,10 @@ path returns `INPROGRESS` + `shouldRetry=true` against the `questions-retry` bud
 is still pending** and the `jobs` row is stranded with `retry_attempts_remaining = 0`, never
 re-selected. That is a genuine "we gave up waiting" event, it is user-visible as a permanently
 empty AI Search result, and ADR-006's `TaskRetryDecision.willBeRetried(...)` predicate detects it
-in-task with certainty. `timed_out` is therefore **reachable**, not fictional — it just is not where
-the ticket looked.
+in-task with certainty. ~~`timed_out` is therefore **reachable**, not fictional — it just is not
+where the ticket looked.~~ **This sentence is the one ADR-011 overturns:** the predicate can *compute*
+the decision, but the task never runs at the moment the budget is spent, so nothing observes it. The
+event is real and still undetected; `timed_out` is not built. See the banner above.
 
 **(e) `GenerateAnswerForQueryTask` has two silent-abandonment paths the ticket does not mention.**
 `return completed(executionInfo)` on missing identifiers (line 65) and on
@@ -924,19 +1104,38 @@ once each.** A "transaction" is one (case, query, document) answer attempt, span
 `GENERATE_ANSWER_FOR_QUERY` → N × `CHECK_STATUS_OF_ANSWER_GENERATION` → up to 100 re-dispatch
 cycles. Six increment points, in two classes:
 
-| Class · condition | `outcome` |
-|---|---|
-| `CheckStatusOfAnswerGenerationTask` · `ANSWER_GENERATED`, after the answer is upserted | `succeeded` |
-| `CheckStatusOfAnswerGenerationTask` · `ANSWER_GENERATION_FAILED` **and** `retryCount >= maxRetries` (the existing `log.warn("Max retries reached…")` branch) | `failed` |
-| `CheckStatusOfAnswerGenerationTask` · `ANSWER_GENERATION_PENDING` / null / non-2xx **and** `!willBeRetried(...)` | `timed_out` |
-| `CheckStatusOfAnswerGenerationTask` · `catch (Exception)` **and** `!willBeRetried(...)` | `failed` |
-| `GenerateAnswerForQueryTask` · missing identifiers, or `QueryDefinitionLatest` not found | `failed` |
-| `GenerateAnswerForQueryTask` · RAG start threw **and** `!willBeRetried(...)` (always, per (f)) | `failed` |
+| Class · condition | `outcome` | Status |
+|---|---|---|
+| `CheckStatusOfAnswerGenerationTask` · `ANSWER_GENERATED`, after the answer is upserted | `succeeded` | stands |
+| `CheckStatusOfAnswerGenerationTask` · `ANSWER_GENERATION_FAILED` **and** `retryCount >= maxRetries` (the existing `log.warn("Max retries reached…")` branch, driven by CDKS's own `CTX_ANSWER_RETRY_COUNT`) | `failed` | stands — **independent of the library counter** |
+| ~~`CheckStatusOfAnswerGenerationTask` · `ANSWER_GENERATION_PENDING` / null / non-2xx **and** `!willBeRetried(...)`~~ | ~~`timed_out`~~ | **withdrawn 2026-09-04 (ADR-011)** — unreachable |
+| ~~`CheckStatusOfAnswerGenerationTask` · `catch (Exception)` **and** `!willBeRetried(...)`~~ | ~~`failed`~~ | **withdrawn 2026-09-04 (ADR-011)** — same unreachable condition |
+| `GenerateAnswerForQueryTask` · missing identifiers, or `QueryDefinitionLatest` not found | `failed` | stands — unconditional |
+| `GenerateAnswerForQueryTask` · RAG start threw **and** `!willBeRetried(...)` (always, per (f)) | `failed` | stands — reachable via the `getRetryDurationsInSecs().isEmpty()` clause, which **is** observable |
 
-1. **`timed_out` is redefined and is reachable:** "the `questions-retry` polling budget was spent
+**Four increment points, not six**, after the amendment: rows 1, 2, 5 and 6. Rows 5 and 6 are two
+increment sites in `GenerateAnswerForQueryTask` for row 5's two conditions plus row 6's, i.e. three
+call sites there and one apiece for rows 1 and 2 — **four** call sites in
+`GenerateAnswerForQueryTask`/`CheckStatusOfAnswerGenerationTask` combined that survive, against
+six designed. **Why row 6 survives when rows 3 and 4 do not** — and this is the distinction that
+matters, because all three call the same predicate: `GENERATE_ANSWER_FOR_QUERY` does not override
+`getRetryDurationsInSecs()`, so `willBeRetried(...)` is false on the
+`task.getRetryDurationsInSecs().isPresent()` clause, which is evaluated from the **task's own
+configuration** and needs no observation of the library's counter at all. Rows 3 and 4 depended on
+the `remaining > 0` clause, which is the unobservable one. **Row 6 keeps the predicate call rather
+than incrementing unconditionally**: if `GenerateAnswerForQueryTask` ever gains a
+`getRetryDurationsInSecs()` override (its own recorded follow-up), the predicate makes the counter
+stop over-reporting automatically instead of silently counting retried transactions as terminal.
+
+1. ~~**`timed_out` is redefined and is reachable:** "the `questions-retry` polling budget was spent
    while RAG still reported `ANSWER_GENERATION_PENDING`". The `catch` path exhausting is `failed`,
    not `timed_out` — a dependency error and a give-up-waiting are different incidents and the tag
-   should not conflate them. **GATE:** this is a redefinition of a ticket-specified tag value.
+   should not conflate them. **GATE:** this is a redefinition of a ticket-specified tag value.~~
+   **Withdrawn 2026-09-04 (ADR-011); GATE-2 is withdrawn with it.** The event is real and the
+   distinction between it and a dependency error was right — but CDKS cannot observe it (see the
+   banner). `outcome` is `{succeeded, failed}` and the meter registers **8** series, not 12. The
+   give-up-waiting event stays invisible, which is the cost this ADR originally listed against
+   exactly this option and which the requester has now accepted knowingly.
 2. **`ANSWER_GENERATION_FAILED` increments only when the re-dispatch budget is spent** (OQ-011(b)),
    so one transaction contributes at most one increment. The condition is the existing `else`
    branch — no new logic, just a counter next to a `log.warn` that already marks the event.
@@ -948,17 +1147,33 @@ cycles. Six increment points, in two classes:
 4. **`GenerateAnswerForQueryTask`'s abandonment paths are counted. GATE.** The ticket names only
    `CheckStatusOfAnswerGenerationTask`'s states. Including (e) and (f) is what makes
    `sum(cdk_answer_generation_total)` equal "transactions that ended" — and therefore what makes
-   `succeeded / (succeeded + failed + timed_out)` a true success rate. Excluding them leaves an
-   unbounded, invisible leak between "transactions started" and "transactions accounted for".
-5. **Exactly-once is structural, not incidental** (AC-015). Verified by tracing all paths:
+   `succeeded / (succeeded + failed)` as close to a true success rate as this ticket can get
+   (`timed_out` was in this expression until ADR-011 withdrew it). Excluding them would leave a
+   *second* unbounded, invisible leak between "transactions started" and "transactions accounted
+   for", on top of the one ADR-011 knowingly leaves. **Note the honest limit after ADR-011:** even
+   with these counted, the ratio still overstates success, because the two withdrawn rows'
+   terminations are missing from the denominator.
+5. **At most once per transaction is structural** (AC-015). Verified by tracing all paths:
    `GenerateAnswerForQueryTask`'s success dispatches `CHECK_STATUS_OF_ANSWER_GENERATION` and returns
    `COMPLETED` **without** incrementing; `CheckStatusOfAnswerGenerationTask`'s `ANSWER_GENERATION_FAILED`
    re-dispatch increments nothing and hands the transaction back to `GenerateAnswerForQueryTask`.
-   Every path through the pair ends at exactly one of the six rows above.
-6. **One behaviour-neutral code move:** `levelStr`/`level` parsing (currently lines 94–95, inside
+   No path can increment twice.
+   **Amended 2026-09-04 (ADR-011): "exactly once" weakens to "at most once".** With rows 3 and 4
+   withdrawn, a transaction abandoned while `PENDING`, or abandoned from the `catch` path, ends with
+   **zero** increments. The invariant the tests must assert is therefore
+   `sum(increments per transaction) ∈ {0, 1}` with `1` for every *observable* termination and `0`
+   only for the two named unobservable ones — not `== 1` for every transaction. Asserting `== 1`
+   would encode a completeness claim that is now false.
+6. ~~**One behaviour-neutral code move:** `levelStr`/`level` parsing (currently lines 94–95, inside
    the post-status region) is hoisted to the top of `CheckStatusOfAnswerGenerationTask.execute`, so
-   the `timed_out` and `catch`-path increments have a `query_level` to tag. No logic changes; the
-   parse has no side effects and cannot throw (`parseQueryLevel` returns `null` on bad input).
+   the `timed_out` and `catch`-path increments have a `query_level` to tag.~~
+   **No longer required — withdrawn 2026-09-04 (ADR-011).** The hoist existed *only* to give rows 3
+   and 4 a `query_level`; both are withdrawn. The two surviving
+   `CheckStatusOfAnswerGenerationTask` increments (rows 1 and 2, at lines ~145 and ~178) both sit
+   **after** the existing parse at lines 94–95, so they already have `level` in scope. **Do not
+   hoist** — the smaller diff is the better one, and NFR-005's strongest position for this story is
+   now "no code is moved at all". Implementers who nonetheless hoist it for readability must keep
+   `02-design.md` §8 and the Stage-4 spec's Scenario 5.10 in step.
 7. **OQ-021 confirmed: no answer-generation *duration* is added.** The ticket does not ask for one,
    and — unlike ADR-002's ingestion duration — it is **not** cheap: there is no persisted
    answer-generation start timestamp to compute from, so it would need either a new column or a new
@@ -968,8 +1183,23 @@ cycles. Six increment points, in two classes:
 ### Alternatives considered
 
 - **Drop `timed_out` entirely** and ship `{succeeded, failed}`. The honest option before (d) was
-  found. Rejected: the event is real, user-visible, currently undetectable, and now cheaply
-  detectable. Dropping the tag value would also silently change a ticket-specified enumeration.
+  found. Rejected at Stage 2: the event is real, user-visible, currently undetectable, and now
+  cheaply detectable. **Adopted 2026-09-04 (ADR-011)** once (d)'s "cheaply detectable" was shown to
+  be false — it is not detectable at all from a task execution. The objection that this "silently
+  changes a ticket-specified enumeration" is answered by making the change **loudly**: ADR-011,
+  this amendment, Story 5's ACs and the Stage-4 spec all record it, and the requester decided it
+  explicitly rather than it being absorbed.
+- **Redefine `timed_out` as "this is my final scheduled execution" (`remaining == 1`)** rather than
+  "my budget is spent" (`remaining == 0`). Considered at Stage 4 and **rejected 2026-09-04** — it
+  *would* work (at `remaining == 1` the poll has returned `PENDING` and the library is about to
+  write `0` and abandon the row, so the increment would be correct and correctly-timed), and CDKS
+  already uses exactly this trick in `CheckIngestionStatusForAllDefendantsTask.LAST_RETRY_COUNT`.
+  Rejected because it *deepens* the one liability ADR-006 already flagged: it replaces a replica of
+  a library predicate with a replica of the library's off-by-one *internal scheduling arithmetic*,
+  which no library contract guarantees, for a value the ticket cannot otherwise get. The requester's
+  decision is to fix the gap in `task-manager-service` (ADR-011's follow-up) rather than encode a
+  second, more fragile assumption about its internals. Recorded here so the follow-up ticket knows
+  this is the cheap interim option if the library change is refused.
 - **`timed_out` = "the `questions-retry` re-dispatch budget of 100 was spent"** (Stage 1's
   suggested reading). Rejected: that is the `ANSWER_GENERATION_FAILED` path, where RAG gave a
   definite negative answer 100 times. That is a failure, not a timeout. Mapping it to `timed_out`
@@ -985,21 +1215,30 @@ cycles. Six increment points, in two classes:
 
 ### Consequences
 
-- **Positive:** the counter's total equals the number of answer-generation transactions that ended,
-  so success rate, failure rate and give-up rate are all directly derivable.
-- **Positive:** `timed_out` ships as a reachable value rather than a permanently-zero series, and it
-  detects a user-visible failure (empty AI Search) that nothing detects today.
+- ~~**Positive:** the counter's total equals the number of answer-generation transactions that
+  ended, so success rate, failure rate and give-up rate are all directly derivable.~~
+  **Retracted 2026-09-04 (ADR-011).** The total equals the number of **observable** terminations;
+  two termination paths are invisible, so the total undercounts and `succeeded / total` overstates
+  the success rate. Documented, not silently accepted.
+- ~~**Positive:** `timed_out` ships as a reachable value rather than a permanently-zero series, and
+  it detects a user-visible failure (empty AI Search) that nothing detects today.~~
+  **Retracted 2026-09-04 (ADR-011).** The user-visible failure (a permanently empty AI Search
+  result) still has no detector anywhere in CDKS after this ticket. This is the single largest thing
+  DD-43182 was expected to deliver and does not.
 - **Positive:** two previously-invisible abandonment paths in `GenerateAnswerForQueryTask` become
   visible.
-- **Accepted:** `cdk_answer_generation_total` and `cdk_task_retry_exhausted_total{task_name="CHECK_STATUS_OF_ANSWER_GENERATION"}`
+- ~~**Accepted:** `cdk_answer_generation_total` and `cdk_task_retry_exhausted_total{task_name="CHECK_STATUS_OF_ANSWER_GENERATION"}`
   will both fire on the same underlying event. Deliberate and correct — they answer different
   questions ("did this answer ever arrive?" versus "is a task giving up?"). Stated in the Javadoc so
-  nobody treats one as a duplicate of the other.
-- **Accepted:** `timed_out` depends on ADR-006's replicated predicate, so ADR-006's library-drift
-  risk propagates here. The same integration test covers both.
-- **Accepted:** twelve pre-registered series, three of which (`timed_out` × `query_level`) should
-  stay at zero in a healthy service. Pre-registering them is the DD-43185 AC-009 rule: a zero
-  series is a signal, a missing one is ambiguous.
+  nobody treats one as a duplicate of the other.~~ **Moot 2026-09-04 (ADR-011):** neither series
+  exists, so there is no overlap to document and the Javadoc paragraph about it is dropped.
+- ~~**Accepted:** `timed_out` depends on ADR-006's replicated predicate, so ADR-006's library-drift
+  risk propagates here. The same integration test covers both.~~ **This is the sentence that turned
+  out to be the whole problem** — the dependency was on *reachability*, not just drift. See the
+  banner.
+- **Accepted:** **eight** pre-registered series (`outcome`(2) × `query_level`(4)), twelve before
+  ADR-011. All eight are reachable. Pre-registering them is the DD-43185 AC-009 rule: a zero series
+  is a signal, a missing one is ambiguous.
 - **Reversibility:** total for the increments; the tag-value *set* is the usual one-way door once
   alert rules exist.
 
@@ -1289,9 +1528,17 @@ try {
 AC-025 and AC-027 are then testable with an injected throwing registry: the business outcome must be
 byte-identical.
 
-**3 — Throttled WARN, in code.** `MetricsSafety` holds a single `AtomicLong` of the last WARN's
-epoch second and emits at most one WARN per 60 s across all sites, with a monotonically counted
-suppressed total included in the line. The message names the metric area and carries the exception
+**3 — Throttled WARN, in code, over an injectable time source.** `MetricsSafety` holds a single
+`AtomicLong` of the last WARN's epoch second and emits at most one WARN per 60 s across all sites,
+with a monotonically counted suppressed total included in the line.
+   **Amended 2026-09-04 — OQ-030 decided: add a time seam.** The helper carries a
+   **package-private, settable time source** — a `LongSupplier` of epoch seconds (or an equivalent
+   settable clock field), defaulting to the real clock and never exposed publicly or through
+   configuration. Without it the 60-second window is only testable by sleeping 60 seconds in a unit
+   test, which is not shippable; with it, "a second WARN is emitted after the window" is a
+   two-line test. The seam is test-only by convention (package-private, no setter on any public
+   API, no property binding), so it is not a new production knob, and no production code passes
+   anything but the default. The message names the metric area and carries the exception
 object; it contains **no** case id, doc id, defendant id, material id, court reference,
 `CJSCPPUID`, RAG transaction id, blob URI, document name or answer text (NFR-001, AC-026), and it
 is emitted as structured JSON through the existing `logback-spring.xml`. No new appender, no
@@ -1312,16 +1559,25 @@ knobs nobody will tune during an incident.
    - **One deliberate exception:** `TaskRetryMetricsAspect` carries
      `@ConditionalOnProperty(name = "cdk.metrics.enabled", havingValue = "true", matchIfMissing = true)`,
      so with the flag off the aspect bean does not exist and the seven task beans are **not
-     CGLIB-proxied at all**. That makes ADR-006's one structural risk reversible with a restart and
-     no deployment, which is worth the small asymmetry. `cdk.task.retry` and
-     `cdk.task.retry.exhausted` are still registered at `0` by `TaskRetryMetrics`, which is
-     unconditional.
+     CGLIB-proxied at all** — *true only until DD-43183's non-optional `JobCorrelationAspect` ships
+     on the same join point, after which the proxying persists regardless of this flag and only the
+     recording stops.* That makes ADR-006's one structural risk reversible with a restart and no
+     deployment, which is worth the small asymmetry. `cdk.task.retry` is still registered at `0`
+     for all seven `task_name` values by `TaskRetryMetrics`, which is unconditional
+     (`cdk.task.retry.exhausted` was named here too until ADR-011 withdrew it).
 
 **5 — FR-012's documentation lives in `CdkMeters`' Javadoc** (OQ-017(b)), extending DD-43185's
-precedent, and covers: `cdk_task_retry_exhausted_total` as the primary "work is being silently
-abandoned" signal; the seven `task_name` values; the `retry_policy`/budget table from ADR-006 with
-the *effective* numbers (including the inert `CDK_JOBMANAGER_RETRY_DEFAULT_*` finding); and the
-statement that `GENERATE_ANSWER_FOR_QUERY` cannot be retried at all. Not a new `docs/` runbook page:
+precedent, and covers: the seven `task_name` values; the `retry_policy`/budget table from ADR-006
+with the *effective* numbers (including the inert `CDK_JOBMANAGER_RETRY_DEFAULT_*` finding); and the
+statement that `GENERATE_ANSWER_FOR_QUERY` cannot be retried at all.
+   **Amended 2026-09-04 (ADR-011).** The clause naming `cdk_task_retry_exhausted_total` as "the
+   primary work-is-being-silently-abandoned signal" is **withdrawn — there is no such signal in this
+   ticket.** The Javadoc must instead state the gap explicitly: `cdk.task.retry` counts *granted*
+   retries only; a task whose budget runs out is abandoned by the library between executions and is
+   **not counted anywhere**; `cdk_answer_generation_total`'s total is therefore an undercount of
+   ended transactions; and the follow-up that closes this is the `task-manager-service` exhaustion
+   event (ADR-011). Documenting the absence is the whole point — an SRE reading `CdkMeters` must not
+   infer from a healthy-looking `cdk_task_retry_total` that nothing is being abandoned. Not a new `docs/` runbook page:
 one file, next to the constants, that a Javadoc-reading engineer and a `CdkMeters`-grepping SRE both
 find.
 
@@ -1361,3 +1617,133 @@ find.
 - **Accepted:** `Error`s are not contained. Deliberate and consistent with DD-43185.
 - **Reversibility:** excellent. `CP_CDK_METRICS_ENABLED=false` needs a restart and no deployment;
   the series stay present at `0` and stop moving, which is honest.
+
+---
+
+## ADR-011: Descope retry-exhaustion detection entirely — withdraw `cdk_task_retry_exhausted_total` and `outcome=timed_out`, and escalate the gap to `task-manager-service`
+
+- **Status:** Accepted at the Stage-4 gate (2026-09-04) · **Date:** 2026-09-04 · **Jira:** DD-43182 · **Resolves:** OQ-022 (blocking) · **Supersedes:** ADR-006 decision (2)'s exhaustion counter, ADR-007 decision (1) and its `catch`-path increment, `02-design.md` GATE-2
+- **Artefacts:** `01-requirements.md` (FR-011, FR-012, AC-017, AC-020) · `02-design.md` (§2, §7, §8, §11, §12) · `03-stories.md` (Stories 5, 6, 7) · `04-test-specs.md` (OQ-022) · ADR-006, ADR-007
+
+### Context
+
+ADR-006 overturned Stage 1's conclusion that retry exhaustion "is not obtainable from CDKS", on
+decompiled evidence that `ExecutionInfo.getRetryAttemptsRemaining()` is public and is the same value
+`TaskExecutor.canRetry(...)` tests. **That evidence is correct.** ADR-007 then built
+`outcome=timed_out` on top of it.
+
+Stage 4, writing the tests, read one step further and found the gap between "computable" and
+"observable":
+
+| Fact | Evidence (`task-manager-service` 1.0.11 bytecode) |
+|---|---|
+| A granted retry decrements the budget | `TaskExecutor.performRetry(...)` → `JobService.updateNextTaskRetryDetails(jobId, …, remaining - 1)` |
+| So the **last granted retry writes `0`** | same call, on the final grant |
+| A row at `0` is never assigned again | `JobsRepository`: `… WHERE worker_id IS NULL AND (retry_attempts_remaining IS NULL OR retry_attempts_remaining > 0) AND assigned_task_start_time <= :currentTime …` |
+| Therefore no execution ever evaluates `canRetry` with `remaining == 0` | the two rows above, composed |
+| CDKS already encodes the asymmetry | `CheckIngestionStatusForAllDefendantsTask.LAST_RETRY_COUNT = 1` (line 64), acted on at line 213 — it treats `remaining == 1` as the final execution |
+
+**The consequence.** A task can predict *its own* retry with certainty, which is what `cdk.task.retry`
+needs and gets. But the exhaustion event happens **between executions**: the scheduler simply stops
+selecting the row. No task runs. Nothing in CDKS is invoked. A counter incremented from inside a
+task execution therefore cannot see it. The only `!canRetry` branches a CDKS execution can reach are
+`getRetryDurationsInSecs().isEmpty()` (`GENERATE_ANSWER_FOR_QUERY` alone) and `remaining == null` —
+neither of which is "the budget ran out".
+
+`cdk_task_retry_exhausted_total` would consequently have read **permanently `0`** for all six tasks
+with a real budget, including `CHECK_INGESTION_STATUS_FOR_ALL_DEFENDANTS` (50 × 5 s) and
+`CHECK_STATUS_OF_ANSWER_GENERATION` (100 × 10 s) — the two whose exhaustion FR-011/FR-012 exist to
+surface. And `outcome=timed_out` was gated on the identical unreachable condition (see ADR-007's
+amendment banner for the traced call sites, including the finding that
+`CheckStatusOfAnswerGenerationTask`'s own `CTX_ANSWER_RETRY_COUNT` counter tracks
+`ANSWER_GENERATION_FAILED` re-dispatches, **not** polling attempts, and so cannot substitute).
+
+### Decision
+
+**1 — `cdk_task_retry_exhausted_total` / `cdk.task.retry.exhausted` is not built.** No meter, no
+`CdkMeters` constant, no `recordRetryExhausted(...)` method, no series. DD-43182 ships **seven**
+meters, not eight.
+
+**2 — `cdk_answer_generation_total`'s `outcome` set is `{succeeded, failed}`.** `timed_out` is not
+built. Eight series (`outcome`(2) × `query_level`(4)), not twelve. GATE-2 is withdrawn.
+
+**3 — `cdk_task_retry_total` is unaffected and ships as designed.** Only *exhaustion detection* is
+descoped, not retry counting. The counter, `TaskRetryMetricsAspect`, `TaskRetryDecision`, the
+`retry_policy` tag (GATE-3), the `task_name` membership check and the throw-path coverage all stand.
+An `INPROGRESS` + `shouldRetry` execution where `willBeRetried(...)` is false now increments
+**nothing** — an explicitly uncounted outcome rather than a mislabelled one.
+
+**4 — The gap is a `task-manager-service` defect and is raised there, as its own ticket.** ADR-006
+listed "raise a `task-manager-service` change to publish an exhaustion event" as an alternative and
+rejected it as *unnecessary*. It is now the **recommended fix**, and the reason is stronger than
+convenience: the information genuinely does not exist on CDKS's side of the boundary. Recommended
+shape for the follow-up ticket, so the library maintainers get a concrete ask rather than a
+complaint:
+
+- **Preferred:** publish a first-class exhaustion event/callback at the point
+  `TaskExecutor` decides `!canRetry` on an `INPROGRESS` result — i.e. immediately before
+  `updateNextTaskDetails(jobId, name, unchanged-start-time, 0)` + `releaseJob(jobId)` — carrying at
+  minimum the job id, the assigned task name and the budget that was exhausted. This is the only
+  place in the system where the event is actually known.
+- **Acceptable alternative:** an `ApplicationEvent`, or a no-op-by-default extension interface a
+  consumer can implement, so consumers opt in without a library fork.
+- **Not acceptable as the primary fix:** consumers polling
+  `SELECT count(*) FROM jobs WHERE retry_attempts_remaining = 0`. That reaches across a schema
+  boundary and yields a gauge of stranded rows rather than a counter of events — still worth doing
+  in CDKS as an independent follow-up (ADR-006's alternatives list keeps it), because it measures the
+  *accumulated backlog* including work abandoned before DD-43182, which no counter can.
+
+**5 — The `remaining == 1` workaround is rejected**, with the reason recorded so the follow-up
+ticket can reconsider it if the library change is refused. It would work, and CDKS already uses the
+trick, but it replaces a replica of a documented-by-bytecode *predicate* with a replica of the
+library's undocumented off-by-one *scheduling arithmetic*. Deepening that coupling to obtain one tag
+value is the wrong trade when the correct fix is a small, well-scoped upstream change.
+
+**6 — The resulting gaps are documented, not absorbed.** Three places must say so plainly:
+`CdkMeters`' Javadoc (ADR-010(5) as amended), the OQ-019 hand-off to platform/SRE, and
+`03-stories.md` Stories 5 and 6. Specifically: retry-budget exhaustion is **not detected anywhere in
+CDKS** after this ticket; `cdk_answer_generation_total`'s total is an **undercount** of ended
+transactions; and `succeeded / (succeeded + failed)` therefore **overstates** the answer-generation
+success rate.
+
+### Alternatives considered
+
+- **(a) Redefine the predicate as "this is the final execution"** — `remaining == null ||
+  remaining <= 1 || durations.isEmpty()`. Makes both withdrawn signals reachable. **Rejected** per
+  (5): brittle coupling to library internals; and it silently changes `cdk_task_retry_total` from 50
+  to 49 for a 50-attempt budget, so the retry counter would then be off-by-one against the library's
+  own behaviour — trading a missing signal for a wrong one.
+- **(b) Keep the counter as designed and accept it firing only for `GENERATE_ANSWER_FOR_QUERY`.**
+  **Rejected:** a series named `cdk_task_retry_exhausted_total` that reads `0` while a 50-attempt
+  budget is being exhausted is the "permanently misleading series" this ticket's own requirements
+  stage was written to prevent, and an alert rule written against it would be actively harmful.
+- **(c) Poll the `jobs` table for `retry_attempts_remaining = 0`, ShedLock-guarded, DD-43185-style.**
+  **Rejected as this ticket's fix** (cross-schema read; gauge not counter; inherits DD-43185's
+  per-pod staleness apparatus) but **retained as an independent follow-up** — see (4).
+- **(d) Add CDKS-side attempt counting in job data**, `CTX_ANSWER_RETRY_COUNT`-style, for the polling
+  paths. **Rejected:** it needs a job-data schema change, it only ever covers the tasks someone
+  remembers to instrument (one of seven today), and it duplicates state the library already owns —
+  the same reason Stage 1 rejected it.
+- **(e) Ship the counter permanently zero and document it.** **Rejected:** documentation does not
+  travel with a Prometheus series into another repository's alert rules.
+
+### Consequences
+
+- **Positive:** no misleading series ships. Every series DD-43182 publishes is reachable by some real
+  code path — the same principle ADR-009(4) applied to the three unwritable ingestion phases.
+- **Positive:** the series budget shrinks (243 → **232** worst case; 106 → **95** registered), the
+  ticket's diff shrinks (one fewer meter, four fewer increment points, no `query_level` hoist, no
+  compose retry-budget override), and Story 6's hardest-blocked integration test is replaced by a
+  simpler one aimed at the counter that does exist.
+- **Positive:** the problem is now owned where it can be fixed, with a concrete proposal, instead of
+  being worked around in a consumer.
+- **Negative, and the significant one:** the ticket's headline capability is not delivered. Retry
+  exhaustion is undetected; a permanently-empty AI Search result caused by a spent polling budget is
+  still invisible; FR-011, FR-012's exhaustion half, AC-017 and AC-020 are **descoped**, not met.
+  Anyone reading DD-43182 as "we can now see work being silently abandoned" must be corrected.
+- **Negative:** `succeeded / total` is not a success rate. It must not be put on a dashboard as one.
+- **Reversibility:** good. Both withdrawn signals are purely additive to re-add — one counter, one
+  tag value, four increment points — the moment the library exposes the event. Nothing about this
+  decision forecloses that; the `CdkMeters` names and the ADR-006 predicate remain the natural
+  landing sites. **Adding a tag value later is additive; that is the one direction of tag-set change
+  that is *not* a one-way door.**

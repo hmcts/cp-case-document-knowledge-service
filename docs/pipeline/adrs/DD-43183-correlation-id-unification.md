@@ -8,6 +8,14 @@
 > Design: [`02-design.md`](../DD-43183-correlation-id-unification/02-design.md)
 >
 > **Status of this file: Stage-2 human gate cleared on 2026-09-03. All eight ADRs are `Accepted`.**
+> **Stage-4 gate, 2026-09-04 — three of these ADRs carry a dated addendum.** No decision below is
+> reopened or reversed; the addenda record how a Stage-4 finding lands against an accepted decision:
+> **ADR-005** — the third clause of its test oracle ("equals the `correlationId` log field") is not
+> automatable from this repository and becomes a named manual-verification item (OQ-102);
+> **ADR-001** — its "first non-blank wins" precedence reading is confirmed as authoritative over
+> Story 1 AC-003's looser wording (OQ-109); **ADR-003** — the nine successor dispatch sites it
+> verified are pinned by two representative multi-hop chains, not nine assertions (OQ-110).
+> The addenda are marked `**Stage-4 addendum**` in place.
 > All six gate items in `02-design.md` §15 (GATE-1 – GATE-6) are **accepted as designed**,
 > including GATE-6 (the `DebugLoggingInterceptor` credential-logging fix is accepted for inclusion
 > in this ticket's diff, not deferred to a separate defect ticket) and the cross-ticket coordination
@@ -210,6 +218,16 @@ take `@ConfigurationProperties` with the drift risk stated here.**
   `TracingFilter` once released, in the same sense any withdrawn response header is poor —
   reinstating it is a commit, but a consumer that broke in the interim has already broken.
 
+**Stage-4 addendum (2026-09-04, OQ-109) — "first non-blank wins" is authoritative.** Stage 4
+noticed that Decision (2)'s table says *first non-blank wins* while `03-stories.md`'s Story 1
+AC-003 said only "the canonical header wins deterministically", and that the two readings differ for
+exactly one input: canonical **present but blank**, alias populated. The gate confirmed **this ADR's
+reading**: a blank, whitespace-only, or ADR-007-rejected `CPPCLIENTCORRELATIONID` **falls through**
+to a usable `X-Correlation-Id`, and only the absence of a usable value in *either* header generates.
+It must not shadow a good alias into a generated ID. Story 1 AC-003 has been reworded to say this
+explicitly, and Stage 4's Scenario 1.5 (which already pinned this reading) stands unchanged. No
+change to the decision itself.
+
 ---
 
 ## ADR-002: `correlationId` is the single canonical MDC key; `traceId` and `spanId` are reserved to Micrometer Tracing and no CDKS code may write them
@@ -370,6 +388,17 @@ onwards, with no migration and no dual-read.
 - **Accepted:** `requestId` appears in the persisted `job_data` of historical rows with values that
   are unrelated fresh UUIDs. Pre-existing, unchanged, and not worth a migration.
 - **Reversibility:** excellent — additive Javadoc plus call-site edits.
+
+**Stage-4 addendum (2026-09-04, OQ-110) — how much test the nine successor sites get.** The Context
+above verified that **all nine** successor dispatches already copy the parent `jobData` map, so
+AC-017 / Story 3 AC-005 is structurally satisfied and the test only pins it. Stage 4 asked whether
+that means nine individual assertions or a representative sample. The gate decided **two
+representative multi-hop chains**, not nine per-site assertions: the multi-hop chains exercise the
+copy at every hop that matters end-to-end, while nine per-site assertions would couple the test
+suite tightly to internal dispatch structure to re-prove one already-verified property. If a *new*
+successor dispatch is added later, the reviewer's job is to confirm it uses
+`createObjectBuilder(jobData)` — the source-walk assertion in Scenario 3.6 (no inline `"requestId"`
+literal) is the standing mechanical guard, not a per-site test. No change to the decision itself.
 
 ---
 
@@ -580,7 +609,8 @@ private String traceId() {
    - `traceId` equals the `correlationId` JSON field on the log lines emitted for that request.
    The third assertion is the one that actually tests AC-020 and the only one that would have caught
    today's defect. A `matches("[0-9a-f]{32}")`-style assertion must **not** be used: it would pass
-   today, against the bug.
+   today, against the bug. **See this ADR's Stage-4 addendum for how the third clause is
+   discharged** — it remains required, and it is **not** an automated test.
 5. **Nothing is added to the API.** `ErrorResponse` keeps its field name and type;
    `api-cp-crime-caseadmin-case-document-knowledge` stays at 0.0.11 (AC-038).
 
@@ -619,6 +649,33 @@ private String traceId() {
 - **Accepted:** `GlobalExceptionHandlerTest` mocks `Tracer`, `Span` and `TraceContext` across seven
   methods; all of them change. Expected — they pin the behaviour being fixed.
 - **Reversibility:** total. One method body.
+
+**Stage-4 addendum (2026-09-04, OQ-102) — the third clause of Decision (4) is discharged manually,
+not automatically, and is not dropped.** Stage 4 verified that CDKS's integration tier has no seam
+for reading the application's emitted log output: `AbstractHttpLiveTest` exposes only a
+`RestTemplate` and a JDBC `Connection`, and the `com.avast.gradle.docker-compose` plugin supplies
+host/port system properties and **no container handle**, so there is no `getLogs()` equivalent and
+no existing test reads container output. The gate decided **not** to manufacture one — neither by
+shelling out to `docker compose logs` from the suite (couples CI to a Docker CLI) nor by adding a
+file appender and a bind mount (changes **production** logging configuration for the benefit of
+tests, which the "no `logback-spring.xml` change" boundary exists to prevent). Decision (4) is
+therefore satisfied as follows, and this is the full picture:
+
+| Clause of the oracle | How it is discharged |
+|---|---|
+| `traceId` non-blank, not `""`, per handler | Automated — unit tier, all six handlers (`GlobalExceptionHandlerTest`) |
+| `traceId` == the `X-Correlation-Id` response header | Automated — integration tier (`CorrelationLogFieldHttpLiveTest`). The strongest fully-automatable proxy for the clause below |
+| `traceId` == the `correlationId` **JSON log field** | **Manual — MV-1** (`02-design.md` §13): one captured JSON log line, confirmed by the implementer and the Stage-6 reviewer, attached to DD-43183, gating **release** of the ticket. Automated *partially* at the unit tier by `ListAppender` **event-shape** coverage, which proves the MDC key is present when a log statement fires but **cannot** prove the `LogstashEncoder`'s JSON output |
+
+- **Accepted, and stated plainly:** the assertion that actually tests the defect this ADR fixes is
+  the one assertion the repository cannot automate. Downgrading it to a *named, owned, written-down*
+  manual step is the honest outcome; silently dropping it, or quietly re-labelling the response-header
+  proxy as if it were the log assertion, is not. Same treatment DD-43185 gave its own
+  production-scale `EXPLAIN` evidence (its `02-design.md` §12).
+- **What would change this:** if a log-reading seam ever lands for another reason (a Testcontainers
+  migration of the live suite would give one for free via `GenericContainer.getLogs()`), MV-1 should be
+  converted to an assertion and this addendum retired. Recorded as a follow-up, not as work in
+  DD-43183.
 
 ---
 

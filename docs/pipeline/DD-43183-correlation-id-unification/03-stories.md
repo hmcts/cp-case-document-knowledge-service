@@ -1,11 +1,9 @@
 # User Stories: Unified Correlation-ID Handling and Trace Propagation
 
 > **Stage 3 — User Story** · Service: `cp-case-document-knowledge-service` (CDKS)
-> **Parent Jira: DD-43183.** No Jira/Atlassian MCP tool is available in this session (consistent
-> with OQ-013 in `01-requirements.md` and `02-design.md`), so **every sub-ticket reference below is
-> a placeholder** — `DD-43183-1` through `DD-43183-7`. Real Jira sub-tickets must be created and
-> linked to the parent epic **before Stage 4 (Test Specs)** starts, per CLAUDE.md's hard rule that
-> every story needs a linked ticket before the test stage.
+> **Parent Jira: DD-43183.** Real sub-tickets `DD-43260`–`DD-43266` were created and linked to the
+> parent epic on 2026-09-04, satisfying CLAUDE.md's hard rule that every story needs a linked
+> ticket before the test stage.
 >
 > Acceptance criteria below are **derived from, not duplicated verbatim from**, `01-requirements.md`'s
 > AC-001–AC-038, rescoped to each story's slice and rewritten to reflect the six accepted Stage-2
@@ -37,18 +35,32 @@
 > `JobCorrelationAspect` ordered outermost of `TaskRetryMetricsAspect` — see Story 3 below for the
 > full detail and the required ordering test.
 
+> **Stage-4 gate decisions applied to this document (2026-09-04).** Seven open questions raised at
+> Stage 4 were decided by the requester; four of them change wording here:
+> **OQ-102** — the integration tier will **not** read the app's log output, so any AC whose oracle
+> was "read a JSON log line from the container" is split into automated unit-tier event-shape
+> coverage plus **MV-1**, a named manual-verification step (`02-design.md` §13) that gates
+> **release** of the ticket. Affects Story 2 AC-004, Story 4 AC-002, Story 5 AC-004/AC-005 and
+> Story 7 AC-002. **OQ-107** — Story 5's (Area E's) scope is **confirmed** as the design's list, no
+> wider. **OQ-108** — Story 6 AC-004 no longer asks the metadata audit to catch DD-43182's `cdk.*`
+> binding gap; it structurally cannot. **OQ-109** — Story 1 AC-003 now states the **first-non-blank-wins**
+> precedence rule explicitly. **OQ-110** — Story 3 AC-005 pins **two representative multi-hop chains**,
+> not nine dispatch sites. **OQ-105** — the stale OTLP paths in `docker/docker-compose.integration.yml`
+> are an explicit Story 6 to-do (new AC-008), deliberately **not** edited at the documentation stages.
+> **OQ-103** — the ERROR-dispatch behaviour stays an unasserted probe; no story gains work for it.
+
 **Standard DoD (every story, per `hmcts-standards.md` and this repo's CLAUDE.md hard rules)**: code
 reviewed & approved · all ACs covered by automated tests (unit + integration, Given/When/Then) ·
 `gradle clean build` (incl. `integration`) passes · PMD/JaCoCo green at existing thresholds ·
 CodeQL and secrets-scanner clean · no PII/case content/court reference/`CJSCPPUID` in code, config,
 tests or fixtures · deployed to and verified on sandbox · Jira ticket updated with test evidence ·
-`claude-generated` + `needs-review` labels applied, linked to parent epic DD-43183 · **story has its
-own linked Jira sub-ticket before Stage 4 (Test Specs) starts** — placeholders only exist below.
+`claude-generated` + `needs-review` labels applied, linked to parent epic DD-43183 · story has its
+own linked Jira sub-ticket (`DD-43260`–`DD-43266`, below).
 
 ---
 
 ## Story 1 — One documented inbound correlation convention; `TracingFilter` deleted
-**Jira: `DD-43183-1`** (placeholder — real sub-ticket required before Stage 4)
+**Jira: `DD-43260`**
 **No dependency on other stories in this set. Must land first — Stories 2–7 all build on the
 `correlation/CorrelationIds` and `correlation/CorrelationScope` classes this story creates.**
 
@@ -75,7 +87,7 @@ close).
 ### Acceptance criteria
 - [ ] AC-001: Given a request carries only the canonical header `CPPCLIENTCORRELATIONID`, when it is handled, then that value is the resolved correlation ID.
 - [ ] AC-002: Given a request carries only the alias `X-Correlation-Id`, when it is handled, then the alias value is honoured as the resolved correlation ID.
-- [ ] AC-003: Given a request carries both headers with different values, when it is handled, then the canonical header wins deterministically — a test pins this precedence order (ADR-001).
+- [ ] AC-003 (**precedence rule pinned at the Stage-4 gate, 2026-09-04 — OQ-109**): resolution is **first non-blank wins**, in the order `CPPCLIENTCORRELATIONID` then `X-Correlation-Id` (ADR-001(2)'s table). Concretely: (a) given both headers present with different non-blank values, the **canonical** value is resolved and the alias value appears nowhere; (b) given the canonical header present but **blank, whitespace-only, or rejected by AC-010's validation** and the alias carrying a usable value, the **alias value is resolved** — a blank canonical header must **not** shadow a usable alias into a freshly generated ID; (c) only when neither header yields a usable value is one generated (AC-004). A test pins the declared precedence **order**, not just one outcome, so reordering the list fails the test.
 - [ ] AC-004: Given a request carries neither header, or one that is blank, when it is handled, then a non-blank correlation ID is generated.
 - [ ] AC-005: The resolved value is present in MDC under exactly one documented key, `correlationId`, for the duration of request handling; a `MdcReservedKeyTest` asserts no `src/main` source file contains an `MDC.put` of `traceId` or `spanId` (ADR-002 — those keys are reserved to Micrometer Tracing).
 - [ ] AC-006: The resolved value is set as the `X-Correlation-Id` response header on every response — 2xx and 4xx/5xx alike — set **before** the filter chain runs, so it cannot be missed by an already-committed response.
@@ -118,12 +130,12 @@ close).
   (OQ-014: 7 JobManager tasks not 8; `task-manager-service` 1.0.11 not 1.0.10) while this story's
   diff is already touching correlation-related documentation — housekeeping, non-blocking, but cheap
   to fold in here.
-- Needs its own linked Jira sub-ticket before Stage 4. Placeholder: `DD-43183-1`.
+- Needs its own linked Jira sub-ticket before Stage 4. Placeholder: `DD-43260`.
 
 ---
 
 ## Story 2 — Outbound propagation, stop destroying MDC, and fix the APIM credential-logging leak
-**Jira: `DD-43183-2`** (placeholder — real sub-ticket required before Stage 4)
+**Jira: `DD-43261`**
 **Depends on Story 1** (`correlation/CorrelationIds`, `correlation/CorrelationScope`, the canonical
 MDC key).
 
@@ -166,7 +178,7 @@ implement, only confirm on merge that PR #225's fix is present in this branch's 
 - [ ] AC-001: Given an inbound (or otherwise in-scope) correlation ID `abc-123`, when CDKS calls RAG, Progression or Hearing via a `RestClient` built by `RestClientFactoryConfig`, then the outbound request carries `abc-123` in **both** documented outbound headers, `CPPCLIENTCORRELATIONID` and `X-Correlation-Id`.
 - [ ] AC-002: `CorrelationIdInterceptor` never substitutes a fresh `UUID.randomUUID()` for an in-scope value — a unit test asserts the in-scope value is transmitted verbatim, and that `X-Request-ID` and the interceptor's own `MDC_KEY` constant no longer exist on the class.
 - [ ] AC-003: `CorrelationIdInterceptor` is MDC-**read-only** — it performs no `MDC.put` and no `MDC.remove` at all (no `try`/`finally`); a unit test asserts MDC is byte-for-byte unchanged immediately before, during, and immediately after `intercept(...)` executes. This is the direct test for the historical destruction bug, not merely for non-propagation.
-- [ ] AC-004: Given an inbound request with correlation ID `abc-123` makes an outbound call and then emits a further log line, when that line is emitted, then it still carries `abc-123` — proven end-to-end by an integration test, not only by the unit-level MDC-unchanged assertion in AC-003.
+- [ ] AC-004 (**oracle re-scoped at the Stage-4 gate, 2026-09-04 — OQ-102**): Given an inbound request with correlation ID `abc-123` makes an outbound call and then emits a further log line, when that line is emitted, then it still carries `abc-123`. Discharged in three parts, because the integration tier cannot read the app's log output: **(i) automated, unit tier** — AC-003's three-snapshot whole-map assertion proves the *mechanism* (the interceptor cannot destroy the ambient value); **(ii) automated, integration tier** — the observable proxy: after an outbound call has occurred on the request thread, the `X-Correlation-Id` response header still equals `abc-123` and, for `/discovery-scheduler/trigger`, so does the response body's `correlationId` (this is explicitly a *proxy*, recorded as such, not the log assertion); **(iii) manual — MV-1** (`02-design.md` §13): the captured JSON log line confirms the post-outbound line really carries `correlationId=abc-123`. No integration test shells out to `docker logs`.
 - [ ] AC-005: Given a request or unit of work makes two or more outbound calls, when they execute, then every one carries the same correlation value — because the value is generated once per unit of work at the entry points built in Stories 1 and 3, not per outbound call inside the interceptor.
 - [ ] AC-006: Given a unit of work with no inbound request (a scheduled run, a startup probe, a directly-constructed test client) makes an outbound call, when it executes, then the outbound request still carries a non-blank correlation value via `CorrelationIds.currentOrRandom()`'s defensive last-resort branch.
 - [x] AC-007 (**GATE-6, security fix — SHIPPED 2026-09-03 in PR #225, ahead of this story**): `DebugLoggingInterceptor`'s outbound/inbound header logging redacts the APIM `Authorization` header and the APIM subscription-key header (deny-list, case-insensitive — see this story's Background for why an allow-list was not used); `DebugLoggingInterceptorTest` asserts the actual formatted log output never contains the raw credential values while a non-sensitive header remains visible. Retained here as a regression check, not open work.
@@ -186,7 +198,7 @@ implement, only confirm on merge that PR #225's fix is present in this branch's 
 
 ### Definition of done
 - [ ] Code reviewed and approved.
-- [ ] All ACs above covered by automated tests (`CorrelationIdInterceptorTest` rewrite covering AC-002/AC-003/AC-008; a `DebugLoggingInterceptorTest` covering AC-007; `CorrelationPropagationHttpLiveTest` covering AC-001, AC-004–AC-006 against WireMock-stubbed RAG/Progression/Hearing).
+- [ ] All ACs above covered by automated tests (`CorrelationIdInterceptorTest` rewrite covering AC-002/AC-003/AC-008; a `DebugLoggingInterceptorTest` covering AC-007; `CorrelationPropagationHttpLiveTest` covering AC-001, AC-005, AC-006 and AC-004's parts (i)–(ii) against WireMock-stubbed RAG/Progression/Hearing) — **AC-004's part (iii) is MV-1, manual, and is recorded on the ticket rather than automated (OQ-102)**.
 - [ ] `gradle clean build` (incl. `integration`) passes; PMD/JaCoCo green; CodeQL and secrets-scanner clean.
 - [ ] No PII/case content/court reference/`CJSCPPUID` in the diff; fixtures synthetic; no real APIM credential value in any test fixture (only synthetic stand-ins used to prove the allow-list excludes the right header names).
 - [ ] Deployed to and verified on sandbox.
@@ -200,12 +212,12 @@ implement, only confirm on merge that PR #225's fix is present in this branch's 
   given the live credential-exposure risk, rather than waiting for Stage 4/5. AC-001–AC-006/AC-008
   are unaffected and still depend on Story 1 as before.
 - Depends on Story 1 for `CorrelationIds`/`CorrelationScope`.
-- Needs its own linked Jira sub-ticket before Stage 4. Placeholder: `DD-43183-2`.
+- Needs its own linked Jira sub-ticket before Stage 4. Placeholder: `DD-43261`.
 
 ---
 
 ## Story 3 — JobManager async correlation restoration (`JobCorrelationAspect`)
-**Jira: `DD-43183-3`** (placeholder — real sub-ticket required before Stage 4)
+**Jira: `DD-43262`**
 **Depends on Story 1** (`correlation/CorrelationScope`). **Cross-ticket dependency: DD-43182's
 `TaskRetryMetricsAspect` story** — see the coordination note below; this dependency is a coordination
 requirement, not a build-order blocker in either direction.
@@ -234,7 +246,7 @@ seven tasks.
 - [ ] AC-002: After that task returns — normally or by throwing — the correlation value is no longer present on that worker thread's MDC; the aspect's `close()` restores the prior map exactly (not `MDC.clear()`, not `MDC.remove()`), so it is safe on a thread that legitimately carries other context.
 - [ ] AC-003: The `jobData` correlation key is referenced via the `JobManagerKeys.Params.REQUEST_ID` constant at every read and write site; no inline `"requestId"`-style literal remains in `src/main` (fixes `RetrieveMaterialAndUploadTask:79` and `JobManagerService:59`).
 - [ ] AC-004: Given a task's `jobData` is missing the correlation key, or it is blank, or it fails the allow-list validation, when the task executes, then it does not throw and the log lines carry a freshly generated correlation value rather than nothing (NFR-004).
-- [ ] AC-005: Given a task chains a successor task via `createObjectBuilder(jobData)`, when the successor executes, then it carries the same correlation ID as its predecessor — already structurally true across all nine successor dispatch sites; a test pins it rather than re-implementing it.
+- [ ] AC-005 (**test breadth pinned at the Stage-4 gate, 2026-09-04 — OQ-110**): Given a task chains a successor task via `createObjectBuilder(jobData)`, when the successor executes, then it carries the same correlation ID as its predecessor. Already structurally true across all nine successor dispatch sites (ADR-003 verified each), so the test **pins** the property rather than re-implementing it — and it does so with **two representative multi-hop chains, not nine individual per-site assertions**. The chains are `GET_CASES_FOR_HEARING → CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS → RETRIEVE_MATERIAL_AND_UPLOAD` and one answer-generation chain (`GENERATE_ANSWER_FOR_QUERY → CHECK_STATUS_OF_ANSWER_GENERATION`). Rationale: nine per-site assertions would couple the suite tightly to internal dispatch structure to re-prove one already-verified property; a *new* successor dispatch is guarded instead by AC-003's source-walk assertion plus Stage-6 review.
 - [ ] AC-006: All four current dispatch sites (`DiscoveryService` ×2, `JobManagerService`, `IngestionProcessorByCaseService`) seed `jobData`'s `requestId` from the ambient in-scope correlation ID (`CorrelationIds.currentOrGenerate()`), not an unrelated fresh `UUID.randomUUID()` as today.
 - [ ] AC-007: `JobCorrelationAspect` additionally seeds `caseId`, `docId` and `transactionId` into MDC from `jobData` where present — this is Area E's entire async-side deliverable; Story 5 must not duplicate MDC-seeding logic for JobManager tasks.
 - [ ] AC-008 (defence in depth): `jobExecutorThreadPool` is given an MDC-clearing `TaskDecorator` (`JobExecutorMdcBeanPostProcessor`); with the pool's size forced to 1 in a test, a job dispatched immediately after a job that left MDC populated observes **nothing** left over from the prior job — proving the guarantee holds even if a future task, or the library itself, writes MDC outside the aspect's scope.
@@ -252,7 +264,7 @@ seven tasks.
 
 ### Definition of done
 - [ ] Code reviewed and approved.
-- [ ] All ACs above covered by automated tests (`JobCorrelationAspectTest`, `JobCorrelationProxyingTest`, `JobExecutorMdcLeakTest`; integration: existing JobManager live tests extended to assert a task's log lines carry the dispatching request's `correlationId`).
+- [ ] All ACs above covered by automated tests (`JobCorrelationAspectTest`, `JobCorrelationProxyingTest`, `JobExecutorMdcLeakTest`; integration: **one** addition to an existing JobManager live test asserting via **WireMock's request journal** that the outbound calls a task makes on a pool thread carry the dispatching request's correlation ID in both outbound headers — the automatable end-to-end proof that the aspect's MDC reached the interceptor off the request thread). **The equivalent log-line assertion is MV-1, manual (OQ-102)** — no live test reads container output.
 - [ ] `gradle clean build` (incl. `integration`) passes; PMD/JaCoCo green; CodeQL and secrets-scanner clean.
 - [ ] No PII/case content/court reference/`CJSCPPUID` in the diff; fixtures synthetic.
 - [ ] Deployed to and verified on sandbox.
@@ -281,12 +293,12 @@ seven tasks.
   that story is **TBC** and must be captured here (or cross-linked from there) once both tickets have
   real sub-tickets.
 - Depends on Story 1 for `CorrelationScope`.
-- Needs its own linked Jira sub-ticket before Stage 4. Placeholder: `DD-43183-3`.
+- Needs its own linked Jira sub-ticket before Stage 4. Placeholder: `DD-43262`.
 
 ---
 
 ## Story 4 — `ErrorResponse.traceId` carries a searchable correlation value
-**Jira: `DD-43183-4`** (placeholder — real sub-ticket required before Stage 4)
+**Jira: `DD-43263`**
 **Depends on Story 1** (`CorrelationIds.currentOrGenerate()`, and the structural guarantee that
 `RequestContextFilter` always leaves a non-blank `correlationId` in MDC).
 
@@ -311,7 +323,10 @@ lookup.
 
 ### Acceptance criteria
 - [ ] AC-001: With the shipped tracing configuration exactly as-is (no property flip required — there is no master switch, per ADR-006/Story 6), every handler in `GlobalExceptionHandler` returns an `ErrorResponse` whose `traceId` is **non-blank**. A test asserting only non-blank, or only a 32-hex shape, is **not sufficient** on its own — see AC-002, which is the actual oracle.
-- [ ] AC-002: `traceId` **equals** both the `X-Correlation-Id` response header **and** the `correlationId` JSON field on the log lines emitted for that request — this is the assertion that proves the field is actually searchable, and the one that would have caught the historical defect.
+- [ ] AC-002 (**oracle split at the Stage-4 gate, 2026-09-04 — OQ-102; the third clause is manual, not dropped**): `traceId` **equals** both the `X-Correlation-Id` response header **and** the `correlationId` JSON field on the log lines emitted for that request. This is the assertion that proves the field is actually searchable and the one that would have caught the historical defect — and its third clause is the one thing this repository cannot automate (`AbstractHttpLiveTest` exposes only a `RestTemplate` and a JDBC `Connection`; the `docker-compose` Gradle plugin gives tests no container handle, so there is no `getLogs()` seam, and the gate declined both ways of manufacturing one). Discharged as:
+      - **Automated, integration tier:** `traceId` == the `X-Correlation-Id` response header == the value sent. The strongest fully-automatable proxy.
+      - **Automated, unit tier:** `ListAppender` **event-shape** coverage — when a log statement fires, MDC carries `correlationId` with that value. Proves the event, **not** the `LogstashEncoder`'s JSON output; must not be claimed as the clause.
+      - **Manual — MV-1** (`02-design.md` §13, ADR-005's Stage-4 addendum): with the compose stack up, one captured JSON log line confirms `correlationId` is a **top-level sibling of `message`** and equals both the response's `traceId` and the value sent. Captured by this story's implementer, confirmed by the Stage-6 reviewer, attached to DD-43183, and it **gates release of the ticket** — same treatment DD-43185 gave its un-automatable production-scale `EXPLAIN` evidence. **Do not** substitute a `matches("[0-9a-f]{32}")` or non-null-only assertion; both pass against the historical defect.
 - [ ] AC-003: This holds for every handler in `GlobalExceptionHandler`: `ResponseStatusException`, `MethodArgumentNotValidException`, `ConstraintViolationException`, `HttpMessageNotReadableException`, `HttpRequestMethodNotSupportedException`, and the catch-all `Exception` — all six share one `base(...)` construction path, so this is structural, not six separate implementations.
 - [ ] AC-004: `GlobalExceptionHandler` no longer has a `Tracer` constructor dependency, no `Objects.requireNonNull` around a tracer lookup, and no `catch (Exception ignored)` block — the class has no operation left that can throw in this area, so there is nothing to swallow.
 - [ ] AC-005 (**GATE-4, explicit naming-mismatch acceptance**): `ErrorResponse.traceId` and `DiscoveryTriggerResponse.correlationId` now carry the same value under different field names. No OpenAPI field is added, renamed or removed by this story; `api-cp-crime-caseadmin-case-document-knowledge` stays at `0.0.11`.
@@ -327,7 +342,8 @@ lookup.
 
 ### Definition of done
 - [ ] Code reviewed and approved.
-- [ ] All ACs above covered by automated tests (`GlobalExceptionHandlerTest` rewrite, all six handlers; integration: an error response's `traceId` compared against the log-field value on a real request).
+- [ ] All ACs above covered by automated tests (`GlobalExceptionHandlerTest` rewrite, all six handlers; integration: an error response's `traceId` compared against the **`X-Correlation-Id` response header** and the value sent, on a real request).
+- [ ] **MV-1 captured and attached to DD-43183** — the one JSON log line proving AC-002's third clause (OQ-102). Not automatable here; not optional either.
 - [ ] `gradle clean build` (incl. `integration`) passes; PMD/JaCoCo green; CodeQL and secrets-scanner clean.
 - [ ] No PII/case content/court reference/`CJSCPPUID` in the diff; fixtures synthetic.
 - [ ] Deployed to and verified on sandbox.
@@ -339,12 +355,12 @@ lookup.
   consumers in the release note (`02-design.md` §16), even though the field's name and type do not
   change.
 - Depends on Story 1 for `CorrelationIds.currentOrGenerate()` and the structural non-blank guarantee.
-- Needs its own linked Jira sub-ticket before Stage 4. Placeholder: `DD-43183-4`.
+- Needs its own linked Jira sub-ticket before Stage 4. Placeholder: `DD-43263`.
 
 ---
 
 ## Story 5 — Business identifiers as structured JSON log fields (non-JobManager half)
-**Jira: `DD-43183-5`** (placeholder — real sub-ticket required before Stage 4)
+**Jira: `DD-43264`**
 **Depends on Story 1** (`correlation/CorrelationScope`). **Aware of, not blocked by, Story 3** —
 Story 3's `JobCorrelationAspect` already delivers the JobManager-task half of this same requirements
 area (FR-012–FR-015) as a side effect; this story must not duplicate that MDC-seeding logic.
@@ -372,14 +388,14 @@ and makes `caseId:*` searches lie (`02-design.md` §9).
 - [ ] AC-001: `RagAnswerAsyncServiceImpl.answerUserQueryAsync`'s completion log line carries `transactionId` (sourced from the returned `UserQueryAnswerRequestAccepted.getTransactionId()`) as a structured field — it carries no identifier at all today.
 - [ ] AC-002: `RagAnswerAsyncServiceImpl.answerUserQueryStatus`'s completion log line carries `transactionId` as a structured MDC field rather than only an interpolated message parameter; its existing CRLF sanitisation is retained unchanged.
 - [ ] AC-003: A log statement emitted from `IdpcAvailabilityService`, `IngestionProcessorByCaseService`, `IngestionService` or `DocumentService`, handling work for a known case, has `caseId` — and `docId` where applicable — in MDC, via a scope opened at the public entry method where the identifier first exists.
-- [ ] AC-004: These identifiers appear as discrete top-level JSON fields, siblings of `message`, not embedded in it — verified by parsing an emitted JSON log line; any stale `{}`-style message placeholder that duplicated an identifier now carried in MDC is removed in the same edit (no dangling placeholder left behind).
-- [ ] AC-005: A unit of work with no case — `/queries` list, `/query-catalogue`, both discovery schedulers, `StalledWorkMetrics` — emits **no `caseId` key at all**; no sentinel value such as `"none"` is introduced.
+- [ ] AC-004 (**oracle split at the Stage-4 gate, 2026-09-04 — OQ-102**): These identifiers appear as discrete top-level JSON fields, siblings of `message`, not embedded in it. Discharged as: **(i) automated, unit tier** — a `ListAppender` asserts the emitted **event's** MDC property map contains the expected keys and that the formatted message does **not** contain the value (i.e. the value is a field, not interpolated text), plus a check that any stale `{}`-style message placeholder that duplicated an identifier is removed in the same edit (no dangling placeholder — nothing in the build catches one, since `errorprone.InvalidLogMessageFormat` is excluded from the PMD ruleset); **(ii) manual — MV-1** for the **JSON encoding itself**, which only the running encoder can show. No `logback-spring.xml` change is needed or permitted — `LogstashEncoder` sets no `includeMdcKeyNames`, so every MDC entry is already a top-level field; a PR-diff check asserts the file is untouched.
+- [ ] AC-005: A unit of work with no case — `/queries` list, `/query-catalogue`, both discovery schedulers, `StalledWorkMetrics` — emits **no `caseId` key at all**; no sentinel value such as `"none"` (or `""`, or `null`) is introduced. The assertion is key **absence**, not "absent or empty" — an "absent or empty" assertion would permit exactly what the design forbids. **Asserted at the unit tier** via `ListAppender` `doesNotContainKey("caseId")` on the emitted event's MDC property map, for all five cases including the two endpoints (OQ-102: no live test reads log output; MV-1's captured line is a spot-check, not the oracle for this AC).
 - [ ] AC-006: `IntradayDiscoveryScheduler.run()` and `NightlyDiscoveryScheduler.run()` are wrapped in `CorrelationScope.openIfAbsent()` (neither carries any MDC today); `StalledWorkMetrics`'s existing hand-rolled `MDC.put`/`remove` is replaced by the same `CorrelationScope` mechanism, with its existing `job` MDC key and behaviour otherwise unchanged.
 - [ ] AC-007: No document content, answer text, `llm_input` value, `CJSCPPUID`, court reference number or other personal data is logged at any level, or placed in MDC, a structured log field, or a propagated header, as a result of any change made by this story.
 
 ### NFR links
 - NFR-001 (Data protection): applies absolutely to every field this story adds.
-- NFR-006 (Testability): a test that parses an emitted JSON log line and asserts the new fields exist as siblings of `message`.
+- NFR-006 (Testability): **automated** — a `ListAppender` test per changed class asserting the new fields are present in the emitted **event's** MDC property map and are not interpolated into the message; **manual (MV-1)** — one captured JSON log line confirming they are siblings of `message` in the encoded output. NFR-006's original wording ("a test that parses an emitted JSON log line") is not satisfiable here: no integration-tier log-reading seam exists and the Stage-4 gate decided not to build one (OQ-102, 2026-09-04).
 - NFR-009 (Cardinality/cost): `caseId`/`docId`/`transactionId` are log fields and trace identifiers only — never a Micrometer metric tag or Prometheus label.
 
 ### Out of scope for this story
@@ -389,25 +405,33 @@ and makes `caseId:*` searches lie (`02-design.md` §9).
 
 ### Definition of done
 - [ ] Code reviewed and approved.
-- [ ] All ACs above covered by automated tests (unit tests per named service/client class; `CorrelationLogFieldHttpLiveTest` parsing a real emitted JSON log line and asserting field siblinghood).
+- [ ] All ACs above covered by automated tests (unit tests per named service/client class, `ListAppender`-based, covering the event shape and the no-sentinel key absence). **Field *siblinghood in the emitted JSON* is MV-1, manual (OQ-102)** — `CorrelationLogFieldHttpLiveTest` no longer reads log output and asserts only response-surface equivalences.
 - [ ] `gradle clean build` (incl. `integration`) passes; PMD/JaCoCo green; CodeQL and secrets-scanner clean.
 - [ ] No PII/case content/court reference/`CJSCPPUID` in the diff; fixtures synthetic.
 - [ ] Deployed to and verified on sandbox.
 - [ ] Jira ticket updated with test evidence.
 
 ### Notes / open questions
-- **`02-design.md` §9 explicitly flags that its scope decision for this area (which classes are
-  "in scope", the no-sentinel rule, which `transactionId` is meant) needs requirements-owner
-  confirmation — it is a design decision, not a formal ADR.** This must be re-confirmed at story
-  kickoff, not treated as silently final just because it appears in an accepted design document.
+- **Scope CONFIRMED at the Stage-4 gate, 2026-09-04 (OQ-107) — no longer an open question.**
+  `02-design.md` §9's scope decision for this area was flagged as needing requirements-owner
+  confirmation (a design decision, not a formal ADR). The requirements owner has now confirmed it
+  **exactly as designed and no wider**: the four named services (`IdpcAvailabilityService`,
+  `IngestionProcessorByCaseService`, `IngestionService`, `DocumentService`), both
+  `RagAnswerAsyncServiceImpl` completion lines, and all seven JobManager tasks via Story 3's shared
+  aspect. The no-sentinel rule stands, and `transactionId` means the **RAG** transaction id
+  (`JobManagerKeys.CTX_RAG_TRANSACTION_ID` / `UserQueryAnswerRequestAccepted.getTransactionId()`).
+  FR-012's literal "a service, task, scheduler or client class" is **bounded to that list** — a
+  wider sweep across `services/` and `clients/` is out of scope for DD-43183 and would need its own
+  ticket. Nothing about this area is provisional any more: Stage 4's Scenarios 5.3 and 5.5 are
+  cleared to be written.
 - Depends on Story 1 for `CorrelationScope`. Does not block, and is not blocked by, Story 3 — but
   implementers of both stories should avoid touching the same MDC-seeding call sites twice.
-- Needs its own linked Jira sub-ticket before Stage 4. Placeholder: `DD-43183-5`.
+- Needs its own linked Jira sub-ticket before Stage 4. Placeholder: `DD-43264`.
 
 ---
 
 ## Story 6 — Correct the OTLP tracing/export configuration
-**Jira: `DD-43183-6`** (placeholder — real sub-ticket required before Stage 4)
+**Jira: `DD-43265`**
 **No dependency on Stories 1–5 in this set** (configuration-only change; can be picked up in
 parallel with any of them).
 
@@ -435,10 +459,12 @@ own `0.1` (**GATE-5**), and adds a standing test that would have caught all thre
 - [ ] AC-001: `OTEL_TRACES_ENABLED` — bound to the real key `management.tracing.export.otlp.enabled` — independently controls trace export; setting `OTEL_METRICS_ENABLED` alone has no effect on trace export.
 - [ ] AC-002: `management.tracing.enabled`, `management.otlp.tracing.enabled` and `management.otlp.tracing.endpoint` are all removed from `application-server-management.yml`, replaced by `management.tracing.export.otlp.enabled` and `management.opentelemetry.tracing.export.otlp.endpoint`, with an in-file comment recording why the old keys are gone (so nobody re-adds them).
 - [ ] AC-003: The default trace export endpoint path is `/v1/traces`; the default metrics export endpoint path is `/v1/metrics`.
-- [ ] AC-004: A new `ConfigurationMetadataAuditTest` walks every key in every `src/main/resources/application*.yml`, resolves each `management.*`/`spring.*` key against the aggregated classpath configuration metadata, and fails the build on any key that is unknown or deprecated at level `error` — with a documented allow-list of pre-existing findings elsewhere in the file (e.g. DD-43182's already-reported `cdk.jobmanager.retry.default` binding gap) so this story does not silently absorb unrelated defects it merely surfaces.
+- [ ] AC-004 (**scope corrected at the Stage-4 gate, 2026-09-04 — OQ-108**): A new `ConfigurationMetadataAuditTest` walks every key in every `src/main/resources/application*.yml` (all seven files), resolves each **`management.*` / `spring.*`** key against the aggregated classpath configuration metadata, and fails the build on any such key that is unknown or deprecated at level `error`, naming every offender with its file and line — with a documented allow-list of any pre-existing `management.*`/`spring.*` findings it surfaces elsewhere in those files, each allow-list entry naming the defect ticket that owns it, so this story does not silently absorb unrelated defects. The implementer must run the test **before** applying AC-002's YAML change and confirm it fails naming exactly the three dead tracing keys — a metadata audit that passes on the unfixed file is doing nothing.
+      **The `management.*`/`spring.*` scope is correct and deliberate, and the clause previously asking this test to also catch DD-43182's `cdk.jobmanager.retry.default` binding gap has been dropped.** That is structurally impossible here: `spring-boot-configuration-processor` is not on this build, so CDKS's own `cdk.*` keys and library prefixes (`authz.http.*`, `job.executor.*`) have **no configuration metadata at all** and would each be reported "unknown" if the scope were widened. DD-43182's finding needs its own defect ticket, owned by DD-43182; no allow-list entry for it is needed or possible. Adding `spring-boot-configuration-processor` so `cdk.*` keys become auditable is a genuinely valuable but **separate** change, explicitly not taken here.
 - [ ] AC-005 (**GATE-5, accepted**): `management.tracing.sampling.probability`'s default drops from `1.0` to `0.1`; `TRACING_SAMPLER_PROBABILITY` remains available to override to `1.0` in a non-production demonstration environment; a comment or test documents that trace IDs and log correlation are unaffected by the sampling rate at any value.
 - [ ] AC-006: With `OTEL_TRACES_ENABLED` and `OTEL_METRICS_ENABLED` both unset, the service starts cleanly and neither exporter bean exists — the current effective default (export nothing) is preserved exactly.
-- [ ] AC-007: Given `OTEL_TRACES_ENABLED=true` and `OTEL_TRACES_URL` pointing at a collector in one non-production environment, when requests are made, then spans appear in the collector, evidenced by a screenshot attached to Jira DD-43183 — a two-variable configuration change only, since there is no "master switch" to flip.
+- [ ] AC-007: Given `OTEL_TRACES_ENABLED=true` and `OTEL_TRACES_URL` pointing at a collector in one non-production environment, when requests are made, then spans appear in the collector, evidenced by a screenshot attached to Jira DD-43183 — a two-variable configuration change only, since there is no "master switch" to flip. (Tracked as **MV-2** in `02-design.md` §13: manual, owned jointly with platform/SRE, blocks nothing else in this ticket.)
+- [ ] AC-008 (**added at the Stage-4 gate, 2026-09-04 — OQ-105; this story owns the compose file**): `docker/docker-compose.integration.yml` no longer pins the **pre-correction** OTLP paths. Its `app` service currently sets `OTEL_TRACES_URL: http://localhost:4318/traces` and `OTEL_METRICS_URL: http://localhost:4318/metrics` (~lines 155–158), so the integration stack keeps `/traces` and `/metrics` no matter what AC-003 changes in the YAML. **Delete both overrides** — preferable to re-pointing them at `/v1/*`, because one definition site cannot drift from another — so `gradle integration` actually exercises this ticket's corrected defaults. While in that block, delete the two **inert** variables `MANAGEMENT_TRACING_ENABLED` and `TRACING_ENABLED` (neither key exists in Boot 4.0.6 and CDKS binds nothing to `TRACING_ENABLED` — same class of dead config this story exists to remove; note `ConfigurationMetadataAuditTest` cannot see compose env vars, so only review catches these). `TRACING_SAMPLER_PROBABILITY: 1.0` may stay: AC-005's new default is asserted against the resolved YAML, never against the running stack. **After the change, `gradle integration` must still pass** — the endpoint being set while `OTEL_TRACES_ENABLED` is unset yields an `OtlpTracingConnectionDetails` bean and **no** exporter, which is harmless, and is why AC-006's assertion is about **exporter** beans specifically.
 
 ### NFR links
 - NFR-007 (Configurability): `OTEL_TRACES_ENABLED` and `OTEL_METRICS_ENABLED` are independently settable, satisfying the half of NFR-007 not already covered by Story 1's GATE-1 deviation.
@@ -452,7 +478,8 @@ own `0.1` (**GATE-5**), and adds a standing test that would have caught all thre
 
 ### Definition of done
 - [ ] Code reviewed and approved.
-- [ ] All ACs above covered by automated tests (`ConfigurationMetadataAuditTest`, `TracingConfigurationTest`); AC-007's collector evidence captured manually per the ticket's stated deliverable.
+- [ ] All ACs above covered by automated tests (`ConfigurationMetadataAuditTest`, `TracingConfigurationTest`); AC-007's collector evidence (**MV-2**) captured manually per the ticket's stated deliverable.
+- [ ] AC-008's `docker/docker-compose.integration.yml` change is in **this story's reviewed diff** (it was deliberately not made at the documentation stages — see Notes), and `gradle integration` passes with it.
 - [ ] `gradle clean build` (incl. `integration`) passes; PMD/JaCoCo green; CodeQL and secrets-scanner clean.
 - [ ] No PII/case content/court reference/`CJSCPPUID` in the diff; fixtures synthetic.
 - [ ] Deployed to and verified on sandbox.
@@ -460,13 +487,26 @@ own `0.1` (**GATE-5**), and adds a standing test that would have caught all thre
 
 ### Notes / open questions
 - **GATE-5 (sampling default 1.0 → 0.1) accepted at the Stage-2 gate on 2026-09-03.**
+- **OQ-105 resolved, 2026-09-04 — and deliberately left as this story's work rather than done at
+  the documentation stage.** The stale OTLP paths in `docker/docker-compose.integration.yml` are a
+  real, small config defect that this story must fix (AC-008), and the decision on *how* is made:
+  **delete the two overrides** rather than re-point them. It was **not** edited while writing these
+  documents, on purpose: that file is executed by `gradle integration` on every CI run, so changing
+  it outside a story diff would put a CI-affecting edit on a documentation branch with no test run,
+  no `implementation` stage and no code review — i.e. it would slip past Stages 5–7 and past this
+  repo's "never proceed past a human gate" rule for the sake of four lines. It costs nothing to
+  land it inside Story 6, where the YAML change it exists to complement also lands and where
+  `gradle integration` proves the stack still comes up.
+- **OQ-108 resolved, 2026-09-04:** AC-004's `management.*`/`spring.*` scope is confirmed correct and
+  the cross-ticket `cdk.jobmanager.retry.default` clause is dropped — see AC-004. DD-43182 keeps
+  ownership of that defect.
 - No dependency on Stories 1–5; can be delivered in parallel with any of them.
-- Needs its own linked Jira sub-ticket before Stage 4. Placeholder: `DD-43183-6`.
+- Needs its own linked Jira sub-ticket before Stage 4. Placeholder: `DD-43265`.
 
 ---
 
 ## Story 7 — MDC leak assurance and whole-ticket regression proof
-**Jira: `DD-43183-7`** (placeholder — real sub-ticket required before Stage 4)
+**Jira: `DD-43266`**
 **Depends on Stories 1–6** (cross-cutting integration/regression story, sequenced last — mirrors the
 pattern used in `DD-43185-stalled-work-scheduler-monitoring/03-stories.md`'s own final story).
 
@@ -487,7 +527,7 @@ test is a deliberately low-value, forward-looking regression check, not a claim 
 
 ### Acceptance criteria
 - [ ] AC-001: With `jobExecutorThreadPool`'s pool size forced to 1 in a test, a job that sets `correlationId` (and `caseId`/`docId`) in MDC and then returns — or throws — is followed by a second, unrelated job on the same thread that observes **nothing** left over from the first, for both the normal-return and the throwing path.
-- [ ] AC-002: Given request A sets a correlation value in MDC, when request B is subsequently handled on the same or a recycled Tomcat thread, then no MDC value from request A is visible while handling request B.
+- [ ] AC-002: Given request A sets a correlation value in MDC, when request B is subsequently handled on the same or a recycled Tomcat thread, then no MDC value from request A is visible while handling request B. **The deterministic, load-bearing proof is at the unit tier** — run the filter twice on one thread with different inputs and assert no bleed, including the case where request A throws inside the handler. The live sequential-request case is **best-effort only**: nothing guarantees two live requests share a Tomcat thread, so it can fail to detect a leak but cannot prove absence. Per OQ-102 (Stage-4 gate, 2026-09-04) the "B's log lines carry nothing from A" clause is asserted as **MDC state / `ListAppender` event MDC** at the unit tier, **not** by reading the container's log output.
 - [ ] AC-003: The same assertion as AC-002 holds with `spring.threads.virtual.enabled=true` forced via `@TestPropertySource` — explicitly a low-value, kept-for-regression test (ADR-008), not evidence of production readiness for virtual threads, which remain out of scope for this whole ticket.
 - [ ] AC-004: A standing `MdcReservedKeyTest` (introduced in Story 1) is re-run here as part of the whole-ticket regression pass: no `src/main` source file contains an `MDC.put` of `traceId` or `spanId`, across the entire diff produced by Stories 1–6, not only Story 1's own files.
 - [ ] AC-005: `gradle clean build` (including `integration`) passes for the whole ticket; PMD and JaCoCo are green at existing, unmodified thresholds; CodeQL and the secrets scanner are clean.
@@ -516,27 +556,44 @@ test is a deliberately low-value, forward-looking regression check, not a claim 
 - Intentionally sequenced last — its cross-cutting tests exercise mechanisms built by every other
   story in this set, so it cannot be meaningfully completed (only partially stubbed) before Stories
   1–6 land.
-- Needs its own linked Jira sub-ticket before Stage 4. Placeholder: `DD-43183-7`.
+- Needs its own linked Jira sub-ticket before Stage 4. Placeholder: `DD-43266`.
 
 ---
 
 ## Summary
 
-| Story | Title | Jira (placeholder) | Depends on | Requirements area |
+| Story | Title | Jira | Depends on | Requirements area |
 |---|---|---|---|---|
-| 1 | One documented inbound correlation convention; `TracingFilter` deleted | `DD-43183-1` | none | A |
-| 2 | Outbound propagation, stop destroying MDC, **GATE-6 credential-logging fix (already shipped, PR #225)** | `DD-43183-2` | Story 1 | B |
-| 3 | JobManager async correlation restoration (`JobCorrelationAspect`) | `DD-43183-3` | Story 1; **cross-ticket: DD-43182's `TaskRetryMetricsAspect` story** | C |
-| 4 | `ErrorResponse.traceId` carries a searchable correlation value | `DD-43183-4` | Story 1 | D |
-| 5 | Business identifiers as structured JSON log fields (non-JobManager half) | `DD-43183-5` | Story 1; aware of Story 3 | E |
-| 6 | Correct the OTLP tracing/export configuration | `DD-43183-6` | none | F |
-| 7 | MDC leak assurance and whole-ticket regression proof | `DD-43183-7` | Stories 1–6 | G |
+| 1 | One documented inbound correlation convention; `TracingFilter` deleted | `DD-43260` | none | A |
+| 2 | Outbound propagation, stop destroying MDC, **GATE-6 credential-logging fix (already shipped, PR #225)** | `DD-43261` | Story 1 | B |
+| 3 | JobManager async correlation restoration (`JobCorrelationAspect`) | `DD-43262` | Story 1; **cross-ticket: DD-43182's `TaskRetryMetricsAspect` story** | C |
+| 4 | `ErrorResponse.traceId` carries a searchable correlation value | `DD-43263` | Story 1 | D |
+| 5 | Business identifiers as structured JSON log fields (non-JobManager half) | `DD-43264` | Story 1; aware of Story 3 | E |
+| 6 | Correct the OTLP tracing/export configuration | `DD-43265` | none | F |
+| 7 | MDC leak assurance and whole-ticket regression proof | `DD-43266` | Stories 1–6 | G |
 
 **GATE-6 (security fix) location, stated once for unambiguous tracking:** the `DebugLoggingInterceptor`
 APIM-credential-logging fix is tracked at **Story 2, AC-007** — and has **already shipped**,
 independently, in **PR #225** (merged 2026-09-03, deny-list redaction of the two credential header
 names), acting on this pipeline's own recommendation to expedite it ahead of the rest of DD-43183's
 correlation-ID work. AC-007 is retained in Story 2 as a regression check, not open work.
+
+**Manual verification, stated once so no story quietly loses it (OQ-102, Stage-4 gate 2026-09-04):**
+this repository has **no seam for reading the application's emitted log output at the integration
+tier**, and the gate decided not to build one (no `docker compose logs` shell-out from the suite, no
+file appender + bind mount changing production logging for tests). Every AC whose oracle was "read a
+JSON log line from the container" is therefore discharged as automated unit-tier **event-shape**
+coverage (a `ListAppender` proves the MDC keys are present when a log statement fires) plus automated
+integration-tier **response-surface** proxies, plus **MV-1** — one captured JSON log line, confirmed
+by the implementer and the Stage-6 reviewer and attached to DD-43183, proving the identifiers are
+**top-level siblings of `message`** and that `correlationId` matches the response. MV-1 gates
+**release of the ticket**, not the merge of any single story, and it is written down here for the
+same reason DD-43185 wrote down its un-automatable production-scale `EXPLAIN` evidence: an
+un-automatable requirement that is merely *dropped* is indistinguishable from one that was forgotten.
+Affected ACs: **Story 2 AC-004(iii)**, **Story 4 AC-002** (third clause), **Story 5 AC-004(ii)**,
+and the log-line half of Story 3's live JobManager addition. **MV-2** (Story 6 AC-007's collector
+screenshot) is the ticket's other manual item and blocks nothing else. Full definition:
+`02-design.md` §13.
 
 **Cross-ticket coordination, stated once so sprint planning does not have to re-derive it:** Story 3
 (`JobCorrelationAspect`) and DD-43182's `TaskRetryMetricsAspect` story both add an `@Aspect` on the
@@ -560,18 +617,23 @@ or reprocessing of historical logs.
 **Carried-forward follow-ups needing action before or shortly after this ticket ships**, for
 visibility at sprint planning (none of these are stories in this set):
 - **OQ-013** — Jira DD-43183's pasted brief was never confirmed against the live ticket/epic
-  comments in this session (no Jira/Atlassian MCP tool available). Real sub-tickets `DD-43183-1`
-  through `DD-43183-7` must be created and linked to the parent epic before Stage 4 starts, and the
+  comments in this session (no Jira/Atlassian MCP tool available). Real sub-tickets `DD-43260`
+  through `DD-43266` must be created and linked to the parent epic before Stage 4 starts, and the
   requester should confirm the pasted brief was complete and current.
-- **OQ-009 (Story 5's scope)** — design's resolution of "every operational log line" needs explicit
-  requirements-owner confirmation, not silent acceptance because it appears in an accepted design
-  document.
+- ~~**OQ-009 (Story 5's scope)**~~ — **resolved 2026-09-04 (carried as OQ-107).** The requirements
+  owner confirmed design §9's resolution of "every operational log line" exactly as written and no
+  wider: the four named services, both `RagAnswerAsyncServiceImpl` completion lines, and the seven
+  JobManager tasks via Story 3's aspect; no sentinel for an absent `caseId`; `transactionId` = the
+  RAG transaction id. Story 5's Notes carry the detail. No longer a follow-up.
 - The additive `ErrorResponse.correlationId` OpenAPI field (GATE-4's honest fix) — needs an
   `api-cp-crime-caseadmin-case-document-knowledge` version bump and consumer coordination; not a
   story here.
 - Distributed `traceparent` propagation to RAG/Hearing/Progression (build `RestClient`s with an
   `observationRegistry`) — a genuinely worthwhile follow-up once a collector exists; explicitly out
   of scope for this ticket.
-- `cdk.jobmanager.retry.default` not binding to `defaultRetry` (found by DD-43182's design,
-  surfaced again by this ticket's `ConfigurationMetadataAuditTest` in Story 6) — needs its own
-  defect ticket, not absorption into DD-43183.
+- `cdk.jobmanager.retry.default` not binding to `defaultRetry` (found by DD-43182's design) — needs
+  its own defect ticket, owned by DD-43182, not absorption into DD-43183. **Corrected 2026-09-04
+  (OQ-108):** this ticket's `ConfigurationMetadataAuditTest` will **not** surface it and cannot —
+  the audit is `management.*`/`spring.*`-scoped because `spring-boot-configuration-processor` is not
+  on this build, so `cdk.*` keys have no configuration metadata to resolve against. Story 6 AC-004's
+  clause asking for an allow-list entry for it has been dropped.

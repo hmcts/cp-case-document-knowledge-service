@@ -29,11 +29,31 @@
 > point, in parallel with any other story. **Story 7 is authored last** — its scenarios exercise
 > mechanisms built by every other story.
 >
-> **Jira linkage — unresolved and blocking.** `03-stories.md` carries placeholder sub-tickets
-> `DD-43183-1` – `DD-43183-7` only. CLAUDE.md's hard rule is *"Every story needs a linked Jira
-> ticket before the test stage."* Real sub-tickets must be created and linked to the parent epic
-> **before any test below is written**. This document uses the placeholders throughout and does not
-> pretend otherwise. See OQ-101.
+> **Jira linkage — resolved.** Real sub-tickets `DD-43260`–`DD-43266` were created and linked to
+> the parent epic on 2026-09-04, satisfying CLAUDE.md's hard rule that every story needs a linked
+> ticket before the test stage. See OQ-101.
+>
+> ---
+>
+> **All ten Stage-4 open questions are now closed (decisions taken 2026-09-04).** This document has
+> been rewritten where they bite, not merely annotated:
+>
+> | OQ | Decision | Where it changed this document |
+> |---|---|---|
+> | OQ-101 | Resolved — real sub-tickets exist | header above |
+> | **OQ-102** | **No automated reading of the app's log output at the integration tier.** Unit-tier `ListAppender` **event-shape** coverage + integration-tier response-surface proxies + **MV-1**, a named manual-verification item | scope boundary 6; Scenarios **1.8, 2.5, 3.11, 4.2, 5.4, 5.5**; the new "Manual verification" section; coverage summary; tier notes |
+> | OQ-103 | **Leave Scenario 1.12 a probe.** No pre-emptive `shouldNotFilterErrorDispatch()` override; design §3's wording softened to match | filter-order facts; Scenario 1.12 |
+> | OQ-104 | Mechanised merge gate recommended to the Story 2 implementer — unchanged, still required | Scenario 2.9 |
+> | OQ-105 | **Delete the compose file's two stale OTLP path overrides** — owned by the Story 6 implementer as `03-stories.md` Story 6 **AC-008**, deliberately not edited at the documentation stages | test inventory; Scenarios 6.3, 6.5 |
+> | OQ-106 | DD-43182 adopts Scenario 3.5 by reference — unchanged | Scenario 3.5 |
+> | OQ-107 | **Area E's scope confirmed** as designed, no wider | Story 5 scope caveat; Scenarios 5.3, 5.5 |
+> | OQ-108 | **Drop** the `cdk.jobmanager.retry.default` clause from Story 6 AC-004 | Scenario 6.4 |
+> | OQ-109 | **First non-blank wins** | Scenario 1.5 |
+> | OQ-110 | **Two representative multi-hop chains**, not nine sites | Scenario 3.8 |
+>
+> Two requirements-level items remain **manual by decision, not by omission**: **MV-1** (a JSON log
+> line, OQ-102) and **MV-2** (collector spans, Story 6 AC-007). Both are defined in the "Manual
+> verification" section below and in `02-design.md` §13.
 
 ---
 
@@ -57,16 +77,24 @@
    Highest shipped version is unchanged.
 5. **AC-030-style collector evidence is not automatable from this repository.** Story 6's AC-007
    (spans visible in a collector) is a manual, two-environment-variable demonstration whose
-   deliverable is a screenshot on the Jira ticket. Scenario 6.7 states the procedure; it is
-   explicitly **not** a test, and no scenario claims to prove it.
-6. **Log-field assertions at the integration tier have no existing seam.** `AbstractHttpLiveTest`
-   exposes HTTP (`RestTemplate`) and JDBC only; the compose stack is driven by the
-   `com.avast.gradle.docker-compose` Gradle plugin, which hands tests host/port system properties
-   and **no container handle**, so there is no `getLogs()` equivalent. Every scenario below that
-   needs to read an emitted JSON log line is flagged and routed through **OQ-102**, which must be
-   decided before those scenarios are written. Where a unit-tier `ListAppender` can prove the
-   *event shape* but not the *JSON encoding*, both halves are stated separately and the unit test is
-   not claimed to prove the encoding.
+   deliverable is a screenshot on the Jira ticket — tracked as **MV-2**. Scenario 6.7 states the
+   procedure; it is explicitly **not** a test, and no scenario claims to prove it.
+6. **Log-field assertions at the integration tier have no seam, and one will not be built —
+   decided 2026-09-04 (OQ-102).** `AbstractHttpLiveTest` exposes HTTP (`RestTemplate`) and JDBC
+   only; the compose stack is driven by the `com.avast.gradle.docker-compose` Gradle plugin, which
+   hands tests host/port system properties and **no container handle**, so there is no `getLogs()`
+   equivalent and no existing test reads container output. Both ways of manufacturing a seam were
+   **rejected at the gate**: shelling out to `docker compose logs` couples the suite to a Docker CLI
+   on the CI runner, and a file appender plus a bind mount would change **production** logging
+   configuration for the benefit of tests, which the "no `logback-spring.xml` change" boundary exists
+   to prevent. Consequently **no scenario in this document reads the application's log output**, and
+   every AC that used to depend on doing so is discharged in three explicitly separated parts:
+   **(i)** automated unit-tier `ListAppender` coverage of the **event shape** — that when a log
+   statement fires, the event's MDC property map carries the expected keys and the message does not
+   interpolate the value; **(ii)** automated integration-tier **response-surface** proxies, recorded
+   as proxies; **(iii)** **MV-1**, a named manual verification (see "Manual verification" below).
+   A unit-tier `ListAppender` is **never** claimed to prove the `LogstashEncoder`'s JSON output, and
+   a response-header proxy is **never** relabelled as the log assertion.
 
 ---
 
@@ -140,7 +168,13 @@ consequences were verified from the resolved classpath during this stage, becaus
   line emitted by `BasicErrorController` on that dispatch carries **no** `correlationId`. Whether
   the response header survives the ERROR dispatch is a container-behaviour question this stage
   cannot settle by reading code. **Raised as OQ-103 with a concrete probe scenario (1.12)**, not
-  assumed either way.
+  assumed either way. **Decided at the Stage-4 gate, 2026-09-04: Scenario 1.12 stays a probe.** The
+  gate explicitly declined to pre-emptively "fix" this by overriding
+  `shouldNotFilterErrorDispatch()` to `false` — that would be inventing a requirement from a
+  behaviour nobody has observed yet. Run the probe, record what it shows on DD-43183, and only then
+  decide whether an override or a documented limitation is the right answer. `02-design.md` §3's
+  wording, which previously asserted AC-006 holds "including … Boot's `/error` dispatch" as settled
+  fact, has been softened to match this uncertainty.
 
 ---
 
@@ -170,12 +204,12 @@ consequences were verified from the resolved classpath during this stage, becaus
 | Unit | `src/test/java/uk/gov/hmcts/cp/cdk/config/TracingConfigurationTest.java` | **new** | 6 |
 | Unit | `src/test/java/uk/gov/hmcts/cp/cdk/correlation/MdcVirtualThreadIsolationTest.java` | **new** | 7 |
 | Integration | `src/integrationTest/java/uk/gov/hmcts/cp/cdk/http/CorrelationPropagationHttpLiveTest.java` | **new** | 1, 2 |
-| Integration | `src/integrationTest/java/uk/gov/hmcts/cp/cdk/http/CorrelationLogFieldHttpLiveTest.java` | **new — blocked on OQ-102** | 4, 5 |
+| Integration | `src/integrationTest/java/uk/gov/hmcts/cp/cdk/http/CorrelationLogFieldHttpLiveTest.java` | **new — re-scoped (OQ-102): asserts response-surface equivalences only, reads no logs.** Its name is now slightly misleading and the implementer may prefer `CorrelationResponseSurfaceHttpLiveTest` | 4, 5 |
 | Integration | `src/integrationTest/java/uk/gov/hmcts/cp/cdk/http/DiscoverySchedulerTriggerHttpLiveTest.java` | **unmodified — run as regression** | 1, 7 |
 | Integration | `DiscoverySchedulerTriggerAclHttpLiveTest` | extend by one assertion (the 403 response header) | 1 |
-| Integration | existing JobManager live tests (`CheckStatusOfAnswerGenerationRagTransactionIdLiveTest`, `RetrieveMaterialAndUploadRagDocumentReferenceLiveTest`, `IngestionProcessByCaseHttpLiveTest`) | **unmodified** as regression; one may gain a correlation assertion (OQ-102) | 3, 7 |
+| Integration | existing JobManager live tests (`CheckStatusOfAnswerGenerationRagTransactionIdLiveTest`, `RetrieveMaterialAndUploadRagDocumentReferenceLiveTest`, `IngestionProcessByCaseHttpLiveTest`) | **unmodified** as regression; **one gains a WireMock-journal correlation assertion** (Scenario 3.11's automatable half — the log half is MV-1) | 3, 7 |
 | Integration | full existing live suite | **unmodified — run as regression** | 7 |
-| Config | `docker/docker-compose.integration.yml` | **extend — see OQ-105** (`OTEL_TRACES_URL` / `OTEL_METRICS_URL` still carry the pre-spec paths) | 6 |
+| Config | `docker/docker-compose.integration.yml` | **edit — decided (OQ-105): delete the `OTEL_TRACES_URL` / `OTEL_METRICS_URL` overrides** (they pin the pre-spec `/traces`, `/metrics` paths) **and the inert `MANAGEMENT_TRACING_ENABLED` / `TRACING_ENABLED` variables**. Owned by the **Story 6 implementer** as `03-stories.md` Story 6 **AC-008** — deliberately not edited at the documentation stages, because this file is executed by `gradle integration` on every CI run and belongs in a reviewed story diff | 6 |
 
 **Naming convention** (house style, matching what is already in these files):
 `<method>_should<Outcome>_when<Condition>` or `should<Outcome>_when<Condition>`; one style per class,
@@ -194,7 +228,7 @@ one; the journal is enabled by default and needs no stub change.
 
 ---
 
-## Story 1 — One documented inbound convention; `TracingFilter` deleted (`DD-43183-1`)
+## Story 1 — One documented inbound convention; `TracingFilter` deleted (`DD-43260`)
 
 Targets the new `correlation/CorrelationIds` and `correlation/CorrelationScope`, the
 `config/RequestContextFilter` rewrite, and the deletion of `filters/tracing/`.
@@ -259,10 +293,13 @@ a leaked MDC entry between test methods is the failure mode the whole ticket is 
   (ADR-001(2)'s table), not "first present wins". A blank canonical header must not shadow a usable
   alias into a generated value.
 - **To be proven by:** `CorrelationIdsTest.resolveInbound_shouldFallThroughToAlias_whenCanonicalIsBlank`.
-- **Why this is its own scenario:** ADR-001(2) says "first non-blank wins" in a table row and
-  Story 1's AC-003 says only "the canonical header wins". Those differ for exactly this input. This
-  scenario pins the ADR's reading; if the gate prefers the story's literal reading, say so before
-  this test is written.
+- **Why this is its own scenario, and it is now settled.** ADR-001(2) says "first non-blank wins" in
+  a table row while Story 1's AC-003 previously said only "the canonical header wins" — readings
+  that differ for exactly this input. **Decided at the Stage-4 gate, 2026-09-04 (OQ-109): the ADR's
+  reading is authoritative.** `03-stories.md`'s Story 1 AC-003 has been reworded to state
+  first-non-blank-wins explicitly (including the case where the canonical value is *rejected* by the
+  allow-list, which falls through the same way), and ADR-001 carries a dated addendum confirming it.
+  This scenario is unchanged and is cleared to be written as specified.
 
 **Scenario 1.6 — A value failing the character allow-list is rejected and regenerated, and the WARN never carries it** *(AC-010)*
 - **Given** a request carrying `X-Correlation-Id: abc/def+ghi=` (a base64-shaped value whose `/`,
@@ -300,10 +337,13 @@ a leaked MDC entry between test methods is the failure mode the whole ticket is 
   MDC value, and **no** log event's message or arguments; and the emitted line parses as exactly
   **one** JSON object.
 - **To be proven by:** `CorrelationIdsTest.resolveInbound_shouldRejectCrlfPayload_andNeverPlaceItInMdc`
-  for the MDC half. **The "parses as exactly one JSON object" half needs OQ-102's decision** — the
-  unit tier can prove the value never enters MDC, which is the control that matters; it cannot
-  observe the `LogstashEncoder`'s output. State both halves; do not claim the unit test proves the
-  encoding.
+  for the MDC half — which is the control that actually matters, because a value that never reaches
+  MDC can never reach the encoder. **The "parses as exactly one JSON object" half is not automated
+  (OQ-102, decided 2026-09-04)**: the unit tier cannot observe the `LogstashEncoder`'s output, and no
+  integration test reads it. It is covered incidentally by **MV-1** — the captured log line is
+  inspected as JSON, so a forged record would be visible — and that is a spot-check, not a
+  guarantee. State both halves; **do not** claim the unit test proves the encoding, and do not weaken
+  the MDC assertion on the grounds that the encoder half is manual.
 - **Fixture note:** the payload must be obviously synthetic. No case reference, no `CJSCPPUID`
   shape, nothing resembling real data (CLAUDE.md, AC-007 of Story 7).
 
@@ -370,7 +410,14 @@ a leaked MDC entry between test methods is the failure mode the whole ticket is 
   the fix is one overridden method (`shouldNotFilterErrorDispatch() → false`) and this scenario
   becomes a normal assertion.
 - **To be proven by:** `CorrelationPropagationHttpLiveTest.unmappedPath_errorDispatch_correlationHeaderBehaviour`
-  — written as an observation first, converted to an assertion once OQ-103 is answered.
+  — written as an observation, and it **stays** one for now.
+- **Gate decision, 2026-09-04 (OQ-103): remains a probe; do not convert it to a pass/fail assertion
+  in this ticket, and do not pre-emptively override `shouldNotFilterErrorDispatch()`.** The
+  implementer runs it, records the observed behaviour on DD-43183, and *then* a decision is taken
+  between (i) documenting the limitation and (ii) the one-method override. Writing the override now
+  would be inventing a requirement from an unobserved behaviour; asserting an expected outcome now
+  would be inventing the behaviour itself. `02-design.md` §3 no longer states the ERROR-dispatch half
+  as settled fact — it points here.
 
 **Scenario 1.13 — `TracingFilter` no longer exists: the class, the file, and the bean** *(AC-008, GATE-2)*
 - **Given** the built application
@@ -464,7 +511,7 @@ a leaked MDC entry between test methods is the failure mode the whole ticket is 
 
 ---
 
-## Story 2 — Outbound propagation and MDC read-only interceptor (`DD-43183-2`)
+## Story 2 — Outbound propagation and MDC read-only interceptor (`DD-43261`)
 
 Targets the `http/CorrelationIdInterceptor` rewrite. **Depends on Story 1.**
 
@@ -538,23 +585,31 @@ Targets the `http/CorrelationIdInterceptor` rewrite. **Depends on Story 1.**
   `assertNull(MDC.get(MDC_KEY))` after the throw — i.e. it asserts the destruction is thorough. That
   method is one of the four Scenario 2.8 rewrites.
 
-**Scenario 2.5 — A log line emitted after an outbound call still carries the request's correlation ID (end-to-end)** *(AC-004)*
+**Scenario 2.5 — After an outbound call, the request's correlation ID survives: the automated proxy, plus MV-1 for the log line itself** *(AC-004 — **rewritten for OQ-102's decision, 2026-09-04**)*
 - **Given** a live request carrying `CPPCLIENTCORRELATIONID: cdk-it-0205` to an endpoint that makes
-  at least one WireMock-stubbed downstream call and then emits a further application log line
+  at least one WireMock-stubbed downstream call and then continues working on the request thread
   (`/ingestions/start-by-case` is the natural choice — it is synchronous and calls
   `IdpcAvailabilityService` inline on the request thread)
 - **When** the request completes
-- **Then** the log line emitted **after** the downstream call carries
-  `correlationId = cdk-it-0205` as a JSON field.
-- **To be proven by:** `CorrelationPropagationHttpLiveTest.logLineAfterOutboundCall_shouldStillCarryTheRequestCorrelationId`.
-  **Blocked on OQ-102** — this is the scenario that most needs a log-reading seam, because it is the
-  only one that proves AC-004 at the level the defect occurred at. The unit-tier proxy for it is
-  Scenario 2.3, which is strictly weaker (it proves the mechanism, not the outcome).
-- **Interim fallback if OQ-102 lands on "no log seam":** assert the observable proxy instead — the
-  `X-Correlation-Id` response header still equals `cdk-it-0205` **and**, for
-  `/discovery-scheduler/trigger`, the response body's `correlationId` still equals the sent value
-  *after* an outbound call has occurred on that thread. Record explicitly that this is a proxy for
-  the log assertion, not the assertion itself.
+- **Then**, **automated**: the `X-Correlation-Id` response header still equals `cdk-it-0205`; the
+  WireMock journal shows the downstream request carried it; and for `/discovery-scheduler/trigger`
+  the response body's `correlationId` still equals the sent value **after** an outbound call has
+  occurred on that thread — which is the same `MDC.get("correlationId")` read that the historical
+  destruction bug would have blanked, so this is a genuine (if indirect) observation of the fix, not
+  a vacuous one.
+- **And**, **automated at the unit tier**: Scenario 2.3's three-snapshot whole-map equality, which
+  proves the *mechanism* — the interceptor cannot destroy the ambient value because it never writes
+  MDC at all.
+- **And**, **manual — MV-1**: the captured JSON log line confirms that a line emitted *after* the
+  outbound call really carries `correlationId = cdk-it-0205` as a top-level field.
+- **To be proven by:** `CorrelationPropagationHttpLiveTest.correlationIdSurvivesAnOutboundCall_observableProxy`
+  (automated) + `CorrelationIdInterceptorTest.intercept_shouldLeaveMdcByteForByteUnchanged_beforeDuringAndAfter`
+  (mechanism) + MV-1 (the log line).
+- **Stated plainly, because this is the honest part.** The strongest available *automated* evidence
+  for AC-004 is a mechanism proof plus two observable proxies; the outcome at the level the defect
+  occurred at — a log line — is confirmed manually once, not on every CI run. The gate accepted that
+  trade rather than couple the suite to a Docker CLI or bend production logging configuration for
+  tests. Do **not** rename the proxy assertions to imply they are the log assertion.
 
 **Scenario 2.6 — Two or more outbound calls in one unit of work carry the same value** *(AC-005)*
 - **Given** a live request carrying `CPPCLIENTCORRELATIONID: cdk-it-0206` to an endpoint that makes
@@ -625,7 +680,7 @@ Targets the `http/CorrelationIdInterceptor` rewrite. **Depends on Story 1.**
 
 ---
 
-## Story 3 — JobManager async correlation restoration (`DD-43183-3`)
+## Story 3 — JobManager async correlation restoration (`DD-43262`)
 
 Targets the new `correlation/JobCorrelationAspect` and `correlation/JobExecutorMdcBeanPostProcessor`,
 the four dispatch sites, and the two inline `"requestId"` literals. **Depends on Story 1.**
@@ -791,13 +846,25 @@ failure must localise to the aspect.
   `createObjectBuilder(jobData)`
 - **When** the successor's `jobData` is built
 - **Then** it carries `requestId = cdk-it-0308` unchanged.
-- **And** the assertion covers the **nine** successor dispatch sites design §7.3 enumerates
-  (`GetCasesForHearingTask`, `RetrieveMaterialAndUploadTask`, `GenerateAnswerForQueryTask`,
-  `CheckStatusOfAnswerGenerationTask`, `CheckAllDocumentsIngestionStatusTask`,
-  `CheckIngestionStatusForAllDefendantsTask` ×3, `RetrieveMaterialAndUploadJobDataService`) — or, if
-  covering nine sites individually is judged disproportionate, at least the two multi-hop chains
-  (`GET_CASES_FOR_HEARING → CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS → RETRIEVE_MATERIAL_AND_UPLOAD`).
-- **To be proven by:** `JobDataCorrelationSeedTest.chainedSuccessor_shouldInheritPredecessorRequestId`.
+- **And** the breadth is now **settled (gate decision, 2026-09-04 — OQ-110): two representative
+  multi-hop chains, not nine individual per-site assertions.** The two chains are
+  (1) `GET_CASES_FOR_HEARING → CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS → RETRIEVE_MATERIAL_AND_UPLOAD`
+  and (2) an answer-generation chain
+  `GENERATE_ANSWER_FOR_QUERY → CHECK_STATUS_OF_ANSWER_GENERATION`. Between them they exercise the
+  `createObjectBuilder(jobData)` copy across more than one hop, in both task families, which is the
+  property AC-005 is about. Design §7.3's nine sites (`GetCasesForHearingTask`,
+  `RetrieveMaterialAndUploadTask`, `GenerateAnswerForQueryTask`, `CheckStatusOfAnswerGenerationTask`,
+  `CheckAllDocumentsIngestionStatusTask`, `CheckIngestionStatusForAllDefendantsTask` ×3,
+  `RetrieveMaterialAndUploadJobDataService`) stay documented as the verified inventory, but are
+  **not** each asserted: nine assertions would couple the suite tightly to internal dispatch
+  structure to re-prove one already-verified property.
+- **What guards a *tenth* site added later**, since this test will not see it: Scenario 3.6's
+  source-walk assertion (no inline `"requestId"` literal anywhere in `src/main`) plus a Stage-6
+  review item to confirm any new successor dispatch uses `createObjectBuilder(jobData)` rather than
+  a fresh builder. State that limitation in the test's Javadoc — a two-chain test that implies
+  nine-site coverage is worse than one that admits its scope.
+- **To be proven by:** `JobDataCorrelationSeedTest.chainedSuccessor_shouldInheritPredecessorRequestId`,
+  parameterised over the **two** chains.
 - **This test pins existing behaviour rather than new behaviour.** ADR-003 verified all nine sites
   already copy the parent map, so AC-005 is *already structurally satisfied*; the story says so
   explicitly ("already structurally true … a test pins it rather than re-implementing it"). The
@@ -856,16 +923,19 @@ failure must localise to the aspect.
   `CheckStatusOfAnswerGenerationRagTransactionIdLiveTest` idiom is the right shape, and
   `CheckStatusOfAnswerGenerationRagTransactionIdLiveTest`'s existing comment shows the polling seam
   (`job.executor.poll-interval`) these tests already use.
-- **Split by seam availability.** The **WireMock-journal half is writable today**: it needs no log
-  access, and it is a genuine end-to-end proof that the aspect's MDC reached the interceptor on a
-  pool thread — which is the async half of the whole ticket. The **log-line half is blocked on
-  OQ-102.** Write the journal half now; gate the log half.
+- **Split by seam availability — resolved 2026-09-04 (OQ-102).** The **WireMock-journal half is the
+  automated deliverable**: it needs no log access, and it is a genuine end-to-end proof that the
+  aspect's MDC reached the interceptor on a pool thread, off the request thread, possibly on another
+  pod — which is the async half of the whole ticket. **The log-line half is not automated**; it is
+  covered by **MV-1**, whose captured line should be taken from a request that dispatched a
+  JobManager task precisely so that one capture evidences both the request-thread and the pool-thread
+  cases. Write the journal half; do not write a log-reading live test.
 - **Existing JobManager live tests stay unmodified** apart from this one addition; the rest run as
   Story 7 regression.
 
 ---
 
-## Story 4 — `ErrorResponse.traceId` carries a searchable correlation value (`DD-43183-4`)
+## Story 4 — `ErrorResponse.traceId` carries a searchable correlation value (`DD-43263`)
 
 Targets `controllers/GlobalExceptionHandler`. **Depends on Story 1.**
 
@@ -892,7 +962,7 @@ MDC seeded per scenario.
 - **Also asserted:** each response's `error`, `message` and `timestamp` fields are unchanged in
   name, type and population from today — this story changes one field's *source*, nothing else.
 
-**Scenario 4.2 — THE ORACLE: `traceId` equals the response header *and* equals the `correlationId` log field** *(AC-002)*
+**Scenario 4.2 — THE ORACLE: `traceId` equals the response header (automated) *and* equals the `correlationId` log field (MV-1, manual)** *(AC-002 — **rewritten for OQ-102's decision, 2026-09-04**)*
 - **Given** a live request carrying `CPPCLIENTCORRELATIONID: cdk-it-0402` that provokes an
   `ErrorResponse` (a malformed JSON body to `/discovery-scheduler/trigger` is the cheapest — the
   existing live test already has that shape)
@@ -902,9 +972,28 @@ MDC seeded per scenario.
   2. the `X-Correlation-Id` **response header**;
   3. the `correlationId` **JSON log field** on the log lines emitted for that request;
   and all three equal `cdk-it-0402`.
-- **To be proven by:** `CorrelationLogFieldHttpLiveTest.errorResponse_traceId_shouldEqualResponseHeaderAndLogField`.
-  Clauses 1 and 2 are writable today. **Clause 3 is blocked on OQ-102** and is the reason that OQ is
-  the highest-priority one in this document.
+- **How each clause is discharged (this is the whole point of the scenario, so it is stated
+  explicitly rather than left to the reader):**
+  - **Clauses 1 == 2, both == the value sent — integration tier, automated.**
+    `CorrelationLogFieldHttpLiveTest.errorResponse_traceId_shouldEqualResponseHeader`: response body
+    versus response header, on one request.
+  - **`traceId` non-blank and == the ambient `correlationId`, for each of the six handlers — unit
+    tier, automated.** Scenario 4.1's six parameterised cases.
+  - **The log *event* carries `correlationId` with that value when a statement fires — unit tier,
+    automated.** A `ListAppender` event-shape assertion (the `DiscoveryTriggerServiceTest` idiom).
+    Proves the event; **not** the JSON encoding.
+  - **Clause 3 — the emitted *JSON log field* equals clauses 1 and 2 — manual, MV-1.** One captured
+    JSON log line, confirmed by the implementer and the Stage-6 reviewer, attached to DD-43183;
+    gates **release** of the ticket.
+- **Gate decision and its honest consequence (OQ-102).** The integration tier has no log-reading
+  seam and one will not be built (scope boundary 6). So the single assertion that tests the *actual*
+  defect — "the value on the response can be found in the logs" — is **not** part of the automated
+  suite. It is not dropped either: it is MV-1, named, owned and release-gating, the same treatment
+  DD-43185 gave its un-automatable production-scale `EXPLAIN` evidence. Clause 2 is the strongest
+  fully-automatable proxy and is the one every CI run enforces; **it must not be described as
+  clause 3**, and the live test's method name must not imply it reads a log field (hence the rename
+  above, and the note in the test inventory that `CorrelationLogFieldHttpLiveTest` is now a
+  misleading class name the implementer may improve).
 - **Why nothing weaker will do — this restates Stage 1's original, now-corrected premise.** Stage 1
   wrote AC-018 as "`traceId` is populated with a non-null value", on the belief that the field
   returns `""` via `Tracer.NOOP`. Design §2 verified that premise is **wrong**: a real `OtelTracer`
@@ -977,16 +1066,26 @@ MDC seeded per scenario.
 
 ---
 
-## Story 5 — Business identifiers as structured JSON log fields (`DD-43183-5`)
+## Story 5 — Business identifiers as structured JSON log fields (`DD-43264`)
 
 Targets `clients/rag/RagAnswerAsyncServiceImpl`, four named services, the two discovery schedulers
 and `metrics/StalledWorkMetrics`. **Depends on Story 1; aware of Story 3.**
 
-> **Scope caveat carried forward, not resolved here.** `02-design.md` §9 and Story 5's own Notes
-> both state that this area's scope decision — which classes are in scope, the no-sentinel rule, and
-> which `transactionId` is meant — **needs requirements-owner confirmation** and was not made an
-> ADR. Until that confirmation lands (OQ-107), the class list in Scenarios 5.3 and 5.5 is
-> provisional and those two scenarios should not be written.
+> **Scope CONFIRMED — 2026-09-04 (OQ-107). No scenario in this story is provisional any more.**
+> `02-design.md` §9 and Story 5's Notes both flagged that this area's scope decision — which classes
+> are in scope, the no-sentinel rule, and which `transactionId` is meant — needed requirements-owner
+> confirmation and was deliberately not made an ADR. The requirements owner has now confirmed it
+> **exactly as designed and no wider**: the four named services (`IdpcAvailabilityService`,
+> `IngestionProcessorByCaseService`, `IngestionService`, `DocumentService`), both
+> `RagAnswerAsyncServiceImpl` completion lines, and all seven JobManager tasks via Story 3's shared
+> aspect (Story 3 AC-007 / Scenario 3.9 — **not** re-implemented here). FR-012's literal "a service,
+> task, scheduler or client class" is bounded to that list; a wider sweep across `services/` and
+> `clients/` is out of scope for DD-43183. `transactionId` means the **RAG** transaction id. The
+> no-sentinel rule stands. **Scenarios 5.3 and 5.5 are cleared to be written as specified.**
+>
+> **One thing did change in this story, for a different reason (OQ-102):** the oracle for Scenarios
+> 5.4 and 5.5 is now unit-tier `ListAppender` **event-shape** coverage plus **MV-1** for the JSON
+> encoding — no live test reads the application's log output.
 
 ---
 
@@ -1022,7 +1121,7 @@ and `metrics/StalledWorkMetrics`. **Depends on Story 1; aware of Story 3.**
   from `.github/pmd-ruleset.xml` (design §7.3, ADR-003(5)), so nothing in the build catches a stale
   `{}`. It has to be a test or a review item; this specification says test.
 
-**Scenario 5.3 — The four named services open a `caseId`/`docId` scope at their public entry method** *(AC-003 — provisional, gated on OQ-107)*
+**Scenario 5.3 — The four named services open a `caseId`/`docId` scope at their public entry method** *(AC-003 — **scope confirmed 2026-09-04, OQ-107; no longer provisional**)*
 - **Given** each of `IdpcAvailabilityService`, `IngestionProcessorByCaseService`, `IngestionService`
   and `DocumentService`, invoked with a synthetic case (and, where applicable, document) identifier
 - **When** a log statement is emitted anywhere within that call
@@ -1038,35 +1137,50 @@ and `metrics/StalledWorkMetrics`. **Depends on Story 1; aware of Story 3.**
   for the **request-thread** call. Those are different units of work on different threads; a
   reviewer should confirm the two mechanisms are not both applied to the same call site.
 
-**Scenario 5.4 — The identifiers are discrete top-level JSON fields, siblings of `message`** *(AC-004)*
-- **Given** a live request that exercises a case-bearing service path
-- **When** a log line is emitted and parsed as JSON
-- **Then** `correlationId`, `caseId` and (where applicable) `docId` / `transactionId` are top-level
-  keys, **siblings of `message`**, not substrings of `message`'s value.
-- **And** `traceId` and `spanId` are also present as top-level fields and are **32-hex / 16-hex**
-  respectively — i.e. the tracer's own values, not a client-supplied string (which is what
-  `TracingFilter`'s deletion buys, and the only assertion in this document that checks a hex shape;
-  it is checking the *tracer's* field, never the correlation ID).
-- **To be proven by:** `CorrelationLogFieldHttpLiveTest.emittedLogLine_shouldCarryIdentifiersAsSiblingsOfMessage`.
-  **Blocked on OQ-102.**
+**Scenario 5.4 — The identifiers are fields, not interpolated text (automated, unit tier) — and are top-level JSON siblings of `message` (MV-1, manual)** *(AC-004 — **rewritten for OQ-102's decision, 2026-09-04**)*
+- **Given** a log statement emitted from a case-bearing service path, with a synthetic `caseId` and
+  (where applicable) `docId` / `transactionId` in scope
+- **When** the event is captured by a `ListAppender<ILoggingEvent>` on the class logger
+- **Then**, **automated**: the event's **MDC property map** contains `correlationId`, `caseId` and
+  (where applicable) `docId` / `transactionId`; and the event's **formatted message does not contain
+  any of those values** — i.e. each identifier is carried as a field and is not interpolated into
+  the message text. That second half is the assertion that catches the real implementation mistake
+  (adding an MDC put while leaving the `{}` parameter in place), and it is fully automatable.
+- **And**, **manual — MV-1**: on one captured line from the running stack, those keys are **top-level
+  JSON keys, siblings of `message`**, and `traceId` / `spanId` are present as **32-hex / 16-hex**
+  values — the tracer's own, not a client-supplied string. This is the only hex-shape check anywhere
+  in this document and it is checking the **tracer's** field, never the correlation ID.
+- **To be proven by:** per-class `ListAppender` assertions in the extended service/client tests
+  (automated) + **MV-1** (the JSON encoding and the tracer's fields).
+- **Why the encoding half cannot be automated, once, so no reviewer has to re-derive it:** a
+  `ListAppender` intercepts the `ILoggingEvent` **before** any encoder runs, so it can never observe
+  `LogstashEncoder`'s output; and the integration tier has no log-reading seam (scope boundary 6).
 - **No `logback-spring.xml` change is needed or permitted.** `LogstashEncoder` sets no
   `includeMdcKeyNames`, so every MDC entry is already emitted as a top-level field (design §9,
-  verified). If this test needs an encoder change to pass, the implementation has done something
-  wrong. A PR-diff check asserts `logback-spring.xml` is untouched.
+  verified). If MV-1 shows a key missing from the JSON while the unit test shows it in the event's
+  MDC map, the fault is a stray `includeMdcKeyNames` or a filtered appender — **not** a reason to
+  edit the encoder. A PR-diff check asserts `logback-spring.xml` is untouched.
 
-**Scenario 5.5 — A unit of work with no case emits no `caseId` key at all — no sentinel** *(AC-005 — provisional, gated on OQ-107)*
+**Scenario 5.5 — A unit of work with no case emits no `caseId` key at all — no sentinel** *(AC-005 — **scope confirmed 2026-09-04 (OQ-107); oracle now unit-tier for all five cases (OQ-102)**)*
 - **Given**, in turn: `GET /queries` (list, no case), `GET /query-catalogue`,
   `IntradayDiscoveryScheduler.run()`, `NightlyDiscoveryScheduler.run()`, and
   `StalledWorkMetrics.refresh()`
-- **When** log lines are emitted
-- **Then** the emitted line contains **no `caseId` key whatsoever** — not `caseId: "none"`, not
-  `caseId: ""`, not `caseId: null`.
+- **When** a log statement is emitted within each unit of work
+- **Then** the captured event's MDC property map contains **no `caseId` key whatsoever** — not
+  `caseId: "none"`, not `caseId: ""`, not `caseId: null`, not the key with any value.
 - **Why no sentinel:** design §9 — a sentinel pollutes the index and makes `caseId:*` searches lie.
   A test that asserts `caseId` is "absent or empty" would permit exactly what the design forbids;
-  the assertion is key **absence**.
-- **To be proven by:** unit-tier `ListAppender` assertions on the event MDC property map for the
-  scheduler and metrics cases (`doesNotContainKey("caseId")`), and — for the two endpoints — a live
-  assertion **blocked on OQ-102**.
+  the assertion is `doesNotContainKey("caseId")`.
+- **To be proven by:** unit-tier `ListAppender` assertions on the event MDC property map for **all
+  five** cases — the two schedulers, `StalledWorkMetrics`, and the two endpoints' query/catalogue
+  service paths (`QueryService` / query-catalogue service, asserted at the service class rather than
+  over HTTP). **No live assertion, and none needed** (OQ-102): key *absence* in the event's MDC map
+  is exactly the property AC-005 states, and it is strictly more precise than eyeballing one
+  captured JSON line. MV-1 remains a spot-check that the same absence holds through the encoder, not
+  this AC's oracle.
+- **A negative assertion has one failure mode worth naming:** it passes trivially if the log
+  statement under test was never emitted. Each of the five cases must also assert that **at least
+  one** event was captured, or the test proves nothing.
 
 **Scenario 5.6 — Both schedulers gain `openIfAbsent()`; `StalledWorkMetrics` switches onto `CorrelationScope` with its `job` key and behaviour otherwise unchanged** *(AC-006)*
 - **Given** `IntradayDiscoveryScheduler.run()` and `NightlyDiscoveryScheduler.run()` — neither of
@@ -1111,7 +1225,7 @@ and `metrics/StalledWorkMetrics`. **Depends on Story 1; aware of Story 3.**
 
 ---
 
-## Story 6 — Correct the OTLP tracing/export configuration (`DD-43183-6`)
+## Story 6 — Correct the OTLP tracing/export configuration (`DD-43265`)
 
 Targets `src/main/resources/application-server-management.yml` and two new unit tests.
 **Independent of Stories 1–5.**
@@ -1168,10 +1282,21 @@ Targets `src/main/resources/application-server-management.yml` and two new unit 
 - **To be proven by:** `TracingConfigurationTest.defaultExportPaths_shouldBeTheOtlpHttpSpecPaths`,
   asserting the resolved property values, not the raw YAML text (so an environment-variable
   placeholder is exercised as Spring would resolve it).
-- **See OQ-105:** `docker/docker-compose.integration.yml` sets `OTEL_TRACES_URL` and
-  `OTEL_METRICS_URL` **explicitly** to the old `/traces` and `/metrics` paths, so the integration
-  stack keeps the pre-spec paths regardless of this change unless the compose file is updated too —
-  and design §11's "Files touched" table does not list the compose file.
+- **OQ-105 — decided 2026-09-04, and it is Story 6 implementation work, not a documentation edit.**
+  `docker/docker-compose.integration.yml` (`app` service, ~lines 155–158) sets `OTEL_TRACES_URL:
+  http://localhost:4318/traces` and `OTEL_METRICS_URL: http://localhost:4318/metrics` **explicitly**,
+  so the integration stack keeps the pre-correction paths regardless of this scenario's YAML change.
+  **Decision: delete both overrides** (rather than re-point them at `/v1/*` — one definition site
+  cannot drift from another), so `gradle integration` exercises the corrected defaults. Also delete
+  the adjacent `MANAGEMENT_TRACING_ENABLED` and `TRACING_ENABLED` variables: both are **inert**
+  (ADR-006 — neither key exists in Boot 4.0.6, and nothing in CDKS binds `TRACING_ENABLED`), and
+  `ConfigurationMetadataAuditTest` cannot see compose env vars, so only review catches them.
+  Tracked as `03-stories.md` **Story 6 AC-008**, and design §11's "Files touched" table now lists
+  the compose file. **The documentation stages deliberately did not edit it**: it is executed by
+  `gradle integration` on every CI run, so it belongs in a reviewed story diff with a green build
+  behind it, not in a docs commit that bypasses Stages 5–7.
+- **This scenario's own assertion is unaffected either way:** it asserts the **resolved YAML
+  property value**, never an observation of the running stack.
 
 **Scenario 6.4 — `ConfigurationMetadataAuditTest`: no unknown or `error`-deprecated `management.*` / `spring.*` key exists in any `application*.yml`** *(AC-004 — the standing control)*
 - **Given** every key in **every** `src/main/resources/application*.yml` — all seven files:
@@ -1191,14 +1316,23 @@ Targets `src/main/resources/application-server-management.yml` and two new unit 
   `management.otlp.tracing.endpoint` (deprecated at level `error`). A metadata-audit test that
   passes on the unfixed file is not doing anything, and this is the only cheap way to know.
 - **To be proven by:** `ConfigurationMetadataAuditTest.noApplicationYamlKeyIsUnknownOrErrorDeprecated`.
-- **Scope, and a correction to Story 6's AC-004 wording.** The test resolves **only** `management.*`
-  and `spring.*` keys — deliberately, because `spring-boot-configuration-processor` is **not** on
-  this build (verified: it appears nowhere in `build.gradle`), so CDKS's own `cdk.*` keys, and
-  library-owned prefixes such as `authz.http.*` and `job.executor.*`, have **no configuration
-  metadata at all** and would every one of them be reported "unknown". A consequence Story 6's
-  AC-004 gets wrong: it asks for an allow-list entry for **DD-43182's `cdk.jobmanager.retry.default`
-  binding gap**, but a `management.*`/`spring.*`-scoped audit can never surface a `cdk.*` key, so no
-  such entry is needed or possible. Raised as OQ-108 rather than silently dropped.
+- **Scope — settled, and Story 6's AC-004 has been corrected (gate decision 2026-09-04, OQ-108:
+  option (i), drop the clause).** The test resolves **only** `management.*` and `spring.*` keys —
+  deliberately, because `spring-boot-configuration-processor` is **not** on this build (verified: it
+  appears nowhere in `build.gradle`), so CDKS's own `cdk.*` keys, and library-owned prefixes such as
+  `authz.http.*` and `job.executor.*`, have **no configuration metadata at all** and would every one
+  of them be reported "unknown". AC-004 previously asked this test to also carry an allow-list entry
+  for **DD-43182's `cdk.jobmanager.retry.default` binding gap**; that clause is **dropped**, because
+  a `management.*`/`spring.*`-scoped audit can never surface a `cdk.*` key — no such entry is needed
+  or possible. **Nothing else about the test's scope shrinks**: it still walks all seven
+  `application*.yml` files and still fails on every unknown or `error`-deprecated `management.*` /
+  `spring.*` key, which is the full set the three dead tracing keys belong to. It keeps a documented
+  allow-list for any *other* `management.*`/`spring.*` finding it surfaces, each entry naming the
+  ticket that owns it.
+- **DD-43182's finding stays DD-43182's**, tracked as a follow-up in design §14 with the correction
+  that this test will not surface it. Option (ii) — adding `spring-boot-configuration-processor` so
+  `cdk.*` keys become auditable — is genuinely valuable and explicitly **not taken here**: it would
+  turn an unrelated ticket's defect into a build failure in this one.
 - **Why this test is the real deliverable of Story 6.** Three inert configuration lines survived
   multiple releases with nothing to notice them. Fixing them is a five-minute edit; the test is what
   catches the *next* one (ADR-006(7)).
@@ -1216,9 +1350,13 @@ Targets `src/main/resources/application-server-management.yml` and two new unit 
   correlation.
 - **To be proven by:** `TracingConfigurationTest.samplingProbability_shouldDefaultToBootDefault_andRemainOverridable`
   and `…correlationBehaviour_shouldBeUnaffectedBySamplingProbability`.
-- **See OQ-105:** `docker/docker-compose.integration.yml` sets `TRACING_SAMPLER_PROBABILITY: 1.0`
-  explicitly, so the integration stack does **not** exercise the new default. The default must be
-  asserted by reading the resolved YAML, never by observing the compose stack.
+- **OQ-105 — decided 2026-09-04.** `docker/docker-compose.integration.yml` sets
+  `TRACING_SAMPLER_PROBABILITY: 1.0` explicitly, so the integration stack does **not** exercise the
+  new default. That override **may stay** (a 100 %-sampling integration stack is harmless with no
+  exporter, and it keeps trace IDs on every line for local debugging); what must go are the two
+  stale `OTEL_*_URL` path overrides — see Scenario 6.3 and Story 6 AC-008. Either way, **this
+  scenario asserts the resolved YAML value and never observes the compose stack**, which is why the
+  compose override cannot invalidate it.
 
 **Scenario 6.6 — With both variables unset the service starts cleanly and neither exporter bean exists** *(AC-006)*
 - **Given** `OTEL_TRACES_ENABLED` and `OTEL_METRICS_ENABLED` both unset
@@ -1235,7 +1373,7 @@ Targets `src/main/resources/application-server-management.yml` and two new unit 
   asserting Stage 1's disproven premise and would fail. Spans are created and discarded today, and
   after this story too.
 
-**Scenario 6.7 — Collector evidence: manual, and stated as such** *(AC-007 — **not a test**)*
+**Scenario 6.7 — Collector evidence: manual, and stated as such — MV-2** *(AC-007 — **not a test**)*
 - **Given** one non-production environment with `OTEL_TRACES_ENABLED=true` and `OTEL_TRACES_URL`
   pointing at a platform-owned collector's `/v1/traces` path
 - **When** requests are made against that environment
@@ -1243,13 +1381,16 @@ Targets `src/main/resources/application-server-management.yml` and two new unit 
 - **Two variables, no code, and no "master switch" to flip** — ADR-006(6) dissolved OQ-011. Platform
   and SRE own the collector endpoint; this story ships only the properties.
 - **Not automatable from this repository**, and no scenario above claims to prove it. It is a
-  story-DoD item satisfied by an attachment, tracked on the ticket, and it blocks nothing else in
-  this ticket (`ErrorResponse.traceId`'s correctness is deliberately independent of export state —
-  ADR-005).
+  story-DoD item satisfied by an attachment, tracked on the ticket as **MV-2** (`02-design.md` §13's
+  manual-verification table), and it blocks nothing else in this ticket
+  (`ErrorResponse.traceId`'s correctness is deliberately independent of export state — ADR-005).
+- **It is now one of two manual items, not the only one.** MV-1 (a captured JSON log line, OQ-102)
+  joined it at the Stage-4 gate. Both are listed together so neither is quietly forgotten at
+  release.
 
 ---
 
-## Story 7 — MDC leak assurance and whole-ticket regression proof (`DD-43183-7`)
+## Story 7 — MDC leak assurance and whole-ticket regression proof (`DD-43266`)
 
 Cross-cutting; authored last. **Depends on Stories 1–6.** This story should add **no production
 code** — if it needs any, an earlier story under-delivered its own AC.
@@ -1274,8 +1415,11 @@ code** — if it needs any, an earlier story under-delivered its own AC.
   and separately with a container/thread-pool configuration that guarantees reuse
 - **When** request B is handled
 - **Then** no MDC value from request A is visible at any point during request B: B's
-  `correlationId` is `cdk-it-0702-b`, B's response header is `cdk-it-0702-b`, and B's log lines
-  carry no `caseId` / `docId` value from A.
+  `correlationId` is `cdk-it-0702-b`, B's response header is `cdk-it-0702-b`, and no `caseId` /
+  `docId` value from A is present in MDC — or in the MDC property map of any event captured — while
+  B is handled. **Asserted as MDC state, not by reading the container's log output** (OQ-102): the
+  unit-tier run-the-filter-twice case inspects `MDC.getCopyOfContextMap()` directly, and a
+  `ListAppender` covers the event's property map where a log statement is involved.
 - **And** a third case: request A **throws** inside the handler (provoking a `GlobalExceptionHandler`
   path) before request B runs — the isolation still holds.
 - **To be proven by:** an extension of `RequestContextFilterTest` (deterministic: run the filter
@@ -1392,7 +1536,7 @@ code** — if it needs any, an earlier story under-delivered its own AC.
 
 No row below is evidence of a passing test, with the single exception of Story 2's AC-007.
 
-### Story 1 — `DD-43183-1`
+### Story 1 — `DD-43260`
 
 | Story AC | Scenario(s) | Unit | Integration | Planned test |
 |---|---|---|---|---|
@@ -1407,20 +1551,20 @@ No row below is evidence of a passing test, with the single exception of Story 2
 | AC-009 prior-map restore, normal + throwing | 1.15, 1.9 | planned | — | existing `clearsMdcEvenIfChainThrowsException` (assertions untouched) + `…shouldRestorePriorMap_whenMdcWasPrePopulated…` |
 | AC-010 reject-and-regenerate; WARN without the value | 1.6, 1.7, 1.8 | planned (allow-list, 63/64/65 boundary, CRLF) | — | `CorrelationIdsTest…` + `ListAppender` |
 
-### Story 2 — `DD-43183-2`
+### Story 2 — `DD-43261`
 
 | Story AC | Scenario(s) | Unit | Integration | Planned test |
 |---|---|---|---|---|
 | AC-001 both outbound headers carry the value | 2.1, 2.6 | planned | planned (WireMock journal) | `intercept_shouldSetBothOutboundHeadersToTheInScopeValue`; `CorrelationPropagationHttpLiveTest` |
 | AC-002 no UUID substitution; constants deleted | 2.2 | planned (+ reflective) | — | `…shouldTransmitInScopeValueVerbatim_neverAGeneratedUuid`; `…shouldNoLongerDeclareXRequestIdOrMdcKeyConstants` |
 | AC-003 **MDC byte-for-byte unchanged** | **2.3**, 2.4 | planned (**3-snapshot whole-map equality, multi-entry**) | — | `intercept_shouldLeaveMdcByteForByteUnchanged_beforeDuringAndAfter` — the direct destruction-bug regression |
-| AC-004 log line after an outbound call still correlates | 2.5 | (proxied by 2.3) | **blocked — OQ-102** | `…logLineAfterOutboundCall_…`; documented header/body proxy as interim |
+| AC-004 correlation survives an outbound call | 2.5 | planned (2.3 = the mechanism proof) | planned (**observable proxy: response header + `DiscoveryTriggerResponse.correlationId` after an outbound call**) | `…correlationIdSurvivesAnOutboundCall_observableProxy` — **the log-line clause is MV-1, manual (OQ-102)** |
 | AC-005 all calls in one unit of work share a value | 2.6 | — | planned (WireMock journal) | `…multipleDownstreamCalls_shouldAllCarryTheSameCorrelationId` |
 | AC-006 non-blank with no ambient value; MDC stays empty | 2.7 | planned | — | `…shouldGenerateNonBlankValue_whenNoAmbientCorrelationId` |
 | **AC-007 GATE-6 credential redaction** | 2.9 | **DONE — PR #225, exists and passes** | — | existing `DebugLoggingInterceptorTest`, unmodified — **regression only; see OQ-104** |
 | AC-008 all four legacy methods rewritten | 2.8 | planned (compile-forced) | — | rewritten class + diff review |
 
-### Story 3 — `DD-43183-3`
+### Story 3 — `DD-43262`
 
 | Story AC | Scenario(s) | Unit | Integration | Planned test |
 |---|---|---|---|---|
@@ -1428,47 +1572,48 @@ No row below is evidence of a passing test, with the single exception of Story 2
 | AC-002 prior map restored exactly; return/throw untouched | 3.2 | planned (`assertSame`, incl. `Error`) | — | `…shouldRestorePriorMapAndPassThroughReturnValue` / `…AndRethrowTheSameInstance` |
 | AC-003 constant everywhere; no inline literal | 3.6 | planned (source walk + constant value) | — | `…noSourceFileUnderMainUsesAnInlineRequestIdLiteral` |
 | AC-004 absent/blank/rejected → generated, no throw | 3.3 | planned (6 cases) | — | `…shouldGenerateCorrelationId_whenJobDataValueIsUnusable` |
-| AC-005 chained successor inherits the value | 3.8 | planned | planned (3.11) | `…chainedSuccessor_shouldInheritPredecessorRequestId` — pins existing behaviour |
+| AC-005 chained successor inherits the value | 3.8 | planned (**2 representative chains, not 9 sites — OQ-110**) | planned (3.11, journal half) | `…chainedSuccessor_shouldInheritPredecessorRequestId`, parameterised over the two chains — pins existing behaviour; a tenth site is guarded by 3.6's source walk + review |
 | AC-006 four dispatch sites seed from ambient ID | 3.7 | planned (4 sites × 2 cases) | — | `JobDataCorrelationSeedTest` |
 | AC-007 `caseId`/`docId`/`transactionId` seeded; absent → no key | 3.9 | planned | — | `…shouldSeedBusinessIdentifiersFromJobData_whenPresent` / `…shouldSeedNoBusinessIdentifierKeys_whenAbsent…` |
 | AC-008 pool `TaskDecorator`, pool size 1 | 3.10, 7.1 | planned | — | `JobExecutorMdcLeakTest…` — **leftover MDC written outside any scope** |
 | **AC-009 GATE-3 proxying + aspect ordering** | **3.4, 3.5** | planned (probe aspect + conditional advisor-chain read) | — | `JobCorrelationProxyingTest…` — **passes with or without DD-43182; see OQ-106** |
 
-### Story 4 — `DD-43183-4`
+### Story 4 — `DD-43263`
 
 | Story AC | Scenario(s) | Unit | Integration | Planned test |
 |---|---|---|---|---|
 | AC-001 non-blank `traceId`, all six handlers | 4.1, 4.4 | planned (6 parameterised) | — | `everyHandler_shouldReturnTraceIdEqualToAmbientCorrelationId`; `…whenMdcIsEmpty` |
-| **AC-002 = response header AND = log field** | **4.2** | — | partial (**clauses 1–2 writable; clause 3 blocked — OQ-102**) | `errorResponse_traceId_shouldEqualResponseHeaderAndLogField` — **non-blank-only and 32-hex-shape oracles both explicitly invalid** |
+| **AC-002 = response header (automated) AND = log field (MV-1)** | **4.2** | planned (event shape via `ListAppender`) | planned (**clauses 1–2: body == header == value sent**) | `errorResponse_traceId_shouldEqualResponseHeader` — **clause 3 is MV-1, manual and release-gating (OQ-102)**; non-blank-only and 32-hex-shape oracles both remain explicitly invalid |
 | AC-003 all six handlers | 4.1 | planned | — | same parameterised test |
 | AC-004 no `Tracer`, no `requireNonNull`, no empty `catch` | 4.3 | planned (no-arg construction + reflective + source) | — | `shouldDeclareNoTracerDependency` + source check |
 | AC-005 GATE-4 same value, two field names; no API change | 4.5 | — | planned | `errorResponseTraceId_andDiscoveryTriggerCorrelationId_shouldCarryTheSameValue` + diff check |
 
-### Story 5 — `DD-43183-5`
+### Story 5 — `DD-43264`
 
 | Story AC | Scenario(s) | Unit | Integration | Planned test |
 |---|---|---|---|---|
 | AC-001 `answerUserQueryAsync` carries `transactionId` | 5.1 | planned | — | `answerUserQueryAsync_shouldPlaceTransactionIdInMdcOnCompletion` |
 | AC-002 `answerUserQueryStatus` structured; CRLF sanitisation kept | 5.2 | planned | — | `…shouldPlaceSanitisedTransactionIdInMdc_notInMessage` + stale-`{}` check |
-| AC-003 four named services scope `caseId`/`docId` | 5.3 | planned (**provisional — OQ-107**) | — | one method per service |
-| AC-004 discrete top-level fields, siblings of `message` | 5.4 | partial (event shape) | **blocked — OQ-102** | `emittedLogLine_shouldCarryIdentifiersAsSiblingsOfMessage` |
-| AC-005 no `caseId` key at all when no case; no sentinel | 5.5 | planned (**provisional — OQ-107**) | partial — OQ-102 | `doesNotContainKey("caseId")` assertions |
+| AC-003 four named services scope `caseId`/`docId` | 5.3 | planned (**scope confirmed — OQ-107**) | — | one method per service |
+| AC-004 identifiers are fields, not interpolated text | 5.4 | planned (**event shape + "message does not contain the value"**) | — | per-class `ListAppender` assertions — **the JSON-sibling half is MV-1, manual (OQ-102)** |
+| AC-005 no `caseId` key at all when no case; no sentinel | 5.5 | planned (**all five cases at the unit tier; scope confirmed — OQ-107**) | — | `doesNotContainKey("caseId")` + "at least one event captured" guard |
 | AC-006 schedulers `openIfAbsent`; `StalledWorkMetrics` on `CorrelationScope` | 5.6 | planned | planned (DD-43185 suites as regression) | scheduler tests + `StalledWorkMetricsTest` extension |
 | AC-007 no PII/case content; NFR-009 no metric tag | 5.7 | planned | planned | MDC-key subset assertions + scanners + `SimpleMeterRegistry` tag check |
 
-### Story 6 — `DD-43183-6`
+### Story 6 — `DD-43265`
 
 | Story AC | Scenario(s) | Unit | Integration | Planned test |
 |---|---|---|---|---|
 | AC-001 `OTEL_TRACES_ENABLED` independent of metrics | 6.1 | planned (5 combinations) | — | `otlpSpanExporter_shouldFollowOtelTracesEnabledOnly` |
 | AC-002 three dead keys gone; two real keys + comment | 6.2, 6.4 | planned | — | `serverManagementYaml_shouldNotContainAnyDeadTracingKey` + audit test |
-| AC-003 `/v1/traces`, `/v1/metrics` defaults | 6.3 | planned (resolved values) | — | `defaultExportPaths_shouldBeTheOtlpHttpSpecPaths` — **compose overrides: OQ-105** |
-| **AC-004 `ConfigurationMetadataAuditTest`** | **6.4** | planned (**7 yml files; red-first check mandated**) | — | `noApplicationYamlKeyIsUnknownOrErrorDeprecated` — **allow-list scope: OQ-108** |
-| AC-005 GATE-5 sampling `1.0 → 0.1`; correlation unaffected | 6.5 | planned | — | `samplingProbability_shouldDefaultToBootDefault_…` — **compose override: OQ-105** |
+| AC-003 `/v1/traces`, `/v1/metrics` defaults | 6.3 | planned (resolved values) | — | `defaultExportPaths_shouldBeTheOtlpHttpSpecPaths` — **compose overrides deleted under AC-008 (OQ-105 decided)** |
+| **AC-004 `ConfigurationMetadataAuditTest`** | **6.4** | planned (**7 yml files; red-first check mandated**) | — | `noApplicationYamlKeyIsUnknownOrErrorDeprecated` — **`management.*`/`spring.*` scope confirmed; the `cdk.*` clause dropped (OQ-108)** |
+| AC-005 GATE-5 sampling `1.0 → 0.1`; correlation unaffected | 6.5 | planned | — | `samplingProbability_shouldDefaultToBootDefault_…` — asserted against the **resolved YAML**; the compose `1.0` override may stay (OQ-105) |
 | AC-006 both unset → starts clean, exports nothing | 6.6 | planned | planned (`gradle integration`) | `withNoOtelVariablesSet_shouldStartCleanlyAndExportNothing` |
-| AC-007 collector screenshot | 6.7 | — | — | **manual, not a test** — Jira attachment |
+| AC-007 collector screenshot | 6.7 | — | — | **MV-2 — manual, not a test** — Jira attachment |
+| **AC-008 compose file no longer pins the pre-spec OTLP paths** | 6.3, 6.5 | — | `gradle integration` green after the edit | **Story 6 implementer's diff (OQ-105)** — delete the two `OTEL_*_URL` overrides + the two inert `*TRACING_ENABLED` variables; not edited at the documentation stages |
 
-### Story 7 — `DD-43183-7`
+### Story 7 — `DD-43266`
 
 | Story AC | Scenario(s) | Unit | Integration | Planned test |
 |---|---|---|---|---|
@@ -1486,41 +1631,75 @@ No row below is evidence of a passing test, with the single exception of Story 2
 
 | Requirements AC | Status |
 |---|---|
-| AC-020 / Story 4 AC-002 clause 3 (the `traceId` on the response equals the `correlationId` **log field**) | **Not closable until OQ-102 is decided.** Clauses 1–2 (response body vs response header) are writable today and are the strongest available proxy. This is the single most important gap in this document, because clause 3 is the only assertion that tests the actual defect. |
-| AC-023 / Story 5 AC-004 (identifiers as **JSON** siblings of `message`) | **Partially closable.** The unit tier proves the *event* shape (MDC property map); the `LogstashEncoder`'s JSON output is observable only with OQ-102's seam. The encoder itself is unchanged and that is a diff-level check. |
-| AC-030 / Story 6 AC-007 (spans in a collector) | **Not closable here.** Manual, one non-production environment, platform-owned collector, screenshot deliverable. Scenario 6.7 states the procedure and asserts nothing. |
+| AC-020 / Story 4 AC-002 clause 3 (the `traceId` on the response equals the `correlationId` **log field**) | **Not automatable in this repository — decided 2026-09-04 (OQ-102), and discharged as MV-1.** Clauses 1–2 (response body == response header == value sent) are automated and are the strongest available proxy; the unit tier automates the event shape. Clause 3 itself is a **named, owned, release-gating manual verification**, not a dropped requirement and not a relabelled proxy. It remains the only assertion that tests the actual defect, which is exactly why it is written down rather than quietly lost. |
+| AC-023 / Story 5 AC-004 (identifiers as **JSON** siblings of `message`) | **Automated in the half that catches the real mistake; manual in the half that cannot be seen from a test.** The unit tier proves the *event* shape (MDC property map) **and** that the message does not interpolate the value — which is where an implementation goes wrong. The `LogstashEncoder`'s JSON output is confirmed by **MV-1**. The encoder is unchanged and that is a diff-level check. |
+| AC-030 / Story 6 AC-007 (spans in a collector) | **Not closable here — MV-2.** Manual, one non-production environment, platform-owned collector, screenshot deliverable. Scenario 6.7 states the procedure and asserts nothing. |
 | AC-033 / Story 7 AC-003 (virtual threads) | **Closable but low-value by construction** (ADR-008). Kept for regression; explicitly not evidence of virtual-thread readiness. |
 | AC-032 / Story 7 AC-002 at the **live** tier | **Best-effort only.** No mechanism guarantees two sequential live requests share a Tomcat thread. The deterministic proof is unit-tier (Scenario 7.2). |
 
 ### Tier notes
 
-- **Nothing is integration-only** except the four assertions that structurally cannot be made at the
+- **Nothing is integration-only** except the three assertions that structurally cannot be made at the
   unit tier: the **response header** on a real 4xx written before the handler (Scenario 1.11), the
-  **WireMock-recorded outbound headers** (2.1/2.6/3.11), the **emitted JSON log line** (blocked —
-  OQ-102), and the **`DiscoveryTriggerResponse.correlationId` published-field** value (1.16/4.5).
-  Every behavioural AC otherwise has a unit-tier plan, so a failure localises to a class rather than
-  to "the compose stack".
+  **WireMock-recorded outbound headers** (2.1/2.6/3.11), and the
+  **`DiscoveryTriggerResponse.correlationId` published-field** value (1.16/4.5). Every behavioural AC
+  otherwise has a unit-tier plan, so a failure localises to a class rather than to "the compose
+  stack".
+- **Nothing is log-reading.** The fourth item on that list used to be "the emitted JSON log line";
+  after OQ-102's decision (2026-09-04) **no test at any tier reads the application's log output**.
+  That assertion lives in the manual-verification section below as MV-1.
 - **Story 6 has no integration-tier test of its own** — configuration binding and bean presence are
   fully observable in a Spring test context, and the compose stack cannot say anything useful about
   an exporter that is deliberately disabled. Its only integration involvement is "`gradle
-  integration` still passes" plus OQ-105's compose-file correction.
+  integration` still passes" **after** AC-008's compose-file correction (OQ-105).
 - **No contract tests, no accessibility tests, no migration tests** — see §"Scope boundaries".
+
+---
+
+## Manual verification — MV-1 and MV-2
+
+Two requirements-level items are **manual by decision, not by omission**. Both are written down
+here, in `02-design.md` §13, and in the affected stories' ACs and DoD, so neither can be lost by
+being true only in a document nobody reads at release time. Neither is test coverage and neither is
+described as such.
+
+| # | What is confirmed | Procedure | Covers | Owner | Gate |
+|---|---|---|---|---|---|
+| **MV-1** | One emitted JSON log line carries the identifiers as **top-level keys, siblings of `message`**, with `correlationId` equal to the value sent and to the value on the response | Bring up the stack (`gradle composeUp`, or during a `gradle integration` run — `build.gradle`'s `dockerCompose { captureContainersOutput = true }` already pipes the app's stdout into the Gradle console; `docker logs cdks_application` is the direct alternative). Send a request carrying a **synthetic** `CPPCLIENTCORRELATIONID` to an endpoint that (a) calls a WireMock-stubbed downstream and (b) dispatches a JobManager task — `/ingestions/start-by-case` does both — and provoke one error response as well. On the captured lines confirm: `correlationId`, `caseId`, `docId`/`transactionId`, `traceId` and `spanId` are **top-level JSON keys**, not substrings of `message`; `correlationId` equals the value sent, the `X-Correlation-Id` response header, and the error response's `ErrorResponse.traceId`; `traceId`/`spanId` are **32/16 hex** (the tracer's own, not a client-supplied string); and a task's line carries the dispatching request's `correlationId`. Attach the lines (synthetic data only — CLAUDE.md's PII rule applies to evidence too) to DD-43183 | Story 4 AC-002 clause 3 (= requirements AC-020's log half) · Story 5 AC-004's JSON-encoding half (= AC-023) · Story 2 AC-004(iii) · Scenario 3.11's log half · Scenario 1.8's "one JSON object" half (spot-check only) | Story 4 implementer captures; Stage-6 reviewer confirms on the ticket | **Release of DD-43183.** Not the merge of any single story |
+| **MV-2** | Spans reach a collector | `OTEL_TRACES_ENABLED=true` + `OTEL_TRACES_URL=<collector>/v1/traces` in one non-production environment; make requests; screenshot the collector | Story 6 AC-007 (= requirements AC-030) | Platform/SRE + Story 6 implementer | Story 6's own DoD; blocks nothing else |
+
+**Why MV-1 exists rather than a test (stated once, so no reviewer re-litigates it).** The
+integration tier has no seam for reading the application's log output, and the Stage-4 gate decided
+on 2026-09-04 not to build one: shelling out to `docker compose logs` from the suite couples CI to a
+Docker CLI, and a file appender plus a bind mount would change **production** logging configuration
+for the benefit of tests, which the "no `logback-spring.xml` change" boundary exists to prevent. The
+automated substitutes are (i) unit-tier `ListAppender` **event-shape** coverage — the MDC keys are
+present when a log statement fires, and the message does not interpolate the value — and (ii)
+integration-tier **response-surface** proxies. Both are strictly weaker than MV-1 and are labelled
+as proxies wherever they appear. This mirrors DD-43185, which named, owned and wrote down its
+un-automatable production-scale `EXPLAIN` evidence rather than dropping the requirement
+(`../DD-43185-stalled-work-scheduler-monitoring/02-design.md` §12).
+
+**If a log-reading seam ever appears** — most plausibly a Testcontainers migration of the live
+suite, which would give `getLogs()` for free — MV-1 should be converted into the assertion it
+stands in for, and this section retired. Recorded as a follow-up; explicitly not work in DD-43183.
 
 ---
 
 ## Risks and open points carried into implementation
 
-New open questions raised by Stage 4. These are **questions, not assumptions** — none is resolved
-here, and each needs an owner's answer before the affected scenario is written.
+Open questions raised by Stage 4. **All ten are now closed** — decisions taken by the requester on
+2026-09-04 and applied throughout this document, `03-stories.md`, `02-design.md` and the ADR file.
+Each entry below keeps its original analysis (so the reasoning behind the decision stays readable)
+and ends with the decision taken. Items that remain *work* — MV-1, MV-2, Scenario 1.12's probe,
+Story 6 AC-008's compose edit, OQ-104's merge gate — are tracked in the stories and the
+manual-verification section above, not as open questions here.
 
-- **OQ-101 (blocking — no real Jira sub-tickets exist).** `03-stories.md` carries placeholders
-  `DD-43183-1` – `DD-43183-7` only, and its own Notes say real sub-tickets are required "before
-  Stage 4 (Test Specs) starts". CLAUDE.md makes this a hard rule. They do not exist. Create and link
-  them to the parent epic DD-43183 before any test below is written, and confirm OQ-013's outstanding
-  question (the pasted brief was never verified against the live ticket in any session of this
-  pipeline — no Jira/Atlassian MCP tool has been available at Stage 1, 2, 3 or 4). — Owner: requester ·
-  Due: **before Stage 5**, and before the first test is authored.
-- **OQ-102 (highest priority — the integration tier cannot read a log line).** Design §13 specifies
+- **OQ-101 — Resolved, 2026-09-04.** Real Jira sub-tickets `DD-43260`–`DD-43266` were created and
+  linked to the parent epic DD-43183. OQ-013's separate question (the pasted brief was never
+  verified against the live ticket) remains open — no Jira/Atlassian MCP tool has been available
+  at any stage of this pipeline.
+- **OQ-102 — CLOSED 2026-09-04 (was the highest-priority item at this stage).** Design §13 specified
   `CorrelationLogFieldHttpLiveTest` as parsing "a JSON log line from the app container's stdout", and
   Story 4's AC-002 makes "equals the `correlationId` log field" the **oracle for the whole of Area D**.
   Verified this stage: `AbstractHttpLiveTest` exposes only a `RestTemplate` and a JDBC `Connection`;
@@ -1534,10 +1713,23 @@ here, and each needs an owner's answer before the affected scenario is written.
   "no `logback-spring.xml` change" boundary was written to prevent;
   (c) accept unit-tier `ListAppender` coverage for the event shape and downgrade AC-002's clause 3
   to a documented manual verification, keeping clauses 1–2 automated.
-  Decide before Scenarios 2.5, 4.2, 5.4 and 5.5's live halves are written. **Stage 4's view: (c) is
-  the honest fallback, but it leaves the defect's actual oracle unautomated, so (a) is worth its
-  cost.** — Owner: requester + the Story 4 implementer · Due: **Stage 4 gate**.
-- **OQ-103 (does the `X-Correlation-Id` header survive Boot's `ERROR` dispatch?).** Design §3 asserts
+  **DECIDED 2026-09-04 — option (c), with the manual half made explicit rather than implicit.**
+  Neither (a) nor (b) is taken: (a) couples the suite to a Docker CLI on the CI runner, and (b)
+  changes production logging configuration for the benefit of tests, which the "no
+  `logback-spring.xml` change" boundary exists to prevent. So: **no test at any tier reads the
+  application's log output.** Unit-tier `ListAppender` coverage keeps proving the **event shape**
+  (MDC keys present when a statement fires; the value not interpolated into the message), the
+  integration tier keeps the **response-surface** proxies, and the log-field clause becomes
+  **MV-1** — a named, owned, documented manual verification that gates **release** of the ticket,
+  the same treatment DD-43185 gave its un-automatable production-scale `EXPLAIN` evidence. Rewritten
+  accordingly: scope boundary 6, Scenarios **1.8, 2.5, 3.11, 4.2, 5.4, 5.5**, the coverage summary,
+  the tier notes, the new "Manual verification" section, `02-design.md` §13/§16, ADR-005's Stage-4
+  addendum, and Stories 2/4/5/7's ACs and DoD. **Stage 4's own preference was (a); the gate chose
+  (c) and the cost is stated plainly wherever it lands** — the assertion that tests the actual
+  defect runs once, by hand, not on every CI run. — Owner: requester + the Story 4 implementer ·
+  **Closed at the Stage-4 gate.**
+- **OQ-103 — CLOSED 2026-09-04 as "stay a probe" (does the `X-Correlation-Id` header survive Boot's
+  `ERROR` dispatch?).** Design §3 asserted
   AC-006 holds "including responses produced by `GlobalExceptionHandler` and by Boot's `/error`
   dispatch". The `GlobalExceptionHandler` half is sound (those exceptions are handled inside the
   `DispatcherServlet` on the original `REQUEST` dispatch). The `/error` half is not established:
@@ -1546,11 +1738,18 @@ here, and each needs an owner's answer before the affected scenario is written.
   map — meaning any `BasicErrorController` log line on that dispatch carries **no** `correlationId`,
   and whether the previously-set response header survives is container behaviour this stage cannot
   settle by reading code. Scenario 1.12 is written as a **probe** rather than an assertion for
-  exactly this reason. Decide: (i) accept whatever the probe shows and document it; (ii) override
-  `shouldNotFilterErrorDispatch()` to `false` so the filter re-runs and re-establishes both the
-  header and MDC. — Owner: design reviewer + the Story 1 implementer · Due: before Scenario 1.12 is
-  converted from a probe to an assertion.
-- **OQ-104 (PR #225 is not in this branch's history — name the concrete merge gate).** Verified this
+  exactly this reason. **DECIDED 2026-09-04 — leave it a probe.** Neither (i) nor (ii) is chosen
+  yet, deliberately: the gate declined to pre-emptively override
+  `shouldNotFilterErrorDispatch()` to `false` on the strength of a behaviour nobody has observed,
+  and equally declined to have Scenario 1.12 assert a guessed outcome. The Story 1 implementer runs
+  the probe, records what it shows on DD-43183, and *then* (i) or (ii) is decided — possibly in a
+  follow-up rather than in this ticket. `02-design.md` §3, which previously stated AC-006 holds
+  "including … Boot's `/error` dispatch" as settled fact, has been **softened** to name the
+  uncertainty and point at this probe; §8's "non-blank is structural" claim now carries the same
+  caveat. — Owner: design reviewer + the Story 1 implementer · **Closed as "stay a probe"; the
+  observation itself is Story 1 implementation work.**
+- **OQ-104 — CLOSED 2026-09-04 as a standing implementer to-do (PR #225 is not in this branch's
+  history — name the concrete merge gate).** Verified at this
   stage: commit `cafc3dc` ("Redact Authorization and Ocp-Apim-Subscription-Key from debug HTTP
   logs", with `DebugLoggingInterceptor.java` +25 and `DebugLoggingInterceptorTest.java` +88) exists
   on `fix/debug-logging-credential-redaction` locally and on `origin`, and
@@ -1562,9 +1761,14 @@ here, and each needs an owner's answer before the affected scenario is written.
   `git merge-base --is-ancestor` check in Story 2's PR, or — better, because it also survives a
   rebase — a Story-2 assertion that `DebugLoggingInterceptorTest` exists and passes, so its
   disappearance fails the build. Confirm which, and confirm the fix is actually on the integration
-  branch Story 2 will branch from. — Owner: Story 2 implementer + release engineer · Due: before
-  Story 2 starts.
-- **OQ-105 (the compose file carries the pre-spec OTLP paths, and design §11 does not list it).**
+  branch Story 2 will branch from. **Reviewed at the Stage-4 gate 2026-09-04 and carried as written:
+  this is a build-time mechanised-gate recommendation for the Story 2 implementer, and the
+  recommendation stands — prefer the "`DebugLoggingInterceptorTest` exists and passes" assertion,
+  because it survives a rebase where a `git merge-base` check does not.** No wording change was
+  needed; recorded here only so it is visibly not an oversight. — Owner: Story 2 implementer +
+  release engineer · **Closed as a standing implementer to-do; due before Story 2 starts.**
+- **OQ-105 — CLOSED 2026-09-04 (the compose file carries the pre-spec OTLP paths, and design §11 did
+  not list it).**
   Verified: `docker/docker-compose.integration.yml:155–158` sets `TRACING_SAMPLER_PROBABILITY: 1.0`,
   `OTEL_METRICS_ENABLED: "false"`, `OTEL_TRACES_URL: http://localhost:4318/traces` and
   `OTEL_METRICS_URL: http://localhost:4318/metrics`. Two consequences for Story 6: (i) the
@@ -1577,10 +1781,20 @@ here, and each needs an owner's answer before the affected scenario is written.
   `OTEL_TRACES_URL` maps to `management.opentelemetry.tracing.export.otlp.endpoint`, the compose
   stack will create an `OtlpTracingConnectionDetails` bean (the endpoint is set) while the exporter
   stays absent (`OTEL_TRACES_ENABLED` unset ⇒ `false`) — harmless, but Scenario 6.6's
-  "neither exporter bean exists" assertion must be about **exporters**, not connection details. —
-  Owner: Story 6 implementer · Due: before Scenario 6.3 is written.
-- **OQ-106 (DD-43182 has no Stage-4 specs, so the GATE-3 ordering test is specified unilaterally
-  here).** `docs/pipeline/DD-43182-operational-metrics-instrumentation/` contains only `00`–`03`;
+  "neither exporter bean exists" assertion must be about **exporters**, not connection details.
+  **DECIDED 2026-09-04 — delete the two `OTEL_*_URL` overrides** (not re-point them: one definition
+  site cannot drift from another), **and delete the two inert `MANAGEMENT_TRACING_ENABLED` /
+  `TRACING_ENABLED` variables** in the same block while there. `TRACING_SAMPLER_PROBABILITY: 1.0`
+  may stay. **And a deliberate choice about *who* makes the edit: not the documentation stages.**
+  The compose file is executed by `gradle integration` on every CI run, so a change to it belongs in
+  a reviewed story diff with a green build behind it — editing it from a docs commit would put a
+  CI-affecting change on the branch with no `implementation` stage, no `ci-orchestrator` run and no
+  code review, i.e. past three pipeline gates for the sake of four lines. It is therefore tracked as
+  **`03-stories.md` Story 6 AC-008**, listed in `02-design.md` §11's "Files touched" table (which
+  previously omitted it — the gap this OQ found), and noted in Scenarios 6.3 and 6.5. — Owner:
+  Story 6 implementer · **Closed; the edit is Story 6 work.**
+- **OQ-106 — CLOSED 2026-09-04 as a standing coordination to-do (DD-43182 has no Stage-4 specs, so
+  the GATE-3 ordering test is specified unilaterally here).** `docs/pipeline/DD-43182-operational-metrics-instrumentation/` contains only `00`–`03`;
   there is **no `04-test-specs.md`** to reconcile against, so nothing was reconciled and nothing
   contradicted. DD-43182's `02-design.md` §7 already names `JobCorrelationProxyingTest` as the test
   that asserts the ordering, and its ADR-006 records the same decision — so the intent is aligned,
@@ -1590,19 +1804,32 @@ here, and each needs an owner's answer before the affected scenario is written.
   (ii) confirm the merge order and who owns the test file if DD-43182 lands first. Also confirm that
   DD-43182's `TaskRetryMetricsAspect` will continue to declare **no `@Order`** — Scenario 3.5's
   conditional half assumes `LOWEST_PRECEDENCE`, and an `@Order` added there later would need this
-  test updated. — Owner: sprint planning + both tickets' implementers · Due: before whichever of the
-  two aspect stories starts.
-- **OQ-107 (Story 5's scope is a design decision, not an ADR, and is still unconfirmed).** Both
+  test updated. **Reviewed at the Stage-4 gate 2026-09-04 and carried as written: DD-43182 defers to
+  this document's Scenario 3.5 as the canonical ordering test and must adopt it by reference rather
+  than author a second one.** No wording change was needed. — Owner: sprint planning + both tickets'
+  implementers · **Closed as a standing coordination to-do; due before whichever of the two aspect
+  stories starts.**
+- **OQ-107 — CLOSED 2026-09-04 (Story 5's scope was a design decision, not an ADR, and was
+  unconfirmed).** Both
   `02-design.md` §9 and Story 5's own Notes state that the Area E scope resolution — which classes
   are in scope, the no-sentinel rule, and which `transactionId` is meant — **needs
   requirements-owner confirmation** and was deliberately not made an ADR. It has not been confirmed.
-  Scenarios 5.3 and 5.5 name a specific class list on that basis and are marked **provisional**;
-  they should not be written until the owner confirms. Confirm also whether "a service, task,
+  Scenarios 5.3 and 5.5 named a specific class list on that basis and were marked **provisional**,
+  not to be written until the owner confirmed. Confirm also whether "a service, task,
   scheduler or client class" (FR-012's literal wording) is genuinely bounded to the four named
   services, or whether the requirements owner expects wider coverage — the difference is a large
-  diff across `services/` and `clients/`. — Owner: requester · Due: at Story 5 kickoff, per the
-  story's own Notes.
-- **OQ-108 (Story 6 AC-004's allow-list asks for something the test cannot surface).** AC-004
+  diff across `services/` and `clients/`. **DECIDED 2026-09-04 — CONFIRMED as proposed, and no
+  wider.** Area E's scope is exactly design §9's list: the four named services
+  (`IdpcAvailabilityService`, `IngestionProcessorByCaseService`, `IngestionService`,
+  `DocumentService`), both `RagAnswerAsyncServiceImpl` completion lines, and all seven JobManager
+  tasks via Story 3's shared aspect. FR-012's literal wording is bounded to that list; a wider sweep
+  across `services/` and `clients/` is out of scope for DD-43183 and needs its own ticket. The
+  no-sentinel rule stands and `transactionId` means the **RAG** transaction id. `02-design.md` §9
+  and §14 now record it as confirmed rather than pending, Story 5's Notes say the same, and
+  **Scenarios 5.3 and 5.5 are no longer provisional** — they are cleared to be written. — Owner:
+  requester · **Closed at the Stage-4 gate.**
+- **OQ-108 — CLOSED 2026-09-04 (Story 6 AC-004's allow-list asked for something the test cannot
+  surface).** AC-004
   requires `ConfigurationMetadataAuditTest` to carry "a documented allow-list of pre-existing
   findings elsewhere in the file (e.g. DD-43182's already-reported `cdk.jobmanager.retry.default`
   binding gap)". But the test is scoped to `management.*` / `spring.*` keys — necessarily, because
@@ -1614,42 +1841,81 @@ here, and each needs an owner's answer before the affected scenario is written.
   drop that clause from AC-004 (recommended — the ticket's dead keys are all `management.*`);
   (ii) add `spring-boot-configuration-processor` so `cdk.*` keys gain metadata and can be audited
   too, which is a genuinely valuable but separate change and would immediately surface
-  DD-43182's finding as a build failure needing its own allow-list entry and defect ticket. —
-  Owner: Story 6 implementer + requester · Due: before Scenario 6.4 is written.
-- **OQ-109 (Scenario 1.5's precedence reading — ADR vs story wording).** ADR-001(2)'s table says
+  DD-43182's finding as a build failure needing its own allow-list entry and defect ticket.
+  **DECIDED 2026-09-04 — option (i): accept the narrower scope and drop that clause from Story 6
+  AC-004.** The audit tool is correctly scoped to `management.*` / `spring.*` and structurally
+  cannot see CDKS's own `cdk.*` keys, so the clause asked for something impossible. **Nothing else
+  about the test shrinks** — it still walks all seven `application*.yml` files, still fails on every
+  unknown or `error`-deprecated `management.*`/`spring.*` key (the class all three of this ticket's
+  dead keys belong to), and still carries an allow-list for any *other* in-scope finding, each entry
+  naming its owning ticket. DD-43182 keeps ownership of `cdk.jobmanager.retry.default`; option (ii)
+  (adding `spring-boot-configuration-processor`) is a genuinely valuable but separate change,
+  explicitly not taken. Applied to Story 6 AC-004, Scenario 6.4, the coverage summary, `02-design.md`
+  §14's follow-up list (which wrongly said this test *will* surface it) and `03-stories.md`'s
+  carried-forward follow-ups. — Owner: Story 6 implementer + requester · **Closed at the Stage-4
+  gate.**
+- **OQ-109 — CLOSED 2026-09-04 (Scenario 1.5's precedence reading — ADR vs story wording).**
+  ADR-001(2)'s table says
   resolution is "**first non-blank wins**", which means a blank `CPPCLIENTCORRELATIONID` falls
   through to a populated `X-Correlation-Id`. Story 1's AC-003 says only "the canonical header wins
   deterministically", which read literally would have a blank canonical header shadow a usable alias
   into a generated value. Those differ for exactly one input, and Scenario 1.5 pins the ADR's
-  reading. Confirm, so the test is not written against the wrong one. — Owner: design reviewer ·
-  Due: before Scenario 1.5 is written.
-- **OQ-110 (Scenario 3.8's breadth — nine successor sites, or two representative chains?).**
+  reading. **DECIDED 2026-09-04 — "first non-blank wins" is correct; ADR-001(2)'s reading is
+  authoritative.** A blank, whitespace-only or allow-list-rejected canonical header **falls through**
+  to a populated `X-Correlation-Id`; it must not shadow a usable alias into a freshly generated ID,
+  and only the absence of a usable value in *either* header generates one. `03-stories.md`'s Story 1
+  AC-003 has been reworded to state the rule explicitly (it previously said only "the canonical
+  header wins deterministically", which reads ambiguously for exactly this input), ADR-001 carries a
+  dated addendum, and `02-design.md` §5's `resolveInbound` comment now says so too. Scenario 1.5 is
+  unchanged and cleared to be written. — Owner: design reviewer · **Closed at the Stage-4 gate.**
+- **OQ-110 — CLOSED 2026-09-04 (Scenario 3.8's breadth — nine successor sites, or two
+  representative chains?).**
   ADR-003 verified all nine successor dispatch sites already copy the parent `jobData` map, so AC-005
   is structurally satisfied and the test only pins it. Asserting all nine individually is thorough
   but repetitive; asserting the two multi-hop chains covers the behaviour with far less test code
-  and less coupling to internal dispatch structure. Confirm which the gate wants, since "a test pins
-  it" (Story 3 AC-005's wording) does not say how many. — Owner: Story 3 implementer · Due: before
-  Scenario 3.8 is written.
+  and less coupling to internal dispatch structure. **DECIDED 2026-09-04 — two representative
+  multi-hop chains, not nine individual dispatch sites.** The chains are
+  `GET_CASES_FOR_HEARING → CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS → RETRIEVE_MATERIAL_AND_UPLOAD`
+  and `GENERATE_ANSWER_FOR_QUERY → CHECK_STATUS_OF_ANSWER_GENERATION`. Story 3 AC-005 now says this
+  explicitly, Scenario 3.8 is parameterised over the two chains rather than offering the choice, and
+  ADR-003 carries a dated addendum. The nine verified sites stay documented as the inventory; a
+  *tenth* added later is guarded by Scenario 3.6's source-walk assertion plus a Stage-6 review item,
+  and that limitation must be stated in the test's Javadoc. — Owner: Story 3 implementer ·
+  **Closed at the Stage-4 gate.**
 
 Carried forward from earlier stages and **still unresolved**: **OQ-013** (the Jira brief was never
 confirmed against the live ticket, and no summary comment has been posted to the epic at any stage —
-now folded into OQ-101), **OQ-009** (Area E scope — now OQ-107), **OQ-014** (context-doc drift:
+now folded into OQ-101), **OQ-014** (context-doc drift:
 `cdks-context.md` says 5 caseflow tasks where there are 4 / 7 total, and says
 `task-manager-service` 1.0.10 and Spring Boot 4.0.5 where `gradle.properties` and `build.gradle`
 pin 1.0.11 and 4.0.6 — Story 1's Notes fold the correction into its diff; non-blocking but it
 should actually happen, along with adding design §12's convention table to `cdks-context.md` per
-NFR-008).
+NFR-008). **OQ-009** (Area E scope) is **no longer** on that list — it was carried here as OQ-107
+and was **confirmed by the requirements owner on 2026-09-04**.
 
 ---
 
 ## Stage-4 gate
 
-Test Specs is a **human gate**. Do not proceed to Stage 5 (Code) until:
+Test Specs is a **human gate**. Status as of **2026-09-04**:
 
-1. The scenarios above are approved.
-2. **OQ-101 is resolved** — real Jira sub-tickets exist and are linked. This is a CLAUDE.md hard
-   rule, not a preference, and it blocks the first test being written rather than the last.
-3. **OQ-102 has a decision** — it determines whether Area D's actual oracle (Story 4 AC-002's
-   clause 3) is automated, proxied, or manual, and it gates four scenarios across three stories.
-4. OQ-103 – OQ-110 have decisions, or an explicit agreement to defer each to the implementer of the
-   story it affects.
+1. ~~OQ-101~~ — **resolved.** Real Jira sub-tickets `DD-43260`–`DD-43266` exist and are linked.
+2. ~~OQ-102~~ — **decided:** no automated log reading; unit-tier event-shape coverage + response-surface
+   proxies + **MV-1** (manual, release-gating). The four affected scenarios (2.5, 4.2, 5.4, 5.5) and
+   the two affected halves (1.8, 3.11) are **rewritten**, not annotated.
+3. ~~OQ-103 – OQ-110~~ — **all decided** (see the resolution table in this document's header and each
+   entry above). Three of them leave standing *work* rather than open questions: Scenario 1.12's
+   probe (OQ-103), Story 6 AC-008's compose edit (OQ-105), and OQ-104's mechanised merge gate.
+4. **Remaining gate item: the scenarios themselves are approved.** That approval is the human
+   decision this stage exists for and has not been recorded here.
+
+**Do not proceed to Stage 5 (Code) on the strength of the open questions being closed.** Closing
+them was a prerequisite for approval, not approval itself. Two things must also be true before
+implementation starts, and neither is implied by anything above:
+
+- The scenario set is explicitly approved by the requester.
+- **MV-1 and MV-2 are accepted as the manual discharge of requirements AC-020's log half, AC-023's
+  encoding half and AC-030** — i.e. the gate accepts that three requirements-level assertions are
+  confirmed by a documented human step rather than by CI. That is the one substantive coverage
+  concession in this ticket and it should be accepted deliberately, not inherited by reading a
+  table.
