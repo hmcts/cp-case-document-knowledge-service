@@ -1017,3 +1017,84 @@ case, on the same thread.
 - **Accepted:** the virtual-thread question returns whenever someone proposes flipping the toggle,
   with this ADR as the record that correlation handling was designed not to care.
 - **Reversibility:** not applicable — nothing is enabled.
+
+---
+
+## ADR-009: No AI Search UI change is in scope — the UI sends no correlation header and displays no `traceId`; this ticket's entire deliverable is internal to CDKS
+
+- **Status:** Accepted · **Date:** 2026-09-06 · **Jira:** DD-43183 · **Resolves:** an unverified stakeholder-table assumption surfaced during post-design Q&A (no OQ number was ever assigned — see Context)
+
+- **Artefacts:** `01-requirements.md` (Actors table, FR-001, FR-011, Out-of-scope) · `02-design.md`
+  (scope note under §1's architecture diagram) · `03-stories.md` (Story 4 Background)
+
+### Context
+
+`01-requirements.md`'s original Actors table stated, as a given fact, that "Upstream API consumers
+(AI Search UI, other CPP services) … send the inbound correlation header and read `traceId` off
+`ErrorResponse`." This was never verified against the UI's actual behaviour — no code, ticket, or
+conversation with the UI team backed it — and, unlike every other shaky premise in this ticket
+(OQ-001 through OQ-014), it was never raised as an open question at Stage 1 or Stage 2.
+
+The gap surfaced only when tracing the already-shipped `requestId` mechanism in
+`JobManagerService`/`IngestionProcessorByCaseService` against this ticket's design: doing so raised
+the question of whether the UI sends anything CDKS could even correlate against. The requirements
+owner has now confirmed, directly, that: (a) the AI Search UI does not send any correlation header
+today and has no plan to start; (b) the UI does not display `traceId` or `correlationId` anywhere a
+user or support engineer would see it, today or after this ticket. Both are stated as settled facts,
+not questions requiring further design work — no ADR-required open question was outstanding on this
+point to begin with, so this ADR exists to record the correction and its (lack of) blast radius,
+not to resolve a live design choice.
+
+### Decision
+
+**This ticket's scope is, and always was, achievable without any UI participation. No story, AC, or
+design element changes as a result of this confirmation.**
+
+1. Every UI-originated request resolves its correlation ID via the **generated** branch of FR-001
+   (Story 1, AC-004) — this was already the designed fallback for "neither header present", built
+   defensively rather than because anyone had confirmed the UI's behaviour. Confirming the UI sends
+   nothing does not require building anything new; it confirms the fallback path is the **only**
+   path UI traffic ever takes.
+2. FR-010/FR-011 and Story 4's `ErrorResponse.traceId` deliverable stand exactly as designed. Their
+   value is realised by a **production support engineer** reading the raw HTTP response or the log
+   index directly (the Actors table's primary actor throughout this document) — never by the UI
+   surfacing the field, which it does not and will not do. Nothing about AC-001–AC-005 assumes
+   otherwise; only the narrative framing of "a caller" needed a clarifying note, not the ACs
+   themselves.
+3. The alias/precedence machinery built in Story 1 (`CPPCLIENTCORRELATIONID` canonical,
+   `X-Correlation-Id` alias) remains necessary and unchanged — it exists for **other CPP services**
+   calling CDKS, which may already send `CPPCLIENTCORRELATIONID` (`cp-audit-filter-springboot`
+   already consumes it), not for the UI.
+4. No Jira sub-ticket (DD-43260–DD-43266) is reopened, re-scoped, or re-described. All seven stories'
+   acceptance criteria were already written to hold regardless of caller identity or caller header
+   behaviour — this ADR confirms that property held, it does not create it.
+
+### Alternatives considered
+
+- **Raise as a new open question (OQ-015) and hold Stage 5 pending an answer.** Rejected: by the
+  time this was raised, the requirements owner had already given a direct, unambiguous answer in the
+  same conversation — there was no live design choice left to gate on. Recording it as an accepted
+  ADR (a confirmed fact plus its scope implication) is the correct artefact, not an open question
+  with an "Owner: requester" row that would sit permanently resolved-on-arrival.
+- **Add a UI follow-up ticket to make the UI send the header and display `traceId`.** Rejected as
+  out of scope for DD-43183 specifically because the requirements owner confirmed no UI change is
+  wanted, not because it lacks merit in the abstract — if support tooling ever needs the UI to
+  surface `traceId`, that is a new, separately-scoped piece of work with its own stakeholder sign-off,
+  not a silent scope-creep addition here.
+- **Do nothing — leave the Actors table's original wording as-is.** Rejected: the original wording
+  actively misdescribes the UI's behaviour as a stated fact, which would mislead a future reader (or
+  a future ticket) into assuming the UI already participates in correlation propagation. Cheap to
+  correct now; costly to leave as a false premise in a document meant to be the source of truth.
+
+### Consequences
+
+- **Positive:** the requirements doc no longer asserts an unverified claim about the UI as fact; the
+  Actors table, FR-001, FR-011, and the Out-of-scope section all now agree with each other and with
+  Story 4's Background.
+- **Positive:** zero implementation impact — no story's ACs, test specs, or Jira sub-ticket content
+  needed to change, because the design never actually depended on the corrected assumption.
+- **Neutral:** if the AI Search UI's behaviour changes in the future (starts sending a header, adds a
+  `traceId` display), no rework is implied — Story 1's alias precedence and Story 4's populated field
+  already accommodate a UI that participates; this ADR only closes the gap of a UI that does not.
+- **Reversibility:** fully reversible — this is a documentation correction with no code or test
+  dependency; nothing here needs to be "undone" if the UI's behaviour is later confirmed different.

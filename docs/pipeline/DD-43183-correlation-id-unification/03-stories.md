@@ -321,6 +321,11 @@ is serialised into `jobData` and no outbound CDKS call carries `traceparent`. Th
 `Tracer` dependency, and removes the bare `catch (Exception ignored)` that used to guard the tracer
 lookup.
 
+**Scope note (confirmed 2026-09-06):** "a caller" above means a support engineer reading the raw
+HTTP response or the log index directly — the AI Search UI does not display `traceId` anywhere and
+has no planned change in this ticket to start doing so (`01-requirements.md` Actors table). This
+story's value is realised through direct API/log inspection, not through the UI.
+
 ### Acceptance criteria
 - [ ] AC-001: With the shipped tracing configuration exactly as-is (no property flip required — there is no master switch, per ADR-006/Story 6), every handler in `GlobalExceptionHandler` returns an `ErrorResponse` whose `traceId` is **non-blank**. A test asserting only non-blank, or only a 32-hex shape, is **not sufficient** on its own — see AC-002, which is the actual oracle.
 - [ ] AC-002 (**oracle split at the Stage-4 gate, 2026-09-04 — OQ-102; the third clause is manual, not dropped**): `traceId` **equals** both the `X-Correlation-Id` response header **and** the `correlationId` JSON field on the log lines emitted for that request. This is the assertion that proves the field is actually searchable and the one that would have caught the historical defect — and its third clause is the one thing this repository cannot automate (`AbstractHttpLiveTest` exposes only a `RestTemplate` and a JDBC `Connection`; the `docker-compose` Gradle plugin gives tests no container handle, so there is no `getLogs()` seam, and the gate declined both ways of manufacturing one). Discharged as:

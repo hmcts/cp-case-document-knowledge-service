@@ -119,7 +119,7 @@ alongside the fix — `CorrelationIdInterceptorTest` explicitly asserts a genera
 | Production support engineer | Primary. Given one error reference from a user, must retrieve every log line for that request in a single query. |
 | Platform / SRE (log + trace pipeline owners) | Own the log index and the OTLP collector; consume the MDC field names and the trace export. Field-name and header conventions must match platform expectations (OQ-002, OQ-011). |
 | CDKS engineers | Diagnose from the same fields; must not regress request latency or break the `DiscoveryTriggerResponse.correlationId` contract. |
-| Upstream API consumers (AI Search UI, other CPP services) | Send the inbound correlation header and read `traceId` off `ErrorResponse`. Alias acceptance protects them from a breaking change. |
+| Upstream API consumers (AI Search UI, other CPP services) | **Decision confirmed (2026-09-06): no UI change is in this ticket's scope.** The AI Search UI is not planned to send any correlation header today or after this ticket, and does not display `traceId`/`correlationId` anywhere a user or support engineer would see it. Alias acceptance (FR-001) exists for **other CPP services**, which may already send `CPPCLIENTCORRELATIONID`; for UI-originated traffic, every request falls through to the generated branch (FR-001's "if no alias is present, a value is generated"). This ticket's deliverable for UI-originated work is entirely internal: one correlation ID, generated once per request regardless of caller, present consistently in logs across every component it touches — services, JobManager tasks and both discovery schedulers — so a support engineer can find it by reading the response header or the logs directly, not by anything the UI itself surfaces. |
 | Security / data-protection reviewer | Confirms no case content, answer text, `llm_input` or `CJSCPPUID` enters MDC, a log field, or a propagated header (NFR-001). |
 
 **Note on source:** derived from the pasted Jira text at `00-input-brief.md`. The ticket itself was
@@ -134,7 +134,7 @@ been posted to the epic either (OQ-013).
 
 | ID | Requirement |
 |----|-------------|
-| FR-001 | Exactly **one** inbound header is the documented correlation header. The others in current use are accepted as **aliases** for backwards compatibility, with a documented precedence order. Candidate set, resolved by OQ-002: `X-Correlation-Id` (`RequestContextFilter`), bare `traceId` (`TracingFilter`), and `CPPCLIENTCORRELATIONID` (already consumed by `cp-audit-filter-springboot`). If no alias is present, a value is generated. |
+| FR-001 | Exactly **one** inbound header is the documented correlation header. The others in current use are accepted as **aliases** for backwards compatibility, with a documented precedence order. Candidate set, resolved by OQ-002: `X-Correlation-Id` (`RequestContextFilter`), bare `traceId` (`TracingFilter`), and `CPPCLIENTCORRELATIONID` (already consumed by `cp-audit-filter-springboot`). If no alias is present, a value is generated. **The AI Search UI sends neither today and has no plan to (confirmed 2026-09-06, Actors table) — so every UI-originated request resolves via the generated branch; the alias/precedence machinery exists for other CPP services that already send `CPPCLIENTCORRELATIONID`, not for the UI.** |
 | FR-002 | The resolved value is placed in MDC under **one** documented key. The key must remain `correlationId` unless OQ-003 decides otherwise, because `DiscoverySchedulerController` reads `MDC.get("correlationId")` into an OpenAPI response field and an integration test asserts it. |
 | FR-003 | The resolved value is returned to the caller on the HTTP **response**. This is new behaviour — no response header carries it today. Header name per OQ-002; applies to success and error responses alike. |
 
@@ -159,7 +159,7 @@ been posted to the epic either (OQ-013).
 | ID | Requirement |
 |----|-------------|
 | FR-010 | Every `ErrorResponse` returned by any handler in `GlobalExceptionHandler` carries a **non-blank** `traceId` in **every** environment, including with tracing disabled. "Non-blank" not "non-null": the field is `""` today, so a non-null assertion is not a valid oracle (OQ-007). Source of the value per OQ-008. |
-| FR-011 | Searching a log index for that single returned value retrieves every log line for that request — i.e. the value placed on `ErrorResponse.traceId` and the value emitted as a structured log field are the same value. |
+| FR-011 | Searching a log index for that single returned value retrieves every log line for that request — i.e. the value placed on `ErrorResponse.traceId` and the value emitted as a structured log field are the same value. **This benefit is reached by a support engineer reading the raw HTTP response or the log index directly, not via the AI Search UI — the UI does not display `traceId` (confirmed 2026-09-06, Actors table), so FR-010/FR-011 are not a UI-visible feature of this ticket.** |
 
 ### Area E — business identifiers as structured fields
 
@@ -189,6 +189,13 @@ been posted to the epic either (OQ-013).
 
 ## Out of scope
 
+- **Any AI Search UI change — confirmed decision, 2026-09-06, not an open question.** The UI is not
+  planned to send any correlation header, and does not display `traceId`/`correlationId` anywhere a
+  user or support engineer would see it. This ticket's entire deliverable is internal to CDKS: one
+  correlation ID, generated once per request (the UI's requests always fall through to the generated
+  branch of FR-001, since it sends nothing), logged consistently everywhere it flows — request
+  handling, outbound calls, every JobManager task, and both discovery schedulers. Nothing in this
+  ticket depends on the UI sending, forwarding, or displaying anything.
 - **Enabling virtual threads in production.** `VIRTUAL_THREADS` stays `false` by default. FR-020 asserts correlation handling *would* be safe under the toggle; flipping it for any environment is a separate decision (OQ-012).
 - **Enabling tracing in production.** FR-018 is explicitly a non-production demonstration. Production sampling rates, collector endpoints and cost are the platform team's call (OQ-011).
 - **Adopting Micrometer Observation / `@Observed` instrumentation, or creating custom spans.** No new spans, span names, or span attributes are requested — only that correlation and existing trace identifiers propagate and are logged.

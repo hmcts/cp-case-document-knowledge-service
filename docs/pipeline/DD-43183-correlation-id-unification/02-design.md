@@ -130,6 +130,12 @@ flowchart TB
 Everything in the pod box already exists except the two `correlation/*` classes and the
 `CorrelationIds` / `CorrelationScope` helpers they use. `TracingFilter` and its package are removed.
 
+**Scope note (confirmed 2026-09-06):** the `caller` subgraph's `CPPCLIENTCORRELATIONID` header applies
+to **other CPP services** calling CDKS, not the AI Search UI — the UI sends neither header today and
+has no plan to, and does not display `ErrorResponse.traceId` anywhere. Every UI-originated request
+therefore takes the `RCF`'s generated-value branch. No part of this design depends on the UI
+participating; the deliverable is CDKS generating and logging one internal ID consistently, end to end.
+
 ### 2. What is actually true today — and how it was verified
 
 This section exists because three of the ticket's factual claims and one of Stage 1's are wrong, and
