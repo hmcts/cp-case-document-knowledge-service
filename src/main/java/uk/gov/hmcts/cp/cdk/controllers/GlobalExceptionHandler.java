@@ -2,15 +2,13 @@ package uk.gov.hmcts.cp.cdk.controllers;
 
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationIds;
 import uk.gov.hmcts.cp.openapi.model.cdk.ErrorResponse;
 
-import java.util.Objects;
 import java.util.stream.Collectors;
 
-import io.micrometer.tracing.Tracer;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,26 +26,14 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @Slf4j
 @RestControllerAdvice
-@RequiredArgsConstructor
 public class GlobalExceptionHandler {
-
-    private final Tracer tracer;
-
-    private String traceId() {
-        String traceId = null;
-        try {
-            traceId = Objects.requireNonNull(tracer.currentSpan()).context().traceId();
-        } catch (Exception ignored) {
-        }
-        return traceId;
-    }
 
     private ErrorResponse base(final String code, final String message) {
         return new ErrorResponse()
                 .error(code)
                 .message(message)
                 .timestamp(utcNow())
-                .traceId(traceId());
+                .traceId(CorrelationIds.currentOrGenerate());
     }
 
     @ExceptionHandler(ResponseStatusException.class)

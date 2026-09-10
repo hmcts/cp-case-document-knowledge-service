@@ -1,6 +1,12 @@
 package uk.gov.hmcts.cp.cdk.storage;
 
 import static java.util.Objects.requireNonNull;
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.DEPENDENCY_AZURE_BLOB;
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.OPERATION_COPY_FROM_URL;
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.OUTCOME_SUCCESS;
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.OUTCOME_TIMEOUT;
+
+import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 
 import java.net.URI;
 import java.net.URLDecoder;
@@ -27,11 +33,14 @@ public class AzureBlobStorageService implements StorageService {
     private final BlobContainerClient blobContainerClient;
     private final long pollIntervalMs;
     private final long timeoutSeconds;
+    private final ExternalCallMetrics externalCallMetrics;
 
-    public AzureBlobStorageService(final BlobContainerClient blobContainerClient, final StorageProperties storageProperties) {
+    public AzureBlobStorageService(final BlobContainerClient blobContainerClient, final StorageProperties storageProperties,
+                                   final ExternalCallMetrics externalCallMetrics) {
         this.blobContainerClient = requireNonNull(blobContainerClient, "blobContainerClient");
         this.pollIntervalMs = storageProperties.copyPollIntervalMs() != null ? storageProperties.copyPollIntervalMs() : 1_000L;
         this.timeoutSeconds = storageProperties.copyTimeoutSeconds() != null ? storageProperties.copyTimeoutSeconds() : 120L;
+        this.externalCallMetrics = requireNonNull(externalCallMetrics, "externalCallMetrics");
     }
 
     @Override
@@ -46,6 +55,7 @@ public class AzureBlobStorageService implements StorageService {
                 .setDestinationRequestConditions(new BlobRequestConditions().setIfNoneMatch("*"))
                 .setPollInterval(Duration.ofMillis(pollIntervalMs));
 
+        final long startNanos = externalCallMetrics.startTimer();
         try {
             final SyncPoller<BlobCopyInfo, Void> syncPoller = destinationBlobClient.beginCopy(copyOptions);
             final BlobCopyInfo blobCopyInfo = syncPoller.waitForCompletion(Duration.ofSeconds(timeoutSeconds)).getValue();
@@ -59,15 +69,19 @@ public class AzureBlobStorageService implements StorageService {
 
             final String blobUrl = destinationBlobClient.getBlobUrl();
             log.info("Azure copy from source to destination successful. blob={}, url={}", blobName, blobUrl);
+            externalCallMetrics.recordOutcome(DEPENDENCY_AZURE_BLOB, OPERATION_COPY_FROM_URL, startNanos, OUTCOME_SUCCESS);
             return new DocumentBlobMetadata(blobUrl, blobName, destinationBlobClient.getProperties().getBlobSize());
 
         } catch (final RuntimeException runtimeException) {
             if (runtimeException.getCause() instanceof TimeoutException) {
                 final String message = "Timed out after " + timeoutSeconds + "s waiting for blob copy to succeed";
                 log.error("Timeout error - {} . blob={}", message, blobName);
+                externalCallMetrics.recordOutcome(DEPENDENCY_AZURE_BLOB, OPERATION_COPY_FROM_URL, startNanos, OUTCOME_TIMEOUT);
                 throw new IllegalStateException(message);
             }
             log.error("Unexpected error during blob copy. blob={}", blobName, runtimeException);
+            externalCallMetrics.recordOutcomeClassifying(DEPENDENCY_AZURE_BLOB, OPERATION_COPY_FROM_URL,
+                    startNanos, runtimeException);
             throw runtimeException;
         }
     }

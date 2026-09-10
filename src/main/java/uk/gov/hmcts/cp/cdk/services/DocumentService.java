@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.cdk.services;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 
@@ -33,8 +34,14 @@ public class DocumentService {
     }
 
     @Transactional(readOnly = true)
+    @SuppressWarnings("PMD.UnusedLocalVariable") // the try-with-resources variable is used for its close()
     public URI getMaterialContentUrl(final UUID docId, final String userId) {
+        try (CorrelationScope scope = CorrelationScope.withIdentifiers(null, docId.toString(), null)) {
+            return getMaterialContentUrlScoped(docId, userId);
+        }
+    }
 
+    private URI getMaterialContentUrlScoped(final UUID docId, final String userId) {
         final UUID materialId = caseDocumentRepository.findById(docId)
                 .map(CaseDocument::getMaterialId)
                 .orElseThrow(() -> new ResponseStatusException(

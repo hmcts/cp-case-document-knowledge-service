@@ -14,10 +14,12 @@ import static org.springframework.http.HttpStatus.OK;
 
 import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
 
 import java.util.function.Function;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,9 +52,11 @@ class ApimDocumentIngestionStatusClientTest {
 
     private ApimDocumentIngestionStatusClient client;
 
+    private final ExternalCallMetrics externalCallMetrics = new ExternalCallMetrics(new SimpleMeterRegistry());
+
     @BeforeEach
     void setUp() {
-        client = new ApimDocumentIngestionStatusClient(restClient, ragClientProperties, apimAuthHeaderService);
+        client = new ApimDocumentIngestionStatusClient(restClient, ragClientProperties, apimAuthHeaderService, externalCallMetrics);
     }
 
     @Test

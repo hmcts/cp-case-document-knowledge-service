@@ -15,16 +15,19 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 import uk.gov.hmcts.cp.openapi.model.DocumentUploadRequest;
 import uk.gov.hmcts.cp.openapi.model.FileStorageLocationReturnedSuccessfully;
 
 import java.util.function.Consumer;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -48,6 +51,8 @@ class ApimDocumentIngestionClientTest {
     private RestClient.RequestHeadersSpec<?> requestHeadersSpec;
     @Mock
     private RestClient.ResponseSpec responseSpec;
+    @Spy
+    private ExternalCallMetrics externalCallMetrics = new ExternalCallMetrics(new SimpleMeterRegistry());
     @InjectMocks
     private ApimDocumentIngestionClient client;
 

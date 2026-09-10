@@ -61,6 +61,13 @@ cdk:
     lock-at-least-for: ${CP_CDK_MONITORING_LOCK_AT_LEAST_FOR:PT55S}
     lock-at-most-for: ${CP_CDK_MONITORING_LOCK_AT_MOST_FOR:PT5M}
 
+  # DD-43182 operational metrics. Gates *recording* only — every series is registered at 0
+  # whatever this says (DD-43185 ADR-002 point 6). Setting this false also removes
+  # TaskRetryMetricsAspect's own recording (the seven @Task beans stay CGLIB-proxied regardless,
+  # once DD-43183's JobCorrelationAspect also exists on the same join point).
+  metrics:
+    enabled: ${CP_CDK_METRICS_ENABLED:true}
+
 taskmanager:
   schema:
     enabled=true:

@@ -92,6 +92,8 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
     @Mock
     private ExecutionService executionService;
+    @Mock
+    private uk.gov.hmcts.cp.cdk.metrics.AnswerGenerationMetrics answerGenerationMetrics;
 
     private ExecutionInfo executionInfo;
     private UUID transactionId;
@@ -103,7 +105,8 @@ class CheckStatusOfAnswerGenerationTaskTest {
     void setUp() {
         task = new CheckStatusOfAnswerGenerationTask(api, objectMapper, retryProperties,
                 answerGenerationService, caseLevelAllDocumentsAnswerService,
-                caseLevelLatestDocumentAnswerService, defendantAnswerService, executionService);
+                caseLevelLatestDocumentAnswerService, defendantAnswerService, executionService,
+                answerGenerationMetrics);
         transactionId = UUID.randomUUID();
         caseId = UUID.randomUUID();
         queryId = UUID.randomUUID();
@@ -130,6 +133,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
         final ExecutionInfo result = task.execute(executionInfo);
 
         assertRetry(result);
+        verifyNoInteractions(answerGenerationMetrics);
     }
 
     @Test
@@ -139,6 +143,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
         final ExecutionInfo result = task.execute(executionInfo);
 
         assertRetry(result);
+        verifyNoInteractions(answerGenerationMetrics);
     }
 
     @Test
@@ -150,6 +155,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
         final ExecutionInfo result = task.execute(executionInfo);
 
         assertRetry(result);
+        verifyNoInteractions(answerGenerationMetrics);
     }
 
     @Test
@@ -161,6 +167,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
         final ExecutionInfo result = task.execute(executionInfo);
 
         assertRetry(result);
+        verifyNoInteractions(answerGenerationMetrics);
     }
 
     @Test
@@ -174,6 +181,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
         final ExecutionInfo result = task.execute(executionInfo);
 
         assertRetry(result);
+        verifyNoInteractions(answerGenerationMetrics);
     }
 
     @Test
@@ -265,6 +273,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
         verifyNoInteractions(jdbc);
         assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
         assertThat(result.isShouldRetry()).isFalse();
+        verifyNoInteractions(answerGenerationMetrics);
     }
 
     private void assertRetry(ExecutionInfo result) {
@@ -290,6 +299,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
         assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
         assertThat(result.isShouldRetry()).isFalse();
+        verifyNoInteractions(answerGenerationMetrics);
     }
 
     @Test
@@ -309,5 +319,6 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
         assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
         assertThat(result.isShouldRetry()).isFalse();
+        verify(answerGenerationMetrics).recordFailed(any());
     }
 }

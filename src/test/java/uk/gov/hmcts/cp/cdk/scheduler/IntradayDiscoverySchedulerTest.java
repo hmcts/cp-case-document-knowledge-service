@@ -18,7 +18,11 @@ import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.TAG_SCHEDULER;
 import uk.gov.hmcts.cp.cdk.metrics.SchedulerMetrics;
 import uk.gov.hmcts.cp.cdk.services.DiscoveryService;
 
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationIds;
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
+
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -26,6 +30,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -155,6 +160,26 @@ class IntradayDiscoverySchedulerTest {
         } finally {
             logger.detachAppender(appender);
         }
+    }
+
+    @Test
+    @DisplayName("DD-43183 Story 5, AC-005/AC-006: a correlation value is present during the run "
+            + "(neither carries any MDC today) and no caseId key is ever seeded — this scheduler has no case")
+    void correlationIdPresentDuringRun_andNoCaseIdKeyEverSeeded() {
+        final AtomicReference<String> observedCorrelationId = new AtomicReference<>();
+        final AtomicReference<Boolean> caseIdKeyWasPresent = new AtomicReference<>(false);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            observedCorrelationId.set(org.slf4j.MDC.get(CorrelationIds.MDC_KEY));
+            caseIdKeyWasPresent.set(org.slf4j.MDC.getCopyOfContextMap() != null
+                    && org.slf4j.MDC.getCopyOfContextMap().containsKey(CorrelationScope.MDC_KEY_CASE_ID));
+            return null;
+        }).when(discoveryService).runIntradayDiscovery();
+
+        scheduler.run();
+
+        assertThat(observedCorrelationId.get()).isNotBlank();
+        assertThat(caseIdKeyWasPresent.get()).isFalse();
+        assertThat(org.slf4j.MDC.get(CorrelationIds.MDC_KEY)).as("restored after the run").isNull();
     }
 
     private static final class TestError extends Error {

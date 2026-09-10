@@ -7,7 +7,9 @@ import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.metrics.IngestionMetrics;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
 import uk.gov.hmcts.cp.cdk.util.MaterialNameValidator;
@@ -50,6 +52,7 @@ public class IdpcAvailabilityService {
     private final ProgressionClient progressionClient;
     private final DocumentIdResolver documentIdResolver;
     private final CaseDocumentRepository caseDocumentRepository;
+    private final IngestionMetrics ingestionMetrics;
 
     /**
      * Evaluates IDPC availability for the given case, persisting a placeholder document for every
@@ -58,7 +61,14 @@ public class IdpcAvailabilityService {
      * @return the newer IDPC documents that require ingestion, in no particular order. An empty
      *         list means no newer IDPC version is available.
      */
+    @SuppressWarnings("PMD.UnusedLocalVariable") // the try-with-resources variable is used for its close()
     public List<NewIdpcDocument> retrieveDocuments(final UUID caseId, final String cppuid) {
+        try (CorrelationScope scope = CorrelationScope.withIdentifiers(caseId.toString(), null, null)) {
+            return retrieveDocumentsScoped(caseId, cppuid);
+        }
+    }
+
+    private List<NewIdpcDocument> retrieveDocumentsScoped(final UUID caseId, final String cppuid) {
         final List<LatestMaterialInfo> materials =
                 progressionClient.getCourtDocumentsForAllDefendants(caseId, cppuid);
         final Map<String, String> defendantToDocIdMap = new HashMap<>();
@@ -119,5 +129,6 @@ public class IdpcAvailabilityService {
         entity.setCourtdocId(fromString(info.courtDocumentId()));
 
         caseDocumentRepository.saveAndFlush(entity);
+        ingestionMetrics.recordPhaseTransition(entity.getIngestionPhase(), entity.getSource());
     }
 }

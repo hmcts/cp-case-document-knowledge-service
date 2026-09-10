@@ -19,6 +19,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_REFE
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.REQUEST_ID;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
@@ -27,6 +28,7 @@ import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
+import uk.gov.hmcts.cp.cdk.metrics.IngestionMetrics;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.storage.DocumentBlobMetadata;
 import uk.gov.hmcts.cp.cdk.storage.StorageService;
@@ -71,12 +73,13 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
     private final JobManagerRetryProperties retryProperties;
     private final ExecutionService executionService;
     private final DocumentIngestionInitiationApi documentIngestionInitiationApi;
+    private final IngestionMetrics ingestionMetrics;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
 
         final JsonObject jobData = executionInfo.getJobData();
-        final String requestId = jobData.getString("requestId", "unknown");
+        final String requestId = jobData.getString(REQUEST_ID, "unknown");
         final String userIdForExternalCalls = jobData.getString(CPPUID, null);
 
         if (isBlank(userIdForExternalCalls)) {
@@ -236,5 +239,6 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
         doc.setIngestionPhaseAt(utcNow());
         doc.setRagDocumentReference(isBlank(documentReference) ? null : documentReference);
         caseDocumentRepository.saveAndFlush(doc);
+        ingestionMetrics.recordPhaseTransition(doc.getIngestionPhase(), doc.getSource());
     }
 }

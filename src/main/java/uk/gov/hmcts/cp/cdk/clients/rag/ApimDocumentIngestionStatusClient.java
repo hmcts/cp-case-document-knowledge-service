@@ -1,7 +1,11 @@
 package uk.gov.hmcts.cp.cdk.clients.rag;
 
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.DEPENDENCY_RAG;
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.OPERATION_DOCUMENT_STATUS_BY_REFERENCE;
+
 import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
 import uk.gov.hmcts.cp.openapi.model.DocumentIngestionStatusReturnedSuccessfully;
 
@@ -25,10 +29,15 @@ public class ApimDocumentIngestionStatusClient implements DocumentIngestionStatu
     private final RestClient restClient;
     private final RagClientProperties ragClientProperties;
     private final ApimAuthHeaderService apimAuthHeaderService;
+    private final ExternalCallMetrics externalCallMetrics;
 
     @Override
     public ResponseEntity<@NotNull DocumentIngestionStatusReturnedSuccessfully> documentStatusByReference(final String documentReference) {
+        return externalCallMetrics.record(DEPENDENCY_RAG, OPERATION_DOCUMENT_STATUS_BY_REFERENCE,
+                () -> documentStatusByReferenceCall(documentReference));
+    }
 
+    private ResponseEntity<@NotNull DocumentIngestionStatusReturnedSuccessfully> documentStatusByReferenceCall(final String documentReference) {
         try {
             final DocumentIngestionStatusReturnedSuccessfully response = restClient
                     .get()

@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.scheduler;
 
 import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.NIGHTLY_DISCOVERY;
 
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
 import uk.gov.hmcts.cp.cdk.metrics.SchedulerMetrics;
 import uk.gov.hmcts.cp.cdk.services.DiscoveryService;
 
@@ -36,17 +37,20 @@ public class NightlyDiscoveryScheduler {
     @SchedulerLock(name = "${scheduler.nightly-discovery.name:nightlyDiscoveryScheduler}",
             lockAtLeastFor = "${scheduler.nightly-discovery.lock-at-least-for:PT1H}",
             lockAtMostFor = "${scheduler.nightly-discovery.lock-at-most-for:PT2H}")
+    @SuppressWarnings("PMD.UnusedLocalVariable") // the try-with-resources variable is used for its close()
     public void run() {
-        log.info("Nightly discovery starting scheduler={}", NIGHTLY_DISCOVERY);
-        boolean success = false;
-        try {
-            discoveryService.runNightlyDiscovery();
-            success = true;
-            log.info("Nightly discovery finished scheduler={}", NIGHTLY_DISCOVERY);
-        } catch (final Exception e) {
-            log.error("Nightly discovery failed scheduler={}", NIGHTLY_DISCOVERY, e);
-        } finally {
-            schedulerMetrics.recordRun(NIGHTLY_DISCOVERY, success);
+        try (CorrelationScope scope = CorrelationScope.openIfAbsent()) {
+            log.info("Nightly discovery starting scheduler={}", NIGHTLY_DISCOVERY);
+            boolean success = false;
+            try {
+                discoveryService.runNightlyDiscovery();
+                success = true;
+                log.info("Nightly discovery finished scheduler={}", NIGHTLY_DISCOVERY);
+            } catch (final Exception e) {
+                log.error("Nightly discovery failed scheduler={}", NIGHTLY_DISCOVERY, e);
+            } finally {
+                schedulerMetrics.recordRun(NIGHTLY_DISCOVERY, success);
+            }
         }
     }
 }

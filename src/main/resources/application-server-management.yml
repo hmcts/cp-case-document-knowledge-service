@@ -30,19 +30,47 @@ management:
       cluster: ${CLUSTER_NAME:local}
       region: ${REGION:local}
 
+    distribution:
+      # Explicitly false, not left at the default. Micrometer's default bucket ladder for a Timer
+      # is wide; on cdk.external.call.duration's tag combinations that alone would breach the
+      # cardinality budget (DD-43182 ADR-005).
+      percentiles-histogram:
+        cdk: false
+      # Server-side, aggregatable buckets for the ingestion-duration timer's p50/p95/p99. These
+      # mirror CdkMeters.INGESTION_DURATION_SLOS — the code default is authoritative; this key is
+      # the runtime override lever. Client-side `percentiles` is deliberately NOT set:
+      # pre-computed per-pod percentiles cannot be combined by histogram_quantile.
+      slo:
+        cdk.document.ingestion.duration: 15s,30s,1m,2m,5m,10m,30m,1h
+
+  # There is no "master switch" for tracing on this Spring Boot version: management.tracing.enabled
+  # was removed at deprecation level `error` (no replacement field on TracingProperties) — a real
+  # OtelTracer bean is always active while spring-boot-starter-opentelemetry is on the classpath.
+  # Only the *exporter* below is switchable. Trace IDs and log correlation (MDC correlationId/
+  # traceId/spanId) are populated on every span regardless of the sampling probability below —
+  # sampling controls only whether a span is exported, never whether it exists or is logged
+  # (DD-43183 ADR-006). Do not re-add management.tracing.enabled, management.otlp.tracing.enabled
+  # or management.otlp.tracing.endpoint — all three are dead/removed keys on this classpath
+  # (DD-43183 Story 6); the real keys are management.tracing.export.otlp.enabled and
+  # management.opentelemetry.tracing.export.otlp.endpoint below.
   tracing:
-    enabled: false
     sampling:
-      probability: ${TRACING_SAMPLER_PROBABILITY:1.0}
+      probability: ${TRACING_SAMPLER_PROBABILITY:0.1}
+    export:
+      otlp:
+        enabled: ${OTEL_TRACES_ENABLED:false}
+
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTEL_TRACES_URL:http://localhost:4318/v1/traces}
 
   otlp:
-    tracing:
-      enabled: ${OTEL_METRICS_ENABLED:false}
-      endpoint: ${OTEL_TRACES_URL:http://localhost:4318/traces}
     metrics:
       export:
         enabled: ${OTEL_METRICS_ENABLED:false}
-        url: ${OTEL_METRICS_URL:http://localhost:4318/metrics}
+        url: ${OTEL_METRICS_URL:http://localhost:4318/v1/metrics}
 
 logging:
   level:

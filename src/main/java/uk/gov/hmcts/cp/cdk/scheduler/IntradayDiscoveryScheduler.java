@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.scheduler;
 
 import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.INTRADAY_DISCOVERY;
 
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
 import uk.gov.hmcts.cp.cdk.metrics.SchedulerMetrics;
 import uk.gov.hmcts.cp.cdk.services.DiscoveryService;
 
@@ -37,17 +38,20 @@ public class IntradayDiscoveryScheduler {
     @SchedulerLock(name = "${scheduler.intraday-discovery.name:intradayDiscoveryScheduler}",
             lockAtLeastFor = "${scheduler.intraday-discovery.lock-at-least-for:PT8M}",
             lockAtMostFor = "${scheduler.intraday-discovery.lock-at-most-for:PT9M}")
+    @SuppressWarnings("PMD.UnusedLocalVariable") // the try-with-resources variable is used for its close()
     public void run() {
-        log.info("Intraday discovery starting scheduler={}", INTRADAY_DISCOVERY);
-        boolean success = false;
-        try {
-            discoveryService.runIntradayDiscovery();
-            success = true;
-            log.info("Intraday discovery finished scheduler={}", INTRADAY_DISCOVERY);
-        } catch (final Exception e) {
-            log.error("Intraday discovery failed scheduler={}", INTRADAY_DISCOVERY, e);
-        } finally {
-            schedulerMetrics.recordRun(INTRADAY_DISCOVERY, success);
+        try (CorrelationScope scope = CorrelationScope.openIfAbsent()) {
+            log.info("Intraday discovery starting scheduler={}", INTRADAY_DISCOVERY);
+            boolean success = false;
+            try {
+                discoveryService.runIntradayDiscovery();
+                success = true;
+                log.info("Intraday discovery finished scheduler={}", INTRADAY_DISCOVERY);
+            } catch (final Exception e) {
+                log.error("Intraday discovery failed scheduler={}", INTRADAY_DISCOVERY, e);
+            } finally {
+                schedulerMetrics.recordRun(INTRADAY_DISCOVERY, success);
+            }
         }
     }
 }

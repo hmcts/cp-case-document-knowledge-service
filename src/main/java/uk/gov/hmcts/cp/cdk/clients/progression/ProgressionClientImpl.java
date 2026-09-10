@@ -1,10 +1,16 @@
 package uk.gov.hmcts.cp.cdk.clients.progression;
 
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.DEPENDENCY_PROGRESSION;
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.OPERATION_GET_COURT_DOCUMENTS;
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.OPERATION_GET_COURT_DOCUMENTS_ALL_DEFENDANTS;
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.OPERATION_GET_MATERIAL_DOWNLOAD_URL;
+
 import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.CourtDocumentSearchResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.UrlResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
+import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 
 import java.net.URI;
 import java.util.Comparator;
@@ -33,12 +39,14 @@ public class ProgressionClientImpl implements ProgressionClient {
     private final String materialContentPath;
     private final String acceptForCourtDocSearch;
     private final String acceptForMaterialContent;
+    private final ExternalCallMetrics externalCallMetrics;
 
 
     public ProgressionClientImpl(final @Qualifier("cqrsRestClient") RestClient restClient,
                                  final CQRSClientProperties rootProps,
                                  final ProgressionClientConfig props,
-                                 final ProgressionDtoMapper mapper) {
+                                 final ProgressionDtoMapper mapper,
+                                 final ExternalCallMetrics externalCallMetrics) {
         this.restClient = Objects.requireNonNull(restClient, "restClient");
         this.cppuidHeader = Objects.requireNonNull(rootProps.headers().cjsCppuid(), "cjsCppuidHeader");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
@@ -46,11 +54,17 @@ public class ProgressionClientImpl implements ProgressionClient {
         this.materialContentPath = Objects.requireNonNull(props.materialContentPath(), "materialContentPath");
         this.acceptForCourtDocSearch = Objects.requireNonNull(props.acceptForCourtDocSearch(), "acceptForCourtDocSearch");
         this.acceptForMaterialContent = Objects.requireNonNull(props.acceptForMaterialContent(), "acceptForMaterialContent");
+        this.externalCallMetrics = Objects.requireNonNull(externalCallMetrics, "externalCallMetrics");
     }
 
     @Override
-    @SuppressWarnings({"PMD.OnlyOneReturn", "PMD.UseExplicitTypes"})
     public Optional<LatestMaterialInfo> getCourtDocuments(final UUID caseId, final String userId) {
+        return externalCallMetrics.record(DEPENDENCY_PROGRESSION, OPERATION_GET_COURT_DOCUMENTS,
+                () -> getCourtDocumentsCall(caseId, userId));
+    }
+
+    @SuppressWarnings({"PMD.OnlyOneReturn", "PMD.UseExplicitTypes"})
+    private Optional<LatestMaterialInfo> getCourtDocumentsCall(final UUID caseId, final String userId) {
         final URI uri = UriComponentsBuilder
                 .fromPath(courtDocsPath)
                 .queryParam("caseId", caseId)
@@ -76,6 +90,11 @@ public class ProgressionClientImpl implements ProgressionClient {
 
     @Override
     public Optional<String> getMaterialDownloadUrl(final UUID materialId, final String userId) {
+        return externalCallMetrics.record(DEPENDENCY_PROGRESSION, OPERATION_GET_MATERIAL_DOWNLOAD_URL,
+                () -> getMaterialDownloadUrlCall(materialId, userId));
+    }
+
+    private Optional<String> getMaterialDownloadUrlCall(final UUID materialId, final String userId) {
         final String path = materialContentPath.replace("{materialId}", materialId.toString());
         final URI uri = UriComponentsBuilder.fromPath(path).build().toUri();
 
@@ -92,8 +111,13 @@ public class ProgressionClientImpl implements ProgressionClient {
     }
 
     @Override
-    @SuppressWarnings({"PMD.OnlyOneReturn", "PMD.UseExplicitTypes"})
     public List<LatestMaterialInfo> getCourtDocumentsForAllDefendants(final UUID caseId, final String userId) {
+        return externalCallMetrics.record(DEPENDENCY_PROGRESSION, OPERATION_GET_COURT_DOCUMENTS_ALL_DEFENDANTS,
+                () -> getCourtDocumentsForAllDefendantsCall(caseId, userId));
+    }
+
+    @SuppressWarnings({"PMD.OnlyOneReturn", "PMD.UseExplicitTypes"})
+    private List<LatestMaterialInfo> getCourtDocumentsForAllDefendantsCall(final UUID caseId, final String userId) {
 
         final URI uri = UriComponentsBuilder
                 .fromPath(courtDocsPath)

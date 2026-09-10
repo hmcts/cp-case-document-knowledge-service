@@ -10,6 +10,7 @@ import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.QUERIES_AWAITING_ANSWER;
 import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.TAG_PHASE;
 
 import uk.gov.hmcts.cp.cdk.config.MonitoringProperties;
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.CaseQueryStatusRepository;
 import uk.gov.hmcts.cp.cdk.repo.PhaseCount;
@@ -18,7 +19,6 @@ import uk.gov.hmcts.cp.cdk.util.TimeUtils;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
@@ -96,10 +96,10 @@ public class StalledWorkMetrics {
      * from updating (FR-006). Never throws — the caller ({@link StalledWorkMetricsRefreshJob})
      * relies on that so nothing escapes into Spring's scheduler.
      */
+    @SuppressWarnings("PMD.UnusedLocalVariable") // the try-with-resources variable is used for its close()
     public void refresh() {
         MDC.put("job", "stalled-work-metrics-refresh");
-        MDC.put("correlationId", UUID.randomUUID().toString());
-        try {
+        try (CorrelationScope scope = CorrelationScope.openIfAbsent()) {
             final OffsetDateTime cutoff = TimeUtils.utcNow().minus(monitoringProperties.getStalledThreshold());
 
             final boolean documentsRefreshed = refreshStalledDocuments(cutoff);
@@ -110,7 +110,6 @@ public class StalledWorkMetrics {
             }
         } finally {
             MDC.remove("job");
-            MDC.remove("correlationId");
         }
     }
 

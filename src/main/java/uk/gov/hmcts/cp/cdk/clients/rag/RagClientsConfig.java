@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.clients.rag;
 
 import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedSynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionInitiationApi;
@@ -28,11 +29,12 @@ public class RagClientsConfig {
     public DocumentInformationSummarisedSynchronouslyApi ragAnswerService(
             @Qualifier(RAG_REST_CLIENT) final RestClient ragRestClient,
             final RagClientProperties ragClientProperties,
-            final ApimAuthHeaderService apimAuthHeaderService) {
+            final ApimAuthHeaderService apimAuthHeaderService,
+            final ExternalCallMetrics externalCallMetrics) {
 
         log.info("Creating DocumentInformationSummarisedSynchronouslyApi client (RAG Answer Service) with auth mode={}",
                 ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : SUBSCRIPTION_KEY);
-        return new RagAnswerServiceImpl(ragRestClient, ragClientProperties, apimAuthHeaderService);
+        return new RagAnswerServiceImpl(ragRestClient, ragClientProperties, apimAuthHeaderService, externalCallMetrics);
     }
 
     @Bean
@@ -40,12 +42,13 @@ public class RagClientsConfig {
     public DocumentInformationSummarisedAsynchronouslyApi ragAnswerServiceAsync(
             @Qualifier(RAG_REST_CLIENT) final RestClient ragRestClient,
             final RagClientProperties ragClientProperties,
-            final ApimAuthHeaderService apimAuthHeaderService) {
+            final ApimAuthHeaderService apimAuthHeaderService,
+            final ExternalCallMetrics externalCallMetrics) {
 
         log.info("Creating DocumentInformationSummarisedAsynchronouslyApi client (RAG Async Answer Service) with auth mode={}",
                 ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : SUBSCRIPTION_KEY);
 
-        return new RagAnswerAsyncServiceImpl(ragRestClient, ragClientProperties, apimAuthHeaderService);
+        return new RagAnswerAsyncServiceImpl(ragRestClient, ragClientProperties, apimAuthHeaderService, externalCallMetrics);
     }
 
     @Bean
@@ -53,11 +56,12 @@ public class RagClientsConfig {
     public DocumentIngestionStatusApi documentIngestionStatusApi(
             @Qualifier(RAG_REST_CLIENT) final RestClient ragRestClient,
             final RagClientProperties ragClientProperties,
-            final ApimAuthHeaderService apimAuthHeaderService) {
+            final ApimAuthHeaderService apimAuthHeaderService,
+            final ExternalCallMetrics externalCallMetrics) {
 
         log.info("Creating DocumentIngestionStatusApi client with auth mode={}",
                 ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : SUBSCRIPTION_KEY);
-        return new ApimDocumentIngestionStatusClient(ragRestClient, ragClientProperties, apimAuthHeaderService);
+        return new ApimDocumentIngestionStatusClient(ragRestClient, ragClientProperties, apimAuthHeaderService, externalCallMetrics);
     }
 
     @Bean
@@ -65,10 +69,11 @@ public class RagClientsConfig {
     public DocumentIngestionInitiationApi documentIngestionInitiationApi(
             @Qualifier(RAG_REST_CLIENT) final RestClient ragRestClient,
             final RagClientProperties ragClientProperties,
-            final ApimAuthHeaderService apimAuthHeaderService) {
+            final ApimAuthHeaderService apimAuthHeaderService,
+            final ExternalCallMetrics externalCallMetrics) {
 
         log.info("Creating DocumentIngestionApi client with auth mode={}",
                 ragClientProperties.getAuth() != null ? ragClientProperties.getAuth().getMode() : SUBSCRIPTION_KEY);
-        return new ApimDocumentIngestionClient(ragRestClient, ragClientProperties, apimAuthHeaderService);
+        return new ApimDocumentIngestionClient(ragRestClient, ragClientProperties, apimAuthHeaderService, externalCallMetrics);
     }
 }
