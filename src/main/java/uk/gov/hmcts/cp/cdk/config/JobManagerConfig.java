@@ -3,6 +3,7 @@ package uk.gov.hmcts.cp.cdk.config;
 import static java.util.Objects.requireNonNull;
 
 import uk.gov.hmcts.cp.cdk.jobmanager.IngestionProperties;
+import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 import uk.gov.hmcts.cp.cdk.storage.AzureBlobStorageService;
 import uk.gov.hmcts.cp.cdk.storage.StorageProperties;
 import uk.gov.hmcts.cp.cdk.storage.StorageService;
@@ -125,7 +126,8 @@ public class JobManagerConfig {
 
     @Bean
     public StorageService storageService(final BlobContainerClient blobContainerClient,
-                                         final StorageProperties storageProperties) {
-        return new AzureBlobStorageService(blobContainerClient, storageProperties);
+                                         final StorageProperties storageProperties,
+                                         final ExternalCallMetrics externalCallMetrics) {
+        return new AzureBlobStorageService(blobContainerClient, storageProperties, externalCallMetrics);
     }
 }

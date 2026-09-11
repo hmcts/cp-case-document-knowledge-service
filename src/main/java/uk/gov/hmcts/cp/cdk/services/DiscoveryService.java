@@ -1,7 +1,6 @@
 package uk.gov.hmcts.cp.cdk.services;
 
 import static java.util.Objects.nonNull;
-import static java.util.UUID.randomUUID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.COURT_CENTRE_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
@@ -12,6 +11,7 @@ import static uk.gov.hmcts.cp.cdk.util.EnvironmentUtil.getSystemUserId;
 
 import uk.gov.hmcts.cp.cdk.clients.hearing.HearingClient;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseForDay;
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationIds;
 import uk.gov.hmcts.cp.cdk.domain.DiscoverySchedulerConfiguration;
 import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
 import uk.gov.hmcts.cp.cdk.repo.DiscoverySchedulerConfigurationRepository;
@@ -150,7 +150,7 @@ public class DiscoveryService {
 
     private JsonObject toJobDataForCaseEligibility(final UUID caseId, final UUID cpSystemUserId) {
         return Json.createObjectBuilder()
-                .add(REQUEST_ID, randomUUID().toString())
+                .add(REQUEST_ID, CorrelationIds.currentOrGenerate())
                 .add(CPPUID, cpSystemUserId.toString())
                 .add(CTX_CASE_ID_KEY, caseId.toString())
                 .build();
@@ -160,7 +160,7 @@ public class DiscoveryService {
                                                    final String roomId, final String date) {
         return Json.createObjectBuilder()
                 .add(CPPUID, cppUid)
-                .add(REQUEST_ID, randomUUID().toString())
+                .add(REQUEST_ID, CorrelationIds.currentOrGenerate())
                 .add(COURT_CENTRE_ID, courtCentreId)
                 .add(ROOM_ID, roomId)
                 .add(DATE, date)

@@ -15,11 +15,13 @@ import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummaries;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesListRequest;
 import uk.gov.hmcts.cp.cdk.clients.hearing.mapper.HearingDtoMapper;
+import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,6 +62,7 @@ class HearingClientImplTest {
     private final String hearingsPath = "/hearings";
     private final String hearingCasesForDayAcceptHeader = "application/json";
     private final String hearingCasesForDayPath = "/hearing-cases-for-day";
+    private final ExternalCallMetrics externalCallMetrics = new ExternalCallMetrics(new SimpleMeterRegistry());
 
     @BeforeEach
     void setUp() {
@@ -70,7 +73,7 @@ class HearingClientImplTest {
         when(hearingProps.getHearingCasesForDayAcceptHeader()).thenReturn(hearingCasesForDayAcceptHeader);
         when(hearingProps.getHearingCasesForDayPath()).thenReturn(hearingCasesForDayPath);
 
-        client = new HearingClientImpl(restClient, rootProps, hearingProps, mapper);
+        client = new HearingClientImpl(restClient, rootProps, hearingProps, mapper, externalCallMetrics);
     }
 
     @Test

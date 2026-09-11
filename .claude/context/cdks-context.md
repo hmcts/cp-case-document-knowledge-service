@@ -22,7 +22,7 @@
 | `services/` | Business logic: answer generation, query management, document discovery, ingestion orchestration, discovery scheduler configuration |
 | `domain/` | 23 JPA entities: `Query`, `QueryVersion`, `CaseDocument`, `CaseQueryStatus`, answer variants, `DocumentVerificationTask`, `ScheduledIngestionRequest`, `DiscoverySchedulerConfiguration` |
 | `repo/` | 14 JPA repositories |
-| `jobmanager/` | Long-running task orchestration via Task Manager service: `caseflow/` (5 multi-defendant tasks), `queryflow/`, `hearing/` |
+| `jobmanager/` | Long-running task orchestration via Task Manager service: `caseflow/` (4 multi-defendant tasks), `queryflow/` (2), `hearing/` (1) — 7 JobManager tasks total |
 | `scheduler/` | `IntradayDiscoveryScheduler` — every 10 min, Mon–Fri 07:00–19:50, ShedLock-guarded |
 | `clients/` | External integrations: `rag/` (AI), `hearing/`, `progression/`, `common/` (Azure auth + APIM) |
 | `storage/` | `AzureBlobStorageService` — all blob operations go here |

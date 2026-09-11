@@ -142,8 +142,6 @@ services:
       CDK_INGEST_VERIFY_MAX_WAIT_MS: 10000
 
       LOGGING_LEVEL_org.flywaydb: "DEBUG"
-      MANAGEMENT_TRACING_ENABLED: "false"
-      TRACING_ENABLED: "false"
 
       CP_CDK_DB_POOL_SIZE: 20
       CP_CDK_DB_MIN_IDLE: 5
@@ -152,10 +150,13 @@ services:
       CLUSTER_NAME: local
       REGION: local
 
+      # MANAGEMENT_TRACING_ENABLED and TRACING_ENABLED removed (DD-43183 Story 6): neither key
+      # binds to anything on Spring Boot 4.0.6 — the same class of dead config this story exists to
+      # remove. OTEL_TRACES_URL/OTEL_METRICS_URL removed too, rather than re-pointed at /v1/* paths:
+      # one definition site (the shipped YAML default) cannot drift from another, and this lets
+      # `gradle integration` exercise the corrected /v1/traces and /v1/metrics defaults directly.
       TRACING_SAMPLER_PROBABILITY: 1.0
       OTEL_METRICS_ENABLED: "false"
-      OTEL_TRACES_URL: http://localhost:4318/traces
-      OTEL_METRICS_URL: http://localhost:4318/metrics
 
       CP_CDK_STORAGE_MODE: connection-string
       CP_CDK_AZURE_STORAGE_CONNECTION_STRING: "${AZURE_STORAGE_CONNECTION_STRING}"

@@ -1,48 +1,38 @@
 package uk.gov.hmcts.cp.cdk.controllers;
 
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.when;
 
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationIds;
 import uk.gov.hmcts.cp.openapi.model.cdk.ErrorResponse;
 
 import java.util.List;
 import java.util.Set;
 
-import io.micrometer.tracing.Span;
-import io.micrometer.tracing.TraceContext;
-import io.micrometer.tracing.Tracer;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.hibernate.validator.internal.engine.path.PathImpl;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
+import org.slf4j.MDC;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("Global Exception Handler tests")
+@DisplayName("GlobalExceptionHandler tests (DD-43183 Story 4 — rewritten, no Tracer dependency)")
 class GlobalExceptionHandlerTest {
-    @Mock
-    private Tracer tracer;
-    @Mock
-    private Span span;
-    @Mock
-    private TraceContext context;
+
     @Mock
     private HttpInputMessage httpInputMessage;
     @Mock
@@ -52,121 +42,114 @@ class GlobalExceptionHandlerTest {
     @Mock
     private MethodArgumentNotValidException methodArgumentNotValidException;
 
+    private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
+
     @BeforeEach
-    public void setup() {
-        when(tracer.currentSpan()).thenReturn(span);
-        when(span.context()).thenReturn(context);
+    void setUp() {
+        MDC.put(CorrelationIds.MDC_KEY, "ambient-correlation-id");
+    }
+
+    @AfterEach
+    void tearDown() {
+        MDC.clear();
     }
 
     @Test
-    @DisplayName("Handle Response Status Exception Should Return Error Response With Correct Fields")
-    void handleResponseStatusExceptionShouldReturnErrorResponseWithCorrectFields() {
-        when(context.traceId()).thenReturn("test-trace-id");
-
-        final GlobalExceptionHandler handler = new GlobalExceptionHandler(tracer);
-
-        String reason = "Test error";
+    @DisplayName("AC-001/AC-003: onResponseStatus's traceId equals the ambient correlation ID")
+    void onResponseStatus_traceIdEqualsAmbientCorrelationId() {
+        final String reason = "Test error";
         final ResponseStatusException ex = new ResponseStatusException(HttpStatus.NOT_FOUND, reason);
 
-        // Act
-        final var response = handler.onResponseStatus(ex);
+        final ResponseEntity<ErrorResponse> response = handler.onResponseStatus(ex);
 
-        // Assert
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        ErrorResponse error = response.getBody();
-        assertNotNull(error);
-        assertEquals("404", error.getError());
-        assertEquals(reason, error.getMessage());
-        assertNotNull(error.getTimestamp());
-        assertEquals("test-trace-id", error.getTraceId());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        final ErrorResponse error = response.getBody();
+        assertThat(error).isNotNull();
+        assertThat(error.getError()).isEqualTo("404");
+        assertThat(error.getMessage()).isEqualTo(reason);
+        assertThat(error.getTimestamp()).isNotNull();
+        assertThat(error.getTraceId()).isEqualTo("ambient-correlation-id");
     }
 
     @Test
-    void onValidation_shouldReturnBAD_REQUEST() {
-        when(span.context().traceId()).thenReturn("tId");
+    @DisplayName("AC-003: onValidation's traceId equals the ambient correlation ID")
+    void onValidation_traceIdEqualsAmbientCorrelationId() {
+        final FieldError fieldError = new FieldError("obj", "caseId", "cannot be null");
+        org.mockito.Mockito.when(bindingResult.getFieldErrors()).thenReturn(List.of(fieldError));
+        org.mockito.Mockito.when(methodArgumentNotValidException.getBindingResult()).thenReturn(bindingResult);
 
-        FieldError fieldError = new FieldError("obj", "caseId", "cannot be null");
-        when(bindingResult.getFieldErrors()).thenReturn(List.of(fieldError));
-        when(methodArgumentNotValidException.getBindingResult()).thenReturn(bindingResult);
+        final ResponseEntity<ErrorResponse> res = handler.onValidation(methodArgumentNotValidException);
 
-        final GlobalExceptionHandler handler = new GlobalExceptionHandler(tracer);
-        ResponseEntity<ErrorResponse> res = handler.onValidation(methodArgumentNotValidException);
-
-        assertEquals(HttpStatus.BAD_REQUEST, res.getStatusCode());
-        assertEquals("400", res.getBody().getError());
-        assertEquals("caseId cannot be null", res.getBody().getMessage());
-        assertEquals("tId", res.getBody().getTraceId());
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(res.getBody().getError()).isEqualTo("400");
+        assertThat(res.getBody().getMessage()).isEqualTo("caseId cannot be null");
+        assertThat(res.getBody().getTraceId()).isEqualTo("ambient-correlation-id");
     }
 
     @Test
-    void onConstraint_shouldReturnBAD_REQUEST() {
-        when(span.context().traceId()).thenReturn("tId");
-
-        when(violation.getPropertyPath()).thenReturn(PathImpl.createPathFromString("name"));
-        when(violation.getMessage()).thenReturn("must not be blank");
-
+    @DisplayName("AC-003: onConstraint's traceId equals the ambient correlation ID")
+    void onConstraint_traceIdEqualsAmbientCorrelationId() {
+        org.mockito.Mockito.when(violation.getPropertyPath()).thenReturn(PathImpl.createPathFromString("name"));
+        org.mockito.Mockito.when(violation.getMessage()).thenReturn("must not be blank");
         final ConstraintViolationException ex = new ConstraintViolationException(Set.of(violation));
 
-        final GlobalExceptionHandler handler = new GlobalExceptionHandler(tracer);
         final ResponseEntity<ErrorResponse> res = handler.onConstraint(ex);
 
-        assertEquals(HttpStatus.BAD_REQUEST, res.getStatusCode());
-        assertEquals("400", res.getBody().getError());
-        assertEquals("name must not be blank", res.getBody().getMessage());
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(res.getBody().getError()).isEqualTo("400");
+        assertThat(res.getBody().getMessage()).isEqualTo("name must not be blank");
+        assertThat(res.getBody().getTraceId()).isEqualTo("ambient-correlation-id");
     }
 
     @Test
-    void onUnreadable_shouldReturnMalformedBody() {
-        when(span.context().traceId()).thenReturn("xyz");
-
+    @DisplayName("AC-003: onUnreadable's traceId equals the ambient correlation ID")
+    void onUnreadable_traceIdEqualsAmbientCorrelationId() {
         final HttpMessageNotReadableException ex = new HttpMessageNotReadableException("bad payload", httpInputMessage);
 
-        final GlobalExceptionHandler handler = new GlobalExceptionHandler(tracer);
         final ResponseEntity<ErrorResponse> result = handler.onUnreadable(ex);
 
-        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
-        assertEquals("400", result.getBody().getError());
-        assertEquals("Malformed request body", result.getBody().getMessage());
-        assertEquals("xyz", result.getBody().getTraceId());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(result.getBody().getMessage()).isEqualTo("Malformed request body");
+        assertThat(result.getBody().getTraceId()).isEqualTo("ambient-correlation-id");
     }
 
     @Test
-    void onUnexpected_shouldReturn500() {
-        when(span.context().traceId()).thenReturn("zzz");
+    @DisplayName("AC-003: onUnexpected's traceId equals the ambient correlation ID")
+    void onUnexpected_traceIdEqualsAmbientCorrelationId() {
+        final ResponseEntity<ErrorResponse> res = handler.onUnexpected(new RuntimeException("Error!!"));
 
-        final Exception ex = new RuntimeException("Error!!");
-
-        final GlobalExceptionHandler handler = new GlobalExceptionHandler(tracer);
-        final ResponseEntity<ErrorResponse> res = handler.onUnexpected(ex);
-
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, res.getStatusCode());
-        assertEquals("500", res.getBody().getError());
-        assertEquals("Unexpected error", res.getBody().getMessage());
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(res.getBody().getMessage()).isEqualTo("Unexpected error");
+        assertThat(res.getBody().getTraceId()).isEqualTo("ambient-correlation-id");
     }
 
     @Test
-    void onMethodNotSupported_shouldReturn405() throws Exception {
-        when(span.context().traceId()).thenReturn("mmm");
+    @DisplayName("AC-003: onMethodNotSupported's traceId equals the ambient correlation ID")
+    void onMethodNotSupported_traceIdEqualsAmbientCorrelationId() throws Exception {
+        final HttpRequestMethodNotSupportedException ex =
+                new HttpRequestMethodNotSupportedException("GET", List.of("POST"));
 
-        final org.springframework.web.HttpRequestMethodNotSupportedException ex =
-                new org.springframework.web.HttpRequestMethodNotSupportedException("GET", List.of("POST"));
-
-        final GlobalExceptionHandler handler = new GlobalExceptionHandler(tracer);
         final ResponseEntity<ErrorResponse> res = handler.onMethodNotSupported(ex);
 
-        assertEquals(HttpStatus.METHOD_NOT_ALLOWED, res.getStatusCode());
-        assertEquals("405", res.getBody().getError());
-        assertEquals("mmm", res.getBody().getTraceId());
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+        assertThat(res.getBody().getTraceId()).isEqualTo("ambient-correlation-id");
     }
 
-    @MockitoSettings(strictness = Strictness.LENIENT)
     @Test
-    void traceId_shouldReturnNull_ifTracerThrows() {
-        when(tracer.currentSpan()).thenThrow(RuntimeException.class);
+    @DisplayName("AC-001: with no ambient correlation value at all, traceId is still non-blank — "
+            + "never the empty string the historical defect returned")
+    void traceIdIsNonBlankEvenWithNoAmbientValue() {
+        MDC.clear();
 
-        final GlobalExceptionHandler handler = new GlobalExceptionHandler(tracer);
         final ResponseEntity<ErrorResponse> res = handler.onUnexpected(new RuntimeException());
 
-        assertThat(res.getBody().getTraceId()).isNull();
+        assertThat(res.getBody().getTraceId()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("AC-004: GlobalExceptionHandler has no Tracer dependency at all")
+    void noTracerConstructorDependency() {
+        assertThat(GlobalExceptionHandler.class.getDeclaredConstructors()).allSatisfy(constructor ->
+                assertThat(constructor.getParameterCount()).isZero());
     }
 }

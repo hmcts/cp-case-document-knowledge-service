@@ -18,6 +18,8 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
 import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
+import uk.gov.hmcts.cp.cdk.metrics.AnswerGenerationMetrics;
+import uk.gov.hmcts.cp.cdk.metrics.TaskRetryDecision;
 import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
@@ -49,6 +51,7 @@ public class GenerateAnswerForQueryTask implements ExecutableTask {
     private final QueryDefinitionLatestRepository queryDefinitionLatestRepository;
     private final DocumentInformationSummarisedAsynchronouslyApi documentInformationSummarisedAsynchronouslyApi;
     private final ExecutionService executionService;
+    private final AnswerGenerationMetrics answerGenerationMetrics;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -62,6 +65,7 @@ public class GenerateAnswerForQueryTask implements ExecutableTask {
 
         if (isNull(caseId) || isNull(docId) || isNull(queryId)) {
             log.warn("GenerateAnswerForQueryTask: missing identifiers caseId={}, docId={}, queryId={}", caseId, docId, queryId);
+            answerGenerationMetrics.recordFailed(parseQueryLevel(levelStr));
             return completed(executionInfo);
         }
         final QueryLevel level = parseQueryLevel(levelStr);
@@ -80,6 +84,7 @@ public class GenerateAnswerForQueryTask implements ExecutableTask {
 
         if (isNull(qdl)) {
             log.warn("No QueryDefinitionLatest found for queryId={}", queryId);
+            answerGenerationMetrics.recordFailed(level);
             return completed(executionInfo);
         }
 
@@ -113,6 +118,14 @@ public class GenerateAnswerForQueryTask implements ExecutableTask {
 
         } catch (final Exception ex) {
             log.error("Failed to start async RAG for caseId={}, docId={}, queryId={}", caseId, docId, queryId, ex);
+
+            // This task has no getRetryDurationsInSecs() override, so willBeRetried(...) is always
+            // false — this "retry-looking" outcome can never actually be granted a retry, so it is
+            // counted as the genuine terminal failure it is (per Story 6's TaskRetryDecision). If
+            // this task ever gains the missing override, this stops over-reporting automatically.
+            if (!TaskRetryDecision.willBeRetried(executionInfo, this)) {
+                answerGenerationMetrics.recordFailed(level);
+            }
 
             return executionInfo()
                     .from(executionInfo)

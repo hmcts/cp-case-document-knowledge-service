@@ -1,31 +1,32 @@
 package uk.gov.hmcts.cp.cdk.http;
 
-import java.io.IOException;
-import java.util.UUID;
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationIds;
 
-import org.slf4j.MDC;
+import java.io.IOException;
+
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
 
+/**
+ * Propagates the in-scope correlation ID to every outbound {@code RestClient} call (DD-43183
+ * Story 2, ADR-007) — attached unconditionally to every client by {@code RestClientFactoryConfig}.
+ *
+ * <p><strong>MDC-read-only.</strong> This class performs no {@code MDC.put} and no {@code MDC.remove}
+ * at all — the historical defect it replaces put a fresh {@code UUID} into MDC and then
+ * <em>removed</em> the key in {@code finally}, deleting the inbound correlation ID for the rest of
+ * the request the moment CDKS made its first outbound call. Removing the ability to write MDC here
+ * closes that failure class rather than patching the {@code finally} block.
+ */
 public class CorrelationIdInterceptor implements ClientHttpRequestInterceptor {
-    public static final String HEADER = "X-Request-ID";
-    public static final String MDC_KEY = "correlationId";
 
     @Override
-    public ClientHttpResponse intercept(final HttpRequest request, final byte[] body, final ClientHttpRequestExecution execution)
-            throws IOException {
-        String cid = request.getHeaders().getFirst(HEADER);
-        if (cid == null || cid.isBlank()) {
-            cid = UUID.randomUUID().toString();
-            request.getHeaders().set(HEADER, cid);
-        }
-        MDC.put(MDC_KEY, cid);
-        try {
-            return execution.execute(request, body);
-        } finally {
-            MDC.remove(MDC_KEY);
-        }
+    public ClientHttpResponse intercept(final HttpRequest request, final byte[] body,
+                                        final ClientHttpRequestExecution execution) throws IOException {
+        final String correlationId = CorrelationIds.currentOrRandom();
+        request.getHeaders().set(CorrelationIds.HEADER_CPP, correlationId);
+        request.getHeaders().set(CorrelationIds.HEADER_X_CORRELATION_ID, correlationId);
+        return execution.execute(request, body);
     }
 }

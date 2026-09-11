@@ -101,7 +101,7 @@ All APIM calls carry a subscription key or AAD token injected by `ApimAuthHeader
 | `api-cp-ai-rag` | 0.0.15 | RAG service API models |
 | `cp-auth-rules-filter` | 1.0.7 | Drools-based HTTP authorization |
 | `cp-audit-filter-springboot` | 1.0.5 | Audit event filter (publishes to Artemis) |
-| `task-manager-service` | 1.0.10 | Job/task orchestration client |
+| `task-manager-service` | 1.0.11 | Job/task orchestration client |
 
 ---
 

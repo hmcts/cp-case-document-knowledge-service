@@ -10,6 +10,8 @@ import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
+
 import java.util.concurrent.TimeoutException;
 
 import com.azure.core.util.polling.PollResponse;
@@ -21,6 +23,7 @@ import com.azure.storage.blob.models.BlobCopyInfo;
 import com.azure.storage.blob.models.BlobProperties;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.models.CopyStatusType;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,7 +60,8 @@ class AzureBlobStorageServiceTest {
         when(storageProperties.copyPollIntervalMs()).thenReturn(100L);
         when(storageProperties.copyTimeoutSeconds()).thenReturn(10L);
 
-        service = new AzureBlobStorageService(containerClient, storageProperties);
+        service = new AzureBlobStorageService(containerClient, storageProperties,
+                new ExternalCallMetrics(new SimpleMeterRegistry()));
     }
 
     @MockitoSettings(strictness = Strictness.LENIENT)

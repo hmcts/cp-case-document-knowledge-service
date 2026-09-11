@@ -21,6 +21,7 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
+import uk.gov.hmcts.cp.cdk.metrics.AnswerGenerationMetrics;
 import uk.gov.hmcts.cp.cdk.services.AnswerGenerationService;
 import uk.gov.hmcts.cp.cdk.services.CaseLevelAllDocumentsAnswerService;
 import uk.gov.hmcts.cp.cdk.services.CaseLevelLatestDocumentAnswerService;
@@ -66,6 +67,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
     private final CaseLevelLatestDocumentAnswerService caseLevelLatestDocumentAnswerService;
     private final DefendantAnswerService defendantAnswerService;
     private final ExecutionService executionService;
+    private final AnswerGenerationMetrics answerGenerationMetrics;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -144,6 +146,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
 
                 log.info("Answer Generation updated in the DB for caseId={}, docId={}, queryId={}, ragTransactionId={}, task completed.",
                         caseId, documentId, queryId, ragTransactionId);
+                answerGenerationMetrics.recordSucceeded(level);
             }
 
             if (ANSWER_GENERATION_FAILED == answerResponseBody.getStatus()) {
@@ -177,6 +180,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                 } else {
                     log.warn("Max retries reached for caseId={}, queryId={}, ragTransactionId={}",
                             caseId, queryId, ragTransactionId);
+                    answerGenerationMetrics.recordFailed(level);
                 }
             }
 

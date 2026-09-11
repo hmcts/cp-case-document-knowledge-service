@@ -1,7 +1,11 @@
 package uk.gov.hmcts.cp.cdk.clients.rag;
 
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.DEPENDENCY_RAG;
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.OPERATION_ANSWER_USER_QUERY;
+
 import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedSynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
 import uk.gov.hmcts.cp.openapi.model.RequestErrored;
@@ -32,10 +36,16 @@ public class RagAnswerServiceImpl implements DocumentInformationSummarisedSynchr
     private final RestClient ragRestClient;
     private final RagClientProperties ragClientProperties;
     private final ApimAuthHeaderService apimAuthHeaderService;
+    private final ExternalCallMetrics externalCallMetrics;
 
     @Override
     public ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullySynchronously> answerUserQuery(
             @Valid final AnswerUserQueryRequest request) {
+        return externalCallMetrics.record(DEPENDENCY_RAG, OPERATION_ANSWER_USER_QUERY, () -> answerUserQueryCall(request));
+    }
+
+    private ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullySynchronously> answerUserQueryCall(
+            final AnswerUserQueryRequest request) {
         try {
             if (request.getMetadataFilter() == null) {
                 request.setMetadataFilter(List.of());

@@ -7,8 +7,10 @@ import static org.mockito.Mockito.when;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
+import uk.gov.hmcts.cp.cdk.metrics.IngestionMetrics;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
 
@@ -16,7 +18,9 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,6 +29,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.MDC;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("IdpcAvailabilityService tests")
@@ -38,6 +43,8 @@ class IdpcAvailabilityServiceTest {
     private DocumentIdResolver documentIdResolver;
     @Mock
     private CaseDocumentRepository caseDocumentRepository;
+    @Mock
+    private IngestionMetrics ingestionMetrics;
 
     @Captor
     private ArgumentCaptor<CaseDocument> caseDocumentCaptor;
@@ -48,10 +55,34 @@ class IdpcAvailabilityServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new IdpcAvailabilityService(progressionClient, documentIdResolver, caseDocumentRepository);
+        service = new IdpcAvailabilityService(progressionClient, documentIdResolver, caseDocumentRepository,
+                ingestionMetrics);
 
         caseId = UUID.randomUUID();
         userId = "cppuid-123";
+    }
+
+    @AfterEach
+    void tearDown() {
+        MDC.clear();
+    }
+
+    @Test
+    @DisplayName("DD-43183 Story 5, AC-003: caseId is present in MDC for the duration of retrieveDocuments(...), "
+            + "and restored afterward")
+    void caseIdIsPresentInMdcDuringExecutionAndRestoredAfter() {
+        final AtomicReference<String> observedCaseId = new AtomicReference<>();
+        when(progressionClient.getCourtDocumentsForAllDefendants(any(), any())).thenAnswer(invocation -> {
+            observedCaseId.set(MDC.get(CorrelationScope.MDC_KEY_CASE_ID));
+            return List.of();
+        });
+
+        service.retrieveDocuments(caseId, userId);
+
+        assertThat(observedCaseId.get()).isEqualTo(caseId.toString());
+        assertThat(MDC.get(CorrelationScope.MDC_KEY_CASE_ID))
+                .as("no sentinel or leftover value after the scope closes")
+                .isNull();
     }
 
     @Test

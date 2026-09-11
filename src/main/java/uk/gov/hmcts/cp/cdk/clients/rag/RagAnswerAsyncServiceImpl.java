@@ -1,7 +1,13 @@
 package uk.gov.hmcts.cp.cdk.clients.rag;
 
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.DEPENDENCY_RAG;
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.OPERATION_ANSWER_USER_QUERY_ASYNC;
+import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.OPERATION_ANSWER_USER_QUERY_STATUS;
+
 import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
+import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
 import uk.gov.hmcts.cp.openapi.model.RequestErrored;
@@ -32,10 +38,18 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
     private final RestClient ragRestClient;
     private final RagClientProperties ragClientProperties;
     private final ApimAuthHeaderService apimAuthHeaderService;
+    private final ExternalCallMetrics externalCallMetrics;
 
 
     @Override
     public ResponseEntity<@NotNull UserQueryAnswerRequestAccepted> answerUserQueryAsync(final AnswerUserQueryRequest answerUserQueryRequest) {
+        return externalCallMetrics.record(DEPENDENCY_RAG, OPERATION_ANSWER_USER_QUERY_ASYNC,
+                () -> answerUserQueryAsyncCall(answerUserQueryRequest));
+    }
+
+    @SuppressWarnings("PMD.UnusedLocalVariable") // the try-with-resources variable is used for its close()
+    private ResponseEntity<@NotNull UserQueryAnswerRequestAccepted> answerUserQueryAsyncCall(
+            final AnswerUserQueryRequest answerUserQueryRequest) {
         try {
             if (answerUserQueryRequest.getMetadataFilter() == null) {
                 answerUserQueryRequest.setMetadataFilter(List.of());
@@ -58,7 +72,9 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
                 response = new UserQueryAnswerRequestAccepted();
             }
 
-            log.info("RAG Async answer answerUserQueryRequest completed successfully");
+            try (CorrelationScope scope = CorrelationScope.withIdentifiers(null, null, response.getTransactionId())) {
+                log.info("RAG Async answer answerUserQueryRequest completed successfully");
+            }
             return ResponseEntity.ok(response);
 
         } catch (final HttpStatusCodeException exception) {
@@ -76,6 +92,13 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
 
     @Override
     public ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> answerUserQueryStatus(final String transactionId, final Boolean withChunkedEntries) {
+        return externalCallMetrics.record(DEPENDENCY_RAG, OPERATION_ANSWER_USER_QUERY_STATUS,
+                () -> answerUserQueryStatusCall(transactionId, withChunkedEntries));
+    }
+
+    @SuppressWarnings("PMD.UnusedLocalVariable") // the try-with-resources variable is used for its close()
+    private ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> answerUserQueryStatusCall(
+            final String transactionId, final Boolean withChunkedEntries) {
         try {
 
             UserQueryAnswerReturnedSuccessfullyAsynchronously response = ragRestClient
@@ -97,11 +120,13 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
             }
 
             final String safeTransactionIdForLog = transactionId == null
-                    ? "null"
+                    ? null
                     : transactionId
                     .replace('\n', '_')
                     .replace('\r', '_');
-            log.info("RAG Async answer status completed successfully for the transactionId: {}", safeTransactionIdForLog);
+            try (CorrelationScope scope = CorrelationScope.withIdentifiers(null, null, safeTransactionIdForLog)) {
+                log.info("RAG Async answer status completed successfully");
+            }
             return ResponseEntity.ok(response);
 
         } catch (final HttpStatusCodeException exception) {
