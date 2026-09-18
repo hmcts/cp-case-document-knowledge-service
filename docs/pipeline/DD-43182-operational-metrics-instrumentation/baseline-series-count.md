@@ -1,5 +1,7 @@
 # Baseline: `GET /actuator/prometheus` whole-endpoint series count — pre-DD-43182
 
+> **⚠️ SUPERSEDED (2026-09-18):** The Prometheus/Micrometer implementation this baseline was captured against has been withdrawn in full. Platform confirmed the standard observability path for this service is structured logging + KQL, not Prometheus. See [ADR-012](../adrs/DD-43182-operational-metrics-instrumentation.md#adr-012-withdraw-the-prometheusmicrometer-implementation-entirely--cdks-observability-moves-to-structured-logging--kql-tracked-under-a-new-ticket) for the full decision. Retained for historical/audit traceability only.
+
 > Captured 2026-09-09, local `docker-compose.integration.yml` stack (`gradle bootJar -x test` +
 > `docker compose -f docker/docker-compose.integration.yml up -d --build`), from commit `d81b9ed`
 > (`develop` tip — DD-43182/DD-43183 design docs only, no implementation code) via `git stash push -u`
