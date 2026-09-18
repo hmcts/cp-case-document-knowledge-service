@@ -1,5 +1,8 @@
 # Test Specs: Stalled-Work Gauges and Scheduler Heartbeat Observability
 
+
+> **⚠️ SUPERSEDED (2026-09-18):** The Prometheus/Micrometer implementation this document describes has been withdrawn in full. Platform confirmed the standard observability path for this service is structured logging + KQL, not Prometheus. See [ADR-009](../adrs/DD-43185-stalled-work-scheduler-monitoring.md#adr-009-withdraw-the-prometheusmicrometer-implementation-entirely--cdks-observability-moves-to-structured-logging--kql-tracked-under-a-new-ticket) for the full decision. This document is retained for historical/audit traceability only — it does not describe what CDKS currently ships. Replacement observability work will be tracked under a new ticket (reference to follow).
+
 > **Stage 4 — Test Specs** · Service: `cp-case-document-knowledge-service` (CDKS)
 > **Jira: DD-43185** · Stories: [`03-stories.md`](./03-stories.md) · Design: [`02-design.md`](./02-design.md) ·
 > Requirements: [`01-requirements.md`](./01-requirements.md) ·

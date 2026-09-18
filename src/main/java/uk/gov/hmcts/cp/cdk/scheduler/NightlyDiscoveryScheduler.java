@@ -1,9 +1,6 @@
 package uk.gov.hmcts.cp.cdk.scheduler;
 
-import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.NIGHTLY_DISCOVERY;
-
 import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
-import uk.gov.hmcts.cp.cdk.metrics.SchedulerMetrics;
 import uk.gov.hmcts.cp.cdk.services.DiscoveryService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -24,13 +21,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class NightlyDiscoveryScheduler {
 
-    private final DiscoveryService discoveryService;
-    private final SchedulerMetrics schedulerMetrics;
+    private static final String NIGHTLY_DISCOVERY = "nightly-discovery";
 
-    public NightlyDiscoveryScheduler(final DiscoveryService discoveryService,
-                                      final SchedulerMetrics schedulerMetrics) {
+    private final DiscoveryService discoveryService;
+
+    public NightlyDiscoveryScheduler(final DiscoveryService discoveryService) {
         this.discoveryService = discoveryService;
-        this.schedulerMetrics = schedulerMetrics;
     }
 
     @Scheduled(cron = "${scheduler.nightly-discovery.cron:0 0 2 * * *}")
@@ -41,15 +37,11 @@ public class NightlyDiscoveryScheduler {
     public void run() {
         try (CorrelationScope scope = CorrelationScope.openIfAbsent()) {
             log.info("Nightly discovery starting scheduler={}", NIGHTLY_DISCOVERY);
-            boolean success = false;
             try {
                 discoveryService.runNightlyDiscovery();
-                success = true;
                 log.info("Nightly discovery finished scheduler={}", NIGHTLY_DISCOVERY);
             } catch (final Exception e) {
                 log.error("Nightly discovery failed scheduler={}", NIGHTLY_DISCOVERY, e);
-            } finally {
-                schedulerMetrics.recordRun(NIGHTLY_DISCOVERY, success);
             }
         }
     }

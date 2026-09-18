@@ -1,5 +1,8 @@
 # User Stories: Stalled-Work Gauges and Scheduler Heartbeat Observability
 
+
+> **⚠️ SUPERSEDED (2026-09-18):** The Prometheus/Micrometer implementation this document describes has been withdrawn in full. Platform confirmed the standard observability path for this service is structured logging + KQL, not Prometheus. See [ADR-009](../adrs/DD-43185-stalled-work-scheduler-monitoring.md#adr-009-withdraw-the-prometheusmicrometer-implementation-entirely--cdks-observability-moves-to-structured-logging--kql-tracked-under-a-new-ticket) for the full decision. This document is retained for historical/audit traceability only — it does not describe what CDKS currently ships. Replacement observability work will be tracked under a new ticket (reference to follow).
+
 > **Stage 3 — User Story** · Service: `cp-case-document-knowledge-service` (CDKS)
 > **Parent Jira: DD-43185.** Real sub-tickets `DD-43218`–`DD-43222` created and linked to the
 > parent epic on 2026-08-27, satisfying CLAUDE.md's hard rule "every story needs a linked Jira

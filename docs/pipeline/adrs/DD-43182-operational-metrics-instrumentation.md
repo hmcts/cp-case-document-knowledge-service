@@ -1747,3 +1747,88 @@ success rate.
   decision forecloses that; the `CdkMeters` names and the ADR-006 predicate remain the natural
   landing sites. **Adding a tag value later is additive; that is the one direction of tag-set change
   that is *not* a one-way door.**
+
+---
+
+## ADR-012: Withdraw the Prometheus/Micrometer implementation entirely — CDKS observability moves to structured logging + KQL, tracked under a new ticket
+
+- **Status:** Accepted at platform decision (2026-09-18) · **Date:** 2026-09-18 · **Jira:** DD-43182 · **Supersedes:** ADR-001 – ADR-011 in full (this ticket's entire implementation), the merged PR (#227) and the `main.tf`-analogous `actuator/prometheus` exposure it relied on
+- **Artefacts:** merged implementation on `develop` (`35f222c`, PR #227) · `baseline-series-count.md` · this decision's own removal branch (`remove_prometheus_DD-43182_and_DD-43185`)
+
+### Context
+
+Platform confirmed that Prometheus/Grafana is not the standard observability path for this
+service — Application Insights is standard, and the platform's actual working pattern (evidenced
+in `devops_dba_toolkit` and the `cp-amp-terraform-az-dashboard` / HRDS reference implementation) is
+**structured JSON logs, auto-ingested into Azure Monitor's `ContainerLogV2` by Container Insights,
+queried by KQL, rendered on Terraform-managed Azure Portal dashboards** — not a Prometheus scrape
+endpoint at all, and not even Micrometer's own Azure Monitor registry. Investigation into that
+reference pattern (see the CDKS Metrics Handbook working notes) found that most of the individual
+log lines this approach needs already exist in CDKS's business code, verbatim, because the same
+call sites were already logging at `INFO`/`WARN`/`ERROR` before this ticket's Micrometer
+instrumentation was added alongside them.
+
+Given that, the entire `cdk_*` custom-metrics surface this ticket built — `CdkMeters`,
+`IngestionMetrics`, `ExternalCallMetrics`, `OutcomeClassifier`, `TaskRetryDecision`,
+`TaskRetryMetricsAspect`, `AnswerGenerationMetrics`, `HttpPoolMetricsConfig`, `CdkMetricsConfig`,
+`MetricsSafety`, `MetricsProperties`, and the `management.metrics`/`management.endpoints.web.exposure`
+config that exposed them — has no future consumer. Keeping it would mean maintaining two competing
+observability mechanisms for the same events, with only one ever actually read.
+
+### Decision
+
+**1 — The entire DD-43182 implementation is removed**, not simplified or run in parallel. Every
+class listed above is deleted; every call site it was wired into (`IdpcAvailabilityService`,
+`RetrieveMaterialAndUploadTask`, `CheckIngestionStatusForAllDefendantsTask`,
+`GenerateAnswerForQueryTask`, `CheckStatusOfAnswerGenerationTask`, the RAG/Hearing/Progression
+clients, `AzureBlobStorageService`) is reverted to its pre-DD-43182 form. DD-43183's correlation-ID
+work in the same files (`CorrelationScope` usage, MDC wiring) is explicitly **not** touched — it is
+a separate, unrelated ticket sharing some of the same files, not part of this withdrawal.
+
+**2 — The `/actuator/prometheus` route itself is disabled**, not just this ticket's custom series.
+`prometheus` is dropped from `management.endpoints.web.exposure.include`, and the
+`micrometer-registry-prometheus` dependency is removed from `build.gradle`. This also removes
+DD-43185's own six-family, fourteen-series Prometheus surface (`cdk_documents_stalled`,
+`cdk_queries_awaiting_answer`, `cdk_monitoring_last_refresh_epoch_seconds`,
+`cdk_scheduler_runs_total`, `cdk_scheduler_last_success_epoch_seconds`, `cdk_scheduler_enabled`) —
+see DD-43185's own ADR-009, which records that half of this decision.
+
+**3 — Replacement observability is out of scope for this ticket.** A new ticket, referenced once
+raised, will cover the structured-logging + KQL + dashboard approach (new/adjusted `log.info(...)`
+call sites, a `support/dashboard-kql/` folder in this repo, and a paired `configs/*.json` +
+`queries/*/*.kql` submission to `cp-amp-terraform-az-dashboard`). Nothing in that future ticket
+depends on any code this ADR removes.
+
+**4 — `baseline-series-count.md` is retained, unedited, as a historical artefact** — it recorded a
+real measurement at the time it was taken and remains useful evidence of what the withdrawn
+implementation would have published, but it no longer describes anything CDKS exposes.
+
+### Alternatives considered
+
+- **(a) Keep both — Micrometer/Prometheus in parallel with the new logging approach.** Considered,
+  since platform said Prometheus/Grafana is "supported" even if not preferred. **Rejected for now:**
+  maintaining two instrumentation mechanisms for the same set of events, when only one has a
+  confirmed reader, is pure carrying cost with no offsetting benefit; this can be revisited if a
+  concrete consumer for the Prometheus surface materialises later.
+- **(b) Add Micrometer's Azure Monitor registry alongside Prometheus, dropping only the `/actuator/prometheus` route.** Considered as a smaller change (the same `counter.increment()`/`timer.record()` call sites would fan out to a second registry automatically). **Rejected:** platform's own reference pattern for this exact problem is logging + KQL, not a metrics API of any kind, and introducing a new external dependency (Azure Monitor ingestion, an authentication-model question against this repo's Managed-Identity-only hard rule) is exactly the kind of decision this withdrawal is meant to avoid pre-empting.
+- **(c) Leave the code in place, disabled behind `cdk.metrics.enabled=false`.** **Rejected:** the flag already existed and gates recording only, not registration — every series would still show up at `/actuator/prometheus` at value zero, which is the confusing state this whole withdrawal is a reaction to, and dead code left "just in case" is exactly what CLAUDE.md's own hard rules ask this repo to avoid.
+
+### Consequences
+
+- **Positive:** removes an entire class of "which pod answered" confusion this implementation
+  produced in practice (see the multi-pod investigation this decision follows from) — logging +
+  KQL, aggregated over `ContainerLogV2` across every pod, does not have that failure mode.
+- **Positive:** removes the `micrometer-registry-prometheus` dependency and roughly a dozen
+  main-source classes plus their tests — less code to maintain for an approach platform does not
+  read from.
+- **Negative:** all of DD-43182's and DD-43185's delivered work (both merged, both reviewed, both
+  passing their own test suites) is discarded rather than evolved. The `03-stories.md`/`04-test-specs.md` acceptance criteria in both tickets' folders no longer describe what ships; they are retained for
+  historical/audit traceability only, per each folder's own updated banner.
+- **Negative:** any dashboard, alert, or runbook that assumed a live `/actuator/prometheus` endpoint
+  for this service breaks. None are known to exist yet (no confirmed Prometheus scrape config was
+  ever found for this service), so the blast radius is believed to be zero, but this should be
+  confirmed with platform before this change reaches a live environment.
+- **Reversibility:** the deleted code exists in full in git history (this branch's parent commit,
+  and PR #227) and can be restored via revert if a future decision reintroduces Prometheus as a
+  parallel path. Nothing about this decision deletes the *design* — `02-design.md`, `03-stories.md`
+  and this ADR file's own history remain the reference if that happens.

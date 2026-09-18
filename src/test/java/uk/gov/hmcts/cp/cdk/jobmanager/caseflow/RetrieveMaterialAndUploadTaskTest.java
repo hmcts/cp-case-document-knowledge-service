@@ -25,7 +25,6 @@ import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
-import uk.gov.hmcts.cp.cdk.metrics.IngestionMetrics;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.storage.DocumentBlobMetadata;
 import uk.gov.hmcts.cp.cdk.storage.StorageService;
@@ -68,8 +67,6 @@ public class RetrieveMaterialAndUploadTaskTest {
     private JobManagerRetryProperties retryProperties;
     @Mock
     private DocumentIngestionInitiationApi documentIngestionInitiationApi;
-    @Mock
-    private IngestionMetrics ingestionMetrics;
 
     @Captor
     private ArgumentCaptor<ExecutionInfo> executionInfoCaptor;
@@ -96,8 +93,7 @@ public class RetrieveMaterialAndUploadTaskTest {
                 uploadProperties,
                 retryProperties,
                 executionService,
-                documentIngestionInitiationApi,
-                ingestionMetrics
+                documentIngestionInitiationApi
         );
 
         documentId = randomUUID();

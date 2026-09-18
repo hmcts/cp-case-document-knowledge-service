@@ -10,7 +10,6 @@ import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClientConfig;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClientImpl;
 import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
-import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -31,9 +30,8 @@ public class CdkClientsConfig {
     public HearingClient hearingClient(@Qualifier("cqrsRestClient") final RestClient restClient,
                                        final CQRSClientProperties cqrsClientProperties,
                                        final HearingClientConfig hearingProps,
-                                       final HearingDtoMapper mapper,
-                                       final ExternalCallMetrics externalCallMetrics) {
-        return new HearingClientImpl(restClient, cqrsClientProperties, hearingProps, mapper, externalCallMetrics);
+                                       final HearingDtoMapper mapper) {
+        return new HearingClientImpl(restClient, cqrsClientProperties, hearingProps, mapper);
     }
 
 
@@ -41,8 +39,7 @@ public class CdkClientsConfig {
     public ProgressionClient progressionClient(@Qualifier("cqrsRestClient") final RestClient restClient,
                                                final CQRSClientProperties cqrsClientProperties,
                                                final ProgressionClientConfig props,
-                                               final ProgressionDtoMapper mapper,
-                                               final ExternalCallMetrics externalCallMetrics) {
-        return new ProgressionClientImpl(restClient, cqrsClientProperties, props, mapper, externalCallMetrics);
+                                               final ProgressionDtoMapper mapper) {
+        return new ProgressionClientImpl(restClient, cqrsClientProperties, props, mapper);
     }
 }

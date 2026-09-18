@@ -29,7 +29,7 @@ Spring Boot 4 (Java 25), PostgreSQL + Flyway, production-ready observability, an
 ## Features
 
 - **PostgreSQL** persistence with **Flyway** migrations
-- **Observability**: Actuator health, Prometheus metrics, OTLP tracing, structured JSON logs
+- **Observability**: Actuator health, OTLP tracing, structured JSON logs (Prometheus metrics withdrawn 2026-09-18 — see `docs/pipeline/adrs/`)
 - **Quality gates**: PMD, JaCoCo coverage
 - **Gradle 9** build with Docker-Compose-backed **integration tests**
 
@@ -43,7 +43,7 @@ Spring Boot 4 (Java 25), PostgreSQL + Flyway, production-ready observability, an
 
 - **Java 25**, **Spring Boot 4.0.0-M2**
 - Spring MVC, Spring Data JPA, **PostgreSQL 16**, Flyway
-- Micrometer + **Prometheus**, OpenTelemetry OTLP exporter
+- OpenTelemetry OTLP exporter
 - Gradle 9, PMD, JaCoCo
 - Docker / Docker Compose v2
 
@@ -241,10 +241,12 @@ docs/pipeline/
     └── 04-test-specs.md
 ```
 
-A fully worked example — including a design-authority-directed scope change and a captured
-`/actuator/prometheus` baseline for regression comparison — is under
+A fully worked example — including a design-authority-directed scope change — is under
 [`docs/pipeline/DD-43185-stalled-work-scheduler-monitoring/`](docs/pipeline/DD-43185-stalled-work-scheduler-monitoring/).
-Worth a skim before running this on your own ticket.
+Worth a skim before running this on your own ticket. Note: that ticket's own Prometheus
+implementation (including its captured `/actuator/prometheus` baseline) was later withdrawn — see
+its `adrs/` entry — the folder remains a useful example of the pipeline *process*, not of a
+currently-shipping feature.
 
 For the full picture — every pipeline stage, which agent runs it, and the hard rules Claude Code
 follows here (no PII in docs, append-only Flyway migrations, Managed-Identity-only Azure access,
@@ -262,7 +264,11 @@ Actuator endpoints (same port as API):
 | `/actuator/health/liveness`  | Liveness probe                 |
 | `/actuator/health/readiness` | Readiness probe                |
 | `/actuator/info`             | App/build info (if configured) |
-| `/actuator/prometheus`       | Prometheus/OpenMetrics scrape  |
+
+Metrics/Prometheus scraping (`/actuator/prometheus`) was withdrawn 2026-09-18 — see
+`docs/pipeline/adrs/DD-43182-operational-metrics-instrumentation.md` (ADR-012) and
+`docs/pipeline/adrs/DD-43185-stalled-work-scheduler-monitoring.md` (ADR-009). Observability's
+replacement (structured logging + KQL against Azure Monitor) is tracked under a follow-up ticket.
 
 The service logs JSON to STDOUT (Logback + logstash-encoder).  
 OTel tracing is pre-wired; set the `OTEL_*` env vars above to export.
@@ -271,7 +277,6 @@ Quick checks:
 
 ```bash
 curl -fsS http://localhost:8082/actuator/health
-curl -fsS http://localhost:8082/actuator/prometheus | head
 ```
 
 ---

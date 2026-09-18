@@ -120,7 +120,7 @@ All APIM calls carry a subscription key or AAD token injected by `ApimAuthHeader
 
 | Concern | Mechanism |
 |---------|-----------|
-| Metrics | Micrometer + Prometheus (`/actuator/prometheus`) |
+| Metrics | None — `/actuator/prometheus` and Micrometer's Prometheus registry were withdrawn (DD-43182 ADR-012, DD-43185 ADR-009, 2026-09-18). Platform's confirmed path is structured logging + KQL against Azure Monitor `ContainerLogV2`, tracked under a follow-up ticket. |
 | Tracing | OpenTelemetry (OTLP; disabled by default, `TRACING_SAMPLER_PROBABILITY`) |
 | Logs | Structured JSON to stdout (`logback-spring.xml` + Logstash encoder 9.0) |
 | Health | Spring Actuator (`/actuator/health`, liveness/readiness) |

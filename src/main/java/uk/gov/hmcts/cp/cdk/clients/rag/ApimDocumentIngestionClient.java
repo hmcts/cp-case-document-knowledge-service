@@ -1,11 +1,7 @@
 package uk.gov.hmcts.cp.cdk.clients.rag;
 
-import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.DEPENDENCY_RAG;
-import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.OPERATION_INITIATE_DOCUMENT_UPLOAD;
-
 import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
-import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionInitiationApi;
 import uk.gov.hmcts.cp.openapi.model.DocumentUploadRequest;
 import uk.gov.hmcts.cp.openapi.model.FileStorageLocationReturnedSuccessfully;
@@ -30,14 +26,9 @@ public class ApimDocumentIngestionClient implements DocumentIngestionInitiationA
     private final RestClient restClient;
     private final RagClientProperties ragClientProperties;
     private final ApimAuthHeaderService apimAuthHeaderService;
-    private final ExternalCallMetrics externalCallMetrics;
 
     @Override
     public ResponseEntity<@NotNull FileStorageLocationReturnedSuccessfully> initiateDocumentUpload(final DocumentUploadRequest documentUploadRequest) {
-        return externalCallMetrics.record(DEPENDENCY_RAG, OPERATION_INITIATE_DOCUMENT_UPLOAD, () -> initiateDocumentUploadCall(documentUploadRequest));
-    }
-
-    private ResponseEntity<@NotNull FileStorageLocationReturnedSuccessfully> initiateDocumentUploadCall(final DocumentUploadRequest documentUploadRequest) {
         try {
             FileStorageLocationReturnedSuccessfully response = restClient
                     .post()
