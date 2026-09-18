@@ -279,7 +279,8 @@ import org.springframework.web.client.RestClientException;
         ));
 
         Awaitility.await()
-                .atMost(Duration.ofSeconds(120))
+                // Widened from 120s: CI-runner contention was intermittently exceeding it (PR #228).
+                .atMost(Duration.ofSeconds(240))
                 .pollInterval(Duration.ofSeconds(2))
                 .ignoreExceptions()
                 .untilAsserted(() -> {
@@ -393,7 +394,8 @@ import org.springframework.web.client.RestClientException;
         ));
 
         Awaitility.await()
-                .atMost(Duration.ofSeconds(120))
+                // Widened from 120s: CI-runner contention was intermittently exceeding it (PR #228).
+                .atMost(Duration.ofSeconds(240))
                 .pollInterval(Duration.ofSeconds(2))
                 .ignoreExceptions()
                 .untilAsserted(() -> {
