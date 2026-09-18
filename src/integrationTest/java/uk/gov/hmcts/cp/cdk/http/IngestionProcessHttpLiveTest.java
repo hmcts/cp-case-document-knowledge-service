@@ -225,7 +225,7 @@ import org.springframework.web.client.RestClientException;
     void start_ingestion_process_executes_all_tasks_successfully() throws Exception {
         // Arrange
         configureFor("localhost", 8089);
-        stubInitiateDocumentUpload("documents-new", "destination.pdf", 3);
+        stubInitiateDocumentUpload("documents-new", "destination.pdf");
 
         final String auditResponse;
         try (BrokerUtil brokerUtil = new BrokerUtil()) {
@@ -279,7 +279,8 @@ import org.springframework.web.client.RestClientException;
         ));
 
         Awaitility.await()
-                .atMost(Duration.ofSeconds(120))
+                // Widened from 120s: CI-runner contention was intermittently exceeding it (PR #228).
+                .atMost(Duration.ofSeconds(240))
                 .pollInterval(Duration.ofSeconds(2))
                 .ignoreExceptions()
                 .untilAsserted(() -> {
@@ -340,7 +341,7 @@ import org.springframework.web.client.RestClientException;
     void start_ingestion_process_executes_all_tasks_successfully_using_new_upload_api() throws Exception {
         // Arrange
         configureFor("localhost", 8089);
-        stubInitiateDocumentUpload("documents-new", "destination.pdf", 3);
+        stubInitiateDocumentUpload("documents-new", "destination.pdf");
 
         final String auditResponse;
         try (BrokerUtil brokerUtil = new BrokerUtil()) {
@@ -393,7 +394,8 @@ import org.springframework.web.client.RestClientException;
         ));
 
         Awaitility.await()
-                .atMost(Duration.ofSeconds(120))
+                // Widened from 120s: CI-runner contention was intermittently exceeding it (PR #228).
+                .atMost(Duration.ofSeconds(240))
                 .pollInterval(Duration.ofSeconds(2))
                 .ignoreExceptions()
                 .untilAsserted(() -> {

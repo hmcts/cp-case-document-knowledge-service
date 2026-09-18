@@ -75,7 +75,7 @@ class IngestionProcessByCaseHttpLiveTest extends AbstractHttpLiveTest {
     @DisplayName("Returns STARTED when a newer IDPC version is available")
     void startByCase_returnsStarted() {
         configureFor("localhost", 8089);
-        stubInitiateDocumentUpload("documents-new", "destination.pdf", 3);
+        stubInitiateDocumentUpload("documents-new", "destination.pdf");
 
         final UUID caseId = UUID.randomUUID();
 

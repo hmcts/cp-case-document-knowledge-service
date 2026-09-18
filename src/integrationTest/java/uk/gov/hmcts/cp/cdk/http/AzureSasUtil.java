@@ -8,8 +8,10 @@ import java.time.OffsetDateTime;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobClientBuilder;
 import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.sas.BlobContainerSasPermission;
 import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 import org.slf4j.Logger;
@@ -69,6 +71,26 @@ public final class AzureSasUtil {
 
         final String sasToken = blobClient.generateSas(sasValues);
         return blobClient.getBlobUrl() + "?" + sasToken;
+    }
+
+    public static String generateContainerSasUrl(final String containerName) {
+        final String connectionString = System.getenv("AZURE_STORAGE_CONNECTION_STRING");
+
+        final BlobContainerClient containerClient = new BlobContainerClientBuilder()
+                .connectionString(connectionString)
+                .containerName(containerName)
+                .buildClient();
+
+        final BlobContainerSasPermission permissions = new BlobContainerSasPermission()
+                .setReadPermission(true)
+                .setWritePermission(true)
+                .setCreatePermission(true);
+
+        final BlobServiceSasSignatureValues sasValues =
+                new BlobServiceSasSignatureValues(OffsetDateTime.now().plusMinutes(10), permissions);
+
+        final String sasToken = containerClient.generateSas(sasValues);
+        return containerClient.getBlobContainerUrl() + "?" + sasToken;
     }
 
 }
