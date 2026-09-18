@@ -75,7 +75,8 @@ class IngestionProcessByCaseHttpLiveTest extends AbstractHttpLiveTest {
     @DisplayName("Returns STARTED when a newer IDPC version is available")
     void startByCase_returnsStarted() {
         configureFor("localhost", 8089);
-        stubInitiateDocumentUpload("documents-new", "destination.pdf", 3);
+        // Unique prefix avoids Azurite blob-name collisions with a still-running background job from a previous test.
+        stubInitiateDocumentUpload("documents-new", "destination-" + UUID.randomUUID() + ".pdf", 3);
 
         final UUID caseId = UUID.randomUUID();
 
