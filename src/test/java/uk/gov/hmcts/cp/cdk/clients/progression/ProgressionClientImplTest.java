@@ -11,7 +11,6 @@ import uk.gov.hmcts.cp.cdk.clients.progression.dto.CourtDocumentSearchResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.UrlResponse;
 import uk.gov.hmcts.cp.cdk.clients.progression.mapper.ProgressionDtoMapper;
-import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 
 import java.net.URI;
 import java.time.ZoneId;
@@ -20,7 +19,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -66,8 +64,7 @@ class ProgressionClientImplTest {
         when(props.acceptForCourtDocSearch()).thenReturn("json");
         when(props.acceptForMaterialContent()).thenReturn("json");
 
-        client = new ProgressionClientImpl(restClient, rootProps, props, mapper,
-                new ExternalCallMetrics(new SimpleMeterRegistry()));
+        client = new ProgressionClientImpl(restClient, rootProps, props, mapper);
     }
 
     @Test

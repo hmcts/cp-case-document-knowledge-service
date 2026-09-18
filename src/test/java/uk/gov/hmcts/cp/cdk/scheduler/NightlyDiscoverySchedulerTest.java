@@ -2,14 +2,11 @@ package uk.gov.hmcts.cp.cdk.scheduler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.NIGHTLY_DISCOVERY;
 
-import uk.gov.hmcts.cp.cdk.metrics.SchedulerMetrics;
 import uk.gov.hmcts.cp.cdk.services.DiscoveryService;
 
 import java.util.List;
@@ -30,17 +27,16 @@ import org.slf4j.LoggerFactory;
 @DisplayName("Nightly Discovery Scheduler tests")
 class NightlyDiscoverySchedulerTest {
 
-    @Mock
-    private DiscoveryService discoveryService;
+    private static final String NIGHTLY_DISCOVERY = "nightly-discovery";
 
     @Mock
-    private SchedulerMetrics schedulerMetrics;
+    private DiscoveryService discoveryService;
 
     private NightlyDiscoveryScheduler scheduler;
 
     @BeforeEach
     void setUp() {
-        scheduler = new NightlyDiscoveryScheduler(discoveryService, schedulerMetrics);
+        scheduler = new NightlyDiscoveryScheduler(discoveryService);
     }
 
     @Test
@@ -66,18 +62,7 @@ class NightlyDiscoverySchedulerTest {
     }
 
     @Test
-    @DisplayName("run should record success exactly once when discovery completes")
-    void run_shouldRecordSuccessExactlyOnce_whenDiscoveryCompletes() {
-        // when
-        scheduler.run();
-
-        // then
-        verify(schedulerMetrics, times(1)).recordRun(NIGHTLY_DISCOVERY, true);
-        verifyNoMoreInteractions(schedulerMetrics);
-    }
-
-    @Test
-    @DisplayName("run should contain and count failure when discovery throws")
+    @DisplayName("run should contain failure when discovery throws")
     void run_shouldContainAndCountFailure_whenDiscoveryThrows() {
         doThrow(new RuntimeException("boom")).when(discoveryService).runNightlyDiscovery();
 
@@ -94,8 +79,6 @@ class NightlyDiscoverySchedulerTest {
         }
 
         // then
-        verify(schedulerMetrics, times(1)).recordRun(NIGHTLY_DISCOVERY, false);
-
         final List<ILoggingEvent> errorEvents = appender.list.stream()
                 .filter(e -> e.getLevel() == Level.ERROR)
                 .toList();
@@ -106,7 +89,7 @@ class NightlyDiscoverySchedulerTest {
     }
 
     @Test
-    @DisplayName("run should propagate an Error and still record exactly one failure")
+    @DisplayName("run should propagate an Error")
     void run_shouldPropagateError_andStillRecordExactlyOneFailure_whenDiscoveryThrowsError() {
         doThrow(new TestError()).when(discoveryService).runNightlyDiscovery();
 
@@ -118,7 +101,6 @@ class NightlyDiscoverySchedulerTest {
         try {
             // when / then
             assertThatCode(scheduler::run).isInstanceOf(TestError.class);
-            verify(schedulerMetrics, times(1)).recordRun(eq(NIGHTLY_DISCOVERY), eq(false));
 
             // N-7: catch (Exception e) does not catch an Error, so the scheduler's own catch
             // block must not have logged anything — confirms the catch really is Exception, not

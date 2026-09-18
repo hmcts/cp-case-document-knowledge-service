@@ -10,7 +10,6 @@ import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
-import uk.gov.hmcts.cp.cdk.metrics.IngestionMetrics;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
 
@@ -43,8 +42,6 @@ class IdpcAvailabilityServiceTest {
     private DocumentIdResolver documentIdResolver;
     @Mock
     private CaseDocumentRepository caseDocumentRepository;
-    @Mock
-    private IngestionMetrics ingestionMetrics;
 
     @Captor
     private ArgumentCaptor<CaseDocument> caseDocumentCaptor;
@@ -55,8 +52,7 @@ class IdpcAvailabilityServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new IdpcAvailabilityService(progressionClient, documentIdResolver, caseDocumentRepository,
-                ingestionMetrics);
+        service = new IdpcAvailabilityService(progressionClient, documentIdResolver, caseDocumentRepository);
 
         caseId = UUID.randomUUID();
         userId = "cppuid-123";

@@ -9,7 +9,6 @@ import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
-import uk.gov.hmcts.cp.cdk.metrics.IngestionMetrics;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.DocumentIdResolver;
 import uk.gov.hmcts.cp.cdk.util.MaterialNameValidator;
@@ -52,7 +51,6 @@ public class IdpcAvailabilityService {
     private final ProgressionClient progressionClient;
     private final DocumentIdResolver documentIdResolver;
     private final CaseDocumentRepository caseDocumentRepository;
-    private final IngestionMetrics ingestionMetrics;
 
     /**
      * Evaluates IDPC availability for the given case, persisting a placeholder document for every
@@ -129,6 +127,5 @@ public class IdpcAvailabilityService {
         entity.setCourtdocId(fromString(info.courtDocumentId()));
 
         caseDocumentRepository.saveAndFlush(entity);
-        ingestionMetrics.recordPhaseTransition(entity.getIngestionPhase(), entity.getSource());
     }
 }

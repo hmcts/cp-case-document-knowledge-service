@@ -7,7 +7,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
@@ -25,18 +24,5 @@ import org.springframework.web.client.RestTemplate;
         );
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).contains("\"status\":\"UP\"");
-    }
-
-    @Test
-    void prometheus_is_exposed() {
-        final HttpHeaders h = new HttpHeaders();
-        h.setAccept(java.util.List.of(MediaType.TEXT_PLAIN));
-        final ResponseEntity<String> res = http.exchange(
-                baseUrl + "/actuator/prometheus", HttpMethod.GET,
-                new HttpEntity<>(h),
-                String.class
-        );
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).contains("application_started_time_seconds");
     }
 }

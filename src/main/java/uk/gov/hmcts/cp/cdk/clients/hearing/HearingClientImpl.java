@@ -3,10 +3,6 @@ package uk.gov.hmcts.cp.cdk.clients.hearing;
 
 import static java.util.Objects.isNull;
 
-import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.DEPENDENCY_HEARING;
-import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.OPERATION_GET_HEARING_CASES_FOR_DAY;
-import static uk.gov.hmcts.cp.cdk.metrics.CdkMeters.OPERATION_GET_HEARINGS_AND_CASES;
-
 import uk.gov.hmcts.cp.cdk.clients.common.CQRSClientProperties;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCaseForDay;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingCasesForDayResponse;
@@ -14,7 +10,6 @@ import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummaries;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesInfo;
 import uk.gov.hmcts.cp.cdk.clients.hearing.dto.HearingSummariesListRequest;
 import uk.gov.hmcts.cp.cdk.clients.hearing.mapper.HearingDtoMapper;
-import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 
 import java.net.URI;
 import java.time.LocalDate;
@@ -39,14 +34,12 @@ public class HearingClientImpl implements HearingClient {
     private final String hearingCasesForDayAcceptHeader;
     private final String hearingCasesForDayPath;
     private final HearingDtoMapper mapper;
-    private final ExternalCallMetrics externalCallMetrics;
 
 
     public HearingClientImpl(final @Qualifier("cqrsRestClient") RestClient restClient,
                              final CQRSClientProperties rootProps,
                              final HearingClientConfig hearingProps,
-                             final HearingDtoMapper mapper,
-                             final ExternalCallMetrics externalCallMetrics) {
+                             final HearingDtoMapper mapper) {
         this.restClient = Objects.requireNonNull(restClient, "restClient");
         this.acceptHeader = Objects.requireNonNull(hearingProps.getHearingsAcceptHeader(), "acceptHeader");
         this.cppuidHeaderName = Objects.requireNonNull(rootProps.headers().cjsCppuid(), "cjsCppuidHeader");
@@ -56,17 +49,11 @@ public class HearingClientImpl implements HearingClient {
         this.hearingCasesForDayPath = Objects.requireNonNull(
                 hearingProps.getHearingCasesForDayPath(), "hearingCasesForDayPath");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
-        this.externalCallMetrics = Objects.requireNonNull(externalCallMetrics, "externalCallMetrics");
     }
 
     @Override
-    public List<HearingSummariesInfo> getHearingsAndCases(final String courtId, final String roomId, final LocalDate date, final String userId) {
-        return externalCallMetrics.record(DEPENDENCY_HEARING, OPERATION_GET_HEARINGS_AND_CASES,
-                () -> getHearingsAndCasesCall(courtId, roomId, date, userId));
-    }
-
     @SuppressWarnings({"PMD.OnlyOneReturn", "PMD.UseExplicitTypes"})
-    private List<HearingSummariesInfo> getHearingsAndCasesCall(final String courtId, final String roomId, final LocalDate date, final String userId) {
+    public List<HearingSummariesInfo> getHearingsAndCases(final String courtId, final String roomId, final LocalDate date, final String userId) {
         final URI uriHearing = UriComponentsBuilder
                 .fromPath(hearingsPath)
                 .queryParam("courtCentreId", courtId)
@@ -97,13 +84,8 @@ public class HearingClientImpl implements HearingClient {
     }
 
     @Override
-    public List<HearingCaseForDay> getHearingCasesForDay(final LocalDate date, final String userId) {
-        return externalCallMetrics.record(DEPENDENCY_HEARING, OPERATION_GET_HEARING_CASES_FOR_DAY,
-                () -> getHearingCasesForDayCall(date, userId));
-    }
-
     @SuppressWarnings({"PMD.OnlyOneReturn", "PMD.UseExplicitTypes"})
-    private List<HearingCaseForDay> getHearingCasesForDayCall(final LocalDate date, final String userId) {
+    public List<HearingCaseForDay> getHearingCasesForDay(final LocalDate date, final String userId) {
         final URI uriHearingCasesForDay = UriComponentsBuilder
                 .fromPath(hearingCasesForDayPath)
                 .queryParam("date", date)

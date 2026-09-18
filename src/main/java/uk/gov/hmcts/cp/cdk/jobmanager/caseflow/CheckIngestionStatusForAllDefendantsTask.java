@@ -25,7 +25,6 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
-import uk.gov.hmcts.cp.cdk.metrics.IngestionMetrics;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryVersionRepository;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
@@ -68,7 +67,6 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
     private final QueryVersionRepository queryVersionRepository;
     private final ExecutionService executionService;
     private final JobManagerRetryProperties retryProperties;
-    private final IngestionMetrics ingestionMetrics;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -243,8 +241,6 @@ public class CheckIngestionStatusForAllDefendantsTask implements ExecutableTask 
             doc.setIngestionPhase(phase);
             doc.setIngestionPhaseAt(utcNow());
             caseDocumentRepository.saveAndFlush(doc);
-            ingestionMetrics.recordPhaseTransition(phase, doc.getSource());
-            ingestionMetrics.recordIngestionDuration(phase, doc.getCreatedAt(), doc.getIngestionPhaseAt());
         });
     }
 

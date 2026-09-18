@@ -15,9 +15,8 @@ import org.springframework.stereotype.Component;
  * (DD-43183 Story 3, ADR-004) — one interception point covering all seven {@code @Task} beans and
  * any future eighth, rather than a try/finally repeated in each.
  *
- * <p><strong>Ordered outermost</strong> ({@link Ordered#HIGHEST_PRECEDENCE}) of DD-43182's
- * {@code TaskRetryMetricsAspect} on the identical join point, so that aspect's own throttled WARN
- * log lines carry a correlation ID (GATE-3, cross-ticket coordination — see both tickets' ADRs).
+ * <p>Ordered outermost ({@link Ordered#HIGHEST_PRECEDENCE}) on its join point so any other aspect
+ * advising the same {@code execute} method observes correlation context already in place.
  *
  * <p>Not conditional on any property: a service that can be configured to stop correlating its own
  * logs has the bug this ticket closes. No {@code catch}, no swallow, no rewriting of the returned

@@ -28,7 +28,6 @@ import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
-import uk.gov.hmcts.cp.cdk.metrics.IngestionMetrics;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.storage.DocumentBlobMetadata;
 import uk.gov.hmcts.cp.cdk.storage.StorageService;
@@ -73,7 +72,6 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
     private final JobManagerRetryProperties retryProperties;
     private final ExecutionService executionService;
     private final DocumentIngestionInitiationApi documentIngestionInitiationApi;
-    private final IngestionMetrics ingestionMetrics;
 
     @Override
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
@@ -239,6 +237,5 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
         doc.setIngestionPhaseAt(utcNow());
         doc.setRagDocumentReference(isBlank(documentReference) ? null : documentReference);
         caseDocumentRepository.saveAndFlush(doc);
-        ingestionMetrics.recordPhaseTransition(doc.getIngestionPhase(), doc.getSource());
     }
 }

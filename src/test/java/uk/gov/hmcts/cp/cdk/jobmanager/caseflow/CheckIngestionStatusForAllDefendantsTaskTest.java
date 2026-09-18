@@ -23,7 +23,6 @@ import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
-import uk.gov.hmcts.cp.cdk.metrics.IngestionMetrics;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
 import uk.gov.hmcts.cp.cdk.repo.QueryVersionRepository;
 import uk.gov.hmcts.cp.openapi.api.DocumentIngestionStatusApi;
@@ -63,8 +62,6 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
     private ExecutionService executionService;
     @Mock
     private JobManagerRetryProperties retryProperties;
-    @Mock
-    private IngestionMetrics ingestionMetrics;
 
     @Captor
     private ArgumentCaptor<ExecutionInfo> executionInfoCaptor;
@@ -82,8 +79,7 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
                 caseDocumentRepository,
                 queryVersionRepository,
                 executionService,
-                retryProperties,
-                ingestionMetrics
+                retryProperties
         );
 
         documentId = randomUUID();

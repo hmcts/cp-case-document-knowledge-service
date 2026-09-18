@@ -15,7 +15,6 @@ import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERA
 
 import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
-import uk.gov.hmcts.cp.cdk.metrics.ExternalCallMetrics;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
 import uk.gov.hmcts.cp.openapi.model.DocumentChunk;
 import uk.gov.hmcts.cp.openapi.model.RequestErrored;
@@ -27,7 +26,6 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.function.Function;
 
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -68,11 +66,9 @@ class RagAnswerAsyncServiceImplTest {
     @Captor
     private ArgumentCaptor<Function<UriBuilder, URI>> uriCaptor;
 
-    private final ExternalCallMetrics externalCallMetrics = new ExternalCallMetrics(new SimpleMeterRegistry());
-
     @BeforeEach
     void setup() {
-        service = new RagAnswerAsyncServiceImpl(ragRestClient, ragClientProperties, apimAuthHeaderService, externalCallMetrics);
+        service = new RagAnswerAsyncServiceImpl(ragRestClient, ragClientProperties, apimAuthHeaderService);
     }
 
     @Test
@@ -227,7 +223,7 @@ class RagAnswerAsyncServiceImplTest {
     @MockitoSettings(strictness = Strictness.LENIENT)
     @Test
     void shouldReturn500ResponseForRagClientException() {
-        final RagAnswerAsyncServiceImpl service = new RagAnswerAsyncServiceImpl(null, null, null, null);
+        final RagAnswerAsyncServiceImpl service = new RagAnswerAsyncServiceImpl(null, null, null);
 
         final RagClientException ex = new RagClientException("Boom!", null);
 
@@ -240,7 +236,7 @@ class RagAnswerAsyncServiceImplTest {
     @MockitoSettings(strictness = Strictness.LENIENT)
     @Test
     void shouldReturn500ResponseForGenericException() {
-        final RagAnswerAsyncServiceImpl service = new RagAnswerAsyncServiceImpl(null, null, null, null);
+        final RagAnswerAsyncServiceImpl service = new RagAnswerAsyncServiceImpl(null, null, null);
 
         final Exception ex = new RuntimeException("We don't care about msg");
 

@@ -778,3 +778,72 @@ detector, and it is the reason this is worth one extra series.
   ADR-002's startup WARN covers the case where one is changed without the other.
 - **Reversibility:** excellent. Removing the gauge, or removing ShedLock, are both single-commit
   changes with no schema or contract implication.
+
+---
+
+## ADR-009: Withdraw the Prometheus/Micrometer implementation entirely — CDKS observability moves to structured logging + KQL, tracked under a new ticket
+
+- **Status:** Accepted at platform decision (2026-09-18) · **Date:** 2026-09-18 · **Jira:** DD-43185 · **Supersedes:** ADR-001 – ADR-008 in full (this ticket's entire implementation), the merged PR (#224) and its `/actuator/prometheus` exposure
+- **Artefacts:** merged implementation on `develop` (`885357e`, PR #224) · `baseline-actuator-prometheus.md` · the same platform decision recorded in full at DD-43182's ADR-012, which this ADR mirrors for this ticket
+
+### Context
+
+This is the companion decision to DD-43182's ADR-012, recorded here in full because DD-43185 shipped
+and merged independently and earlier, and its own implementation — `CdkMeters`'s original six
+families, `SchedulerMetrics`, `StalledWorkMetrics`, `StalledWorkMetricsRefreshJob`, the
+`cdk.monitoring.*` configuration namespace (`MonitoringProperties`/`MonitoringConfig`), and the two
+native `CaseDocumentRepository`/`CaseQueryStatusRepository` queries that fed the stalled-work gauges
+— is withdrawn for the identical reason: platform's confirmed observability path for this service is
+structured logging ingested into Azure Monitor's `ContainerLogV2`, queried by KQL, not a Prometheus
+scrape endpoint. See DD-43182's ADR-012 for the full context, the reference-pattern evidence
+(`devops_dba_toolkit`, `cp-amp-terraform-az-dashboard`), and the alternatives considered — all of it
+applies to this ticket without modification.
+
+One item specific to this ticket: `cdk_queries_awaiting_answer` carried an independent, already-known
+data-correctness defect (its underlying query depends on a `case_query_status.status` value —
+`ANSWER_NOT_AVAILABLE` — that no application code path ever writes, so it always read `0` regardless
+of real backlog; see the separate bug ticket raised for this). That defect is now moot rather than
+fixed — the gauge it affected no longer exists — but the defect analysis remains valid input for
+whichever KQL query eventually replaces it under the new ticket, since the same "what counts as
+awaiting" ambiguity will need resolving there too.
+
+### Decision
+
+**1 — The entire DD-43185 implementation is removed.** `CdkMeters`, `SchedulerMetrics`,
+`StalledWorkMetrics`, `StalledWorkMetricsRefreshJob`, `MonitoringProperties`, `MonitoringConfig`, and
+the `countStalledByPhase`/`countAwaitingAnswerOlderThan` repository queries are all deleted. The two
+schedulers (`IntradayDiscoveryScheduler`, `NightlyDiscoveryScheduler`) revert to calling
+`DiscoveryService` directly, with no `SchedulerMetrics.recordRun(...)` call — their existing
+start/finish/failure `log.info`/`log.error` lines are unaffected and remain the natural basis for
+whatever KQL query later replaces this ticket's counters.
+
+**2 — `ShedLockConfig` is retained.** It is not DD-43185-specific — both discovery schedulers use
+`@SchedulerLock` for their own single-pod-execution guarantee, independent of any metrics work, and
+continue to need the lock provider/task scheduler beans it registers.
+
+**3 — The `/actuator/prometheus` route itself is disabled** as part of this same change — recorded
+once, at DD-43182's ADR-012, since it is one shared piece of configuration removed for both tickets
+together, not two separate removals.
+
+**4 — Replacement observability is out of scope for this ticket**, tracked under the same new ticket
+referenced at DD-43182's ADR-012.
+
+### Consequences
+
+- **Positive:** removes the confusion this implementation produced in practice — the multi-pod
+  investigation that led to this decision found that `cdk_scheduler_runs_total` (a ShedLock-guarded,
+  per-pod counter) reads correctly on whichever pod most recently won the lock and `0` on every other
+  pod, which is expected Micrometer/multi-replica behaviour but was repeatedly misread as a bug when
+  checked via a single curl to the shared ingress.
+- **Positive:** the already-known `cdk_queries_awaiting_answer` defect stops being a live,
+  potentially-misleading "all clear" signal in production — it simply no longer exists, rather than
+  continuing to read `0` regardless of real backlog.
+- **Negative:** all of DD-43185's delivered work (merged, reviewed, passing its own test suite since
+  PR #224) is discarded rather than evolved. `03-stories.md`/`04-test-specs.md` in this ticket's
+  folder no longer describe what ships; retained for historical/audit traceability only.
+- **Negative:** `baseline-actuator-prometheus.md` no longer describes a regression baseline for
+  anything CDKS currently exposes — retained unedited as a historical artefact, same treatment as
+  DD-43182's `baseline-series-count.md`.
+- **Reversibility:** the deleted code exists in full in git history (PR #224, and this decision's own
+  removal branch) and can be restored via revert if a future decision reintroduces Prometheus as a
+  parallel path.

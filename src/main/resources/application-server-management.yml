@@ -17,31 +17,12 @@ management:
     web:
       base-path: /actuator
       exposure:
-        include: "health,info,metrics,prometheus,env,loggers,threaddump"
+        include: "health,info,metrics,env,loggers,threaddump"
 
   endpoint:
     health:
       probes:
         enabled: false
-
-  metrics:
-    tags:
-      service: cp-case-document-knowledge-service
-      cluster: ${CLUSTER_NAME:local}
-      region: ${REGION:local}
-
-    distribution:
-      # Explicitly false, not left at the default. Micrometer's default bucket ladder for a Timer
-      # is wide; on cdk.external.call.duration's tag combinations that alone would breach the
-      # cardinality budget (DD-43182 ADR-005).
-      percentiles-histogram:
-        cdk: false
-      # Server-side, aggregatable buckets for the ingestion-duration timer's p50/p95/p99. These
-      # mirror CdkMeters.INGESTION_DURATION_SLOS — the code default is authoritative; this key is
-      # the runtime override lever. Client-side `percentiles` is deliberately NOT set:
-      # pre-computed per-pod percentiles cannot be combined by histogram_quantile.
-      slo:
-        cdk.document.ingestion.duration: 15s,30s,1m,2m,5m,10m,30m,1h
 
   # There is no "master switch" for tracing on this Spring Boot version: management.tracing.enabled
   # was removed at deprecation level `error` (no replacement field on TracingProperties) — a real
