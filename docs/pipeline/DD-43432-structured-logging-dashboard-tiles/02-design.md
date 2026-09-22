@@ -296,6 +296,13 @@ This design uses:
 // Deliberately NOT counted: "Document status check  FAILED with reason=" - that is a transient
 // polling exception that retries, not a terminal ingestion failure (AC-008).
 //
+// Known, accepted gap (AC-008a, OQ-011): CheckIngestionStatusForAllDefendantsTask:213-214 also
+// sets ingestion_phase=FAILED when polling retries are exhausted, but emits no distinguishing log
+// line (the only preceding log is the generic "Ingestion status not complete ... -> retrying",
+// which also fires on retries that later succeed). This path is NOT visible to this query. It is
+// an explicit, written exclusion for this ticket - not fixed here because doing so needs a Java
+// change outside this story's verify-only scope for FR-002-FR-004. Tracked as a follow-up (OQ-011).
+//
 // 'ns-dev-ccm-03' is the dev namespace literal; the terraform dashboard repo substitutes the
 // per-environment namespace at plan time (ADR-004).
 let cdks =
@@ -510,7 +517,7 @@ that repo's owner (OQ-010); this is a Story 3 blocker only, and does not hold up
 | **FR-001** | Add `WAITING_FOR_UPLOAD` log line | 1 | CDKS | `IdpcAvailabilityService.java` §1.2 (+2 lines) | AC-001, AC-002, AC-003, AC-004, AC-005 |
 | **FR-002** | `UPLOADED` — verify, do not change | 1 (verify) + 2 (KQL) | CDKS | `RetrieveMaterialAndUploadTask.java:129-130` unchanged; §2.3 `PhaseOrder = 2` branch | AC-006, AC-007 |
 | **FR-003** | `INGESTED` — verify, do not change | 1 (verify) + 2 (KQL) | CDKS | `CheckIngestionStatusForAllDefendantsTask.java:116` unchanged; §2.3 `PhaseOrder = 3` branch | AC-006, AC-007 |
-| **FR-004** | `FAILED` / `EXCEEDED_FILE_SIZE_LIMIT` — verify, split on `reason=` | 1 (verify) + 2 (KQL) | CDKS | `CheckIngestionStatusForAllDefendantsTask.java:194-200` unchanged; §2.3 `PhaseOrder = 4` and `5` branches | AC-006, AC-007, AC-008 |
+| **FR-004** | `FAILED` / `EXCEEDED_FILE_SIZE_LIMIT` — verify, split on `reason=` | 1 (verify) + 2 (KQL) | CDKS | `CheckIngestionStatusForAllDefendantsTask.java:194-200` unchanged; §2.3 `PhaseOrder = 4` and `5` branches; retry-exhaustion path (`:213-214`) explicitly excluded, not implemented (OQ-011) | AC-006, AC-007, AC-008, AC-008a |
 | **FR-005** | Tile 2 countable — no Java change (ADR-001, ADR-002) | 2 | CDKS | §2.4 in full; no Java diff | AC-009, AC-010, AC-011, AC-012 |
 | **FR-006** | Tile-driving lines are a consumed interface | 2 | CDKS | Header comment block in both `.kql` files (§2.3, §2.4); "Conventions" note in `support/README.md` (§2.6) | AC-013 |
 | **FR-007** | KQL definitions live in this repo | 2 | CDKS | `support/dashboard-kql/` (§2.1) | AC-013, AC-014 |
@@ -533,6 +540,7 @@ that repo's owner (OQ-010); this is a Story 3 blocker only, and does not hold up
 | AC-006 | `git diff develop -- src/main/java/uk/gov/hmcts/cp/cdk/jobmanager/` is empty (§1.3) |
 | AC-007 | Tile-1 query structure: five mutually exclusive branches over one base predicate set (§2.3) |
 | AC-008 | `startswith_cs 'ingestion FAILED for identifier='` cannot match `Document status check  FAILED with reason=` (§2.3 header + notes) |
+| AC-008a | **Documented exclusion, not implemented.** §2.3's header block records that the retry-exhaustion path (`:213-214`) is not visible to this query — satisfied by the written record, per the AC's own wording; no query change can close it without a Java log line (OQ-011). |
 | AC-009 | Tile-2 query (§2.4) under ADR-001's per-transaction definition |
 | AC-010 | **Superseded by ADR-001** — a retried query is counted as two outcomes, not once. Record this on the ticket when closing AC-010; the AC predates the requester's 2026-09-21 decision and must not be read as still requiring de-duplication. |
 | AC-011 | Satisfied by the "explicitly records which are excluded and why" limb: §2.4's header block plus ADR-002 |
@@ -552,6 +560,7 @@ that repo's owner (OQ-010); this is a Story 3 blocker only, and does not hold up
 | OQ-008 | Five-phase tile set confirmed complete (`UPLOADING`, `INGESTING`, `NOT_FOUND` excluded) | Requester | No |
 | OQ-009 | Security sign-off on `caseId` / `docId` / `materialId` / `queryId` / `ragTransactionId` being dashboard-visible. This design **excludes** `defendantId` and `courtdocId` by default, as recommended. | Security reviewer | Before merge |
 | OQ-010 | Story 3 ownership, merge route, and whether tile delivery blocks closing DD-43432 | Requester | Before Stage 3 |
+| OQ-011 | Tile-1 `FAILED` undercounts the retry-exhaustion path (`CheckIngestionStatusForAllDefendantsTask.java:213-214`, no log line) — accepted as a written exclusion (AC-008a); a follow-up story/ticket should add the missing log line | Requester | No — non-blocking, follow-up ticket owed before Stage 5 |
 | — | AC-010 wording is superseded by ADR-001 (§4.2) — note it on the ticket rather than re-testing it | Requester | No |
 
 ---

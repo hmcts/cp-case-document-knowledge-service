@@ -553,6 +553,32 @@ live workspace nobody knows the true denominator.
 
 ---
 
+**Scenario 2.3a — The retry-exhaustion `FAILED` path is a documented exclusion, not a behavioural test** *(AC-008a — added 2026-09-22, raised at Code Review; documentary, not de novo)*
+
+> **This is a review of the shipped file's header comment, not a query-behaviour test — there is
+> nothing to seed.** `CheckIngestionStatusForAllDefendantsTask.java:213-214` sets
+> `ingestion_phase = FAILED` when polling retries are exhausted, with no distinguishing log line
+> (`01-requirements.md` fact 11). No query text can make that path countable without a Java log
+> line, which is outside Story 2's scope (`03-stories.md` Story 2, out-of-scope) — so this scenario
+> proves the gap is **written down**, not fixed.
+
+- **Given** the shipped `ingestion-phase-counts.kql`.
+- **When** its header comment block is reviewed at PR.
+- **Then** the header explicitly names the retry-exhaustion path (`:213-214`) as not visible to this
+  query, and states why (no distinguishing log line, fix out of this ticket's Java scope) — matching
+  `02-design.md` §2.3's header text verbatim in substance.
+- **Why this is the right bar for AC-008a.** The AC was written to require either a working
+  predicate or an explicit, written exclusion — the second limb is deliberately available (same
+  pattern as AC-011's "or the design explicitly and in writing records which are excluded and why").
+  A behavioural test would need to simulate polling-retry exhaustion end-to-end, which is a
+  `CheckIngestionStatusForAllDefendantsTask` concern outside Story 2's non-code scope.
+- **What this does NOT prove.** It does not prove Tile 1's `FAILED` count is complete — it proves
+  the opposite is documented. The real-world undercount (fact 11, OQ-011) stands until a follow-up
+  ticket adds the missing log line; do not close OQ-011 against this scenario.
+- **Evidence:** the header-comment text, quoted on DD-43471 alongside Scenario 2.7's file review.
+
+---
+
 **Scenario 2.4 — Tile 2 reports total / succeeded / failed per RAG transaction** *(AC-009)*
 
 - **Given** a known set of answer-generation events spanning all three shapes ADR-001 names:
@@ -689,6 +715,7 @@ these are excluded and why". **ADR-002 takes the second limb.** Verification is 
 |---|---|---|
 | AC-007 | Scenario 2.2 (Method A exact, Method B corroborating) | **No** |
 | AC-008 | Scenario 2.3 | **No** |
+| AC-008a | Scenario 2.3a — documentary only (header-comment review) | Yes, by review |
 | AC-009 | Scenario 2.4 | **No** |
 | AC-010 (superseded) | Scenario 2.5, closed against ADR-001's definition | **No** |
 | AC-011 | Scenario 2.6 — Part A documentary, Part B behavioural | Part A yes (file review); Part B **no** |
@@ -765,6 +792,7 @@ terraform repo should be wiring up an already-verified query, not discovering a 
 | AC-006 | 1 | Scenario 1.6 — `git diff develop -- …/jobmanager/` empty; existing suites unmodified | Review |
 | AC-007 | 2 | Scenario 2.2 | **Manual** |
 | AC-008 | 2 | Scenario 2.3 | **Manual** |
+| AC-008a | 2 | Scenario 2.3a — header-comment review, not a query-behaviour test | Review |
 | AC-009 | 2 | Scenario 2.4 | **Manual** |
 | AC-010 | 2 | Scenario 2.5 — **superseded wording**; closed against ADR-001 | **Manual** |
 | AC-011 | 2 | Scenario 2.6 — Part A (file review) + Part B (query run) | Review + **manual** |
@@ -775,10 +803,11 @@ terraform repo should be wiring up an already-verified query, not discovering a 
 | AC-016 | 1, 2 | Scenario 1.4 (the log line) + Scenario 2.9 (the files) + secrets-scanner + hooks | Unit + CI + review |
 | AC-017 | 1 | Scenario 1.8 — `git diff develop -- logback-spring.xml build.gradle` empty | Review |
 
-**ACs not closable by anything in this repository:** AC-007 – AC-011, AC-014. All six are Story 2
-and all six are manual by the nature of the deliverable, not by omission. Six of seventeen ACs
-having no automated coverage is unusual and is being stated up front rather than discovered at the
-gate.
+**ACs not closable by anything in this repository:** AC-007, AC-008, AC-009, AC-010, AC-011, AC-014
+(**not** AC-008a or AC-013, despite sitting inside that numeric span — both of those are closable by
+in-repo file review). All six are Story 2 and all six are manual by the nature of the deliverable,
+not by omission. Six of eighteen ACs having no automated coverage is unusual and is being stated up
+front rather than discovered at the gate.
 
 ### Tier notes
 
@@ -829,7 +858,10 @@ was never confirmed against the live ticket, and no Stage-1 summary comment has 
 **OQ-008** (five-phase tile set confirmed complete), **OQ-009** (security sign-off on
 `caseId`/`docId`/`materialId`/`queryId`/`ragTransactionId` becoming queryable from a **shared**
 Azure Portal dashboard — a wider audience than pod logs; **required before merge**), **OQ-010**
-(Story 3 ownership and merge route).
+(Story 3 ownership and merge route), **OQ-011** (Tile-1 `FAILED` undercounts the retry-exhaustion
+path at `CheckIngestionStatusForAllDefendantsTask.java:213-214` — accepted as a written exclusion
+for this ticket via AC-008a/Scenario 2.3a; non-blocking here, but a follow-up ticket to add the
+missing log line is owed before Stage 5).
 
 ---
 
@@ -845,8 +877,9 @@ Do not proceed to Stage 5 until:
 
 1. The Story-1 scenarios (1.1 – 1.8) are approved, including the four test names and the
    `ListAppender` mechanism.
-2. The Story-2 position is accepted — that AC-007 – AC-011 and AC-014 have **no automated coverage**
-   and are discharged by human execution with evidence on DD-43471.
+2. The Story-2 position is accepted — that AC-007, AC-008, AC-009, AC-010, AC-011 and AC-014 have
+   **no automated coverage** and are discharged by human execution with evidence on DD-43471
+   (AC-008a is the one Story-2 AC in this range that **is** closable, by header-comment review).
 3. The Story-3 position is accepted — **no test specs**, because it lands in another repository with
    its own review process.
 4. OQ-401 – OQ-404 have decisions, and OQ-009 has a route to sign-off before merge.

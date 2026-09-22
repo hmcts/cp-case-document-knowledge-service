@@ -166,6 +166,13 @@ support/
       counted twice and none unattributed (`02-design.md` §2.3's five mutually exclusive branches).
 - [ ] AC-008: `ingestion-phase-counts.kql` does **not** count the polling-exception line
       `Document status check FAILED with reason='…'` as a terminal ingestion failure.
+- [ ] AC-008a *(added 2026-09-22, raised at Code Review — OQ-011)*: `ingestion-phase-counts.kql`'s
+      header comment explicitly records, in writing, that the retry-exhaustion path
+      (`CheckIngestionStatusForAllDefendantsTask.java:213-214` — `updateIngestionPhase(documentId,
+      FAILED)` on exhausted polling retries) is **not** visible to this query, because that path
+      emits no distinguishing log line and adding one is a Java change outside this story's scope.
+      This AC is satisfied by the written record (`02-design.md` §2.3), not by query behaviour — the
+      undercount itself is not fixed by Story 2 and is tracked as a follow-up under OQ-011.
 - [ ] AC-009: Given a set of answer-generation requests over a bounded time window in which some
       succeed first time, some succeed after one or more retries, and some exhaust `maxAttempts`,
       when `answer-generation-outcomes.kql` runs over that window, then it reports a total count of
@@ -204,6 +211,11 @@ support/
   generalization fix (ADR-003, ADR-004) — both Story 3 concerns, not KQL-file content.
 - `run-query.sh`, `logs-kql/`, `chart-kql/`, `alerts-kql/` folders — HRDS has them, this story does
   not create them (`02-design.md` §5).
+- **Fixing the Tile-1 `FAILED` undercount at its source.** The retry-exhaustion path
+  (`CheckIngestionStatusForAllDefendantsTask.java:213-214`) needs a new Java log line to become
+  KQL-visible — that is a `src/main/java` change, which this story explicitly excludes above. This
+  story only documents the gap in the query header (AC-008a); closing it is a follow-up ticket
+  (OQ-011), not part of DD-43432's delivered scope.
 
 ### Definition of done
 - [ ] Code (file) reviewed and approved via normal PR review, even though no Java is touched.
