@@ -210,6 +210,11 @@ Full detail recorded in ADR-001 (`adrs/DD-43432-structured-logging-dashboard-til
   for its existing tiles). CDKS's two tiles will instead omit their own time filter and rely on the
   portal-injected range (`IsQueryContainTimeRange: false`), with the dashboard-level default lowered
   to 30 days. This is a Story 2 (KQL) + Story 3 (terraform) concern — no CDKS Java impact.
+  **Revised 2026-09-22 (ADR-005):** both `.kql` files now also carry their own
+  `TimeGenerated > ago(30d)` fallback filter, so "default to last 30 days" holds regardless of
+  whether Story 3's terraform-level default-lowering has landed — the KQL-level filter and the
+  portal's picker AND together, so a picker range wider than 30 days is still capped at 30 days.
+  `IsQueryContainTimeRange: false` still stands; the portal's picker still narrows further when set.
 - **`support/dashboard-kql/` conventions confirmed** (resolves former OQ-007): flat `.kql` files, one
   per tile, referenced by filename (no extension) from the dashboard's `configs/<name>.json`
   `tiles[].query` field; a `support/sync-dashboard-to-terraform.sh` script (manual, not CI/CD, requires
@@ -228,6 +233,14 @@ Full detail recorded in ADR-001 (`adrs/DD-43432-structured-logging-dashboard-til
   per-dashboard namespace map, not a single global `var.namespace`). **Requester will raise this with
   the `cp-amp-terraform-az-dashboard` repo owner directly** — recorded here as a known Story 3
   dependency, not CDKS-repo work, and not blocking Stories 1–2.
+  **Revised 2026-09-22 (ADR-004, decision point 4):** the checked-in placeholder literal changed from
+  `ns-dev-ccm-03` to `ns-ste-ccm-29` — same mechanism as above, just a different default anchor
+  string. Because the terraform `replace()` search string (`ns-dev-amp-01`) matches neither CDKS
+  literal, this substitution is a silent no-op against CDKS's queries either way; until the namespace
+  map fix lands, **ste** tiles now happen to show correct data (not dev, as before the swap) while
+  every other environment shows ste's data. A further option — making CDKS itself environment-aware
+  rather than relying on one hardcoded literal — was considered and deliberately deferred as a
+  follow-up (OQ-012), not part of this ticket.
 
 ## Open Questions still outstanding
 
@@ -241,11 +254,13 @@ Full detail recorded in ADR-001 (`adrs/DD-43432-structured-logging-dashboard-til
 
 - **OQ-011 (Tile-1 FAILED undercount via retry exhaustion — added 2026-09-22, raised at Code Review on PR #230):** `CheckIngestionStatusForAllDefendantsTask.java:213-214` sets `ingestion_phase = FAILED` when polling retries are exhausted, but emits no log line distinguishing this from an in-progress retry (fact 11) — the same class of gap as `WAITING_FOR_UPLOAD` (fact 4), except this ticket's Java scope (FR-002–FR-004, verify-only) does not cover adding one. Tile 1's `FAILED` count therefore undercounts this path, which is plausibly the more common real-world failure mode (timeouts) versus the explicit-status-failure path fact 3 covers. Accepted as an explicit, written exclusion for this ticket (AC-008a) rather than blocking Stories 1–2. A follow-up story/ticket should add a distinguishing log line at `:213-214`, mirroring FR-001's pattern for `WAITING_FOR_UPLOAD`. — Owner: requester · Due: raise the follow-up ticket before Stage 5 (Deploy Sandbox); non-blocking for this ticket.
 
+- **OQ-012 (CDKS-side namespace dynamism — added 2026-09-22, requester direction during Stage 5 implementation):** the checked-in namespace literal in both `.kql` files was revised from `ns-dev-ccm-03` to `ns-ste-ccm-29` (ADR-004, decision point 4), keeping the existing single-hardcoded-literal-plus-Terraform-`replace()` mechanism unchanged. A more thorough fix — making CDKS itself environment-aware (e.g. an `--env` argument to `sync-dashboard-to-terraform.sh`) instead of relying on one hardcoded literal per file — was raised and deliberately deferred: ship the simple swap now, revisit real per-environment dynamism as a follow-up once there is bandwidth. Not blocking Stories 1–2. — Owner: requester · Due: follow-up ticket, no fixed date.
+
 ---
 
 ## Stage gate
 
 **Stage 1 (Requirements) is a Human gate.** The two decisions that were blocking (former OQ-002 and
 OQ-006) are now resolved by direct requester decision (above; full rationale in ADR-001). Remaining
-open items (OQ-001, OQ-008, OQ-009, OQ-010, OQ-011) are non-blocking confirmations/exclusions, not
-open design questions. Proceeding to Stage 2 (Architecture & Design) on requester confirmation.
+open items (OQ-001, OQ-008, OQ-009, OQ-010, OQ-011, OQ-012) are non-blocking confirmations/exclusions,
+not open design questions. Proceeding to Stage 2 (Architecture & Design) on requester confirmation.

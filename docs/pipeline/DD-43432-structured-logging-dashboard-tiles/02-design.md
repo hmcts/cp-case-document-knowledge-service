@@ -5,7 +5,10 @@
 > Requirements: [`01-requirements.md`](./01-requirements.md) ·
 > Input brief: [`00-input-brief.md`](./00-input-brief.md) ·
 > ADRs: [`adrs/DD-43432-structured-logging-dashboard-tiles.md`](../adrs/DD-43432-structured-logging-dashboard-tiles.md)
-> (ADR-001 – ADR-004, all **Accepted** — this document makes them concrete, it does not revisit them)
+> (ADR-001 – ADR-004, all **Accepted** — this document makes them concrete, it does not revisit them.
+> **Updated 2026-09-22:** ADR-004's namespace literal was revised (`ns-dev-ccm-03` → `ns-ste-ccm-29`)
+> and ADR-005 was added, adding a 30-day `ago()` fallback filter to both queries — this document's
+> §2.2–§2.6 below have been updated to match; see ADR-005 for the rationale.)
 >
 > **Scope of the change, in one line:** one new `log.info(...)` statement in one Java file, plus four
 > new non-code files under a new `support/` folder. Nothing else in `src/main/java` moves.
@@ -199,11 +202,11 @@ Derived from HRDS's actual `.kql` files, with the two deliberate ADR-driven dive
 | Convention | CDKS | Same as HRDS? |
 |---|---|---|
 | Table | `ContainerLogV2` | Yes |
-| Namespace filter | `where PodNamespace == 'ns-dev-ccm-03'` — hardcoded literal | Yes (ADR-004; HRDS hardcodes `ns-dev-amp-01`) |
+| Namespace filter | `where PodNamespace == 'ns-ste-ccm-29'` — hardcoded literal, revised 2026-09-22 (was `ns-dev-ccm-03`) | Yes (ADR-004; HRDS hardcodes `ns-dev-amp-01`) |
 | Sidecar exclusion | `where ContainerName != 'istio-proxy'` | Yes |
 | Service discriminator | `where tostring(LogJson.app) == 'cp-case-document-knowledge-service'` | **No** — HRDS uses `PodName startswith '<prefix>'`. See OPEN-DS-001 below. |
 | JSON extraction | `extend LogJson = parse_json(LogMessage)` then `extend Message = tostring(LogJson.message)` | Yes (`incoming-events-by-type.kql`, `all-logs-recent.kql`) |
-| Time filter | **None** — the portal's time-range picker supplies it | **No** — ADR-003 |
+| Time filter | `where TimeGenerated > ago(30d)` — fallback only, revised 2026-09-22 (ADR-005); portal's picker still ANDs on top when set (ADR-003 otherwise stands) | **No** — ADR-003/ADR-005 |
 | Multi-segment shape | `let` common prefix + `union` of per-segment `summarize count()` sub-queries | Adapted from `todays-summary.kql` (which unions but hardcodes `startofday(now())`) |
 | Header comment | `//` block naming the source class + message marker for each segment | New — required by AC-013 |
 | Output | `AnalyticsGrid` table: two visible columns + a sort column | Yes (`todays-summary.kql`) |
@@ -276,9 +279,12 @@ This design uses:
 ```kusto
 // Tile 1 - Document ingestion phase breakdown (DD-43432)
 //
-// One row per ingestion phase, counting phase transitions over whatever time range the Azure
-// Portal dashboard's time-range picker supplies. Deliberately contains no ago()/startofday()
-// filter - the tile is registered with IsQueryContainTimeRange = false (ADR-003).
+// One row per ingestion phase, counting phase transitions over the Azure Portal dashboard's
+// time-range picker, when one is supplied - AND'd with a 30-day ago() fallback below so the tile
+// still shows a bounded, meaningful window when no time range has been picked (revises ADR-003's
+// "no filter at all" position; the tile is still registered with IsQueryContainTimeRange = false,
+// so the portal's own picker keeps narrowing the range on top of this fallback - selecting a
+// picker range wider than 30 days will still be capped at 30 days by this filter).
 //
 // Source log statements in cp-case-document-knowledge-service (FR-001 - FR-004).
 // Changing the text, level or emission point of any of these breaks this tile - update this file
@@ -303,11 +309,13 @@ This design uses:
 // an explicit, written exclusion for this ticket - not fixed here because doing so needs a Java
 // change outside this story's verify-only scope for FR-002-FR-004. Tracked as a follow-up (OQ-011).
 //
-// 'ns-dev-ccm-03' is the dev namespace literal; the terraform dashboard repo substitutes the
-// per-environment namespace at plan time (ADR-004).
+// 'ns-ste-ccm-29' is the default namespace literal; the terraform dashboard repo substitutes the
+// per-environment namespace at plan time (ADR-004) - this literal is only the anchor string that
+// substitution searches for, it does not have to match the environment actually being deployed to.
 let cdks =
     ContainerLogV2
-    | where PodNamespace == 'ns-dev-ccm-03'
+    | where TimeGenerated > ago(30d)
+    | where PodNamespace == 'ns-ste-ccm-29'
     | where ContainerName != 'istio-proxy'
     | extend LogJson = parse_json(LogMessage)
     | where tostring(LogJson.app) == 'cp-case-document-knowledge-service'
@@ -355,6 +363,11 @@ union
   quotes need no escaping. Terraform passes the query through `jsonencode(...)`
   (`dashboards.tf`, `tile_inputs_template`), which escapes the double quotes on the way into the
   portal definition — no manual escaping is needed in the `.kql` file.
+- **`TimeGenerated > ago(30d)` (ADR-005, added 2026-09-22)** applies inside `let cdks = …`, so every
+  branch of the union inherits it — it is not repeated per branch. Because `IsQueryContainTimeRange`
+  stays `false`, the portal's own picker filter still ANDs on top of this one; a picker range wider
+  than 30 days is silently capped at 30 days by this line, not widened. See ADR-005 for why that
+  tradeoff was accepted.
 
 ### 2.4 `support/dashboard-kql/answer-generation-outcomes.kql` (Tile 2) — full draft
 
@@ -367,8 +380,11 @@ union
 // and one succeeded (ADR-001). Succeeded + Failed can therefore be less than Total while
 // transactions are still in flight.
 //
-// Deliberately contains no ago()/startofday() filter - the tile is registered with
-// IsQueryContainTimeRange = false (ADR-003).
+// AND'd with a 30-day ago() fallback below so the tile still shows a bounded, meaningful window
+// when no time range has been picked (revises ADR-003's "no filter at all" position; the tile is
+// still registered with IsQueryContainTimeRange = false, so the portal's own picker keeps
+// narrowing the range on top of this fallback - selecting a picker range wider than 30 days will
+// still be capped at 30 days by this filter).
 //
 // Source log statements in cp-case-document-knowledge-service (FR-005). Changing the text, level
 // or emission point of any of these breaks this tile - update this file in the same change (FR-006):
@@ -386,11 +402,13 @@ union
 //   "Answer generation failed. Retrying"               - a retry decision, not an outcome
 //   "Max retries reached for caseId="                  - follows a line already counted as Failed
 //
-// 'ns-dev-ccm-03' is the dev namespace literal; the terraform dashboard repo substitutes the
-// per-environment namespace at plan time (ADR-004).
+// 'ns-ste-ccm-29' is the default namespace literal; the terraform dashboard repo substitutes the
+// per-environment namespace at plan time (ADR-004) - this literal is only the anchor string that
+// substitution searches for, it does not have to match the environment actually being deployed to.
 let cdks =
     ContainerLogV2
-    | where PodNamespace == 'ns-dev-ccm-03'
+    | where TimeGenerated > ago(30d)
+    | where PodNamespace == 'ns-ste-ccm-29'
     | where ContainerName != 'istio-proxy'
     | extend LogJson = parse_json(LogMessage)
     | where tostring(LogJson.app) == 'cp-case-document-knowledge-service'
@@ -422,6 +440,8 @@ union
 - Per ADR-002 a total RAG outage shows as `Total` dropping toward zero with no corresponding `Failed`
   rise, because `Failed to start async RAG` is excluded. Documented in the header block so a support
   engineer reading the tile is not misled.
+- **`TimeGenerated > ago(30d)` (ADR-005, added 2026-09-22)** applies inside `let cdks = …`, identically
+  to Tile 1 — see §2.3's implementer note for the picker-interaction tradeoff, which applies here too.
 
 ### 2.5 `support/sync-dashboard-to-terraform.sh`
 
@@ -469,13 +489,15 @@ Required content, in this order:
    | `ingestion-phase-counts.kql` | Document ingestion phase breakdown — table, dashboard time range |
    | `answer-generation-outcomes.kql` | Answer generation total / succeeded / failed — table, dashboard time range |
 
-5. **A short "Conventions" note** recording the three things a future editor will otherwise get
-   wrong: (a) no time filter in these queries — the portal picker supplies it (ADR-003); (b)
-   `ns-dev-ccm-03` is a deliberate hardcoded literal that the terraform repo substitutes per
-   environment (ADR-004), and the known limitation that its replacement is not yet
-   generalised for CDKS's namespace family; (c) FR-006 — each query's header comment names the log
-   statements it binds to, and changing one of those Java lines requires updating the query in the
-   same change.
+5. **A short "Conventions" note**, revised 2026-09-22, recording the things a future editor will
+   otherwise get wrong: (a) both queries carry a `TimeGenerated > ago(30d)` fallback filter — the
+   portal picker still narrows the range further when set, but the fallback caps the window at 30
+   days even when a wider range is picked (ADR-003, as revised by ADR-005); (b) `ns-ste-ccm-29` is a
+   deliberate hardcoded literal that the terraform repo substitutes per environment (ADR-004), and the
+   known limitation that its replacement is not yet generalised for CDKS's namespace family — making
+   CDKS itself environment-aware instead is a deferred follow-up, not this ticket; (c) FR-006 — each
+   query's header comment names the log statements it binds to, and changing one of those Java lines
+   requires updating the query in the same change.
 6. **Jira reference** — DD-43432.
 
 No PII, no real workspace GUIDs, no namespace names other than `ns-dev-ccm-03` / `ns-ste-ccm-29`, no
@@ -498,13 +520,19 @@ matching `queries/cdks/` folder populated by running Story 2's `sync-dashboard-t
 Two changes to the shared module are also needed, both flagged in the ADRs and neither of them CDKS-repo
 work: (1) per **ADR-003**, `tile_inputs_template` in `dashboards.tf` currently emits
 `{"name": "IsQueryContainTimeRange", "value": true}` unconditionally, so it needs a per-tile override
-to emit `false` for these two tiles, and the dashboard-level default time range lowered from 90 days
-to 30; (2) per **ADR-004**, `dashboards.tf` substitutes namespaces with a single hardcoded
-`replace(query, "ns-dev-amp-01", var.namespace)` against one global `var.namespace`, which will not
-substitute CDKS's differently-named `ns-dev-ccm-03` / `ns-ste-ccm-29` family — it needs a
-per-dashboard namespace map. Until that lands, CDKS's dev tiles happen to work (the literal already
-*is* the dev namespace) but no other environment will. The requester is raising both directly with
-that repo's owner (OQ-010); this is a Story 3 blocker only, and does not hold up Stories 1 or 2.
+to emit `false` for these two tiles — the dashboard-level default time range lowering from 90 to 30
+days remains worth doing as picker-UX polish, but per **ADR-005** (added 2026-09-22) it is no longer
+strictly required for a 30-day default to hold, since both `.kql` files now carry their own
+`ago(30d)` fallback; (2) per **ADR-004**, `dashboards.tf` substitutes namespaces with a single
+hardcoded `replace(query, "ns-dev-amp-01", var.namespace)` against one global `var.namespace` — a
+search string that matches **neither** `ns-dev-ccm-03` **nor** `ns-ste-ccm-29` (both are CDKS
+literals, not HRDS's `ns-dev-amp-01`), so this `replace()` is a silent no-op against either of CDKS's
+queries today and always leaves the pre-baked literal untouched. It needs a per-dashboard namespace
+map. Until that lands, CDKS's **ste** tiles happen to work (the checked-in literal, revised
+2026-09-22, already *is* `ns-ste-ccm-29`) — but dev, and every other environment, will show ste's data
+under a dashboard deployed anywhere else, until the namespace map fix lands. The requester is raising
+both directly with that repo's owner (OQ-010); this is a Story 3 blocker only, and does not hold up
+Stories 1 or 2.
 
 ---
 
@@ -561,7 +589,9 @@ that repo's owner (OQ-010); this is a Story 3 blocker only, and does not hold up
 | OQ-009 | Security sign-off on `caseId` / `docId` / `materialId` / `queryId` / `ragTransactionId` being dashboard-visible. This design **excludes** `defendantId` and `courtdocId` by default, as recommended. | Security reviewer | Before merge |
 | OQ-010 | Story 3 ownership, merge route, and whether tile delivery blocks closing DD-43432 | Requester | Before Stage 3 |
 | OQ-011 | Tile-1 `FAILED` undercounts the retry-exhaustion path (`CheckIngestionStatusForAllDefendantsTask.java:213-214`, no log line) — accepted as a written exclusion (AC-008a); a follow-up story/ticket should add the missing log line | Requester | No — non-blocking, follow-up ticket owed before Stage 5 |
+| OQ-012 | Namespace literal changed 2026-09-22 to `ns-ste-ccm-29` (ADR-004, decision point 4); phased plan accepted — ship the literal swap now, revisit making CDKS itself environment-aware (rather than one hardcoded literal) as a separate follow-up, not this ticket | Requester | No — deferred by design, not forgotten |
 | — | AC-010 wording is superseded by ADR-001 (§4.2) — note it on the ticket rather than re-testing it | Requester | No |
+| — | Both `.kql` files now carry a `TimeGenerated > ago(30d)` fallback filter (ADR-005, added 2026-09-22), revising ADR-003's "no time filter at all" position — see §2.3/§2.4 implementer notes | Requester | No |
 
 ---
 
