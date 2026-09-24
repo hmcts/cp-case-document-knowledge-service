@@ -129,6 +129,13 @@ rather than inventing verification tasks that would look like code changes.
   Azure Portal dashboard, and confirmation that `defendantId`/`courtdocId` stay excluded) is owned
   by the security reviewer and is due before merge — carried forward from `01-requirements.md`, not
   resolved by this story.
+- **OQ-013 (added 2026-09-24, raised at Code Review on PR #231):** the four new tests above assert
+  against `WAITING_FOR_UPLOAD_LOG_PREFIX`, a copy of the marker string hardcoded in the test file —
+  not read from `support/dashboard-kql/ingestion-phase-counts.kql`. A rewording of the Java log line
+  that happened to also update this test's hardcoded copy would stay green while the `.kql` file
+  silently drifted out of sync. A contract test closing this gap is tracked as
+  [DD-43672](https://hmcts.atlassian.net/browse/DD-43672), not fixed in this story — see
+  `01-requirements.md` OQ-013.
 - Jira sub-ticket: [DD-43470](https://hmcts.atlassian.net/browse/DD-43470).
 
 ---
@@ -225,6 +232,13 @@ support/
   KQL-visible — that is a `src/main/java` change, which this story explicitly excludes above. This
   story only documents the gap in the query header (AC-008a); closing it is a follow-up ticket
   (OQ-011), not part of DD-43432's delivered scope.
+- **A contract test tying all 7 log-line markers to `support/dashboard-kql/*.kql`.** Raised at Code
+  Review on PR #231 (2026-09-24): AC-006/AC-012 (Story 1) only assert `git diff develop` is empty for
+  the 6 pre-existing lines, and no test at all reads the marker strings out of the `.kql` files
+  themselves — so a future rewording of any of the 7 lines would pass CI while the affected tile
+  segment silently shows 0. This story does not add that test; it is tracked as
+  [DD-43672](https://hmcts.atlassian.net/browse/DD-43672) (OQ-013), due before Story 3 wires the
+  tiles up.
 
 ### Definition of done
 - [ ] Code (file) reviewed and approved via normal PR review, even though no Java is touched.

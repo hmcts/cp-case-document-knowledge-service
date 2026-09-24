@@ -166,6 +166,19 @@ All four use synthetic `UUID.randomUUID()` values only — no real case data, no
 numbers (AC-016). Assert on `ILoggingEvent.getFormattedMessage()` (not `getMessage()`, which returns
 the un-interpolated `{}` template).
 
+> **Known gap, raised at Code Review (PR #231, 2026-09-24), tracked as OQ-013 — not fixed here.** All
+> four tests above match against a prefix string hardcoded in the test file
+> (`WAITING_FOR_UPLOAD_LOG_PREFIX` in `IdpcAvailabilityServiceTest`), not read from
+> `support/dashboard-kql/ingestion-phase-counts.kql`. So these tests catch the Java line drifting from
+> the *test's own copy* of the string, but not the Java line and the `.kql` file's
+> `startswith_cs 'Saved CaseDocument placeholder docId='` predicate drifting from **each other**. The
+> same gap applies, with no test coverage at all, to the other 6 markers (`UPLOADED`, `INGESTED`,
+> `FAILED`/`EXCEEDED_FILE_SIZE_LIMIT`, `Total`, `Succeeded`, `Failed`) — AC-006/AC-012 only assert a
+> `git diff develop` is empty, which doesn't protect against a future rewording. A proposed contract
+> test — read each marker from `support/dashboard-kql/*.kql` and assert it is still logged — is
+> tracked as [DD-43672](https://hmcts.atlassian.net/browse/DD-43672) (OQ-013), due before Story 3,
+> not part of this design.
+
 > **Note for Stage 4 (Test Specs):** the tile behaviour itself — "the KQL attributes each event to
 > exactly one phase" (AC-007, AC-008, AC-009 – AC-011) — is **not** unit-testable in this repo. It is
 > verified by executing the queries against a real Log Analytics workspace and recording the result on
@@ -547,7 +560,7 @@ Stories 1 or 2.
 | **FR-003** | `INGESTED` — verify, do not change | 1 (verify) + 2 (KQL) | CDKS | `CheckIngestionStatusForAllDefendantsTask.java:116` unchanged; §2.3 `PhaseOrder = 3` branch | AC-006, AC-007 |
 | **FR-004** | `FAILED` / `EXCEEDED_FILE_SIZE_LIMIT` — verify, split on `reason=` | 1 (verify) + 2 (KQL) | CDKS | `CheckIngestionStatusForAllDefendantsTask.java:194-200` unchanged; §2.3 `PhaseOrder = 4` and `5` branches; retry-exhaustion path (`:213-214`) explicitly excluded, not implemented (OQ-011) | AC-006, AC-007, AC-008, AC-008a |
 | **FR-005** | Tile 2 countable — no Java change (ADR-001, ADR-002) | 2 | CDKS | §2.4 in full; no Java diff | AC-009, AC-010, AC-011, AC-012 |
-| **FR-006** | Tile-driving lines are a consumed interface | 2 | CDKS | Header comment block in both `.kql` files (§2.3, §2.4); "Conventions" note in `support/README.md` (§2.6) | AC-013 |
+| **FR-006** | Tile-driving lines are a consumed interface | 2 | CDKS | Header comment block in both `.kql` files (§2.3, §2.4); "Conventions" note in `support/README.md` (§2.6) — **documented, not enforced by any test** (OQ-013) | AC-013 |
 | **FR-007** | KQL definitions live in this repo | 2 | CDKS | `support/dashboard-kql/` (§2.1) | AC-013, AC-014 |
 | **NFR-001** | No PII / case content | 1, 2 | CDKS | Four UUID/enum values only (§1.2); synthetic test data (§1.4) | AC-004, AC-016 |
 | **NFR-002** | Existing SLF4J → Logstash pipeline only | 1 | CDKS | `@Slf4j` + parameterised `log.info`; `caseId` via existing `CorrelationScope` at `:64`; `logback-spring.xml` untouched | AC-017 |
@@ -590,6 +603,7 @@ Stories 1 or 2.
 | OQ-010 | Story 3 ownership, merge route, and whether tile delivery blocks closing DD-43432 | Requester | Before Stage 3 |
 | OQ-011 | Tile-1 `FAILED` undercounts the retry-exhaustion path (`CheckIngestionStatusForAllDefendantsTask.java:213-214`, no log line) — accepted as a written exclusion (AC-008a); a follow-up story/ticket should add the missing log line | Requester | No — non-blocking, follow-up ticket owed before Stage 5 |
 | OQ-012 | Namespace literal changed 2026-09-22 to `ns-ste-ccm-29` (ADR-004, decision point 4); phased plan accepted — ship the literal swap now, revisit making CDKS itself environment-aware (rather than one hardcoded literal) as a separate follow-up, not this ticket | Requester | No — deferred by design, not forgotten |
+| OQ-013 | No contract test ties the 7 log-line markers to `support/dashboard-kql/*.kql` — only `WAITING_FOR_UPLOAD` is tested at all, and that test hardcodes its own copy of the marker rather than reading it from the `.kql` file (raised at Code Review, PR #231, 2026-09-24). Reopens OQ-007's "no automated enforcement expected" resolution. Tracked as [DD-43672](https://hmcts.atlassian.net/browse/DD-43672), not fixed on DD-43470/DD-43471 | Requester | No for this PR — but should close before Story 3 wires the tiles up |
 | — | AC-010 wording is superseded by ADR-001 (§4.2) — note it on the ticket rather than re-testing it | Requester | No |
 | — | Both `.kql` files now carry a `TimeGenerated > ago(30d)` fallback filter (ADR-005, added 2026-09-22), revising ADR-003's "no time filter at all" position — see §2.3/§2.4 implementer notes | Requester | No |
 

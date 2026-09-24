@@ -183,6 +183,14 @@ fixtures in this class already comply.
 - **Level assertion is not optional.** `logger.info(...)` → `logger.debug(...)` is a one-character
   change that leaves every message-content assertion green while removing the event from
   `ContainerLogV2` entirely (root threshold is `INFO`). `getLevel()` is the only thing that catches it.
+- **Known gap, raised at Code Review (PR #231, 2026-09-24) — OQ-013, not fixed here.** The
+  `Saved CaseDocument placeholder docId=` string this scenario asserts against is a literal hardcoded
+  in the test file (`WAITING_FOR_UPLOAD_LOG_PREFIX`), not read from
+  `support/dashboard-kql/ingestion-phase-counts.kql`. This scenario proves the Java line matches the
+  test's own copy of the string — it does **not** prove the Java line and the `.kql` file's
+  `startswith_cs` predicate stay in sync with each other. A proposed contract test (read the marker
+  from the `.kql` file, assert it is still logged) would close this properly; tracked as
+  [DD-43672](https://hmcts.atlassian.net/browse/DD-43672), due before Story 3.
 
 ---
 
@@ -876,7 +884,12 @@ path at `CheckIngestionStatusForAllDefendantsTask.java:213-214` — accepted as 
 for this ticket via AC-008a/Scenario 2.3a; non-blocking here, but a follow-up ticket to add the
 missing log line is owed before Stage 5), **OQ-012** (namespace literal revised 2026-09-22 to
 `ns-ste-ccm-29`; making CDKS itself environment-aware instead of relying on one hardcoded literal is a
-deliberately deferred follow-up, not this ticket — see ADR-004 decision point 4).
+deliberately deferred follow-up, not this ticket — see ADR-004 decision point 4), **OQ-013** (added
+2026-09-24, raised at Code Review on PR #231 — no contract test ties any of the 7 log-line markers to
+`support/dashboard-kql/*.kql`; even `WAITING_FOR_UPLOAD`'s tests match against a hardcoded copy of the
+marker in the test file, not the `.kql` file itself, so a rewording of any of the 7 lines would pass
+CI while the tile silently shows 0. Reopens OQ-007's Stage-2 "no automated enforcement expected"
+resolution. Tracked as [DD-43672](https://hmcts.atlassian.net/browse/DD-43672), due before Story 3).
 
 ---
 
