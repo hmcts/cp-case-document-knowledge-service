@@ -7,6 +7,10 @@
 > Input brief: [`00-input-brief.md`](./00-input-brief.md) ·
 > ADRs: [`adrs/DD-43432-structured-logging-dashboard-tiles.md`](../adrs/DD-43432-structured-logging-dashboard-tiles.md)
 > (ADR-001 – ADR-004, all **Accepted** at the Stage-2 gate on 2026-09-21 — not reopened here).
+> **Updated 2026-09-22, during Stage 5 implementation:** ADR-004's namespace literal was revised
+> (`ns-dev-ccm-03` → `ns-ste-ccm-29`) and ADR-005 was added (30-day `ago()` fallback filter in both
+> `.kql` files, revising ADR-003) — the scenarios below that quote the shipped queries verbatim have
+> been updated to match; see the ADR file for full rationale.
 >
 > **Sub-tickets:** Story 1 → [DD-43470](https://hmcts.atlassian.net/browse/DD-43470) ·
 > Story 2 → [DD-43471](https://hmcts.atlassian.net/browse/DD-43471) ·
@@ -179,6 +183,14 @@ fixtures in this class already comply.
 - **Level assertion is not optional.** `logger.info(...)` → `logger.debug(...)` is a one-character
   change that leaves every message-content assertion green while removing the event from
   `ContainerLogV2` entirely (root threshold is `INFO`). `getLevel()` is the only thing that catches it.
+- **Known gap, raised at Code Review (PR #231, 2026-09-24) — OQ-013, not fixed here.** The
+  `Saved CaseDocument placeholder docId=` string this scenario asserts against is a literal hardcoded
+  in the test file (`WAITING_FOR_UPLOAD_LOG_PREFIX`), not read from
+  `support/dashboard-kql/ingestion-phase-counts.kql`. This scenario proves the Java line matches the
+  test's own copy of the string — it does **not** prove the Java line and the `.kql` file's
+  `startswith_cs` predicate stay in sync with each other. A proposed contract test (read the marker
+  from the `.kql` file, assert it is still logged) would close this properly; tracked as
+  [DD-43672](https://hmcts.atlassian.net/browse/DD-43672), due before Story 3.
 
 ---
 
@@ -468,12 +480,15 @@ live workspace nobody knows the true denominator.
 
 **Run this first. If it fails, nothing else in Story 2 means anything.**
 
-- **Given** the shared prefix block that opens both shipped `.kql` files:
-  `ContainerLogV2 | where PodNamespace == 'ns-dev-ccm-03' | where ContainerName != 'istio-proxy' | extend LogJson = parse_json(LogMessage) | where tostring(LogJson.app) == 'cp-case-document-knowledge-service' | extend Message = tostring(LogJson.message)`,
-  and a dev workspace over a period in which CDKS is known to have been running and serving traffic.
+- **Given** the shared prefix block that opens both shipped `.kql` files (revised 2026-09-22 — ADR-004
+  decision point 4, ADR-005):
+  `ContainerLogV2 | where TimeGenerated > ago(30d) | where PodNamespace == 'ns-ste-ccm-29' | where ContainerName != 'istio-proxy' | extend LogJson = parse_json(LogMessage) | where tostring(LogJson.app) == 'cp-case-document-knowledge-service' | extend Message = tostring(LogJson.message)`,
+  and a workspace for the environment matching `ns-ste-ccm-29` (see the literal-vs-environment note
+  under point 1 below) over a period in which CDKS is known to have been running and serving traffic.
 - **When** the operator appends `| summarize Rows = count(), Distinct = dcount(Message)` and runs it
-  over an explicit window (`| where TimeGenerated > ago(1d)` added **for this pre-flight only** —
-  the shipped files carry no time filter, per ADR-003).
+  over a narrower explicit window (`| where TimeGenerated > ago(1d)` added **for this pre-flight
+  only**, on top of the shipped files' own 30-day fallback, per ADR-005 — a narrower window keeps this
+  sanity check fast without contradicting the shipped filter).
 - **Then** `Rows` is **greater than zero**, and spot-checking `| take 20 | project Message` shows
   recognisable CDKS log messages.
 - **Why this is the single most important check in Story 2.** Every tile branch is a
@@ -484,7 +499,11 @@ live workspace nobody knows the true denominator.
   reading of AC-014 would pass a completely broken query. This pre-flight is what distinguishes
   "returns zero" from "returns nothing".
 - **Specific things this pre-flight decides:**
-  1. whether `PodNamespace == 'ns-dev-ccm-03'` is the correct literal for the workspace being queried;
+  1. whether `PodNamespace == 'ns-ste-ccm-29'` is the correct literal for the workspace being queried
+     — remember this is the **checked-in default literal** (revised 2026-09-22 to ste), not
+     necessarily the environment under test; running this pre-flight against a **dev** workspace
+     requires temporarily swapping the literal to `ns-dev-ccm-03` for the pre-flight run only (do not
+     ship that swap — it is a local, throwaway edit for this check, not a change to the `.kql` files);
   2. whether `tostring(LogJson.app)` is populated — `02-design.md` §2.2 predicts it is, from
      `logback-spring.xml`'s `LogstashEncoder` custom fields, but that prediction has **not** been
      verified against a real `ContainerLogV2` row in any session so far;
@@ -751,8 +770,10 @@ Concretely:
 - Its acceptance evidence — `terraform plan`/`apply` for at least dev, and both tiles rendering real
   data on the Azure Portal — is produced by that repo's own pipeline and recorded on DD-43472 by the
   receiving team.
-- Its two external dependencies (ADR-003's per-tile `IsQueryContainTimeRange: false` override, and
-  ADR-004's per-dashboard namespace map replacing the single hardcoded
+- Its two external dependencies (ADR-003's per-tile `IsQueryContainTimeRange: false` override — the
+  dashboard-level default-range lowering is picker-UX polish only as of ADR-005, no longer strictly
+  required for the 30-day default since both `.kql` files carry their own fallback — and ADR-004's
+  per-dashboard namespace map replacing the single hardcoded
   `replace(query, "ns-dev-amp-01", var.namespace)`) are shared-module changes owned by that repo.
   The requester is raising both with its owner (OQ-010). Neither blocks Story 1 or Story 2.
 
@@ -861,7 +882,14 @@ Azure Portal dashboard — a wider audience than pod logs; **required before mer
 (Story 3 ownership and merge route), **OQ-011** (Tile-1 `FAILED` undercounts the retry-exhaustion
 path at `CheckIngestionStatusForAllDefendantsTask.java:213-214` — accepted as a written exclusion
 for this ticket via AC-008a/Scenario 2.3a; non-blocking here, but a follow-up ticket to add the
-missing log line is owed before Stage 5).
+missing log line is owed before Stage 5), **OQ-012** (namespace literal revised 2026-09-22 to
+`ns-ste-ccm-29`; making CDKS itself environment-aware instead of relying on one hardcoded literal is a
+deliberately deferred follow-up, not this ticket — see ADR-004 decision point 4), **OQ-013** (added
+2026-09-24, raised at Code Review on PR #231 — no contract test ties any of the 7 log-line markers to
+`support/dashboard-kql/*.kql`; even `WAITING_FOR_UPLOAD`'s tests match against a hardcoded copy of the
+marker in the test file, not the `.kql` file itself, so a rewording of any of the 7 lines would pass
+CI while the tile silently shows 0. Reopens OQ-007's Stage-2 "no automated enforcement expected"
+resolution. Tracked as [DD-43672](https://hmcts.atlassian.net/browse/DD-43672), due before Story 3).
 
 ---
 

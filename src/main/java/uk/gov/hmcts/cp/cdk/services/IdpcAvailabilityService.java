@@ -127,5 +127,8 @@ public class IdpcAvailabilityService {
         entity.setCourtdocId(fromString(info.courtDocumentId()));
 
         caseDocumentRepository.saveAndFlush(entity);
+
+        log.info("Saved CaseDocument placeholder docId={}, caseId={}, materialId={}, ingestionPhase={}",
+                docId, caseId, info.materialId(), DocumentIngestionPhase.WAITING_FOR_UPLOAD);
     }
 }

@@ -1,0 +1,68 @@
+// Tile 1 - Document ingestion phase breakdown (DD-43432)
+//
+// One row per ingestion phase, counting phase transitions over the Azure Portal dashboard's
+// time-range picker, when one is supplied - AND'd with a 30-day ago() fallback below so the tile
+// still shows a bounded, meaningful window when no time range has been picked (revises ADR-003's
+// "no filter at all" position; the tile is still registered with IsQueryContainTimeRange = false,
+// so the portal's own picker keeps narrowing the range on top of this fallback - selecting a
+// picker range wider than 30 days will still be capped at 30 days by this filter).
+//
+// Source log statements in cp-case-document-knowledge-service (FR-001 - FR-004).
+// Changing the text, level or emission point of any of these breaks this tile - update this file
+// in the same change (FR-006):
+//   WAITING_FOR_UPLOAD        services/IdpcAvailabilityService.persistCaseDocument
+//                             "Saved CaseDocument placeholder docId="
+//   UPLOADED                  jobmanager/caseflow/RetrieveMaterialAndUploadTask
+//                             "Saved CaseDocument docId="
+//   INGESTED                  jobmanager/caseflow/CheckIngestionStatusForAllDefendantsTask
+//                             "INGESTION SUCCESS identifier="
+//   FAILED / EXCEEDED_FILE_SIZE_LIMIT
+//                             jobmanager/caseflow/CheckIngestionStatusForAllDefendantsTask
+//                             "ingestion FAILED for identifier=" , split on reason=
+//
+// Deliberately NOT counted: "Document status check  FAILED with reason=" - that is a transient
+// polling exception that retries, not a terminal ingestion failure (AC-008).
+//
+// Known, accepted gap (AC-008a, OQ-011): CheckIngestionStatusForAllDefendantsTask:213-214 also
+// sets ingestion_phase=FAILED when polling retries are exhausted, but emits no distinguishing log
+// line (the only preceding log is the generic "Ingestion status not complete ... -> retrying",
+// which also fires on retries that later succeed). This path is NOT visible to this query. It is
+// an explicit, written exclusion for this ticket - not fixed here because doing so needs a Java
+// change outside this story's verify-only scope for FR-002-FR-004. Tracked as a follow-up (OQ-011).
+//
+// 'ns-ste-ccm-29' is the default namespace literal; the terraform dashboard repo substitutes the
+// per-environment namespace at plan time (ADR-004) - this literal is only the anchor string that
+// substitution searches for, it does not have to match the environment actually being deployed to.
+let cdks =
+    ContainerLogV2
+    | where TimeGenerated > ago(30d)
+    | where PodNamespace == 'ns-ste-ccm-29'
+    | where ContainerName != 'istio-proxy'
+    | extend LogJson = parse_json(LogMessage)
+    | where tostring(LogJson.app) == 'cp-case-document-knowledge-service'
+    | extend Message = tostring(LogJson.message);
+union
+(cdks
+    | where Message startswith_cs 'Saved CaseDocument placeholder docId='
+    | summarize Count = count()
+    | extend Phase = 'WAITING_FOR_UPLOAD', PhaseOrder = 1),
+(cdks
+    | where Message startswith_cs 'Saved CaseDocument docId='
+    | summarize Count = count()
+    | extend Phase = 'UPLOADED', PhaseOrder = 2),
+(cdks
+    | where Message startswith_cs 'INGESTION SUCCESS identifier='
+    | summarize Count = count()
+    | extend Phase = 'INGESTED', PhaseOrder = 3),
+(cdks
+    | where Message startswith_cs 'ingestion FAILED for identifier='
+    | where Message contains "reason='FILE_SIZE_OVER_LIMIT'"
+    | summarize Count = count()
+    | extend Phase = 'EXCEEDED_FILE_SIZE_LIMIT', PhaseOrder = 4),
+(cdks
+    | where Message startswith_cs 'ingestion FAILED for identifier='
+    | where Message !contains "reason='FILE_SIZE_OVER_LIMIT'"
+    | summarize Count = count()
+    | extend Phase = 'FAILED', PhaseOrder = 5)
+| order by PhaseOrder asc
+| project Phase, Count = toint(Count)

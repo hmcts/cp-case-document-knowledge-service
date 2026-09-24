@@ -14,7 +14,10 @@
 > rescoped only where `02-design.md` made an FR concrete (e.g. FR-005 needing no Java change,
 > confirmed by ADR-001/ADR-002). No new ADR is raised at this stage; ADR-001–ADR-004
 > (`../adrs/DD-43432-structured-logging-dashboard-tiles.md`) are all **Accepted** and are not
-> reopened here.
+> reopened here. **Updated 2026-09-22, during Stage 5 implementation:** ADR-004's namespace literal
+> was revised (`ns-dev-ccm-03` → `ns-ste-ccm-29`) and ADR-005 was added (30-day `ago()` fallback
+> filter in both `.kql` files, revising ADR-003) — this document's Story 2 section below reflects
+> both; see the ADR file for full rationale.
 >
 > **NFRs are kept deliberately minimal, per the requester's own instruction** ("dont give too many
 > NFR's"). Each story links only the NFRs from `01-requirements.md` that actually apply to its own
@@ -126,6 +129,13 @@ rather than inventing verification tasks that would look like code changes.
   Azure Portal dashboard, and confirmation that `defendantId`/`courtdocId` stay excluded) is owned
   by the security reviewer and is due before merge — carried forward from `01-requirements.md`, not
   resolved by this story.
+- **OQ-013 (added 2026-09-24, raised at Code Review on PR #231):** the four new tests above assert
+  against `WAITING_FOR_UPLOAD_LOG_PREFIX`, a copy of the marker string hardcoded in the test file —
+  not read from `support/dashboard-kql/ingestion-phase-counts.kql`. A rewording of the Java log line
+  that happened to also update this test's hardcoded copy would stay green while the `.kql` file
+  silently drifted out of sync. A contract test closing this gap is tracked as
+  [DD-43672](https://hmcts.atlassian.net/browse/DD-43672), not fixed in this story — see
+  `01-requirements.md` OQ-013.
 - Jira sub-ticket: [DD-43470](https://hmcts.atlassian.net/browse/DD-43470).
 
 ---
@@ -147,7 +157,10 @@ depends on, and I can trust the numbers on the dashboard before Story 3 wires it
 ### Background
 `02-design.md` §2 gives both queries in full, plus the supporting script and README, mirroring
 `service-cp-crime-hearing-results-document-subscription`'s (HRDS) `support/` convention exactly
-(ADR-004). No `src/main/java` code is touched by this story. Four new files only:
+(ADR-004). No `src/main/java` code is touched by this story. Four new files only. **Revised
+2026-09-22:** both `.kql` files now also carry a `TimeGenerated > ago(30d)` fallback filter (ADR-005)
+and the namespace literal is `ns-ste-ccm-29` (was `ns-dev-ccm-03`, ADR-004 decision point 4) — this
+story delivers both, per `02-design.md` §2.3/§2.4 as updated.
 
 ```
 support/
@@ -207,8 +220,11 @@ support/
 - Any `src/main/java`, `logback-spring.xml`, or `build.gradle` change — this story is entirely
   non-code artefacts.
 - Wiring these queries into an actual dashboard tile — Story 3, a different repo.
-- The `IsQueryContainTimeRange`/30-day-default terraform template change and the namespace
-  generalization fix (ADR-003, ADR-004) — both Story 3 concerns, not KQL-file content.
+- The `IsQueryContainTimeRange` per-tile override and the dashboard-level default-time-range terraform
+  template change, and the namespace-generalization fix (ADR-003, ADR-004) — both Story 3 concerns,
+  in a different repo, **not** KQL-file content. (The `TimeGenerated > ago(30d)` KQL-level fallback
+  itself, per ADR-005, *is* in scope and delivered by this story — see Background above; only the
+  terraform-side `IsQueryContainTimeRange`/default-range plumbing is Story 3's.)
 - `run-query.sh`, `logs-kql/`, `chart-kql/`, `alerts-kql/` folders — HRDS has them, this story does
   not create them (`02-design.md` §5).
 - **Fixing the Tile-1 `FAILED` undercount at its source.** The retry-exhaustion path
@@ -216,6 +232,13 @@ support/
   KQL-visible — that is a `src/main/java` change, which this story explicitly excludes above. This
   story only documents the gap in the query header (AC-008a); closing it is a follow-up ticket
   (OQ-011), not part of DD-43432's delivered scope.
+- **A contract test tying all 7 log-line markers to `support/dashboard-kql/*.kql`.** Raised at Code
+  Review on PR #231 (2026-09-24): AC-006/AC-012 (Story 1) only assert `git diff develop` is empty for
+  the 6 pre-existing lines, and no test at all reads the marker strings out of the `.kql` files
+  themselves — so a future rewording of any of the 7 lines would pass CI while the affected tile
+  segment silently shows 0. This story does not add that test; it is tracked as
+  [DD-43672](https://hmcts.atlassian.net/browse/DD-43672) (OQ-013), due before Story 3 wires the
+  tiles up.
 
 ### Definition of done
 - [ ] Code (file) reviewed and approved via normal PR review, even though no Java is touched.
@@ -237,8 +260,13 @@ support/
   `PodName startswith '<prefix>'` (HRDS's convention). This is correct and sufficient as drafted; an
   optional `PodName` narrowing is a non-blocking follow-up for the requester/production support, not
   a prerequisite for this story.
-- The `ns-dev-ccm-03` namespace literal in both `.kql` files is a known, deliberate, non-blocking
-  dependency for Story 3 (ADR-004) — it does not block landing this story.
+- The `ns-ste-ccm-29` namespace literal (revised 2026-09-22 from `ns-dev-ccm-03`) in both `.kql` files
+  is a known, deliberate, non-blocking dependency for Story 3 (ADR-004) — it does not block landing
+  this story. Making CDKS itself environment-aware, instead of one hardcoded literal, is a separately
+  tracked follow-up (OQ-012), not this story.
+- The `TimeGenerated > ago(30d)` fallback filter (ADR-005, added 2026-09-22) is delivered by this
+  story; it AND's with the portal's picker, so a picker range wider than 30 days is still capped at
+  30 days — see `02-design.md` §2.3/§2.4 implementer notes for the tradeoff.
 - Jira sub-ticket: [DD-43471](https://hmcts.atlassian.net/browse/DD-43471).
 
 ---
@@ -269,12 +297,16 @@ without over-specifying the one that is out of this repo.
 - The matching `queries/cdks/` folder, populated by running Story 2's
   `sync-dashboard-to-terraform.sh` from a checkout with both repos as sibling directories.
 - A `dashboards.tf` / `tile_inputs_template` change (ADR-003) so these two tiles can be registered
-  with `IsQueryContainTimeRange: false` — the shared module currently emits `true` unconditionally —
-  and the dashboard-level default time range lowered from 90 days to 30.
+  with `IsQueryContainTimeRange: false` — the shared module currently emits `true` unconditionally.
+  The dashboard-level default time range lowering from 90 to 30 days remains worth doing as picker-UX
+  polish, but per **ADR-005** (added 2026-09-22) is no longer strictly required for a 30-day default
+  to hold, since both `.kql` files (Story 2) now carry their own `TimeGenerated > ago(30d)` fallback.
 - A namespace-generalization fix (ADR-004) — `dashboards.tf` currently does a single hardcoded
-  `replace(query, "ns-dev-amp-01", var.namespace)` against one global `var.namespace`; this does not
-  correctly substitute CDKS's differently-named `ns-dev-ccm-03` / `ns-ste-ccm-29` namespace family
-  and needs a per-dashboard namespace map instead.
+  `replace(query, "ns-dev-amp-01", var.namespace)` against one global `var.namespace`; that search
+  string matches **neither** of CDKS's namespace literals, so it is a silent no-op against CDKS's
+  queries either way and needs a per-dashboard namespace map instead. Until that fix lands, **ste**
+  tiles happen to show correct data (the Story-2 literal, revised 2026-09-22, is `ns-ste-ccm-29`) —
+  every other environment shows ste's data under a dashboard deployed there.
 
 ### Dependencies and constraints
 - Consumes Story 2's two `.kql` files verbatim via `sync-dashboard-to-terraform.sh` — cannot be
