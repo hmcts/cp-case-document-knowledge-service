@@ -22,6 +22,8 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.COMPLETED;
 
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
+import uk.gov.hmcts.cp.cdk.dashboard.DashboardKql;
+import uk.gov.hmcts.cp.cdk.dashboard.LogCapture;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
@@ -41,6 +43,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import ch.qos.logback.classic.Level;
 import jakarta.json.JsonObject;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -158,7 +161,13 @@ public class RetrieveMaterialAndUploadTaskTest {
         when(storageService.copyFromUrl(any(), any())).thenReturn(new DocumentBlobMetadata("https://storage.blob/blob1", "document-id_120326.pdf", 12345L));
 
         ExecutionInfo result;
-        result = task.execute(executionInfo);
+        try (LogCapture logs = LogCapture.forClass(RetrieveMaterialAndUploadTask.class)) {
+            result = task.execute(executionInfo);
+
+            // Tile 1 UPLOADED counts this line (support/dashboard-kql/ingestion-phase-counts.kql, FR-006)
+            logs.assertDashboardLine(DashboardKql.segment(DashboardKql.INGESTION_PHASE_COUNTS, "UPLOADED"), Level.INFO);
+            logs.assertDashboardLine(DashboardKql.segment(DashboardKql.INGESTION_PHASE_COUNTS, "WAITING_FOR_UPLOAD"), Level.INFO, 0);
+        }
         assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
 
         // Verify next task scheduled

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import uk.gov.hmcts.cp.cdk.clients.progression.ProgressionClient;
 import uk.gov.hmcts.cp.cdk.clients.progression.dto.LatestMaterialInfo;
 import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
+import uk.gov.hmcts.cp.cdk.dashboard.DashboardKql;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.repo.CaseDocumentRepository;
@@ -40,7 +41,9 @@ import org.slf4j.MDC;
 class IdpcAvailabilityServiceTest {
 
     public static final int EXPECTED_SIZE = 50;
-    private static final String WAITING_FOR_UPLOAD_LOG_PREFIX = "Saved CaseDocument placeholder docId=";
+    // Read from support/dashboard-kql/ingestion-phase-counts.kql, not hand-copied (FR-006, DD-43672).
+    private static final DashboardKql.Segment WAITING_FOR_UPLOAD_SEGMENT =
+            DashboardKql.segment(DashboardKql.INGESTION_PHASE_COUNTS, "WAITING_FOR_UPLOAD");
 
     @Mock
     private ProgressionClient progressionClient;
@@ -80,7 +83,7 @@ class IdpcAvailabilityServiceTest {
 
     private List<ILoggingEvent> waitingForUploadLogEvents() {
         return logAppender.list.stream()
-                .filter(event -> event.getFormattedMessage().startsWith(WAITING_FOR_UPLOAD_LOG_PREFIX))
+                .filter(event -> WAITING_FOR_UPLOAD_SEGMENT.matches(event.getFormattedMessage()))
                 .toList();
     }
 
