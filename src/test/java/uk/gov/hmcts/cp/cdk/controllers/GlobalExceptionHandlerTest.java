@@ -4,6 +4,7 @@ package uk.gov.hmcts.cp.cdk.controllers;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import uk.gov.hmcts.cp.openapi.model.cdk.ErrorResponse;
@@ -16,7 +17,7 @@ import io.micrometer.tracing.TraceContext;
 import io.micrometer.tracing.Tracer;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
-import org.hibernate.validator.internal.engine.path.PathImpl;
+import jakarta.validation.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -102,7 +103,12 @@ class GlobalExceptionHandlerTest {
     void onConstraint_shouldReturnBAD_REQUEST() {
         when(span.context().traceId()).thenReturn("tId");
 
-        when(violation.getPropertyPath()).thenReturn(PathImpl.createPathFromString("name"));
+        // handler only reads the property path's toString() (formatViolation:
+        // getPropertyPath() + " " + message) — no dependency on Hibernate Validator's
+        // internal PathImpl, which moved between validator versions.
+        final Path propertyPath = mock(Path.class);
+        when(propertyPath.toString()).thenReturn("name");
+        when(violation.getPropertyPath()).thenReturn(propertyPath);
         when(violation.getMessage()).thenReturn("must not be blank");
 
         final ConstraintViolationException ex = new ConstraintViolationException(Set.of(violation));
