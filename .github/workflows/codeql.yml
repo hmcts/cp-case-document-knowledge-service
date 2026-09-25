@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -99,7 +99,7 @@ jobs:
       AZURE_STORAGE_CONNECTION_STRING: ${{ vars.AZURE_STORAGE_CONNECTION_STRING }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - uses: actions/setup-java@v5
         with:
