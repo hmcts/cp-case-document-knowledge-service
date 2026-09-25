@@ -53,6 +53,12 @@ java {
 tasks.withType(Javadoc).configureEach {
     options.addBooleanOption('Xdoclint:none', true)
 }
+// sourcesJar packages main resources, which include the generated git.properties
+// (build/generated/resources/git). Declare the producer task explicitly so Gradle 9.7+
+// doesn't fail validation on the implicit task dependency.
+tasks.named('sourcesJar') {
+    dependsOn tasks.named('generateGitProperties')
+}
 
 /* ------------ Source sets ------------ */
 sourceSets {
