@@ -19,6 +19,8 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERYIDS
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
+import uk.gov.hmcts.cp.cdk.dashboard.DashboardKql;
+import uk.gov.hmcts.cp.cdk.dashboard.LogCapture;
 import uk.gov.hmcts.cp.cdk.domain.CaseDocument;
 import uk.gov.hmcts.cp.cdk.domain.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
@@ -40,8 +42,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import ch.qos.logback.classic.Level;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -69,10 +73,12 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
     private CheckIngestionStatusForAllDefendantsTask task;
 
     private UUID documentId;
+    private LogCapture logs;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        logs = LogCapture.forClass(CheckIngestionStatusForAllDefendantsTask.class);
 
         task = new CheckIngestionStatusForAllDefendantsTask(
                 documentIngestionStatusApi,
@@ -83,6 +89,15 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
         );
 
         documentId = randomUUID();
+    }
+
+    @AfterEach
+    void tearDown() {
+        logs.close();
+    }
+
+    private static DashboardKql.Segment tile1(final String phase) {
+        return DashboardKql.segment(DashboardKql.INGESTION_PHASE_COUNTS, phase);
     }
 
     @Test
@@ -150,6 +165,8 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
         ExecutionInfo result = task.execute(executionInfo);
 
         assertThat(doc.getIngestionPhase()).isEqualTo(DocumentIngestionPhase.INGESTED);
+        // Tile 1 INGESTED counts this line (support/dashboard-kql/ingestion-phase-counts.kql, FR-006)
+        logs.assertDashboardLine(tile1("INGESTED"), Level.INFO);
         assertThat(doc.getRagDocumentReference()).isEqualTo("pre-existing-reference");
         verify(caseDocumentRepository).saveAndFlush(doc);
 
@@ -234,6 +251,9 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
         ExecutionInfo result = task.execute(executionInfo);
 
         assertThat(doc.getIngestionPhase()).isEqualTo(DocumentIngestionPhase.EXCEEDED_FILE_SIZE_LIMIT);
+        // Tile 1 EXCEEDED_FILE_SIZE_LIMIT counts this line, and FAILED must not (FR-006)
+        logs.assertDashboardLine(tile1("EXCEEDED_FILE_SIZE_LIMIT"), Level.ERROR);
+        logs.assertDashboardLine(tile1("FAILED"), Level.ERROR, 0);
         assertThat(doc.getRagDocumentReference()).isEqualTo("pre-existing-reference");
         verify(caseDocumentRepository).saveAndFlush(doc);
         assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
@@ -269,6 +289,9 @@ class CheckIngestionStatusForAllDefendantsTaskTest {
         final ExecutionInfo result = task.execute(executionInfo);
 
         assertThat(doc.getIngestionPhase()).isEqualTo(DocumentIngestionPhase.FAILED);
+        // Tile 1 FAILED counts this line, and EXCEEDED_FILE_SIZE_LIMIT must not (FR-006)
+        logs.assertDashboardLine(tile1("FAILED"), Level.ERROR);
+        logs.assertDashboardLine(tile1("EXCEEDED_FILE_SIZE_LIMIT"), Level.ERROR, 0);
         assertThat(doc.getRagDocumentReference()).isEqualTo("pre-existing-reference");
         verify(caseDocumentRepository).saveAndFlush(doc);
         assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);

@@ -1,0 +1,56 @@
+// Tile 2 - Answer generation outcomes (DD-43432)
+//
+// Three rows: total RAG transactions started, and how many of them succeeded / failed.
+// Counting unit is one RAG transaction, NOT one business request - a query that fails and then
+// succeeds on retry mints a brand-new ragTransactionId and is counted as two outcomes, one failed
+// and one succeeded (ADR-001). Succeeded + Failed can therefore be less than Total while
+// transactions are still in flight.
+//
+// AND'd with a 30-day ago() fallback below so the tile still shows a bounded, meaningful window
+// when no time range has been picked (revises ADR-003's "no filter at all" position; the tile is
+// still registered with IsQueryContainTimeRange = false, so the portal's own picker keeps
+// narrowing the range on top of this fallback - selecting a picker range wider than 30 days will
+// still be capped at 30 days by this filter).
+//
+// Source log statements in cp-case-document-knowledge-service (FR-005). Changing the text, level
+// or emission point of any of these breaks this tile - update this file in the same change (FR-006):
+//   Total        jobmanager/queryflow/GenerateAnswerForQueryTask
+//                "Async RAG started for caseId="
+//   Succeeded    jobmanager/queryflow/CheckStatusOfAnswerGenerationTask
+//                "Answer Generation updated in the DB for caseId="
+//   Failed       jobmanager/queryflow/CheckStatusOfAnswerGenerationTask
+//                "Answer Generation Failed for caseId="
+//
+// Deliberately NOT counted as failures (ADR-002):
+//   "Failed to start async RAG for caseId="            - infrastructure error, no transaction exists
+//   "Failed to check answer generation status RAG for" - transient polling error, retries the same
+//                                                        transaction and may still succeed
+//   "Answer generation failed. Retrying"               - a retry decision, not an outcome
+//   "Max retries reached for caseId="                  - follows a line already counted as Failed
+//
+// 'ns-ste-ccm-29' is the default namespace literal; the terraform dashboard repo substitutes the
+// per-environment namespace at plan time (ADR-004) - this literal is only the anchor string that
+// substitution searches for, it does not have to match the environment actually being deployed to.
+let cdks =
+    ContainerLogV2
+    | where TimeGenerated > ago(30d)
+    | where PodNamespace == 'ns-ste-ccm-29'
+    | where ContainerName != 'istio-proxy'
+    | extend LogJson = parse_json(LogMessage)
+    | where tostring(LogJson.app) == 'cp-case-document-knowledge-service'
+    | extend Message = tostring(LogJson.message);
+union
+(cdks
+    | where Message startswith_cs 'Async RAG started for caseId='
+    | summarize Count = count()
+    | extend Outcome = 'Total RAG transactions', OutcomeOrder = 1),
+(cdks
+    | where Message startswith_cs 'Answer Generation updated in the DB for caseId='
+    | summarize Count = count()
+    | extend Outcome = 'Succeeded', OutcomeOrder = 2),
+(cdks
+    | where Message startswith_cs 'Answer Generation Failed for caseId='
+    | summarize Count = count()
+    | extend Outcome = 'Failed', OutcomeOrder = 3)
+| order by OutcomeOrder asc
+| project Outcome, Count = toint(Count)

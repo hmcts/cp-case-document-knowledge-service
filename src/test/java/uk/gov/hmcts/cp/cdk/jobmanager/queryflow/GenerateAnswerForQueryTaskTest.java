@@ -15,6 +15,8 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_RAG_TRAN
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
+import uk.gov.hmcts.cp.cdk.dashboard.DashboardKql;
+import uk.gov.hmcts.cp.cdk.dashboard.LogCapture;
 import uk.gov.hmcts.cp.cdk.domain.QueryDefinitionLatest;
 import uk.gov.hmcts.cp.cdk.repo.QueryDefinitionLatestRepository;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
@@ -26,6 +28,7 @@ import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 import java.util.Optional;
 import java.util.UUID;
 
+import ch.qos.logback.classic.Level;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import org.jetbrains.annotations.NotNull;
@@ -113,7 +116,12 @@ class GenerateAnswerForQueryTaskTest {
         ResponseEntity<@NotNull UserQueryAnswerRequestAccepted> response = ResponseEntity.ok(body);
         when(api.answerUserQueryAsync(any())).thenReturn(response);
 
-        final ExecutionInfo result = task.execute(executionInfo);
+        final ExecutionInfo result;
+        try (LogCapture logs = LogCapture.forClass(GenerateAnswerForQueryTask.class)) {
+            result = task.execute(executionInfo);
+            // Tile 2 "Total RAG transactions" counts this line (support/dashboard-kql/answer-generation-outcomes.kql, FR-006)
+            logs.assertDashboardLine(DashboardKql.segment(DashboardKql.ANSWER_GENERATION_OUTCOMES, "Total RAG transactions"), Level.INFO);
+        }
 
         // current task completed
         assertThat(result.getExecutionStatus()).isEqualTo(ExecutionStatus.COMPLETED);
@@ -144,7 +152,12 @@ class GenerateAnswerForQueryTaskTest {
         when(queryDefinitionLatestRepository.findByQueryId(queryId)).thenReturn(Optional.of(qdl));
         when(api.answerUserQueryAsync(any())).thenThrow(new RuntimeException("boom"));
 
-        final ExecutionInfo result = task.execute(executionInfo);
+        final ExecutionInfo result;
+        try (LogCapture logs = LogCapture.forClass(GenerateAnswerForQueryTask.class)) {
+            result = task.execute(executionInfo);
+            // no transaction was started, so Tile 2 Total must not count it (ADR-002)
+            logs.assertDashboardLine(DashboardKql.segment(DashboardKql.ANSWER_GENERATION_OUTCOMES, "Total RAG transactions"), Level.INFO, 0);
+        }
 
         assertRetry(result);
         verifyNoInteractions(executionService);
