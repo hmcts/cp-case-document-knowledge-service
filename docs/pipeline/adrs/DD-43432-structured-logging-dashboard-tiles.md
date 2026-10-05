@@ -111,8 +111,8 @@ will need a per-tile override). No CDKS Java or KQL-file impact either way — t
 ## ADR-004: `support/dashboard-kql` mirrors HRDS's convention exactly; namespace placeholder is a known Story 3 dependency
 
 **Status:** Accepted, with a flagged external dependency · **Date:** 2026-09-21 · **Decision point 1
-revised 2026-09-22** — placeholder literal changed from `ns-dev-ccm-03` to `ns-ste-ccm-29`, see the
-end of this ADR.
+revised twice** — 2026-09-22 (`ns-dev-ccm-03` → `ns-ste-ccm-29`) and 2026-10-05 (`ns-ste-ccm-29` →
+`ns-dev-ccm-07`, this time a *confirmed* value, not a guess — see decision point 5, end of this ADR).
 
 **Context:** Read HRDS's actual `support/README.md`, `support/dashboard-kql/*.kql`, and
 `support/sync-dashboard-to-terraform.sh`, plus the terraform repo's `queries/README.md` and
@@ -161,6 +161,39 @@ CDKS's real namespaces are a different naming family entirely: `ns-dev-ccm-03` (
 the placeholder is correct and consistent with HRDS's own pattern even before the generalization
 lands. Negative: CDKS's dashboard cannot actually go live in any environment until the terraform-side
 fix is merged; tracked as an external blocker for Story 3 only, not Stories 1–2.
+
+5. **Added 2026-10-05, raised at review on `cp-amp-terraform-az-dashboard` PR #27** ("feels odd that
+   I got back 0 rows in prod, you sure this is OK?"): confirmed — `ns-ste-ccm-29` was never verified
+   against any real environment, same as `ns-dev-ccm-03` before it. Ran the OPEN-DS-001-style discovery
+   query (`ContainerLogV2 | summarize count() by PodNamespace`) against a real dev workspace on
+   2026-10-01 and cross-checked the result by filtering `tostring(parse_json(LogMessage).app) ==
+   'cp-case-document-knowledge-service'` to confirm it's CDKS and not a namespace-neighbour — real
+   value is **`ns-dev-ccm-07`**, confirmed shared with `cp-court-list-publishing-service`. Both
+   `.kql` files' literal is updated to this confirmed value. This does **not** make the tile work in
+   prod (or sit/prp) — those environments' real namespaces are still unconfirmed, and even once
+   confirmed, point 2 above still applies: the terraform repo's existing substitution mechanism
+   can't correctly rewrite this literal for CDKS regardless, because `var.namespace` holds HRDS's own
+   per-environment namespace family, not CDKS's. The per-dashboard namespace map (point 4, OQ-012)
+   remains the real fix and is still not done.
+   - Same PR #27 review also raised the cost/performance of evaluating `LogJson.app` for every row in
+     the namespace before narrowing to CDKS, pointing at HRDS's `PodName startswith` convention as a
+     cheaper alternative (OPEN-DS-001, `02-design.md` §2.2). Confirmed the underlying concern is real
+     — `ns-dev-ccm-07` is a shared namespace, not CDKS-exclusive. **Fixed same day (2026-10-05),
+     following the requester's direction to look at the deployment config rather than defer again:**
+     CDKS's real Helm release name — `casedocumentknowledge-service` — was found in
+     `latestcpp-aks-deploy/helmsman.toml`'s `[apps.casedocumentknowledge-service]` block (the actual
+     Helmsman desired-state file driving CDKS's AKS deployment), not guessed from the repo name. Both
+     `.kql` files now add `PodName startswith 'casedocumentknowledge-service'` in the same position
+     HRDS uses it (after `PodNamespace`/`ContainerName`, before `parse_json`), keeping the `app`-field
+     check as a belt-and-braces guard rather than removing it, exactly as `02-design.md` §2.2 already
+     planned for once a prefix was available. This is config-confirmed, not yet confirmed by a live
+     query against `ContainerLogV2` — OPEN-DS-001's discovery query is still outstanding and would
+     close this fully. Also noted as a partial, independent mitigant found during the same
+     investigation: a live query confirmed `LogMessage` already arrives as `dynamic` in this
+     `ContainerLogV2` schema, not a raw JSON string, so `parse_json()` here is a no-op/passthrough
+     rather than a fresh per-row parse — the cost concern was about field-access-before-narrowing
+     ordering, not literal re-parsing of JSON text, and is now addressed by narrowing earlier via
+     `PodName` regardless.
 
 ---
 

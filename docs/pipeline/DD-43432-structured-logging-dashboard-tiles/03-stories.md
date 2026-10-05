@@ -160,7 +160,10 @@ depends on, and I can trust the numbers on the dashboard before Story 3 wires it
 (ADR-004). No `src/main/java` code is touched by this story. Four new files only. **Revised
 2026-09-22:** both `.kql` files now also carry a `TimeGenerated > ago(30d)` fallback filter (ADR-005)
 and the namespace literal is `ns-ste-ccm-29` (was `ns-dev-ccm-03`, ADR-004 decision point 4) — this
-story delivers both, per `02-design.md` §2.3/§2.4 as updated.
+story delivers both, per `02-design.md` §2.3/§2.4 as updated. **Revised again 2026-10-05**, raised at
+review on `cp-amp-terraform-az-dashboard` PR #27: `ns-ste-ccm-29` read 0 rows in prod and was never
+actually verified; the literal is now `ns-dev-ccm-07`, confirmed via a live discovery query against
+dev (ADR-004 decision point 5) — a real value this time, not a guess, though it still only fixes dev.
 
 ```
 support/
@@ -255,15 +258,16 @@ support/
 - [ ] Jira ticket updated with test evidence, including the AC-014 execution result.
 
 ### Notes / open questions
-- OPEN-DS-001 (`02-design.md` §2.2): CDKS's pod-name prefix is not determinable from this repo, so
-  both queries filter on `LogJson.app == 'cp-case-document-knowledge-service'` rather than
-  `PodName startswith '<prefix>'` (HRDS's convention). This is correct and sufficient as drafted; an
-  optional `PodName` narrowing is a non-blocking follow-up for the requester/production support, not
-  a prerequisite for this story.
-- The `ns-ste-ccm-29` namespace literal (revised 2026-09-22 from `ns-dev-ccm-03`) in both `.kql` files
-  is a known, deliberate, non-blocking dependency for Story 3 (ADR-004) — it does not block landing
-  this story. Making CDKS itself environment-aware, instead of one hardcoded literal, is a separately
-  tracked follow-up (OQ-012), not this story.
+- OPEN-DS-001 (`02-design.md` §2.2): resolved 2026-10-05, raised at review on `cp-amp-terraform-az-dashboard`
+  PR #27 — both queries now also filter on `PodName startswith 'casedocumentknowledge-service'`
+  (CDKS's real Helm release name, found in `latestcpp-aks-deploy/helmsman.toml`, not guessed), in the
+  same position HRDS uses it, alongside the existing `LogJson.app` check rather than replacing it.
+  Config-confirmed, not yet confirmed by a live query — the discovery query in `02-design.md` §2.2 is
+  still outstanding.
+- The namespace literal in both `.kql` files — `ns-dev-ccm-07` as of 2026-10-05 (previously
+  `ns-ste-ccm-29`, before that `ns-dev-ccm-03`) — is a known, deliberate, non-blocking dependency for
+  Story 3 (ADR-004) — it does not block landing this story. Making CDKS itself environment-aware,
+  instead of one hardcoded literal, is a separately tracked follow-up (OQ-012), not this story.
 - The `TimeGenerated > ago(30d)` fallback filter (ADR-005, added 2026-09-22) is delivered by this
   story; it AND's with the portal's picker, so a picker range wider than 30 days is still capped at
   30 days — see `02-design.md` §2.3/§2.4 implementer notes for the tradeoff.
@@ -303,10 +307,14 @@ without over-specifying the one that is out of this repo.
   to hold, since both `.kql` files (Story 2) now carry their own `TimeGenerated > ago(30d)` fallback.
 - A namespace-generalization fix (ADR-004) — `dashboards.tf` currently does a single hardcoded
   `replace(query, "ns-dev-amp-01", var.namespace)` against one global `var.namespace`; that search
-  string matches **neither** of CDKS's namespace literals, so it is a silent no-op against CDKS's
-  queries either way and needs a per-dashboard namespace map instead. Until that fix lands, **ste**
-  tiles happen to show correct data (the Story-2 literal, revised 2026-09-22, is `ns-ste-ccm-29`) —
-  every other environment shows ste's data under a dashboard deployed there.
+  string matches **none** of the literals CDKS has ever used, so it is a silent no-op against CDKS's
+  queries either way and needs a per-dashboard namespace map instead. Until that fix lands, **dev**
+  tiles happen to show correct data (the Story-2 literal, confirmed 2026-10-05 per ADR-004 decision
+  point 5, is `ns-dev-ccm-07`) — every other environment shows dev's data under a dashboard deployed
+  there. (This flips with whichever literal is checked in — it was `ns-ste-ccm-29` from 2026-09-22 to
+  2026-10-05, which would have made ste the one that happened to work, had that literal ever actually
+  matched a real ste namespace — it didn't, it was never verified. Don't read "happens to work" as a
+  substitute for the real per-dashboard fix.)
 
 ### Dependencies and constraints
 - Consumes Story 2's two `.kql` files verbatim via `sync-dashboard-to-terraform.sh` — cannot be

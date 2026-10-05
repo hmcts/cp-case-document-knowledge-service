@@ -480,10 +480,10 @@ live workspace nobody knows the true denominator.
 
 **Run this first. If it fails, nothing else in Story 2 means anything.**
 
-- **Given** the shared prefix block that opens both shipped `.kql` files (revised 2026-09-22 — ADR-004
-  decision point 4, ADR-005):
-  `ContainerLogV2 | where TimeGenerated > ago(30d) | where PodNamespace == 'ns-ste-ccm-29' | where ContainerName != 'istio-proxy' | extend LogJson = parse_json(LogMessage) | where tostring(LogJson.app) == 'cp-case-document-knowledge-service' | extend Message = tostring(LogJson.message)`,
-  and a workspace for the environment matching `ns-ste-ccm-29` (see the literal-vs-environment note
+- **Given** the shared prefix block that opens both shipped `.kql` files (revised 2026-10-05 — ADR-004
+  decision point 5, raised at `cp-amp-terraform-az-dashboard` PR #27 review):
+  `ContainerLogV2 | where TimeGenerated > ago(30d) | where PodNamespace == 'ns-dev-ccm-07' | where ContainerName != 'istio-proxy' | extend LogJson = parse_json(LogMessage) | where tostring(LogJson.app) == 'cp-case-document-knowledge-service' | extend Message = tostring(LogJson.message)`,
+  and a workspace for the environment matching `ns-dev-ccm-07` (see the literal-vs-environment note
   under point 1 below) over a period in which CDKS is known to have been running and serving traffic.
 - **When** the operator appends `| summarize Rows = count(), Distinct = dcount(Message)` and runs it
   over a narrower explicit window (`| where TimeGenerated > ago(1d)` added **for this pre-flight
@@ -499,11 +499,13 @@ live workspace nobody knows the true denominator.
   reading of AC-014 would pass a completely broken query. This pre-flight is what distinguishes
   "returns zero" from "returns nothing".
 - **Specific things this pre-flight decides:**
-  1. whether `PodNamespace == 'ns-ste-ccm-29'` is the correct literal for the workspace being queried
-     — remember this is the **checked-in default literal** (revised 2026-09-22 to ste), not
-     necessarily the environment under test; running this pre-flight against a **dev** workspace
-     requires temporarily swapping the literal to `ns-dev-ccm-03` for the pre-flight run only (do not
-     ship that swap — it is a local, throwaway edit for this check, not a change to the `.kql` files);
+  1. whether `PodNamespace == 'ns-dev-ccm-07'` is the correct literal for the workspace being queried
+     — this one **has** been run for real against dev (2026-10-01) and confirmed correct for that
+     environment (ADR-004 decision point 5); remember it is still only the **checked-in default
+     literal**, not necessarily the environment under test — running this pre-flight against sit/prp/
+     prd requires temporarily swapping the literal to that environment's own confirmed namespace for
+     the pre-flight run only, once confirmed the same way (do not ship that swap — it is a local,
+     throwaway edit for this check, not a change to the `.kql` files);
   2. whether `tostring(LogJson.app)` is populated — `02-design.md` §2.2 predicts it is, from
      `logback-spring.xml`'s `LogstashEncoder` custom fields, but that prediction has **not** been
      verified against a real `ContainerLogV2` row in any session so far;
@@ -718,8 +720,10 @@ these are excluded and why". **ADR-002 takes the second limb.** Verification is 
   and a human reads the diff.
 - **Then** none contains a workspace GUID, subscription id, connection string, SAS token, account
   key, subscription key, case/defendant/material/court identifier, or any real log content. The only
-  namespace literals present are `ns-dev-ccm-03` and `ns-ste-ccm-29`. Any example UUID appearing in a
-  comment is an obviously synthetic zero-padded value.
+  namespace literals present are `ns-dev-ccm-03`, `ns-dev-ccm-04`, `ns-ste-ccm-29` (all superseded,
+  mentioned only in header comments as "earlier literals, now corrected") and `ns-dev-ccm-07` (the
+  current, confirmed value) — none of these are sensitive, they are AKS namespace names, not case
+  data. Any example UUID appearing in a comment is an obviously synthetic zero-padded value.
 - **Extends to the Jira evidence.** The result grids attached under Scenarios 2.1–2.8 must be
   aggregate counts or redacted samples — a raw `| take 20 | project Message` screenshot containing
   live case identifiers would breach the same rule the files are being checked against. Say this to
@@ -883,8 +887,10 @@ Azure Portal dashboard — a wider audience than pod logs; **required before mer
 path at `CheckIngestionStatusForAllDefendantsTask.java:213-214` — accepted as a written exclusion
 for this ticket via AC-008a/Scenario 2.3a; non-blocking here, but a follow-up ticket to add the
 missing log line is owed before Stage 5), **OQ-012** (namespace literal revised 2026-09-22 to
-`ns-ste-ccm-29`; making CDKS itself environment-aware instead of relying on one hardcoded literal is a
-deliberately deferred follow-up, not this ticket — see ADR-004 decision point 4), **OQ-013** (added
+`ns-ste-ccm-29`, then again 2026-10-05 to `ns-dev-ccm-07` — this time a confirmed value, per PR #27
+review on `cp-amp-terraform-az-dashboard` (ADR-004 decision point 5) — still only fixes dev; making
+CDKS itself environment-aware instead of relying on one hardcoded literal is a deliberately deferred
+follow-up, not this ticket — see ADR-004 decision point 4), **OQ-013** (added
 2026-09-24, raised at Code Review on PR #231 — no contract test ties any of the 7 log-line markers to
 `support/dashboard-kql/*.kql`; even `WAITING_FOR_UPLOAD`'s tests match against a hardcoded copy of the
 marker in the test file, not the `.kql` file itself, so a rewording of any of the 7 lines would pass

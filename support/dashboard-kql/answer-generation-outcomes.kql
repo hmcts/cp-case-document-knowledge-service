@@ -28,14 +28,40 @@
 //   "Answer generation failed. Retrying"               - a retry decision, not an outcome
 //   "Max retries reached for caseId="                  - follows a line already counted as Failed
 //
-// 'ns-ste-ccm-29' is the default namespace literal; the terraform dashboard repo substitutes the
-// per-environment namespace at plan time (ADR-004) - this literal is only the anchor string that
-// substitution searches for, it does not have to match the environment actually being deployed to.
+// 'ns-dev-ccm-07' is CDKS's confirmed dev namespace (verified 2026-10-01 against a real workspace:
+// `ContainerLogV2 | summarize count() by PodNamespace`, cross-checked by then filtering on
+// `tostring(parse_json(LogMessage).app) == 'cp-case-document-knowledge-service'` to confirm it's
+// this service, not a neighbour sharing the namespace - see PR #27 review, ADR-004 revision).
+// Earlier literals here (`ns-dev-ccm-03`, `ns-dev-ccm-04`, `ns-ste-ccm-29`) were all unverified
+// guesses and all turned out wrong; this one is not a guess. It is still only a single hardcoded
+// literal, so this query reads zero rows in every OTHER environment (sit/prp/prd included) until
+// that environment's real PodNamespace is confirmed the same way. The terraform dashboard repo's
+// existing `replace(query, "ns-dev-amp-01", var.namespace)` substitution (ADR-004) cannot fix this
+// for CDKS even then: `var.namespace` holds HRDS's own per-environment namespace family
+// (`ns-dev-amp-01`, `ns-sit-amp-01`, ...), not CDKS's - a per-dashboard namespace map in that repo's
+// dashboards.tf is still required (OQ-012), this is not a CDKS-repo fix.
+//
+// Performance/cost fix (PR #27 review, resolves OPEN-DS-001): adds `PodName startswith
+// 'casedocumentknowledge-service'` - the same optimization HRDS uses, and in the same position
+// (after the cheap PodNamespace/ContainerName filters, before parse_json) - so the JSON field
+// access below only runs over CDKS's own rows, not every row in the shared namespace
+// (`ns-dev-ccm-07` is confirmed shared with `cp-court-list-publishing-service`). The prefix is
+// CDKS's actual Helm release name - `[apps.casedocumentknowledge-service] name =
+// "casedocumentknowledge-service"` in `latestcpp-aks-deploy/helmsman.toml` - read from the real
+// deployment config, not guessed from the repo name (the repo-name trap OPEN-DS-001 already warned
+// about: HRDS's own repo is named differently again from its release name). The `app`-field check
+// is kept, not replaced, as a belt-and-braces correctness guard now that it runs over a far smaller
+// row set - this was the exact plan `02-design.md` §2.2 already set out once a prefix was confirmed.
+// Not yet confirmed by a live query against ContainerLogV2 (only against the deployment config) -
+// run this once to fully close OPEN-DS-001:
+//   ContainerLogV2 | where PodNamespace == 'ns-dev-ccm-07' | where TimeGenerated > ago(1d)
+//   | summarize Lines = count() by PodName | order by Lines desc
 let cdks =
     ContainerLogV2
     | where TimeGenerated > ago(30d)
-    | where PodNamespace == 'ns-ste-ccm-29'
+    | where PodNamespace == 'ns-dev-ccm-07'
     | where ContainerName != 'istio-proxy'
+    | where PodName startswith 'casedocumentknowledge-service'
     | extend LogJson = parse_json(LogMessage)
     | where tostring(LogJson.app) == 'cp-case-document-knowledge-service'
     | extend Message = tostring(LogJson.message);

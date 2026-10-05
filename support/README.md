@@ -24,11 +24,17 @@ KQL queries for the `cp-case-document-knowledge-service` (CDKS) service.
   Portal dashboard's time-range picker hasn't been touched. The picker still narrows the range
   further when a user selects one (the tile stays registered with `IsQueryContainTimeRange = false`);
   the two filters AND together, so picking a range wider than 30 days is still capped at 30 days.
-- **`ns-ste-ccm-29` is a deliberate hardcoded literal**, substituted per environment by the terraform
-  repo at plan time (ADR-004) — it is only the anchor string that substitution searches for, not
-  necessarily the environment actually being deployed to. Known limitation: making CDKS itself
-  environment-aware, rather than relying on this single literal, is tracked as a follow-up (not this
-  ticket) — see ADR-004 and Story 3's scope note.
+- **`ns-dev-ccm-07` is a deliberate hardcoded literal** (confirmed real for dev on 2026-10-05, not a
+  guess — see ADR-004 decision point 5), substituted per environment by the terraform repo at plan
+  time (ADR-004) — it is only the anchor string that substitution searches for, not necessarily the
+  environment actually being deployed to. Known limitation: making CDKS itself environment-aware,
+  rather than relying on this single literal, is tracked as a follow-up (not this ticket) — see
+  ADR-004 and Story 3's scope note.
+- **Both queries also filter `PodName startswith 'casedocumentknowledge-service'`** (added
+  2026-10-05, resolves OPEN-DS-001) — CDKS's real Helm release name, found in
+  `latestcpp-aks-deploy/helmsman.toml`, not guessed from the repo name. Narrows to CDKS's own rows
+  before the JSON field access, same convention HRDS uses and in the same position; the `app`-field
+  check stays as a belt-and-braces guard, not a replacement.
 - **Each query's header comment names the log statements it binds to** (FR-006). Changing the text,
   level or emission point of any of those Java log lines requires updating the corresponding query in
   the same change.
