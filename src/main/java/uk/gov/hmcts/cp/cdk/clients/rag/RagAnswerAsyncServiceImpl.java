@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.clients.rag;
 
 import uk.gov.hmcts.cp.cdk.clients.common.ApimAuthHeaderService;
 import uk.gov.hmcts.cp.cdk.clients.common.RagClientProperties;
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
 import uk.gov.hmcts.cp.openapi.api.DocumentInformationSummarisedAsynchronouslyApi;
 import uk.gov.hmcts.cp.openapi.model.AnswerUserQueryRequest;
 import uk.gov.hmcts.cp.openapi.model.RequestErrored;
@@ -35,6 +36,7 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
 
 
     @Override
+    @SuppressWarnings("PMD.UnusedLocalVariable") // the try-with-resources variable is used for its close()
     public ResponseEntity<@NotNull UserQueryAnswerRequestAccepted> answerUserQueryAsync(final AnswerUserQueryRequest answerUserQueryRequest) {
         try {
             if (answerUserQueryRequest.getMetadataFilter() == null) {
@@ -58,7 +60,9 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
                 response = new UserQueryAnswerRequestAccepted();
             }
 
-            log.info("RAG Async answer answerUserQueryRequest completed successfully");
+            try (CorrelationScope scope = CorrelationScope.withIdentifiers(null, null, response.getTransactionId())) {
+                log.info("RAG Async answer answerUserQueryRequest completed successfully");
+            }
             return ResponseEntity.ok(response);
 
         } catch (final HttpStatusCodeException exception) {
@@ -75,7 +79,9 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
     }
 
     @Override
-    public ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> answerUserQueryStatus(final String transactionId, final Boolean withChunkedEntries) {
+    @SuppressWarnings("PMD.UnusedLocalVariable") // the try-with-resources variable is used for its close()
+    public ResponseEntity<@NotNull UserQueryAnswerReturnedSuccessfullyAsynchronously> answerUserQueryStatus(
+            final String transactionId, final Boolean withChunkedEntries) {
         try {
 
             UserQueryAnswerReturnedSuccessfullyAsynchronously response = ragRestClient
@@ -97,11 +103,13 @@ public class RagAnswerAsyncServiceImpl implements DocumentInformationSummarisedA
             }
 
             final String safeTransactionIdForLog = transactionId == null
-                    ? "null"
+                    ? null
                     : transactionId
                     .replace('\n', '_')
                     .replace('\r', '_');
-            log.info("RAG Async answer status completed successfully for the transactionId: {}", safeTransactionIdForLog);
+            try (CorrelationScope scope = CorrelationScope.withIdentifiers(null, null, safeTransactionIdForLog)) {
+                log.info("RAG Async answer status completed successfully");
+            }
             return ResponseEntity.ok(response);
 
         } catch (final HttpStatusCodeException exception) {

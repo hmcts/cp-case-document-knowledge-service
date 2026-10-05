@@ -19,6 +19,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_REFE
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_MATERIAL_NAME;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.REQUEST_ID;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseUuidOrNull;
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
@@ -76,7 +77,7 @@ public class RetrieveMaterialAndUploadTask implements ExecutableTask {
     public ExecutionInfo execute(final ExecutionInfo executionInfo) {
 
         final JsonObject jobData = executionInfo.getJobData();
-        final String requestId = jobData.getString("requestId", "unknown");
+        final String requestId = jobData.getString(REQUEST_ID, "unknown");
         final String userIdForExternalCalls = jobData.getString(CPPUID, null);
 
         if (isBlank(userIdForExternalCalls)) {

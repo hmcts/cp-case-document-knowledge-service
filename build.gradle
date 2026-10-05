@@ -147,7 +147,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
 
     // OpenAPI UI
@@ -205,6 +204,11 @@ dependencies {
     testImplementation "com.squareup.okhttp3:mockwebserver:${vers.mockwebserver}"
     testImplementation "org.assertj:assertj-core:${vers.assertj}"
     testImplementation "io.rest-assured:rest-assured:${vers.restAssured}"
+    // Reads the aggregated META-INF/spring-configuration-metadata.json shipped inside every
+    // Spring Boot starter/autoconfigure jar on the classpath — used by ConfigurationMetadataAuditTest
+    // (DD-43183 Story 6) to catch unbound/deprecated management.*/spring.* keys in our own YAML.
+    // This is a metadata *reader*; it does not require spring-boot-configuration-processor.
+    testImplementation "org.springframework.boot:spring-boot-configuration-metadata"
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation "com.github.tomakehurst:wiremock:${vers.wiremock}"
 

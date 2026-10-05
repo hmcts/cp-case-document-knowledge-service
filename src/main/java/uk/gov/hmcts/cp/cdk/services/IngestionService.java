@@ -1,5 +1,6 @@
 package uk.gov.hmcts.cp.cdk.services;
 
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
 import uk.gov.hmcts.cp.cdk.repo.IngestionStatusViewRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.DocumentIngestionPhase;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionStatusResponse;
@@ -21,7 +22,14 @@ public class IngestionService {
     private final IngestionStatusViewRepository repo;
 
     @Transactional(readOnly = true)
+    @SuppressWarnings("PMD.UnusedLocalVariable") // the try-with-resources variable is used for its close()
     public IngestionStatusResponse getStatus(final UUID caseId) {
+        try (CorrelationScope scope = CorrelationScope.withIdentifiers(caseId.toString(), null, null)) {
+            return getStatusScoped(caseId);
+        }
+    }
+
+    private IngestionStatusResponse getStatusScoped(final UUID caseId) {
         final IngestionStatusResponse resp = new IngestionStatusResponse();
         final Scope scope = new Scope();
         scope.setCaseId(caseId);

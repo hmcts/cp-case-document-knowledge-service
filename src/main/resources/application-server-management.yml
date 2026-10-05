@@ -17,32 +17,41 @@ management:
     web:
       base-path: /actuator
       exposure:
-        include: "health,info,metrics,prometheus,env,loggers,threaddump"
+        include: "health,info,metrics,env,loggers,threaddump"
 
   endpoint:
     health:
       probes:
         enabled: false
 
-  metrics:
-    tags:
-      service: cp-case-document-knowledge-service
-      cluster: ${CLUSTER_NAME:local}
-      region: ${REGION:local}
-
+  # There is no "master switch" for tracing on this Spring Boot version: management.tracing.enabled
+  # was removed at deprecation level `error` (no replacement field on TracingProperties) — a real
+  # OtelTracer bean is always active while spring-boot-starter-opentelemetry is on the classpath.
+  # Only the *exporter* below is switchable. Trace IDs and log correlation (MDC correlationId/
+  # traceId/spanId) are populated on every span regardless of the sampling probability below —
+  # sampling controls only whether a span is exported, never whether it exists or is logged
+  # (DD-43183 ADR-006). Do not re-add management.tracing.enabled, management.otlp.tracing.enabled
+  # or management.otlp.tracing.endpoint — all three are dead/removed keys on this classpath
+  # (DD-43183 Story 6); the real keys are management.tracing.export.otlp.enabled and
+  # management.opentelemetry.tracing.export.otlp.endpoint below.
   tracing:
-    enabled: false
     sampling:
-      probability: ${TRACING_SAMPLER_PROBABILITY:1.0}
+      probability: ${TRACING_SAMPLER_PROBABILITY:0.1}
+    export:
+      otlp:
+        enabled: ${OTEL_TRACES_ENABLED:false}
+
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTEL_TRACES_URL:http://localhost:4318/v1/traces}
 
   otlp:
-    tracing:
-      enabled: ${OTEL_METRICS_ENABLED:false}
-      endpoint: ${OTEL_TRACES_URL:http://localhost:4318/traces}
     metrics:
       export:
         enabled: ${OTEL_METRICS_ENABLED:false}
-        url: ${OTEL_METRICS_URL:http://localhost:4318/metrics}
+        url: ${OTEL_METRICS_URL:http://localhost:4318/v1/metrics}
 
 logging:
   level:

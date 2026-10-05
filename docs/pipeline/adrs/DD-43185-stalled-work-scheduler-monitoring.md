@@ -352,16 +352,22 @@ CREATE INDEX IF NOT EXISTS idx_cqs_awaiting_answer_at
   be taken or reversed at the Stage-2 gate without touching the migration.
 - **Accepted:** `idx_cd_phase_phase_at` indexes every `case_documents` row, including the
   `INGESTED` majority. It is the price of not depending on a predicate-implication proof.
-- **Accepted / needs DBA input:** plain `CREATE INDEX` takes a `SHARE` lock that blocks writes to
-  each table for the duration of the build. On a small table this is sub-second; on a large one it
-  is an ingestion outage. **Neither this repository nor its compose stack can tell you which.** The
-  row counts must come from the DBA (OQ-009), and if either table is large the migration should be
-  scheduled into a window, or `CONCURRENTLY` applied out-of-band with a no-op
-  `CREATE INDEX IF NOT EXISTS` left in `V1014` to keep Flyway consistent.
+- **Resolved — 2026-09-01, DBA row-count confirmation received.** Plain `CREATE INDEX` takes a
+  `SHARE` lock that blocks writes to each table for the duration of the build; the risk is real
+  only when the table is large enough for that build to take more than a moment. The requester has
+  confirmed both `case_documents` and `case_query_status` hold **fewer than ~100,000 rows** in
+  production. At that volume, index construction is sub-second to low-single-digit seconds on
+  typical hardware — the write-blocking window is not a meaningful ingestion-outage risk. `V1014`
+  is cleared to ship as a normal, unscheduled migration; no maintenance window and no out-of-band
+  `CONCURRENTLY` build are required. Still route through `migration-reviewer` per the standard
+  hard rule, but the row-count blocker itself (OQ-009's first half) is closed.
 - **Accepted:** `AC-006`/`AC-012` ("EXPLAIN shows an index scan", "under 500 ms at production
-  scale") remain **unverifiable inside this repository**. What can be delivered is a
-  Testcontainers-backed plan assertion at documented synthetic volumes; the production-scale number
-  is a manual DBA follow-up. See `02-design.md` §12 (OQ-009).
+  scale") remain **unverifiable inside this repository** as literal automated assertions — the
+  Testcontainers-backed plan assertion (`StalledWorkQueryPlanTest`) proves index usage at a
+  documented ~100k-row synthetic volume, which given the confirmed real production volume above is
+  now a representative proxy rather than merely a synthetic stand-in. A one-off production
+  `EXPLAIN (ANALYZE, BUFFERS)` capture post-deploy remains good practice for the record, but is no
+  longer gating the merge. See `02-design.md` §12 (OQ-009).
 - **Reversibility:** good. Both indexes are additive and droppable in a later migration with no
   data implication; the only irreversible cost is the build-time lock.
 
@@ -772,3 +778,72 @@ detector, and it is the reason this is worth one extra series.
   ADR-002's startup WARN covers the case where one is changed without the other.
 - **Reversibility:** excellent. Removing the gauge, or removing ShedLock, are both single-commit
   changes with no schema or contract implication.
+
+---
+
+## ADR-009: Withdraw the Prometheus/Micrometer implementation entirely — CDKS observability moves to structured logging + KQL, tracked under a new ticket
+
+- **Status:** Accepted at platform decision (2026-09-18) · **Date:** 2026-09-18 · **Jira:** DD-43185 · **Supersedes:** ADR-001 – ADR-008 in full (this ticket's entire implementation), the merged PR (#224) and its `/actuator/prometheus` exposure
+- **Artefacts:** merged implementation on `develop` (`885357e`, PR #224) · `baseline-actuator-prometheus.md` · the same platform decision recorded in full at DD-43182's ADR-012, which this ADR mirrors for this ticket
+
+### Context
+
+This is the companion decision to DD-43182's ADR-012, recorded here in full because DD-43185 shipped
+and merged independently and earlier, and its own implementation — `CdkMeters`'s original six
+families, `SchedulerMetrics`, `StalledWorkMetrics`, `StalledWorkMetricsRefreshJob`, the
+`cdk.monitoring.*` configuration namespace (`MonitoringProperties`/`MonitoringConfig`), and the two
+native `CaseDocumentRepository`/`CaseQueryStatusRepository` queries that fed the stalled-work gauges
+— is withdrawn for the identical reason: platform's confirmed observability path for this service is
+structured logging ingested into Azure Monitor's `ContainerLogV2`, queried by KQL, not a Prometheus
+scrape endpoint. See DD-43182's ADR-012 for the full context, the reference-pattern evidence
+(`devops_dba_toolkit`, `cp-amp-terraform-az-dashboard`), and the alternatives considered — all of it
+applies to this ticket without modification.
+
+One item specific to this ticket: `cdk_queries_awaiting_answer` carried an independent, already-known
+data-correctness defect (its underlying query depends on a `case_query_status.status` value —
+`ANSWER_NOT_AVAILABLE` — that no application code path ever writes, so it always read `0` regardless
+of real backlog; see the separate bug ticket raised for this). That defect is now moot rather than
+fixed — the gauge it affected no longer exists — but the defect analysis remains valid input for
+whichever KQL query eventually replaces it under the new ticket, since the same "what counts as
+awaiting" ambiguity will need resolving there too.
+
+### Decision
+
+**1 — The entire DD-43185 implementation is removed.** `CdkMeters`, `SchedulerMetrics`,
+`StalledWorkMetrics`, `StalledWorkMetricsRefreshJob`, `MonitoringProperties`, `MonitoringConfig`, and
+the `countStalledByPhase`/`countAwaitingAnswerOlderThan` repository queries are all deleted. The two
+schedulers (`IntradayDiscoveryScheduler`, `NightlyDiscoveryScheduler`) revert to calling
+`DiscoveryService` directly, with no `SchedulerMetrics.recordRun(...)` call — their existing
+start/finish/failure `log.info`/`log.error` lines are unaffected and remain the natural basis for
+whatever KQL query later replaces this ticket's counters.
+
+**2 — `ShedLockConfig` is retained.** It is not DD-43185-specific — both discovery schedulers use
+`@SchedulerLock` for their own single-pod-execution guarantee, independent of any metrics work, and
+continue to need the lock provider/task scheduler beans it registers.
+
+**3 — The `/actuator/prometheus` route itself is disabled** as part of this same change — recorded
+once, at DD-43182's ADR-012, since it is one shared piece of configuration removed for both tickets
+together, not two separate removals.
+
+**4 — Replacement observability is out of scope for this ticket**, tracked under the same new ticket
+referenced at DD-43182's ADR-012.
+
+### Consequences
+
+- **Positive:** removes the confusion this implementation produced in practice — the multi-pod
+  investigation that led to this decision found that `cdk_scheduler_runs_total` (a ShedLock-guarded,
+  per-pod counter) reads correctly on whichever pod most recently won the lock and `0` on every other
+  pod, which is expected Micrometer/multi-replica behaviour but was repeatedly misread as a bug when
+  checked via a single curl to the shared ingress.
+- **Positive:** the already-known `cdk_queries_awaiting_answer` defect stops being a live,
+  potentially-misleading "all clear" signal in production — it simply no longer exists, rather than
+  continuing to read `0` regardless of real backlog.
+- **Negative:** all of DD-43185's delivered work (merged, reviewed, passing its own test suite since
+  PR #224) is discarded rather than evolved. `03-stories.md`/`04-test-specs.md` in this ticket's
+  folder no longer describe what ships; retained for historical/audit traceability only.
+- **Negative:** `baseline-actuator-prometheus.md` no longer describes a regression baseline for
+  anything CDKS currently exposes — retained unedited as a historical artefact, same treatment as
+  DD-43182's `baseline-series-count.md`.
+- **Reversibility:** the deleted code exists in full in git history (PR #224, and this decision's own
+  removal branch) and can be restored via revert if a future decision reintroduces Prometheus as a
+  parallel path.

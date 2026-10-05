@@ -29,7 +29,6 @@ public class ApimDocumentIngestionClient implements DocumentIngestionInitiationA
 
     @Override
     public ResponseEntity<@NotNull FileStorageLocationReturnedSuccessfully> initiateDocumentUpload(final DocumentUploadRequest documentUploadRequest) {
-
         try {
             FileStorageLocationReturnedSuccessfully response = restClient
                     .post()

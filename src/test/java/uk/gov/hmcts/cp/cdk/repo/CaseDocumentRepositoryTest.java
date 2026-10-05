@@ -145,10 +145,11 @@ class CaseDocumentRepositoryTest {
     private void persist(final UUID docId, final UUID caseId, final UUID defendantId, final DocumentIngestionPhase phase) {
         jdbc.update("""
                     INSERT INTO case_documents
-                    (doc_id, case_id, material_id, source, doc_name, 
-                     blob_uri, content_type, size_bytes, sha256_hex, 
+                    (doc_id, case_id, material_id, source, doc_name,
+                     blob_uri, content_type, size_bytes, sha256_hex,
                      uploaded_at, ingestion_phase, ingestion_phase_at, defendant_id, courtdoc_id, created_at)
                     VALUES(?, ?, ?, 'IDPC', '', 'http://blob_uri', '', 0, null, now(), ?::document_ingestion_phase_enum, now(), ?, ?, now())
                 """, docId, caseId, randomUUID(), phase.name(), defendantId, randomUUID());
     }
+
 }

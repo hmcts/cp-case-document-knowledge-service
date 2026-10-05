@@ -23,6 +23,8 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.COMPLETED;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.INPROGRESS;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus.STARTED;
 
+import uk.gov.hmcts.cp.cdk.dashboard.DashboardKql;
+import uk.gov.hmcts.cp.cdk.dashboard.LogCapture;
 import uk.gov.hmcts.cp.cdk.domain.QueryLevel;
 import uk.gov.hmcts.cp.cdk.jobmanager.JobManagerRetryProperties;
 import uk.gov.hmcts.cp.cdk.services.AnswerGenerationService;
@@ -39,9 +41,11 @@ import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 import java.util.List;
 import java.util.UUID;
 
+import ch.qos.logback.classic.Level;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.JsonObject;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -98,9 +102,11 @@ class CheckStatusOfAnswerGenerationTaskTest {
     private UUID caseId;
     private UUID queryId;
     private UUID documentId;
+    private LogCapture logs;
 
     @BeforeEach
     void setUp() {
+        logs = LogCapture.forClass(CheckStatusOfAnswerGenerationTask.class);
         task = new CheckStatusOfAnswerGenerationTask(api, objectMapper, retryProperties,
                 answerGenerationService, caseLevelAllDocumentsAnswerService,
                 caseLevelLatestDocumentAnswerService, defendantAnswerService, executionService);
@@ -121,6 +127,15 @@ class CheckStatusOfAnswerGenerationTaskTest {
                 .withExecutionStatus(STARTED)
                 .withAssignedTaskStartTime(now())
                 .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        logs.close();
+    }
+
+    private static DashboardKql.Segment tile2(final String outcome) {
+        return DashboardKql.segment(DashboardKql.ANSWER_GENERATION_OUTCOMES, outcome);
     }
 
     @Test
@@ -174,6 +189,9 @@ class CheckStatusOfAnswerGenerationTaskTest {
         final ExecutionInfo result = task.execute(executionInfo);
 
         assertRetry(result);
+        // pending is not an outcome - neither Tile 2 outcome segment may count it
+        logs.assertDashboardLine(tile2("Succeeded"), Level.INFO, 0);
+        logs.assertDashboardLine(tile2("Failed"), Level.INFO, 0);
     }
 
     @Test
@@ -190,6 +208,9 @@ class CheckStatusOfAnswerGenerationTaskTest {
         final ExecutionInfo result = task.execute(executionInfo);
 
         verify(answerGenerationService).upsertAnswer(any(UUID.class), any(UUID.class), anyString(), anyString(), any(UUID.class), eq(transactionId));
+        // Tile 2 Succeeded counts this line (support/dashboard-kql/answer-generation-outcomes.kql, FR-006)
+        logs.assertDashboardLine(tile2("Succeeded"), Level.INFO);
+        logs.assertDashboardLine(tile2("Failed"), Level.INFO, 0);
 
         assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
         assertThat(result.isShouldRetry()).isFalse();
@@ -263,6 +284,9 @@ class CheckStatusOfAnswerGenerationTaskTest {
         final ExecutionInfo result = task.execute(executionInfo);
 
         verifyNoInteractions(jdbc);
+        // Tile 2 Failed counts this line (support/dashboard-kql/answer-generation-outcomes.kql, FR-006)
+        logs.assertDashboardLine(tile2("Failed"), Level.INFO);
+        logs.assertDashboardLine(tile2("Succeeded"), Level.INFO, 0);
         assertThat(result.getExecutionStatus()).isEqualTo(COMPLETED);
         assertThat(result.isShouldRetry()).isFalse();
     }

@@ -1,19 +1,36 @@
 package uk.gov.hmcts.cp.cdk.scheduler;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import uk.gov.hmcts.cp.cdk.services.DiscoveryService;
 
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationIds;
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
+
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 
 @ExtendWith(MockitoExtension.class)
 class IntradayDiscoverySchedulerTest {
+
+    private static final String INTRADAY_DISCOVERY = "intraday-discovery";
 
     @Mock
     private DiscoveryService discoveryService;
@@ -43,5 +60,80 @@ class IntradayDiscoverySchedulerTest {
 
         // then
         verify(discoveryService, times(2)).runIntradayDiscovery();
+    }
+
+    @Test
+    void run_shouldContainAndCountFailure_whenDiscoveryThrows() {
+        doThrow(new RuntimeException("boom")).when(discoveryService).runIntradayDiscovery();
+
+        final Logger logger = (Logger) LoggerFactory.getLogger(IntradayDiscoveryScheduler.class);
+        final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+
+        try {
+            // when
+            assertThatCode(scheduler::run).doesNotThrowAnyException();
+        } finally {
+            logger.detachAppender(appender);
+        }
+
+        // then
+        final List<ILoggingEvent> errorEvents = appender.list.stream()
+                .filter(e -> e.getLevel() == Level.ERROR)
+                .toList();
+        assertThat(errorEvents).hasSize(1);
+        final ILoggingEvent errorEvent = errorEvents.get(0);
+        assertThat(errorEvent.getThrowableProxy()).isNotNull();
+        assertThat(errorEvent.getFormattedMessage()).contains(INTRADAY_DISCOVERY);
+    }
+
+    @Test
+    void run_shouldPropagateError_whenDiscoveryThrowsError() {
+        doThrow(new TestError()).when(discoveryService).runIntradayDiscovery();
+
+        final Logger logger = (Logger) LoggerFactory.getLogger(IntradayDiscoveryScheduler.class);
+        final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+
+        try {
+            // when / then
+            assertThatCode(scheduler::run).isInstanceOf(TestError.class);
+
+            // N-7: catch (Exception e) does not catch an Error, so the scheduler's own catch
+            // block must not have logged anything — confirms the catch really is Exception, not
+            // the wider (and wrong) Throwable.
+            final List<ILoggingEvent> errorEvents = appender.list.stream()
+                    .filter(e -> e.getLevel() == Level.ERROR)
+                    .toList();
+            assertThat(errorEvents).isEmpty();
+        } finally {
+            logger.detachAppender(appender);
+        }
+    }
+
+    @Test
+    @DisplayName("DD-43183 Story 5, AC-005/AC-006: a correlation value is present during the run "
+            + "(neither carries any MDC today) and no caseId key is ever seeded — this scheduler has no case")
+    void correlationIdPresentDuringRun_andNoCaseIdKeyEverSeeded() {
+        final AtomicReference<String> observedCorrelationId = new AtomicReference<>();
+        final AtomicReference<Boolean> caseIdKeyWasPresent = new AtomicReference<>(false);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            observedCorrelationId.set(org.slf4j.MDC.get(CorrelationIds.MDC_KEY));
+            caseIdKeyWasPresent.set(org.slf4j.MDC.getCopyOfContextMap() != null
+                    && org.slf4j.MDC.getCopyOfContextMap().containsKey(CorrelationScope.MDC_KEY_CASE_ID));
+            return null;
+        }).when(discoveryService).runIntradayDiscovery();
+
+        scheduler.run();
+
+        assertThat(observedCorrelationId.get()).isNotBlank();
+        assertThat(caseIdKeyWasPresent.get()).isFalse();
+        assertThat(org.slf4j.MDC.get(CorrelationIds.MDC_KEY)).as("restored after the run").isNull();
+    }
+
+    private static final class TestError extends Error {
+        private static final long serialVersionUID = 1L;
     }
 }

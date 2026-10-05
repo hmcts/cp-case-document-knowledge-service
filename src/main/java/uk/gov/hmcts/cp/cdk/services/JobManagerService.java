@@ -2,8 +2,10 @@ package uk.gov.hmcts.cp.cdk.services;
 
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS;
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GET_CASES_FOR_HEARING;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.REQUEST_ID;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationIds;
 import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
 import uk.gov.hmcts.cp.cdk.repo.ScheduledIngestionRequestRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
@@ -52,11 +54,11 @@ public class JobManagerService implements IngestionProcessor {
                                                           final IngestionProcessRequest request) {
         Objects.requireNonNull(request, "request must not be null");
 
-        final String requestId = UUID.randomUUID().toString();
+        final String requestId = CorrelationIds.currentOrGenerate();
 
         final JsonObject jobData = Json.createObjectBuilder()
                 .add("cppuid", cppuid)
-                .add("requestId", requestId)
+                .add(REQUEST_ID, requestId)
                 .add("courtCentreId", request.getCourtCentreId().toString())
                 .add("roomId", request.getRoomId().toString())
                 .add("date", request.getDate().toString())

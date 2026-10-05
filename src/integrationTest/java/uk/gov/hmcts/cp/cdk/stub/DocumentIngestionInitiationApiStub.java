@@ -4,53 +4,39 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
-import static jakarta.json.Json.createObjectBuilder;
-import static java.util.UUID.randomUUID;
 import static org.apache.http.HttpStatus.SC_ACCEPTED;
-import static uk.gov.hmcts.cp.cdk.http.AzureSasUtil.generateSasUrl;
-
-import com.github.tomakehurst.wiremock.client.ScenarioMappingBuilder;
-import com.github.tomakehurst.wiremock.stubbing.Scenario;
-import jakarta.json.JsonObject;
+import static uk.gov.hmcts.cp.cdk.http.AzureSasUtil.generateContainerSasUrl;
 
 public class DocumentIngestionInitiationApiStub {
 
     private static final String INITIATE_DOCUMENT_UPLOAD = "/document-upload";
     public static final String APPLICATION_JSON = "application/json";
 
-    public static void stubInitiateDocumentUpload(final String containerName, final String blobNamePrefix,
-                                                  final int numberOfResponses) {
+    public static void stubInitiateDocumentUpload(final String containerName, final String blobNamePrefix) {
 
-        final String scenario = "initiate-document-upload";
+        final String containerSasUrl = generateContainerSasUrl(containerName);
+        final int queryIndex = containerSasUrl.indexOf('?');
+        final String containerBaseUrl = containerSasUrl.substring(0, queryIndex);
+        final String sasQuery = containerSasUrl.substring(queryIndex + 1);
 
-        for (int i = 0; i < numberOfResponses; i++) {
-            final String currentState = (i == 0) ? Scenario.STARTED : "STATE_" + i;
+        // {{request.id}} is a fresh UUID WireMock assigns per served request, so every call gets a
+        // distinct blob name against one shared container-scoped SAS -- no scenario/counter state to
+        // race on across concurrent JobManager tasks or overlapping test methods.
+        final String body = """
+                {
+                  "storageUrl": "%s/%s-{{request.id}}?%s",
+                  "documentReference": "{{request.id}}"
+                }
+                """.formatted(containerBaseUrl, blobNamePrefix, sasQuery);
 
-            final String nextState = "STATE_" + (i + 1);
-            final String blobName = blobNamePrefix + "-" + i;
-            final String sasStorageUrl = generateSasUrl(containerName, blobName);
-
-            final JsonObject responseJson = createObjectBuilder()
-                    .add("storageUrl", sasStorageUrl)
-                    .add("documentReference", randomUUID().toString())
-                    .build();
-
-            ScenarioMappingBuilder builder = post(urlPathEqualTo(INITIATE_DOCUMENT_UPLOAD))
-                    .inScenario(scenario)
-                    .whenScenarioStateIs(currentState)
-                    .willReturn(aResponse()
-                            .withStatus(SC_ACCEPTED)
-                            .withHeader("CPPID", randomUUID().toString())
-                            .withHeader("Content-Type", APPLICATION_JSON)
-                            .withBody(responseJson.toString())
-                    );
-
-            if (i < numberOfResponses - 1) {
-                builder = builder.willSetStateTo(nextState);
-            }
-
-            stubFor(builder);
-        }
+        stubFor(post(urlPathEqualTo(INITIATE_DOCUMENT_UPLOAD))
+                .willReturn(aResponse()
+                        .withStatus(SC_ACCEPTED)
+                        .withHeader("CPPID", "{{request.id}}")
+                        .withHeader("Content-Type", APPLICATION_JSON)
+                        .withTransformers("response-template")
+                        .withBody(body)
+                ));
     }
 
 }

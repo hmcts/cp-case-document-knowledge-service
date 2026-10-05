@@ -28,7 +28,6 @@ public class ApimDocumentIngestionStatusClient implements DocumentIngestionStatu
 
     @Override
     public ResponseEntity<@NotNull DocumentIngestionStatusReturnedSuccessfully> documentStatusByReference(final String documentReference) {
-
         try {
             final DocumentIngestionStatusReturnedSuccessfully response = restClient
                     .get()

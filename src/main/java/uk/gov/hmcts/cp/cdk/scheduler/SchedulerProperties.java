@@ -23,6 +23,16 @@ public class SchedulerProperties {
         private String cron;
         private String lockAtLeastFor;
         private String lockAtMostFor;
+
+        /**
+         * Mirrors @ConditionalOnProperty(..., havingValue = "true", matchIfMissing = true) on
+         * IntradayDiscoveryScheduler. The Java default is deliberately true so that "property
+         * absent" resolves the same way here as it does in the conditional. application-cdk.yml
+         * always supplies a value (defaulting to false via CP_CDK_SCHEDULER_INTRADAY_DISCOVERY_ENABLED),
+         * so the effective shipped default is unchanged. If the conditional's matchIfMissing is
+         * ever changed, change this default with it.
+         */
+        private boolean enabled = true;
     }
 
     @Data
@@ -32,5 +42,11 @@ public class SchedulerProperties {
         private String lockAtLeastFor;
         private String lockAtMostFor;
         private int daysAhead = 3;
+
+        /**
+         * Mirrors @ConditionalOnProperty(..., havingValue = "true", matchIfMissing = true) on
+         * NightlyDiscoveryScheduler. See IntradayDiscovery#enabled for the same rationale.
+         */
+        private boolean enabled = true;
     }
 }

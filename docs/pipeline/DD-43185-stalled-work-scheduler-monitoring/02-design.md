@@ -1,5 +1,8 @@
 # Design: Stalled-Work Gauges and Scheduler Heartbeat Observability
 
+
+> **⚠️ SUPERSEDED (2026-09-18):** The Prometheus/Micrometer implementation this document describes has been withdrawn in full. Platform confirmed the standard observability path for this service is structured logging + KQL, not Prometheus. See [ADR-009](../adrs/DD-43185-stalled-work-scheduler-monitoring.md#adr-009-withdraw-the-prometheusmicrometer-implementation-entirely--cdks-observability-moves-to-structured-logging--kql-tracked-under-a-new-ticket) for the full decision. This document is retained for historical/audit traceability only — it does not describe what CDKS currently ships. Replacement observability work will be tracked under a new ticket (reference to follow).
+
 > **Stage 2 — Architecture & Design** · Service: `cp-case-document-knowledge-service` (CDKS)
 > **Jira: DD-43185** · Requirements: [`01-requirements.md`](./01-requirements.md) ·
 > ADRs: [`adrs/DD-43185-stalled-work-scheduler-monitoring.md`](../adrs/DD-43185-stalled-work-scheduler-monitoring.md)
@@ -189,6 +192,18 @@ minute per assertion:
 AC-010's "≥ 60 s" is therefore asserted against `application-cdk.yml`'s shipped default in a unit
 test, **not** against the running compose container — exactly as the shipped 10-minutely intraday
 cron is not what the compose stack runs.
+
+> **Implementation note (N-3, 2026-09-01):** the shipped compose file deliberately departs from
+> the sketch above in three ways, all recorded inline as YAML comments at the point of use: (1) it
+> does **not** override `CP_CDK_MONITORING_STALLED_THRESHOLD` at all — the compose stack runs with
+> the shipped `PT30M` default rather than a shortened `PT1M` — because a short threshold would let
+> other suites' freshly-created `WAITING_FOR_UPLOAD` rows join the stalled-document count and flake
+> the assertions (the exact risk OQ-015 raised); the live tests instead backdate their own seeded
+> rows by 61 minutes, which works against either threshold value. (2) `lock-at-least-for` is `PT1S`,
+> not `PT0S`, so `lock_until` is provably `>` `locked_at` for OQ-017's assertion rather than merely
+> `>=`. (3) `lock-at-most-for` is set explicitly to `PT30S` rather than left at the shipped `PT5M`.
+> All three are compose-only test-environment choices; the shipped `application-cdk.yml` defaults
+> above are unchanged.
 
 ### 4. `SchedulerProperties` — bind the missing `enabled` flag (OQ-007 → ADR-006)
 

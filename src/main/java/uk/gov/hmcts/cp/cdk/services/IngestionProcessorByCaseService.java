@@ -5,6 +5,8 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.RETRIEVE_MATERIAL_AND_UPL
 import static uk.gov.hmcts.cp.cdk.util.TimeUtils.utcNow;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationIds;
+import uk.gov.hmcts.cp.cdk.correlation.CorrelationScope;
 import uk.gov.hmcts.cp.cdk.jobmanager.support.JobPriority;
 import uk.gov.hmcts.cp.cdk.repo.CaseQueryStatusRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessByCaseRequest;
@@ -79,10 +81,18 @@ public class IngestionProcessorByCaseService implements IngestionProcessorByCase
     private final CaseQueryStatusRepository caseQueryStatusRepository;
 
     @Override
+    @SuppressWarnings("PMD.UnusedLocalVariable") // the try-with-resources variable is used for its close()
     public IngestionProcessResponse startIngestionProcess(final String cppuid,
                                                            final IngestionProcessByCaseRequest req) {
+        try (CorrelationScope scope = CorrelationScope.withIdentifiers(req.getCaseId().toString(), null, null)) {
+            return startIngestionProcessScoped(cppuid, req);
+        }
+    }
+
+    private IngestionProcessResponse startIngestionProcessScoped(final String cppuid,
+                                                                  final IngestionProcessByCaseRequest req) {
         final UUID caseId = req.getCaseId();
-        final String requestId = UUID.randomUUID().toString();
+        final String requestId = CorrelationIds.currentOrGenerate();
 
         final IngestionProcessResponse response = new IngestionProcessResponse();
         response.setLastUpdated(utcNow());
