@@ -10,7 +10,7 @@ import java.util.Set;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
-import org.hibernate.validator.internal.engine.path.PathImpl;
+import jakarta.validation.Path;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,6 +37,8 @@ class GlobalExceptionHandlerTest {
     private HttpInputMessage httpInputMessage;
     @Mock
     private ConstraintViolation<Object> violation;
+    @Mock
+    private Path propertyPath;
     @Mock
     private BindingResult bindingResult;
     @Mock
@@ -89,7 +91,8 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("AC-003: onConstraint's traceId equals the ambient correlation ID")
     void onConstraint_traceIdEqualsAmbientCorrelationId() {
-        org.mockito.Mockito.when(violation.getPropertyPath()).thenReturn(PathImpl.createPathFromString("name"));
+        org.mockito.Mockito.when(propertyPath.toString()).thenReturn("name");
+        org.mockito.Mockito.when(violation.getPropertyPath()).thenReturn(propertyPath);
         org.mockito.Mockito.when(violation.getMessage()).thenReturn("must not be blank");
         final ConstraintViolationException ex = new ConstraintViolationException(Set.of(violation));
 
