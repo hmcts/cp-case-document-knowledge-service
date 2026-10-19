@@ -11,6 +11,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.CHECK_STATUS_OF_ANSWER_GE
 import static uk.gov.hmcts.cp.cdk.jobmanager.TaskNames.GENERATE_ANSWER_FOR_QUERY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERY_PROMPT_VERSION;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_RAG_TRANSACTION_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
@@ -110,6 +111,7 @@ class GenerateAnswerForQueryTaskTest {
     void shouldStartAsyncRagAndScheduleNextTask() {
         when(qdl.getUserQuery()).thenReturn("user query");
         when(qdl.getQueryPrompt()).thenReturn("prompt");
+        when(qdl.getVersionLabel()).thenReturn("V2");
         when(queryDefinitionLatestRepository.findByQueryId(queryId)).thenReturn(Optional.of(qdl));
 
         when(body.getTransactionId()).thenReturn("txn-123");
@@ -133,6 +135,7 @@ class GenerateAnswerForQueryTaskTest {
         assertThat(nextTask.getAssignedTaskName()).isEqualTo(CHECK_STATUS_OF_ANSWER_GENERATION);
         assertThat(nextTask.getExecutionStatus()).isEqualTo(ExecutionStatus.STARTED);
         assertThat(nextTask.getJobData().getString(CTX_RAG_TRANSACTION_ID)).isEqualTo("txn-123");
+        assertThat(nextTask.getJobData().getString(CTX_QUERY_PROMPT_VERSION)).isEqualTo("V2");
     }
 
     @Test

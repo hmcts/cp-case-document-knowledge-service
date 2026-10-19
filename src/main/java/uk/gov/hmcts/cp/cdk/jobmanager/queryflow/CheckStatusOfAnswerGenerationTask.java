@@ -9,6 +9,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERY_LEVEL;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERY_PROMPT_VERSION;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_RAG_TRANSACTION_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.EMPTY_STRING;
@@ -93,6 +94,7 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
             final UUID defendantId = parseUuidOrNull(jobData.getString(CTX_DEFENDANT_ID_KEY, null));
             final String levelStr = jobData.getString(CTX_QUERY_LEVEL, null);
             final QueryLevel level = parseQueryLevel(levelStr);
+            final String queryPromptVersion = jobData.getString(CTX_QUERY_PROMPT_VERSION, null);
 
             if (ANSWER_GENERATED == answerResponseBody.getStatus()) {
                 final String llmInputJson = getLlmJson(answerResponseBody.getDocumentChunks(), caseId, documentId, queryId);
@@ -104,7 +106,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                                     answerResponseBody.getLlmResponse(),
                                     llmInputJson,
                                     documentId,
-                                    ragTransactionId
+                                    ragTransactionId,
+                                    queryPromptVersion
                             );
                             break;
 
@@ -114,7 +117,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                                     queryId,
                                     answerResponseBody.getLlmResponse(),
                                     llmInputJson,
-                                    ragTransactionId
+                                    ragTransactionId,
+                                    queryPromptVersion
                             );
                             break;
 
@@ -126,7 +130,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                                     answerResponseBody.getLlmResponse(),
                                     llmInputJson,
                                     documentId,
-                                    ragTransactionId
+                                    ragTransactionId,
+                                    queryPromptVersion
                             );
                             break;
                         case null, default:
@@ -136,7 +141,8 @@ public class CheckStatusOfAnswerGenerationTask implements ExecutableTask {
                                     answerResponseBody.getLlmResponse(),
                                     llmInputJson,
                                     documentId,
-                                    ragTransactionId
+                                    ragTransactionId,
+                                    queryPromptVersion
                             );
                             break;
                     }

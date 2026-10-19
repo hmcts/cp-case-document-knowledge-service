@@ -55,10 +55,10 @@ class QueryVersionRepositoryTest {
         final Query q = new Query(qid, "Case Summary (All Witnesses)", OffsetDateTime.now(), 200,true);
         queryRepo.saveAndFlush(q);
 
-        final QueryVersion v1 = new QueryVersion(new QueryVersionId(qid, t1), q, "UQ v1", "QP v1", QueryLevel.CASE);
+        final QueryVersion v1 = new QueryVersion(new QueryVersionId(qid, t1), q, "UQ v1", "QP v1", "V1", QueryLevel.CASE);
         repo.save(v1);
 
-        final QueryVersion v2 = new QueryVersion(new QueryVersionId(qid, t2), q, "UQ v2", "QP v2",QueryLevel.CASE);
+        final QueryVersion v2 = new QueryVersion(new QueryVersionId(qid, t2), q, "UQ v2", "QP v2", "V2", QueryLevel.CASE);
         repo.saveAndFlush(v2);
     }
 

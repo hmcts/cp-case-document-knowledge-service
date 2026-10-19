@@ -45,6 +45,9 @@ public class QueryVersion {
     @Column(name = "query_prompt", nullable = false, columnDefinition = "TEXT")
     private String queryPrompt;
 
+    @Column(name = "version_label", nullable = false)
+    private String versionLabel;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(

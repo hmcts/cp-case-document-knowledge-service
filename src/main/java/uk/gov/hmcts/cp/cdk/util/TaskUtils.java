@@ -82,7 +82,8 @@ public class TaskUtils {
                                                           final String answer,
                                                           final String llmInput,
                                                           final UUID documentId,
-                                                          final UUID ragTransactionId) {
+                                                          final UUID ragTransactionId,
+                                                          final String queryPromptVersion) {
         return new MapSqlParameterSource()
                 .addValue("case_id", caseId)
                 .addValue("query_id", queryId)
@@ -90,7 +91,8 @@ public class TaskUtils {
                 .addValue("answer", answer)
                 .addValue("llm_input", llmInput)
                 .addValue("doc_id", documentId)
-                .addValue("rag_transaction_id", ragTransactionId);
+                .addValue("rag_transaction_id", ragTransactionId)
+                .addValue("query_prompt_version", queryPromptVersion);
     }
 
     public static MapSqlParameterSource buildCaseStatusParams(final UUID caseId,

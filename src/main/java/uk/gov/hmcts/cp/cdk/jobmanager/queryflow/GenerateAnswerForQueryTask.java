@@ -10,6 +10,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.BlobMetadataKeys.META_DOCUM
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERY_LEVEL;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERY_PROMPT_VERSION;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_RAG_TRANSACTION_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.cdk.util.TaskUtils.parseQueryLevel;
@@ -98,7 +99,9 @@ public class GenerateAnswerForQueryTask implements ExecutableTask {
 
             log.info("Async RAG started for caseId={}, docId={}, queryId={}, transactionId={}", caseId, docId, queryId, transactionId);
 
-            final JsonObjectBuilder nextJobData = createObjectBuilder(jobData).add(CTX_RAG_TRANSACTION_ID, transactionId);
+            final JsonObjectBuilder nextJobData = createObjectBuilder(jobData)
+                    .add(CTX_RAG_TRANSACTION_ID, transactionId)
+                    .add(CTX_QUERY_PROMPT_VERSION, qdl.getVersionLabel());
 
             final ExecutionInfo nextTask = executionInfo()
                     .from(executionInfo)

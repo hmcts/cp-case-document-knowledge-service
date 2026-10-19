@@ -65,10 +65,10 @@ class QueriesAsOfRepositoryTest {
         final Query q = new Query(qid, "Defendant Position", OffsetDateTime.now(), 200,true);
         queryRepo.saveAndFlush(q);
 
-        final QueryVersion v1 = new QueryVersion(new QueryVersionId(qid, t1), q, "def v1", "prompt v1", QueryLevel.CASE);
+        final QueryVersion v1 = new QueryVersion(new QueryVersionId(qid, t1), q, "def v1", "prompt v1", "V1", QueryLevel.CASE);
         versionRepo.save(v1);
 
-        final QueryVersion v2 = new QueryVersion(new QueryVersionId(qid, t2), q, "def v2", "prompt v2",QueryLevel.CASE);
+        final QueryVersion v2 = new QueryVersion(new QueryVersionId(qid, t2), q, "def v2", "prompt v2", "V2", QueryLevel.CASE);
         versionRepo.saveAndFlush(v2);
 
         final CaseQueryStatus cqs = new CaseQueryStatus();
@@ -124,6 +124,7 @@ class QueriesAsOfRepositoryTest {
                 inactiveQuery,
                 "inactive def",
                 "inactive prompt",
+                "V1",
                 QueryLevel.CASE
         );
         versionRepo.saveAndFlush(v1);
