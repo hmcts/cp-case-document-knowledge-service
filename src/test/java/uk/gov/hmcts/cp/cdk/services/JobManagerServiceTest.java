@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase.FAILED;
 
 import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
+import uk.gov.hmcts.cp.cdk.jobmanager.support.JobPriority;
 import uk.gov.hmcts.cp.cdk.repo.ScheduledIngestionRequestRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
@@ -181,5 +182,31 @@ class JobManagerServiceTest {
         // then — the no-arg overload is unchanged behaviour: immediate start
         verify(executor).executeWith(captor.capture());
         assertThat(captor.getValue().getAssignedTaskStartTime()).isBetween(before, after);
+    }
+
+    @Test
+    void dispatchCheckIdpcAvailability_withExplicitPriority_stampsThatPriority() {
+        // given
+        final JsonObject jobData = Json.createObjectBuilder().add("caseId", randomUUID().toString()).build();
+
+        // when
+        jobManagerService.dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(jobData, ZonedDateTime.now(), 3);
+
+        // then
+        verify(executor).executeWith(captor.capture());
+        assertThat(captor.getValue().getPriority()).isEqualTo(3);
+    }
+
+    @Test
+    void dispatchCheckIdpcAvailability_withoutPriority_defaultsToJobPriorityDefault() {
+        // given
+        final JsonObject jobData = Json.createObjectBuilder().add("caseId", randomUUID().toString()).build();
+
+        // when
+        jobManagerService.dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(jobData, ZonedDateTime.now());
+
+        // then — the 2-arg overload stamps the default priority explicitly
+        verify(executor).executeWith(captor.capture());
+        assertThat(captor.getValue().getPriority()).isEqualTo(JobPriority.DEFAULT);
     }
 }

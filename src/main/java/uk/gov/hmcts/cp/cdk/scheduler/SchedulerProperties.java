@@ -53,8 +53,14 @@ public class SchedulerProperties {
 
         private final Stagger stagger = new Stagger();
 
+        private final Priority priority = new Priority();
+
         public Stagger getStagger() {
             return stagger;
+        }
+
+        public Priority getPriority() {
+            return priority;
         }
 
         /**
@@ -76,6 +82,23 @@ public class SchedulerProperties {
              * misconfiguration.
              */
             private Duration maxWindow = Duration.ofHours(8);
+        }
+
+        /**
+         * A2 (DD-43823): prioritise nightly CHECK_IDPC entry tasks by hearing proximity, within the
+         * nightly band and always below JobPriority.HIGH(1). Off by default.
+         */
+        @Data
+        public static class Priority {
+            /** When false, entry tasks keep the default priority (JobPriority.DEFAULT = 10). */
+            private boolean enabled;
+
+            /**
+             * Priority for the nearest hearing date; each further day adds 1 (toward lower priority).
+             * Clamped at dispatch time to [JobPriority.HIGH + 1 .. JobPriority.DEFAULT] so manual
+             * HIGH(1) ingestion always pre-empts.
+             */
+            private int highest = 2;
         }
     }
 }

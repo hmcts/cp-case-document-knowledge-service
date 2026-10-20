@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -267,7 +268,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, times(2)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class));
+        verify(jobManagerService, times(2)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class), anyInt());
     }
 
     @Test
@@ -296,7 +297,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, times(3)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class));
+        verify(jobManagerService, times(3)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class), anyInt());
     }
 
     @Test
@@ -328,7 +329,7 @@ class DiscoveryServiceTest {
 
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
-        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture(), any(ZonedDateTime.class));
+        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture(), any(ZonedDateTime.class), anyInt());
         assertThat(captor.getValue().getString("caseId")).isEqualTo(sharedCaseId.toString());
     }
 
@@ -364,7 +365,7 @@ class DiscoveryServiceTest {
 
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
-        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture(), any(ZonedDateTime.class));
+        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture(), any(ZonedDateTime.class), anyInt());
         assertThat(captor.getValue().getString("caseId")).isEqualTo(sharedCaseId.toString());
     }
 
@@ -391,7 +392,7 @@ class DiscoveryServiceTest {
 
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
-        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture(), any(ZonedDateTime.class));
+        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture(), any(ZonedDateTime.class), anyInt());
 
         final JsonObject jobData = captor.getValue();
         assertThat(jobData.getString("caseId")).isEqualTo(caseId.toString());
@@ -415,13 +416,13 @@ class DiscoveryServiceTest {
         when(hearingCaseWhitelistSelector.findMatchingCases(any(), any())).thenReturn(List.of(matchedCase));
         doThrow(new RuntimeException("Dispatch failed"))
                 .when(jobManagerService)
-                .dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class));
+                .dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class), anyInt());
 
         // when / then
         Assertions.assertThatCode(() -> discoveryService.runNightlyDiscovery())
                 .doesNotThrowAnyException();
 
-        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class));
+        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class), anyInt());
     }
 
     @Test
@@ -445,7 +446,7 @@ class DiscoveryServiceTest {
         Assertions.assertThatCode(() -> discoveryService.runNightlyDiscovery())
                 .doesNotThrowAnyException();
 
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(), any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(), any(), anyInt());
     }
 
     @Test
@@ -468,7 +469,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(), any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(), any(), anyInt());
     }
 
     @Test
@@ -486,7 +487,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(), any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(), any(), anyInt());
     }
 
     @Test
@@ -742,8 +743,159 @@ class DiscoveryServiceTest {
     private List<ZonedDateTime> captureEntryStartTimes(final int expectedCount) {
         final ArgumentCaptor<ZonedDateTime> timeCaptor = ArgumentCaptor.forClass(ZonedDateTime.class);
         verify(jobManagerService, times(expectedCount))
-                .dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), timeCaptor.capture());
+                .dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), timeCaptor.capture(), anyInt());
         return timeCaptor.getAllValues();
+    }
+
+    // ----- Option A2 (DD-43823): priority & ordering by hearing proximity -----
+
+    @Test
+    void runNightlyDiscovery_whenPriorityDisabled_keepsInsertionOrderAndDefaultPriority() {
+        // given — dates seen far-first; A2 off => no reordering, default priority
+        final DiscoveryService service = discoveryServiceWithPriority(false, 2);
+        final UUID farCase = UUID.randomUUID();
+        final UUID midCase = UUID.randomUUID();
+        final UUID nearCase = UUID.randomUUID();
+        stubThreeDatesFarFirst(farCase, midCase, nearCase);
+
+        // when
+        service.runNightlyDiscovery();
+
+        // then
+        final DispatchCapture capture = captureDispatch(3);
+        assertThat(capture.caseIdsInOrder()).containsExactly(farCase, midCase, nearCase);
+        assertThat(capture.priorities()).containsExactly(10, 10, 10);
+    }
+
+    @Test
+    void runNightlyDiscovery_whenPriorityEnabled_dispatchesNearestHearingFirstWithProximityPriority() {
+        // given — dates seen far-first; A2 on => reorder nearest-first, proximity priority
+        final DiscoveryService service = discoveryServiceWithPriority(true, 2);
+        final UUID farCase = UUID.randomUUID();
+        final UUID midCase = UUID.randomUUID();
+        final UUID nearCase = UUID.randomUUID();
+        stubThreeDatesFarFirst(farCase, midCase, nearCase);
+
+        // when
+        service.runNightlyDiscovery();
+
+        // then
+        final DispatchCapture capture = captureDispatch(3);
+        assertThat(capture.caseIdsInOrder()).containsExactly(nearCase, midCase, farCase);
+        assertThat(capture.priorities()).containsExactly(2, 3, 4); // today=2, +1=3, +2=4
+    }
+
+    @Test
+    void runNightlyDiscovery_caseOnMultipleDates_usesEarliestHearingForPriority() {
+        // given — same case on today and +2; earliest (today) must win
+        final DiscoveryService service = discoveryServiceWithPriority(true, 2);
+        final LocalDate today = LocalDate.now();
+        final UUID caseId = UUID.randomUUID();
+        final HearingCaseForDay later = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), today.plusDays(2), UUID.randomUUID(), List.of(caseId));
+        final HearingCaseForDay earlier = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), today, UUID.randomUUID(), List.of(caseId));
+
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+                .thenReturn(List.of(today.plusDays(2), today));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations()).thenReturn(List.of(mockConfiguration()));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(eq(today.plusDays(2)), any())).thenReturn(List.of(later));
+        when(hearingClient.getHearingCasesForDay(eq(today), any())).thenReturn(List.of(earlier));
+        when(hearingCaseWhitelistSelector.findMatchingCases(eq(List.of(later)), any())).thenReturn(List.of(later));
+        when(hearingCaseWhitelistSelector.findMatchingCases(eq(List.of(earlier)), any())).thenReturn(List.of(earlier));
+
+        // when
+        service.runNightlyDiscovery();
+
+        // then
+        final DispatchCapture capture = captureDispatch(1);
+        assertThat(capture.caseIdsInOrder()).containsExactly(caseId);
+        assertThat(capture.priorities()).containsExactly(2); // earliest hearing is today => 2
+    }
+
+    @Test
+    void runNightlyDiscovery_priorityHighestBelowFloor_isClampedAboveManualHigh() {
+        // given — misconfigured highest=1 (== manual HIGH) must floor at 2
+        final DiscoveryService service = discoveryServiceWithPriority(true, 1);
+        stubSingleDateWithMatchedCases(1); // 1 case, hearing today
+
+        // when
+        service.runNightlyDiscovery();
+
+        // then
+        assertThat(captureDispatch(1).priorities()).containsExactly(2);
+    }
+
+    @Test
+    void runNightlyDiscovery_farFutureHearing_priorityClampedAtDefault() {
+        // given — hearing far away: 2 + 20 = 22 must clamp to DEFAULT(10)
+        final DiscoveryService service = discoveryServiceWithPriority(true, 2);
+        final LocalDate today = LocalDate.now();
+        final UUID caseId = UUID.randomUUID();
+        final HearingCaseForDay far = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), today.plusDays(20), UUID.randomUUID(), List.of(caseId));
+
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS)).thenReturn(List.of(today.plusDays(20)));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations()).thenReturn(List.of(mockConfiguration()));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(eq(today.plusDays(20)), any())).thenReturn(List.of(far));
+        when(hearingCaseWhitelistSelector.findMatchingCases(eq(List.of(far)), any())).thenReturn(List.of(far));
+
+        // when
+        service.runNightlyDiscovery();
+
+        // then
+        assertThat(captureDispatch(1).priorities()).containsExactly(10);
+    }
+
+    private record DispatchCapture(List<UUID> caseIdsInOrder, List<Integer> priorities) {
+    }
+
+    private DispatchCapture captureDispatch(final int expectedCount) {
+        final ArgumentCaptor<JsonObject> jobDataCaptor = ArgumentCaptor.forClass(JsonObject.class);
+        final ArgumentCaptor<Integer> priorityCaptor = ArgumentCaptor.forClass(Integer.class);
+        verify(jobManagerService, times(expectedCount))
+                .dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(
+                        jobDataCaptor.capture(), any(ZonedDateTime.class), priorityCaptor.capture());
+        final List<UUID> caseIds = jobDataCaptor.getAllValues().stream()
+                .map(jobData -> UUID.fromString(jobData.getString("caseId"))).toList();
+        return new DispatchCapture(caseIds, priorityCaptor.getAllValues());
+    }
+
+    private void stubThreeDatesFarFirst(final UUID farCase, final UUID midCase, final UUID nearCase) {
+        final LocalDate today = LocalDate.now();
+        final HearingCaseForDay near = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), today, UUID.randomUUID(), List.of(nearCase));
+        final HearingCaseForDay mid = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), today.plusDays(1), UUID.randomUUID(), List.of(midCase));
+        final HearingCaseForDay far = new HearingCaseForDay(
+                UUID.randomUUID(), UUID.randomUUID(), today.plusDays(2), UUID.randomUUID(), List.of(farCase));
+
+        // calculator returns dates far-first so insertion order is far, mid, near
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS))
+                .thenReturn(List.of(today.plusDays(2), today.plusDays(1), today));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations()).thenReturn(List.of(mockConfiguration()));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(eq(today.plusDays(2)), any())).thenReturn(List.of(far));
+        when(hearingClient.getHearingCasesForDay(eq(today.plusDays(1)), any())).thenReturn(List.of(mid));
+        when(hearingClient.getHearingCasesForDay(eq(today), any())).thenReturn(List.of(near));
+        when(hearingCaseWhitelistSelector.findMatchingCases(eq(List.of(far)), any())).thenReturn(List.of(far));
+        when(hearingCaseWhitelistSelector.findMatchingCases(eq(List.of(mid)), any())).thenReturn(List.of(mid));
+        when(hearingCaseWhitelistSelector.findMatchingCases(eq(List.of(near)), any())).thenReturn(List.of(near));
+    }
+
+    private DiscoveryService discoveryServiceWithPriority(final boolean enabled, final int highest) {
+        final SchedulerProperties schedulerProperties = new SchedulerProperties();
+        schedulerProperties.getNightlyDiscovery().setDaysAhead(NIGHTLY_DISCOVERY_DAYS);
+        final SchedulerProperties.NightlyDiscovery.Priority priority =
+                schedulerProperties.getNightlyDiscovery().getPriority();
+        priority.setEnabled(enabled);
+        priority.setHighest(highest);
+        return new DiscoveryService(
+                jobManagerService, scheduledIngestionRequestRepository, discoverySchedulerConfigurationRepository,
+                hearingDaysCalculator, hearingClient, hearingCaseWhitelistSelector, schedulerProperties, environment,
+                true);
     }
 
     private DiscoveryService discoveryServiceWithStagger(final boolean enabled, final double casesPerMinute,

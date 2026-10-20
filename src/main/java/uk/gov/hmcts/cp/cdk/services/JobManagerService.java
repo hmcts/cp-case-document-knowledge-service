@@ -7,6 +7,7 @@ import static uk.gov.hmcts.cp.taskmanager.domain.ExecutionInfo.executionInfo;
 
 import uk.gov.hmcts.cp.cdk.correlation.CorrelationIds;
 import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
+import uk.gov.hmcts.cp.cdk.jobmanager.support.JobPriority;
 import uk.gov.hmcts.cp.cdk.repo.ScheduledIngestionRequestRepository;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessPhase;
 import uk.gov.hmcts.cp.openapi.model.cdk.IngestionProcessRequest;
@@ -135,9 +136,17 @@ public class JobManagerService implements IngestionProcessor {
     /* package */
     void dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(final JsonObject jobData,
                                                                  final ZonedDateTime assignedTaskStartTime) {
+        dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(jobData, assignedTaskStartTime, JobPriority.DEFAULT);
+    }
+
+    /* package */
+    void dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(final JsonObject jobData,
+                                                                 final ZonedDateTime assignedTaskStartTime,
+                                                                 final int priority) {
         final ExecutionInfo executionInfo = executionInfo()
                 .withAssignedTaskName(CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS)
                 .withAssignedTaskStartTime(assignedTaskStartTime)
+                .withPriority(priority)
                 .withJobData(jobData)
                 .withExecutionStatus(ExecutionStatus.STARTED)
                 .build();

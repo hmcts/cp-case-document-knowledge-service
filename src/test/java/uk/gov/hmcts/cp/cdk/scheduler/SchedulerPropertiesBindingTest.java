@@ -84,6 +84,33 @@ class SchedulerPropertiesBindingTest {
         });
     }
 
+    @Test
+    @DisplayName("nightly-discovery priority binds enabled / highest when supplied (DD-43823 Option A2)")
+    void priority_shouldBindAllFields_whenProvided() {
+        contextRunner
+                .withPropertyValues(
+                        "scheduler.nightly-discovery.priority.enabled=true",
+                        "scheduler.nightly-discovery.priority.highest=3")
+                .run(context -> {
+                    final SchedulerProperties.NightlyDiscovery.Priority priority =
+                            context.getBean(SchedulerProperties.class).getNightlyDiscovery().getPriority();
+                    assertThat(priority.isEnabled()).isTrue();
+                    assertThat(priority.getHighest()).isEqualTo(3);
+                });
+    }
+
+    @Test
+    @DisplayName("nightly-discovery priority defaults to disabled, highest=2 when the block is absent")
+    void priority_shouldUseSafeDefaults_whenBlockAbsent() {
+        contextRunner.run(context -> {
+            final SchedulerProperties.NightlyDiscovery.Priority priority =
+                    context.getBean(SchedulerProperties.class).getNightlyDiscovery().getPriority();
+            assertThat(priority).isNotNull();
+            assertThat(priority.isEnabled()).isFalse();
+            assertThat(priority.getHighest()).isEqualTo(2);
+        });
+    }
+
     @Configuration
     @EnableConfigurationProperties(SchedulerProperties.class)
     static class SchedulerPropertiesConfig {
