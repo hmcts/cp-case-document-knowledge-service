@@ -129,14 +129,15 @@ import org.springframework.web.client.RestClientException;
 
             // 2️⃣ Insert into query_versions table
             try (PreparedStatement ps = c.prepareStatement(
-                    "INSERT INTO query_versions (query_id, effective_at, user_query, query_prompt,level) " +
-                            "VALUES (?, ?, ?, ?,?::query_level_enum)"
+                    "INSERT INTO query_versions (query_id, effective_at, user_query, query_prompt,level,version_label) " +
+                            "VALUES (?, ?, ?, ?,?::query_level_enum,?)"
             )) {
                 ps.setObject(1, queryId);
                 ps.setObject(2, OffsetDateTime.parse("2025-11-01T00:00:00Z"));
                 ps.setString(3, "give me a chronology of the facts of the offences");
                 ps.setString(4, "dummy");
                 ps.setString(5,"CASE");
+                ps.setString(6, "V1");
                 ps.executeUpdate();
             }
         } catch (SQLException e) {

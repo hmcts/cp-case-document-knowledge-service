@@ -15,6 +15,7 @@ import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DEFENDANT_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_DOC_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERY_LEVEL;
+import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_QUERY_PROMPT_VERSION;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_RAG_TRANSACTION_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_SINGLE_QUERY_ID;
 import static uk.gov.hmcts.cp.openapi.model.AnswerGenerationStatus.ANSWER_GENERATED;
@@ -119,6 +120,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
                 .add(CTX_DOC_ID_KEY, documentId.toString())
                 .add(CTX_SINGLE_QUERY_ID, queryId.toString())
                 .add(CTX_RAG_TRANSACTION_ID, transactionId.toString())
+                .add(CTX_QUERY_PROMPT_VERSION, "V3")
                 .build();
 
         executionInfo = ExecutionInfo.executionInfo()
@@ -207,7 +209,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
         final ExecutionInfo result = task.execute(executionInfo);
 
-        verify(answerGenerationService).upsertAnswer(any(UUID.class), any(UUID.class), anyString(), anyString(), any(UUID.class), eq(transactionId));
+        verify(answerGenerationService).upsertAnswer(any(UUID.class), any(UUID.class), anyString(), anyString(), any(UUID.class), eq(transactionId), eq("V3"));
         // Tile 2 Succeeded counts this line (support/dashboard-kql/answer-generation-outcomes.kql, FR-006)
         logs.assertDashboardLine(tile2("Succeeded"), Level.INFO);
         logs.assertDashboardLine(tile2("Failed"), Level.INFO, 0);
@@ -230,7 +232,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
         task.execute(executionInfo);
 
-        verify(caseLevelLatestDocumentAnswerService).upsert(eq(caseId), eq(queryId), anyString(), anyString(), eq(documentId), eq(transactionId));
+        verify(caseLevelLatestDocumentAnswerService).upsert(eq(caseId), eq(queryId), anyString(), anyString(), eq(documentId), eq(transactionId), eq("V3"));
     }
 
     @Test
@@ -247,7 +249,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
         task.execute(executionInfo);
 
-        verify(caseLevelAllDocumentsAnswerService).upsert(eq(caseId), eq(queryId), anyString(), anyString(), eq(transactionId));
+        verify(caseLevelAllDocumentsAnswerService).upsert(eq(caseId), eq(queryId), anyString(), anyString(), eq(transactionId), eq("V3"));
     }
 
     @Test
@@ -266,7 +268,7 @@ class CheckStatusOfAnswerGenerationTaskTest {
 
         task.execute(executionInfo);
 
-        verify(defendantAnswerService).upsert(eq(caseId), eq(queryId), eq(defendantId), anyString(), anyString(), eq(documentId), eq(transactionId));
+        verify(defendantAnswerService).upsert(eq(caseId), eq(queryId), eq(defendantId), anyString(), anyString(), eq(documentId), eq(transactionId), eq("V3"));
     }
 
     @Test

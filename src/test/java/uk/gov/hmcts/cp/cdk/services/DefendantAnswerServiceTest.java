@@ -39,6 +39,7 @@ class DefendantAnswerServiceTest {
     private UUID defendantId;
     private UUID docId;
     private UUID ragTransactionId;
+    private String queryPromptVersion;
 
     @BeforeEach
     void setUp() {
@@ -47,6 +48,7 @@ class DefendantAnswerServiceTest {
         defendantId = UUID.randomUUID();
         docId = UUID.randomUUID();
         ragTransactionId = UUID.randomUUID();
+        queryPromptVersion = "V3";
     }
 
     @Test
@@ -56,7 +58,7 @@ class DefendantAnswerServiceTest {
         when(jdbcTemplate.update(anyString(), any(MapSqlParameterSource.class))).thenReturn(1);
 
         // when
-        service.upsert(caseId, queryId, defendantId, "answer", "llmInput", docId, ragTransactionId);
+        service.upsert(caseId, queryId, defendantId, "answer", "llmInput", docId, ragTransactionId, queryPromptVersion);
 
         // then
         verify(jdbcTemplate).queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Integer.class));
@@ -72,7 +74,7 @@ class DefendantAnswerServiceTest {
         final ArgumentCaptor<MapSqlParameterSource> captor = ArgumentCaptor.forClass(MapSqlParameterSource.class);
 
         // when
-        service.upsert(caseId, queryId, defendantId, "myAnswer", "myInput", docId, ragTransactionId);
+        service.upsert(caseId, queryId, defendantId, "myAnswer", "myInput", docId, ragTransactionId, queryPromptVersion);
 
         // then
         verify(jdbcTemplate).update(contains("INSERT INTO defendant_answers"), captor.capture());
@@ -86,6 +88,7 @@ class DefendantAnswerServiceTest {
         assertThat(params.getValue("llm_input")).isEqualTo("myInput");
         assertThat(params.getValue("doc_id")).isEqualTo(docId);
         assertThat(params.getValue("rag_transaction_id")).isEqualTo(ragTransactionId);
+        assertThat(params.getValue("query_prompt_version")).isEqualTo(queryPromptVersion);
     }
 
     @Test
@@ -95,7 +98,7 @@ class DefendantAnswerServiceTest {
 
         // when
 
-        service.upsert(caseId, queryId, defendantId, "answer", "input", docId, ragTransactionId);
+        service.upsert(caseId, queryId, defendantId, "answer", "input", docId, ragTransactionId, queryPromptVersion);
 
         // then
         final InOrder inOrder = inOrder(jdbcTemplate);
@@ -109,7 +112,7 @@ class DefendantAnswerServiceTest {
         when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Integer.class))).thenReturn(7);
 
         // when
-        service.upsert(caseId, queryId, defendantId, "answer", "input", docId, ragTransactionId);
+        service.upsert(caseId, queryId, defendantId, "answer", "input", docId, ragTransactionId, queryPromptVersion);
 
         // then
         final ArgumentCaptor<MapSqlParameterSource> captor = ArgumentCaptor.forClass(MapSqlParameterSource.class);
@@ -128,7 +131,7 @@ class DefendantAnswerServiceTest {
         when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Integer.class))).thenReturn(2);
 
         // when
-        service.upsert(caseId, queryId, defendantId, "answer", "input", null, ragTransactionId);
+        service.upsert(caseId, queryId, defendantId, "answer", "input", null, ragTransactionId, queryPromptVersion);
 
         // then
         final ArgumentCaptor<MapSqlParameterSource> captor = ArgumentCaptor.forClass(MapSqlParameterSource.class);

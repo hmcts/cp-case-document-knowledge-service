@@ -217,10 +217,38 @@ class QueryServiceTest {
         final QueryVersionId id = saved.getQueryVersionId();
         assertThat(id.getQueryId()).isEqualTo(qid);
         assertThat(id.getEffectiveAt()).isEqualTo(eff);
+        assertThat(saved.getVersionLabel()).isEqualTo("V1");
 
         assertThat(resp.getAsOf()).isEqualTo(eff);
         assertThat(resp.getQueries()).hasSize(1);
         assertThat(resp.getQueries().get(0).getQueryId()).isEqualTo(qid);
+    }
+
+    @Test
+    @DisplayName("upsertDefinitions computes the next version label when prior versions exist (DD-43822/DD-43848)")
+    void upsert_computes_next_version_label_when_prior_versions_exist() {
+        final UUID qid = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        final Query q = new Query();
+        when(qRepo.findById(qid)).thenReturn(Optional.of(q));
+        when(qvRepo.countVersions(qid)).thenReturn(2L);
+
+        final OffsetDateTime eff = OffsetDateTime.parse("2025-05-01T12:00:00Z");
+        when(qvRepo.snapshotDefinitionsAsOf(eff)).thenReturn(List.of());
+
+        final QueryUpsertRequest req = new QueryUpsertRequest();
+        final QueryUpsertRequestQueriesInner item = new QueryUpsertRequestQueriesInner();
+        item.setQueryId(qid);
+        item.setUserQuery("UQ");
+        item.setQueryPrompt("QP");
+        item.setLevel(uk.gov.hmcts.cp.openapi.model.cdk.QueryLevel.CASE);
+        req.setEffectiveAt(eff);
+        req.setQueries(List.of(item));
+
+        service.upsertDefinitions(req);
+
+        final ArgumentCaptor<QueryVersion> cap = ArgumentCaptor.forClass(QueryVersion.class);
+        verify(qvRepo).save(cap.capture());
+        assertThat(cap.getValue().getVersionLabel()).isEqualTo("V3");
     }
 
     @Test

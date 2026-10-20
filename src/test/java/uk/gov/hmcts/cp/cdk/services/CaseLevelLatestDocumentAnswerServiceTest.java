@@ -37,6 +37,7 @@ class CaseLevelLatestDocumentAnswerServiceTest {
     private UUID queryId;
     private UUID docId;
     private UUID ragTransactionId;
+    private String queryPromptVersion;
 
     @BeforeEach
     void setUp() {
@@ -44,6 +45,7 @@ class CaseLevelLatestDocumentAnswerServiceTest {
         queryId = UUID.randomUUID();
         docId = UUID.randomUUID();
         ragTransactionId = UUID.randomUUID();
+        queryPromptVersion = "V3";
     }
 
     @Test
@@ -52,7 +54,7 @@ class CaseLevelLatestDocumentAnswerServiceTest {
         when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Integer.class))).thenReturn(1);
 
         // when
-        service.upsert(caseId, queryId, "answer", "llm-input", docId, ragTransactionId);
+        service.upsert(caseId, queryId, "answer", "llm-input", docId, ragTransactionId, queryPromptVersion);
 
         // then
         verify(jdbcTemplate, times(1)).queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Integer.class));
@@ -66,7 +68,7 @@ class CaseLevelLatestDocumentAnswerServiceTest {
         final ArgumentCaptor<MapSqlParameterSource> captor = ArgumentCaptor.forClass(MapSqlParameterSource.class);
 
         // when
-        service.upsert(caseId, queryId, "ans", "llm", docId, ragTransactionId);
+        service.upsert(caseId, queryId, "ans", "llm", docId, ragTransactionId, queryPromptVersion);
 
         // then
         verify(jdbcTemplate).update(contains("INSERT INTO case_level_latest_doc_answers"), captor.capture());
@@ -80,6 +82,7 @@ class CaseLevelLatestDocumentAnswerServiceTest {
         assertThat(params.getValue("llm_input")).isEqualTo("llm");
         assertThat(params.getValue("doc_id")).isEqualTo(docId);
         assertThat(params.getValue("rag_transaction_id")).isEqualTo(ragTransactionId);
+        assertThat(params.getValue("query_prompt_version")).isEqualTo(queryPromptVersion);
     }
 
     @Test
@@ -89,7 +92,7 @@ class CaseLevelLatestDocumentAnswerServiceTest {
         final ArgumentCaptor<MapSqlParameterSource> captor = ArgumentCaptor.forClass(MapSqlParameterSource.class);
 
         // when
-        service.upsert(caseId, queryId, "a", "b", docId, ragTransactionId);
+        service.upsert(caseId, queryId, "a", "b", docId, ragTransactionId, queryPromptVersion);
 
         // then
         verify(jdbcTemplate).queryForObject(contains("SELECT COALESCE(MAX(version)"), captor.capture(), eq(Integer.class));
@@ -106,7 +109,7 @@ class CaseLevelLatestDocumentAnswerServiceTest {
         when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Integer.class))).thenReturn(null);
 
         // when / then
-        assertThrows(NullPointerException.class, () -> service.upsert(caseId, queryId, "a", "b", docId, ragTransactionId));
+        assertThrows(NullPointerException.class, () -> service.upsert(caseId, queryId, "a", "b", docId, ragTransactionId, queryPromptVersion));
     }
 
     @Test
@@ -115,7 +118,7 @@ class CaseLevelLatestDocumentAnswerServiceTest {
         when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Integer.class))).thenReturn(2);
 
         // when
-        service.upsert(caseId, queryId, "answer", "llm", docId, ragTransactionId);
+        service.upsert(caseId, queryId, "answer", "llm", docId, ragTransactionId, queryPromptVersion);
 
         // then
         final InOrder inOrder = inOrder(jdbcTemplate);

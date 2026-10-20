@@ -44,7 +44,7 @@ class QueryMapperTest {
         final UUID queryId = randomUUID();
         final Query query = new Query(queryId, queryLabel, utcNow(), 2,true);
         final QueryVersionId queryVersionId = new QueryVersionId(queryId, utcNow());
-        final QueryVersion queryVersion = new QueryVersion(queryVersionId, query, userQuery, queryPrompt, QueryLevel.CASE);
+        final QueryVersion queryVersion = new QueryVersion(queryVersionId, query, userQuery, queryPrompt, "V1", QueryLevel.CASE);
 
         // When
         final QueryVersionSummary response = mapper.toVersionSummary(query, queryVersion);

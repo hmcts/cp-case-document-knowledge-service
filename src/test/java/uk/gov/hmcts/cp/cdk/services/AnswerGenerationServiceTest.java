@@ -49,6 +49,7 @@ public class AnswerGenerationServiceTest {
     private UUID queryId;
     private UUID docId;
     private UUID ragTransactionId;
+    private String queryPromptVersion;
 
     @BeforeEach
     void setUp() {
@@ -56,6 +57,7 @@ public class AnswerGenerationServiceTest {
         queryId = randomUUID();
         docId = randomUUID();
         ragTransactionId = randomUUID();
+        queryPromptVersion = "V3";
     }
 
     @Test
@@ -68,7 +70,7 @@ public class AnswerGenerationServiceTest {
                 .thenReturn(1);
 
         // when
-        service.upsertAnswer(caseId, queryId, "answer", "llmInput", docId, ragTransactionId);
+        service.upsertAnswer(caseId, queryId, "answer", "llmInput", docId, ragTransactionId, queryPromptVersion);
 
         // then
         final InOrder inOrder = inOrder(jdbcTemplate);
@@ -99,7 +101,7 @@ public class AnswerGenerationServiceTest {
                 .thenReturn(1);
 
         // when
-        service.upsertAnswer(caseId, queryId, "answer", "llmInput", docId, ragTransactionId);
+        service.upsertAnswer(caseId, queryId, "answer", "llmInput", docId, ragTransactionId, queryPromptVersion);
 
         // then
         verify(jdbcTemplate).queryForObject(anyString(), paramCaptor.capture(), eq(Integer.class));
@@ -120,7 +122,7 @@ public class AnswerGenerationServiceTest {
                 .thenReturn(1);
 
         // when
-        service.upsertAnswer(caseId, queryId, "my-answer", "my-llm-input", docId, ragTransactionId);
+        service.upsertAnswer(caseId, queryId, "my-answer", "my-llm-input", docId, ragTransactionId, queryPromptVersion);
 
         // then
         verify(jdbcTemplate).update(eq(SQL_UPSERT_ANSWER), paramCaptor.capture());
@@ -134,6 +136,7 @@ public class AnswerGenerationServiceTest {
         assertThat(params.getValue("llm_input")).isEqualTo("my-llm-input");
         assertThat(params.getValue("version")).isEqualTo(5);
         assertThat(params.getValue("rag_transaction_id")).isEqualTo(ragTransactionId);
+        assertThat(params.getValue("query_prompt_version")).isEqualTo(queryPromptVersion);
     }
 
     @Test
@@ -144,7 +147,7 @@ public class AnswerGenerationServiceTest {
 
         // when & then
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> service.upsertAnswer(caseId, queryId, "a", "b", docId, ragTransactionId));
+                () -> service.upsertAnswer(caseId, queryId, "a", "b", docId, ragTransactionId, queryPromptVersion));
 
         assertThat(ex.getMessage()).isEqualTo("DB error");
 
@@ -163,7 +166,7 @@ public class AnswerGenerationServiceTest {
 
         // when & then
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> service.upsertAnswer(caseId, queryId, "a", "b", docId, ragTransactionId));
+                () -> service.upsertAnswer(caseId, queryId, "a", "b", docId, ragTransactionId, queryPromptVersion));
 
         assertThat(ex.getMessage()).isEqualTo("Insert failed");
     }
@@ -176,7 +179,7 @@ public class AnswerGenerationServiceTest {
         when(jdbcTemplate.update(eq(SQL_UPSERT_ANSWER), any(MapSqlParameterSource.class))).thenReturn(1);
 
         // when
-        service.upsertAnswer(caseId, queryId, "answer", "llmInput", docId, ragTransactionId);
+        service.upsertAnswer(caseId, queryId, "answer", "llmInput", docId, ragTransactionId, queryPromptVersion);
 
         // then
         String versionSql = sqlCaptor.getValue();
@@ -197,7 +200,7 @@ public class AnswerGenerationServiceTest {
         when(jdbcTemplate.update(eq(SQL_UPSERT_ANSWER), any(MapSqlParameterSource.class))).thenReturn(1);
 
         // when
-        service.upsertAnswer(caseId, queryId, "answer", "llmInput", docId, ragTransactionId);
+        service.upsertAnswer(caseId, queryId, "answer", "llmInput", docId, ragTransactionId, queryPromptVersion);
 
         // then
         verify(jdbcTemplate, times(2)).update(anyString(), paramCaptor.capture());

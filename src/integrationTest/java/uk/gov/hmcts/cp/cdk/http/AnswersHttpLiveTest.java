@@ -75,19 +75,21 @@ import org.springframework.web.client.HttpClientErrorException;
             }
             // 2) definitions (v1, v2)
             try (PreparedStatement ps = c.prepareStatement(
-                    "INSERT INTO query_versions (query_id, effective_at, user_query, query_prompt) VALUES (?, ?, ?, ?)")) {
+                    "INSERT INTO query_versions (query_id, effective_at, user_query, query_prompt, version_label) VALUES (?, ?, ?, ?, ?)")) {
                 ps.setObject(1, queryId);
                 ps.setObject(2, v1Eff);
                 ps.setString(3, "User query v1");
                 ps.setString(4, "Prompt v1");
+                ps.setString(5, "V1");
                 ps.executeUpdate();
             }
             try (PreparedStatement ps = c.prepareStatement(
-                    "INSERT INTO query_versions (query_id, effective_at, user_query, query_prompt) VALUES (?, ?, ?, ?)")) {
+                    "INSERT INTO query_versions (query_id, effective_at, user_query, query_prompt, version_label) VALUES (?, ?, ?, ?, ?)")) {
                 ps.setObject(1, queryId);
                 ps.setObject(2, v2Eff);
                 ps.setString(3, "User query v2");
                 ps.setString(4, "Prompt v2");
+                ps.setString(5, "V2");
                 ps.executeUpdate();
             }
             // 3) answers (v1, v2 latest)
@@ -142,11 +144,12 @@ import org.springframework.web.client.HttpClientErrorException;
                 ps.executeUpdate();
             }
             try (PreparedStatement ps = c.prepareStatement(
-                    "INSERT INTO query_versions (query_id, effective_at, user_query, query_prompt) VALUES (?, ?, ?, ?)")) {
+                    "INSERT INTO query_versions (query_id, effective_at, user_query, query_prompt, version_label) VALUES (?, ?, ?, ?, ?)")) {
                 ps.setObject(1, noAnswerQueryId);
                 ps.setObject(2, OffsetDateTime.parse("2025-06-01T12:00:00Z"));
                 ps.setString(3, "No answer query");
                 ps.setString(4, "No answer prompt");
+                ps.setString(5, "V1");
                 ps.executeUpdate();
             }
 

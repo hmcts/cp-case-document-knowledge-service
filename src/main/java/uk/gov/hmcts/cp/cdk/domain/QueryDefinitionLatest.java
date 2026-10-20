@@ -26,6 +26,9 @@ public class QueryDefinitionLatest {
     @Column(name = "effective_at", nullable = false)
     private OffsetDateTime effectiveAt;
 
+    @Column(name = "version_label", nullable = false)
+    private String versionLabel;
+
     @Column(name = "user_query", nullable = false)
     private String userQuery;
 

@@ -215,11 +215,14 @@ public class QueryService {
                 );
             }
 
+            final long nextOrdinal = queryVersionRepository.countVersions(queryId) + 1;
+
             final QueryVersion version = new QueryVersion();
             version.setQuery(query);
             version.setQueryVersionId(new QueryVersionId(queryId, effectiveAt));
             version.setUserQuery(userQuery);
             version.setQueryPrompt(queryPrompt);
+            version.setVersionLabel("V" + nextOrdinal);
             version.setLevel(uk.gov.hmcts.cp.cdk.domain.QueryLevel.valueOf(item.getLevel().name()));
             queryVersionRepository.save(version);
         });

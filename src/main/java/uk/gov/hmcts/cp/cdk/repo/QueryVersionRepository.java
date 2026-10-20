@@ -58,6 +58,13 @@ public interface QueryVersionRepository extends JpaRepository<QueryVersion, Quer
             """, nativeQuery = true)
     Optional<QueryVersion> findLatestByQueryId(UUID queryId);
 
+    @Query(value = """
+            SELECT COUNT(*)
+              FROM query_versions
+             WHERE query_id = :queryId
+            """, nativeQuery = true)
+    long countVersions(UUID queryId);
+
 
     record SnapshotDefinition(
             UUID queryId,

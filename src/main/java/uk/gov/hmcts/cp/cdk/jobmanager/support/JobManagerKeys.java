@@ -17,6 +17,7 @@ public final class JobManagerKeys {
     public static final String CTX_MATERIAL_NAME = "materialName";
     public static final String CTX_SINGLE_QUERY_ID = "CTX_SINGLE_QUERY_ID";
     public static final String CTX_RAG_TRANSACTION_ID = "ragTransactionId";
+    public static final String CTX_QUERY_PROMPT_VERSION = "queryPromptVersion";
 
     public static final String CTX_ANSWER_RETRY_COUNT = "answerRetryCount";
 
