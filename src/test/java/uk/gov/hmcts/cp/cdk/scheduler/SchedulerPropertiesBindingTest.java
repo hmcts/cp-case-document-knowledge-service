@@ -2,6 +2,8 @@ package uk.gov.hmcts.cp.cdk.scheduler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -49,6 +51,37 @@ class SchedulerPropertiesBindingTest {
                             .as("shipped default for CP_CDK_SCHEDULER_NIGHTLY_DISCOVERY_ENABLED")
                             .isFalse();
                 });
+    }
+
+    @Test
+    @DisplayName("nightly-discovery stagger binds enabled / cases-per-minute / max-window when supplied "
+            + "(DD-43823 Option A1)")
+    void stagger_shouldBindAllFields_whenProvided() {
+        contextRunner
+                .withPropertyValues(
+                        "scheduler.nightly-discovery.stagger.enabled=true",
+                        "scheduler.nightly-discovery.stagger.cases-per-minute=4",
+                        "scheduler.nightly-discovery.stagger.max-window=PT6H")
+                .run(context -> {
+                    final SchedulerProperties.NightlyDiscovery.Stagger stagger =
+                            context.getBean(SchedulerProperties.class).getNightlyDiscovery().getStagger();
+                    assertThat(stagger.isEnabled()).isTrue();
+                    assertThat(stagger.getCasesPerMinute()).isEqualTo(4.0);
+                    assertThat(stagger.getMaxWindow()).isEqualTo(Duration.ofHours(6));
+                });
+    }
+
+    @Test
+    @DisplayName("nightly-discovery stagger defaults to disabled, 2 cases/min, PT8H when the block is absent")
+    void stagger_shouldUseSafeDefaults_whenBlockAbsent() {
+        contextRunner.run(context -> {
+            final SchedulerProperties.NightlyDiscovery.Stagger stagger =
+                    context.getBean(SchedulerProperties.class).getNightlyDiscovery().getStagger();
+            assertThat(stagger).isNotNull();
+            assertThat(stagger.isEnabled()).isFalse();
+            assertThat(stagger.getCasesPerMinute()).isEqualTo(2.0);
+            assertThat(stagger.getMaxWindow()).isEqualTo(Duration.ofHours(8));
+        });
     }
 
     @Configuration

@@ -19,7 +19,9 @@ import uk.gov.hmcts.cp.cdk.repo.DiscoverySchedulerConfigurationRepository;
 import uk.gov.hmcts.cp.cdk.repo.ScheduledIngestionRequestRepository;
 import uk.gov.hmcts.cp.cdk.scheduler.SchedulerProperties;
 
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -33,6 +35,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.env.Environment;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.slf4j.LoggerFactory;
 
 @ExtendWith(MockitoExtension.class)
 class DiscoveryServiceTest {
@@ -259,7 +267,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, times(2)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
+        verify(jobManagerService, times(2)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class));
     }
 
     @Test
@@ -288,7 +296,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, times(3)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
+        verify(jobManagerService, times(3)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class));
     }
 
     @Test
@@ -320,7 +328,7 @@ class DiscoveryServiceTest {
 
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
-        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture());
+        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture(), any(ZonedDateTime.class));
         assertThat(captor.getValue().getString("caseId")).isEqualTo(sharedCaseId.toString());
     }
 
@@ -356,7 +364,7 @@ class DiscoveryServiceTest {
 
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
-        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture());
+        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture(), any(ZonedDateTime.class));
         assertThat(captor.getValue().getString("caseId")).isEqualTo(sharedCaseId.toString());
     }
 
@@ -383,7 +391,7 @@ class DiscoveryServiceTest {
 
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
-        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture());
+        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture(), any(ZonedDateTime.class));
 
         final JsonObject jobData = captor.getValue();
         assertThat(jobData.getString("caseId")).isEqualTo(caseId.toString());
@@ -407,13 +415,13 @@ class DiscoveryServiceTest {
         when(hearingCaseWhitelistSelector.findMatchingCases(any(), any())).thenReturn(List.of(matchedCase));
         doThrow(new RuntimeException("Dispatch failed"))
                 .when(jobManagerService)
-                .dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
+                .dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class));
 
         // when / then
         Assertions.assertThatCode(() -> discoveryService.runNightlyDiscovery())
                 .doesNotThrowAnyException();
 
-        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
+        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class));
     }
 
     @Test
@@ -437,7 +445,7 @@ class DiscoveryServiceTest {
         Assertions.assertThatCode(() -> discoveryService.runNightlyDiscovery())
                 .doesNotThrowAnyException();
 
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(), any());
     }
 
     @Test
@@ -460,7 +468,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(), any());
     }
 
     @Test
@@ -478,7 +486,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(), any());
     }
 
     @Test
@@ -609,6 +617,148 @@ class DiscoveryServiceTest {
                 .hasCauseInstanceOf(IllegalArgumentException.class);
 
         verifyNoInteractions(jobManagerService);
+    }
+
+    // ----- Option A1 (DD-43823): deferred-start staggering of the per-case CHECK_IDPC entry tasks -----
+
+    @Test
+    void runNightlyDiscovery_whenStaggerDisabled_dispatchesEveryEntryTaskWithImmediateStartTime() {
+        // given
+        final DiscoveryService service = discoveryServiceWithStagger(false, 2.0, Duration.ofHours(8));
+        stubSingleDateWithMatchedCases(3);
+
+        // when
+        service.runNightlyDiscovery();
+
+        // then — all three entry tasks share the same (immediate) start time: current behaviour preserved
+        final List<ZonedDateTime> startTimes = captureEntryStartTimes(3);
+        assertThat(Duration.between(startTimes.get(0), startTimes.get(1))).isZero();
+        assertThat(Duration.between(startTimes.get(0), startTimes.get(2))).isZero();
+    }
+
+    @Test
+    void runNightlyDiscovery_whenStaggerEnabled_releasesEntryTasksAtConfiguredRate() {
+        // given — 2 cases/min => 30s between consecutive entry tasks
+        final DiscoveryService service = discoveryServiceWithStagger(true, 2.0, Duration.ofHours(8));
+        stubSingleDateWithMatchedCases(3);
+
+        // when
+        service.runNightlyDiscovery();
+
+        // then
+        final List<ZonedDateTime> startTimes = captureEntryStartTimes(3);
+        assertThat(Duration.between(startTimes.get(0), startTimes.get(1))).isEqualTo(Duration.ofSeconds(30));
+        assertThat(Duration.between(startTimes.get(0), startTimes.get(2))).isEqualTo(Duration.ofSeconds(60));
+    }
+
+    @Test
+    void runNightlyDiscovery_staggerStepScalesInverselyWithRate() {
+        // given — 4 cases/min => 15s between consecutive entry tasks
+        final DiscoveryService service = discoveryServiceWithStagger(true, 4.0, Duration.ofHours(8));
+        stubSingleDateWithMatchedCases(2);
+
+        // when
+        service.runNightlyDiscovery();
+
+        // then
+        final List<ZonedDateTime> startTimes = captureEntryStartTimes(2);
+        assertThat(Duration.between(startTimes.get(0), startTimes.get(1))).isEqualTo(Duration.ofSeconds(15));
+    }
+
+    @Test
+    void runNightlyDiscovery_firstEntryTaskIsNeverDeferred() {
+        // given
+        final DiscoveryService service = discoveryServiceWithStagger(true, 2.0, Duration.ofHours(8));
+        stubSingleDateWithMatchedCases(1);
+        final ZonedDateTime before = ZonedDateTime.now();
+
+        // when
+        service.runNightlyDiscovery();
+
+        // then — index 0 starts ~now, not deferred
+        final ZonedDateTime after = ZonedDateTime.now();
+        final List<ZonedDateTime> startTimes = captureEntryStartTimes(1);
+        assertThat(startTimes.get(0)).isBetween(before, after);
+    }
+
+    @Test
+    void runNightlyDiscovery_whenWindowExceedsMaxWindow_clampsOverflowWarnsAndDropsNothing() {
+        // given — 60 cases/min (1s step), cap 2s: indexes 3 and 4 clamp to base + 2s
+        final DiscoveryService service = discoveryServiceWithStagger(true, 60.0, Duration.ofSeconds(2));
+        stubSingleDateWithMatchedCases(5);
+
+        final Logger logger = (Logger) LoggerFactory.getLogger(DiscoveryService.class);
+        final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+
+        // when
+        try {
+            service.runNightlyDiscovery();
+        } finally {
+            logger.detachAppender(appender);
+        }
+
+        // then — nothing dropped
+        final List<ZonedDateTime> startTimes = captureEntryStartTimes(5);
+        assertThat(startTimes).hasSize(5);
+
+        // overflow cases share the capped start time (base + 2s)
+        assertThat(Duration.between(startTimes.get(0), startTimes.get(2))).isEqualTo(Duration.ofSeconds(2));
+        assertThat(startTimes.get(3)).isEqualTo(startTimes.get(2));
+        assertThat(startTimes.get(4)).isEqualTo(startTimes.get(2));
+
+        // and the tripwire warned
+        assertThat(appender.list).anySatisfy(event -> {
+            assertThat(event.getLevel()).isEqualTo(Level.WARN);
+            assertThat(event.getFormattedMessage()).containsIgnoringCase("stagger window");
+        });
+    }
+
+    @Test
+    void runNightlyDiscovery_whenCasesPerMinuteNotPositive_fallsBackToImmediateStart() {
+        // given — guards against divide-by-zero / misconfiguration
+        final DiscoveryService service = discoveryServiceWithStagger(true, 0.0, Duration.ofHours(8));
+        stubSingleDateWithMatchedCases(2);
+
+        // when / then
+        Assertions.assertThatCode(service::runNightlyDiscovery).doesNotThrowAnyException();
+
+        final List<ZonedDateTime> startTimes = captureEntryStartTimes(2);
+        assertThat(Duration.between(startTimes.get(0), startTimes.get(1))).isZero();
+    }
+
+    private void stubSingleDateWithMatchedCases(final int caseCount) {
+        final LocalDate today = LocalDate.now();
+        final DiscoverySchedulerConfiguration config = mockConfiguration();
+        final HearingCaseForDay matchedCase = hearingCaseWithProsecutionCases(today, caseCount);
+        when(hearingDaysCalculator.calculate(today, NIGHTLY_DISCOVERY_DAYS)).thenReturn(List.of(today));
+        when(discoverySchedulerConfigurationRepository.findLatestActiveConfigurations()).thenReturn(List.of(config));
+        when(environment.getProperty(SYSTEM_USER_ID_ENV_KEY)).thenReturn(SYSTEM_USER_ID);
+        when(hearingClient.getHearingCasesForDay(any(), any())).thenReturn(List.of(matchedCase));
+        when(hearingCaseWhitelistSelector.findMatchingCases(any(), any())).thenReturn(List.of(matchedCase));
+    }
+
+    private List<ZonedDateTime> captureEntryStartTimes(final int expectedCount) {
+        final ArgumentCaptor<ZonedDateTime> timeCaptor = ArgumentCaptor.forClass(ZonedDateTime.class);
+        verify(jobManagerService, times(expectedCount))
+                .dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), timeCaptor.capture());
+        return timeCaptor.getAllValues();
+    }
+
+    private DiscoveryService discoveryServiceWithStagger(final boolean enabled, final double casesPerMinute,
+                                                         final Duration maxWindow) {
+        final SchedulerProperties schedulerProperties = new SchedulerProperties();
+        schedulerProperties.getNightlyDiscovery().setDaysAhead(NIGHTLY_DISCOVERY_DAYS);
+        final SchedulerProperties.NightlyDiscovery.Stagger stagger =
+                schedulerProperties.getNightlyDiscovery().getStagger();
+        stagger.setEnabled(enabled);
+        stagger.setCasesPerMinute(casesPerMinute);
+        stagger.setMaxWindow(maxWindow);
+        return new DiscoveryService(
+                jobManagerService, scheduledIngestionRequestRepository, discoverySchedulerConfigurationRepository,
+                hearingDaysCalculator, hearingClient, hearingCaseWhitelistSelector, schedulerProperties, environment,
+                true);
     }
 
     private DiscoveryService discoveryServiceWithHearingForCasesEnabled(final boolean isHearingForCasesEnabled) {

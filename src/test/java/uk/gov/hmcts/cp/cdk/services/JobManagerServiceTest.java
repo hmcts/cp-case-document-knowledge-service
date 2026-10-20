@@ -21,7 +21,10 @@ import uk.gov.hmcts.cp.taskmanager.domain.ExecutionStatus;
 import uk.gov.hmcts.cp.taskmanager.service.ExecutionService;
 
 import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -145,5 +148,38 @@ class JobManagerServiceTest {
         assertThat(saved.getCourtCentreId()).isEqualTo(request.getCourtCentreId());
         assertThat(saved.getCourtRoomId()).isEqualTo(request.getRoomId());
         assertThat(saved.getHearingDate()).isEqualTo(request.getDate());
+    }
+
+    @Test
+    void dispatchCheckIdpcAvailability_withExplicitStartTime_stampsThatStartTime() {
+        // given
+        final ZonedDateTime startTime = ZonedDateTime.now().plusMinutes(5);
+        final JsonObject jobData = Json.createObjectBuilder().add("caseId", randomUUID().toString()).build();
+
+        // when
+        jobManagerService.dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(jobData, startTime);
+
+        // then
+        verify(executor).executeWith(captor.capture());
+        final ExecutionInfo info = captor.getValue();
+        assertThat(info.getAssignedTaskName()).isEqualTo("CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS");
+        assertThat(info.getAssignedTaskStartTime()).isEqualTo(startTime);
+        assertThat(info.getExecutionStatus()).isEqualTo(ExecutionStatus.STARTED);
+        assertThat(info.getJobData()).isEqualTo(jobData);
+    }
+
+    @Test
+    void dispatchCheckIdpcAvailability_withoutStartTime_defaultsToNow() {
+        // given
+        final JsonObject jobData = Json.createObjectBuilder().add("caseId", randomUUID().toString()).build();
+        final ZonedDateTime before = ZonedDateTime.now();
+
+        // when
+        jobManagerService.dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(jobData);
+        final ZonedDateTime after = ZonedDateTime.now();
+
+        // then — the no-arg overload is unchanged behaviour: immediate start
+        verify(executor).executeWith(captor.capture());
+        assertThat(captor.getValue().getAssignedTaskStartTime()).isBetween(before, after);
     }
 }

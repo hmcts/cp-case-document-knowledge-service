@@ -129,9 +129,15 @@ public class JobManagerService implements IngestionProcessor {
 
     /* package */
     void dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(final JsonObject jobData) {
+        dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(jobData, ZonedDateTime.now());
+    }
+
+    /* package */
+    void dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(final JsonObject jobData,
+                                                                 final ZonedDateTime assignedTaskStartTime) {
         final ExecutionInfo executionInfo = executionInfo()
                 .withAssignedTaskName(CHECK_IDPC_AVAILABILITY_ALL_DEFENDANTS)
-                .withAssignedTaskStartTime(ZonedDateTime.now())
+                .withAssignedTaskStartTime(assignedTaskStartTime)
                 .withJobData(jobData)
                 .withExecutionStatus(ExecutionStatus.STARTED)
                 .build();

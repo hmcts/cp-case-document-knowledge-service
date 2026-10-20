@@ -71,3 +71,12 @@ scheduler:
     lock-at-most-for: "${CP_CDK_SCHEDULER_NIGHTLY_DISCOVERY_LOCK_AT_MOST_FOR:PT2H}"
     enabled: ${CP_CDK_SCHEDULER_NIGHTLY_DISCOVERY_ENABLED:false}
     days-ahead: ${CP_CDK_SCHEDULER_NIGHTLY_DISCOVERY_DAYS_AHEAD:3}
+    stagger:
+      # Option A1 (DD-43823): release per-case CHECK_IDPC entry tasks at a controlled rate instead
+      # of all at 02:00. Off until tuned per-env against the prod RAG rate.
+      enabled: ${CP_CDK_SCHEDULER_NIGHTLY_DISCOVERY_STAGGER_ENABLED:false}
+      cases-per-minute: ${CP_CDK_SCHEDULER_NIGHTLY_DISCOVERY_STAGGER_CASES_PER_MINUTE:2}
+      # Tripwire only (not a deadline): warns when the stagger window exceeds this, signalling that
+      # volume has outgrown A1 smoothing -> consider option B1 (cap + carry-over). Generous so it
+      # never reshapes a legitimate night; the clamp itself is only a backstop against misconfig.
+      max-window: ${CP_CDK_SCHEDULER_NIGHTLY_DISCOVERY_STAGGER_MAX_WINDOW:PT8H}
