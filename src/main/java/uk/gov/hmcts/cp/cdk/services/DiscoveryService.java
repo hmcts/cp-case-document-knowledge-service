@@ -1,6 +1,5 @@
 package uk.gov.hmcts.cp.cdk.services;
 
-import static java.util.Objects.nonNull;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.CTX_CASE_ID_KEY;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.COURT_CENTRE_ID;
 import static uk.gov.hmcts.cp.cdk.jobmanager.support.JobManagerKeys.Params.CPPUID;
@@ -17,13 +16,12 @@ import uk.gov.hmcts.cp.cdk.domain.ScheduledIngestionRequest;
 import uk.gov.hmcts.cp.cdk.repo.DiscoverySchedulerConfigurationRepository;
 import uk.gov.hmcts.cp.cdk.repo.ScheduledIngestionRequestRepository;
 import uk.gov.hmcts.cp.cdk.scheduler.SchedulerProperties;
+import uk.gov.hmcts.cp.cdk.services.NightlyEntryTaskPlanner.CaseDispatch;
 
 import java.time.LocalDate;
-import java.util.LinkedHashSet;
+import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -42,6 +40,7 @@ public class DiscoveryService {
     private final HearingDaysCalculator hearingDaysCalculator;
     private final HearingClient hearingClient;
     private final HearingCaseWhitelistSelector hearingCaseWhitelistSelector;
+    private final NightlyEntryTaskPlanner nightlyEntryTaskPlanner;
     private final SchedulerProperties schedulerProperties;
     private final Environment environment;
     private final boolean isHearingForCasesEnabled;
@@ -52,6 +51,7 @@ public class DiscoveryService {
                             final HearingDaysCalculator hearingDaysCalculator,
                             final HearingClient hearingClient,
                             final HearingCaseWhitelistSelector hearingCaseWhitelistSelector,
+                            final NightlyEntryTaskPlanner nightlyEntryTaskPlanner,
                             final SchedulerProperties schedulerProperties,
                             final Environment environment,
                             @Value("${cqrs.client.hearing.is-hearing-for-cases-enabled:false}") final boolean isHearingForCasesEnabled) {
@@ -61,6 +61,7 @@ public class DiscoveryService {
         this.hearingDaysCalculator = hearingDaysCalculator;
         this.hearingClient = hearingClient;
         this.hearingCaseWhitelistSelector = hearingCaseWhitelistSelector;
+        this.nightlyEntryTaskPlanner = nightlyEntryTaskPlanner;
         this.schedulerProperties = schedulerProperties;
         this.environment = environment;
         this.isHearingForCasesEnabled = isHearingForCasesEnabled;
@@ -105,15 +106,13 @@ public class DiscoveryService {
                     .flatMap(hearingDate -> matchHearingCasesForDate(hearingDate, cpSystemUserId, activeCourtCentreConfigurations).stream())
                     .toList();
 
-            final Set<UUID> uniqueCaseIds = matchedHearingCases.stream()
-                    .filter(hearingCase -> nonNull(hearingCase.prosecutionCases()))
-                    .flatMap(hearingCase -> hearingCase.prosecutionCases().stream())
-                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            final List<CaseDispatch> plan = nightlyEntryTaskPlanner.plan(today, matchedHearingCases);
 
             log.info("Nightly discovery dispatching case eligibility checks for uniqueCaseIds={} out of matchedHearingCases={}",
-                    uniqueCaseIds.size(), matchedHearingCases.size());
+                    plan.size(), matchedHearingCases.size());
 
-            uniqueCaseIds.forEach(caseId -> dispatchCaseEligibilityCheck(caseId, cpSystemUserId));
+            plan.forEach(caseDispatch -> dispatchCaseEligibilityCheck(
+                    caseDispatch.caseId(), cpSystemUserId, caseDispatch.startTime(), caseDispatch.priority()));
         } else {
             activeCourtCentreConfigurations.forEach(acc -> {
                 hearingDates.stream()
@@ -139,10 +138,11 @@ public class DiscoveryService {
         return matchedHearingCases;
     }
 
-    private void dispatchCaseEligibilityCheck(final UUID caseId, final UUID cpSystemUserId) {
+    private void dispatchCaseEligibilityCheck(final UUID caseId, final UUID cpSystemUserId,
+                                              final ZonedDateTime startTime, final int priority) {
         final JsonObject jobData = toJobDataForCaseEligibility(caseId, cpSystemUserId);
         try {
-            jobManagerService.dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(jobData);
+            jobManagerService.dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(jobData, startTime, priority);
         } catch (Exception e) {
             log.error("Nightly Discovery - Failed to dispatch case ingestion tasks for the jobData={}", jobData, e);
         }

@@ -2,6 +2,7 @@ package uk.gov.hmcts.cp.cdk.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -20,6 +21,7 @@ import uk.gov.hmcts.cp.cdk.repo.ScheduledIngestionRequestRepository;
 import uk.gov.hmcts.cp.cdk.scheduler.SchedulerProperties;
 
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -259,7 +261,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, times(2)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
+        verify(jobManagerService, times(2)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class), anyInt());
     }
 
     @Test
@@ -288,7 +290,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, times(3)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
+        verify(jobManagerService, times(3)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class), anyInt());
     }
 
     @Test
@@ -320,7 +322,7 @@ class DiscoveryServiceTest {
 
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
-        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture());
+        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture(), any(ZonedDateTime.class), anyInt());
         assertThat(captor.getValue().getString("caseId")).isEqualTo(sharedCaseId.toString());
     }
 
@@ -356,7 +358,7 @@ class DiscoveryServiceTest {
 
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
-        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture());
+        verify(jobManagerService, times(1)).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture(), any(ZonedDateTime.class), anyInt());
         assertThat(captor.getValue().getString("caseId")).isEqualTo(sharedCaseId.toString());
     }
 
@@ -383,7 +385,7 @@ class DiscoveryServiceTest {
 
         // then
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
-        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture());
+        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(captor.capture(), any(ZonedDateTime.class), anyInt());
 
         final JsonObject jobData = captor.getValue();
         assertThat(jobData.getString("caseId")).isEqualTo(caseId.toString());
@@ -407,13 +409,13 @@ class DiscoveryServiceTest {
         when(hearingCaseWhitelistSelector.findMatchingCases(any(), any())).thenReturn(List.of(matchedCase));
         doThrow(new RuntimeException("Dispatch failed"))
                 .when(jobManagerService)
-                .dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
+                .dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class), anyInt());
 
         // when / then
         Assertions.assertThatCode(() -> discoveryService.runNightlyDiscovery())
                 .doesNotThrowAnyException();
 
-        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class));
+        verify(jobManagerService).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(JsonObject.class), any(ZonedDateTime.class), anyInt());
     }
 
     @Test
@@ -437,7 +439,7 @@ class DiscoveryServiceTest {
         Assertions.assertThatCode(() -> discoveryService.runNightlyDiscovery())
                 .doesNotThrowAnyException();
 
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(), any(), anyInt());
     }
 
     @Test
@@ -460,7 +462,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(), any(), anyInt());
     }
 
     @Test
@@ -478,7 +480,7 @@ class DiscoveryServiceTest {
         discoveryService.runNightlyDiscovery();
 
         // then
-        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any());
+        verify(jobManagerService, never()).dispatchCaseDocumentIngestionTasksCheckIdpcAvailability(any(), any(), anyInt());
     }
 
     @Test
@@ -614,10 +616,13 @@ class DiscoveryServiceTest {
     private DiscoveryService discoveryServiceWithHearingForCasesEnabled(final boolean isHearingForCasesEnabled) {
         final SchedulerProperties schedulerProperties = new SchedulerProperties();
         schedulerProperties.getNightlyDiscovery().setDaysAhead(NIGHTLY_DISCOVERY_DAYS);
+        // Real planner (default config): keeps these orchestration tests end-to-end; planning policy
+        // is covered independently in NightlyEntryTaskPlannerTest.
+        final NightlyEntryTaskPlanner nightlyEntryTaskPlanner = new NightlyEntryTaskPlanner(schedulerProperties);
         return new DiscoveryService(
                 jobManagerService, scheduledIngestionRequestRepository, discoverySchedulerConfigurationRepository,
-                hearingDaysCalculator, hearingClient, hearingCaseWhitelistSelector, schedulerProperties, environment,
-                isHearingForCasesEnabled);
+                hearingDaysCalculator, hearingClient, hearingCaseWhitelistSelector, nightlyEntryTaskPlanner,
+                schedulerProperties, environment, isHearingForCasesEnabled);
     }
 
     private DiscoverySchedulerConfiguration mockConfiguration() {
