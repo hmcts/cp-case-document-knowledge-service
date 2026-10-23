@@ -21,7 +21,6 @@ spring:
 logging:
   level:
     root: INFO
-    org.springframework.batch: INFO
     org.springframework.jdbc.core: WARN
     uk.gov.hmcts.cp: DEBUG         # your code
   pattern:

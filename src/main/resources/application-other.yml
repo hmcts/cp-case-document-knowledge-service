@@ -20,10 +20,3 @@ authz:
 
 # Virtual threads toggle (Boot 3.2+/4.x)
 spring.threads.virtual.enabled: ${VIRTUAL_THREADS:false}
-
-spring:
-  batch:
-    jdbc:
-      initialize-schema: never
-    job:
-      enabled: false
