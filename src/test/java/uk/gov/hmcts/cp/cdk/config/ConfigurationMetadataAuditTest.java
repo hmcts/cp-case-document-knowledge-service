@@ -49,23 +49,6 @@ class ConfigurationMetadataAuditTest {
 
     private static final String METADATA_RESOURCE = "META-INF/spring-configuration-metadata.json";
 
-    /**
-     * Pre-existing findings this test surfaces but does not itself fix — unrelated to this story's
-     * tracing/OTLP scope, so this story does not silently absorb them.
-     *
-     * <p>{@code spring.batch.jdbc.initialize-schema} and {@code spring.batch.job.enabled}
-     * ({@code application-other.yml}) configure Spring Batch, which is verified <strong>not</strong>
-     * to be a dependency of this project at all (no {@code spring-boot-starter-batch} on the
-     * classpath) — dead configuration for a library that was never added, most likely a leftover
-     * from the HMCTS Spring Boot template. No defect ticket exists yet for this; it needs one. Not
-     * fixed here because it is out of scope for DD-43183 and touching it is a judgement call for
-     * whoever owns `application-other.yml`'s history, not a tracing/OTLP concern.
-     */
-    private static final Set<String> ALLOW_LISTED_KEYS = Set.of(
-            "spring.batch.jdbc.initialize-schema",
-            "spring.batch.job.enabled"
-    );
-
     @Test
     @DisplayName("AC-004: no unknown or error-deprecated management.*/spring.* key in any application*.yml")
     void noUnknownOrErrorDeprecatedManagementOrSpringKeys() throws IOException {
@@ -77,9 +60,6 @@ class ConfigurationMetadataAuditTest {
         final List<String> offenders = new ArrayList<>();
         for (final String file : APPLICATION_YML_FILES) {
             for (final String key : managementAndSpringKeys(file)) {
-                if (ALLOW_LISTED_KEYS.contains(key)) {
-                    continue;
-                }
                 final ConfigurationMetadataProperty exact = allProperties.get(key);
                 if (exact != null) {
                     if (isDeprecatedAtErrorLevel(exact)) {
