@@ -13,7 +13,6 @@
 | Spring Boot | 4.0.5 |
 | Spring MVC | via Spring Boot |
 | Spring Data JPA | via Spring Boot |
-| Spring Batch | on classpath; `job.enabled=false` (disabled at runtime) |
 | Gradle | 9 (wrapper: `./gradlew`) |
 | Base package | `uk.gov.hmcts.cp.cdk` |
 | Context path | `/casedocumentknowledge-service` |
@@ -28,7 +27,7 @@
 |-----------|-----------------|
 | PostgreSQL | 16 (production), 16-alpine (Docker Compose) |
 | Flyway | 7.x — migrations in `src/main/resources/db/migration/` |
-| Migration prefix | `V1000` – `V1011` (append-only; never edit shipped versions) |
+| Migration prefix | `V1000` – `V1016` (append-only; never edit shipped versions) |
 | HikariCP | max 20 connections, min 5, 300 s timeout |
 | JPA DDL | `validate` — Flyway owns schema; Hibernate must not auto-create |
 | Timezone | UTC enforced via JPA/JDBC properties |
@@ -38,7 +37,7 @@
 
 | File | What it creates / alters |
 |------|--------------------------|
-| `V1000__spring_batch_metadata.sql` | Spring Batch metadata tables |
+| `V1000__spring_batch_metadata.sql` | Spring Batch metadata tables (obsolete — dropped in `V1016`) |
 | `V1001__case_documents_ai_schema.sql` | Core schema: `queries`, `query_versions`, `case_documents`, `case_query_status`, answer tables, views |
 | `V1002__case_documents_queries_updateschema.sql` | Query versioning / lifecycle updates |
 | `V1003__document_verification_task.sql` | `document_verification_task` table + indexes |
@@ -48,6 +47,11 @@
 | `V1009__case_documents_scheduled_ingestion_request.sql` | `scheduled_ingestion_request` table |
 | `V1010__create_shedlock_table.sql` | `shedlock` table for distributed scheduler lock |
 | `V1011__create_discovery_scheduler_configuration.sql` | `discovery_scheduler_configuration` table (versioned court centre/court room ingestion config) |
+| `V1012__add_rag_transaction_id_to_answers.sql` | `rag_transaction_id` on answer tables |
+| `V1013__add_rag_document_reference_to_case_documents.sql` | `rag_document_reference` on `case_documents` |
+| `V1014__add_stalled_work_monitoring_indexes.sql` | Indexes supporting stalled-work monitoring |
+| `V1015__add_query_prompt_version_tracking.sql` | Query prompt version tracking |
+| `V1016__drop_obsolete_spring_batch_metadata.sql` | Drops the obsolete `BATCH_*` tables/sequences from `V1000` |
 
 ---
 
