@@ -2,7 +2,7 @@ plugins {
     id 'application'
     id 'java'
 
-    id 'org.springframework.boot' version '4.1.1'
+    id 'org.springframework.boot' version '4.1.2'
     id 'io.spring.dependency-management' version '1.1.7'
 
     id 'jacoco'
@@ -115,7 +115,7 @@ ext.vers = [
 ]
 
 /* ---- Import Spring Boot BOM explicitly (helps with milestone builds) ---- */
-def springBootVersion = '4.1.1'
+def springBootVersion = '4.1.2'
 dependencyManagement {
     imports {
         mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
@@ -184,7 +184,7 @@ dependencies {
     implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:$vers.shedlock")
 
     // Testcontainers (BOM)
-    testImplementation("org.springframework.boot:spring-boot-testcontainers:4.1.1")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers:4.1.2")
     testImplementation 'org.testcontainers:postgresql:1.21.4'
     testImplementation 'org.testcontainers:junit-jupiter:1.21.4'
     // Something badly wrong here if we need testcontainers in none test build
